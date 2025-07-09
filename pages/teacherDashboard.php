@@ -829,9 +829,12 @@
                             pageFile = 'profile.php';
                             break;
                         case 7: // Settings
+                            pageFile = 'settings.php';
+                            break;
+                        case 8: // Support
                             pageFile = 'support.php';
                             break;
-                        case 8: // Logout
+                        case 9: // Logout
                             if (confirm('Are you sure you want to log out?')) {
                                 window.location.href = 'index.php';
                             }

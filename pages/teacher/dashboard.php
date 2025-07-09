@@ -265,6 +265,41 @@
             background: var(--inputfieldhover-color);
         }
 
+        /* Table Styles */
+        .table-responsive {
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th, td {
+            padding: 10px;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        th {
+            font-weight: 600;
+            color: var(--blackfont-color);
+        }
+
+        .status-badge.present {
+            color: var(--success-green);
+            background: rgba(22, 163, 74, 0.1);
+            padding: 2px 8px;
+            border-radius: 4px;
+        }
+
+        .status-badge.absent {
+            color: var(--danger-red);
+            background: rgba(220, 38, 38, 0.1);
+            padding: 2px 8px;
+            border-radius: 4px;
+        }
+
         /* Responsive Adjustments */
         @media (max-width: 1024px) {
             .charts-row {
@@ -338,7 +373,7 @@
             <div class="card-header">
                 <div>
                     <div class="card-title">Total Students</div>
-                    <div class="card-value" id="totalStudents">150</div>
+                    <div class="card-value" id="totalStudents">9</div>
                 </div>
                 <div class="card-icon bg-blue">
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 16 16">
@@ -357,7 +392,7 @@
             <div class="card-header">
                 <div>
                     <div class="card-title">Attendance Rate</div>
-                    <div class="card-value" id="attendanceRate">92%</div>
+                    <div class="card-value" id="attendanceRate">90%</div>
                 </div>
                 <div class="card-icon bg-green">
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 16 16">
@@ -375,7 +410,7 @@
             <div class="card-header">
                 <div>
                     <div class="card-title">At-Risk Students</div>
-                    <div class="card-value" id="atRiskStudents">12</div>
+                    <div class="card-value" id="atRiskStudents">1</div>
                 </div>
                 <div class="card-icon bg-pink">
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 16 16">
@@ -392,7 +427,7 @@
             <div class="card-header">
                 <div>
                     <div class="card-title">Absences Today</div>
-                    <div class="card-value" id="absencesToday">8</div>
+                    <div class="card-value" id="absencesToday">2</div>
                 </div>
                 <div class="card-icon bg-orange">
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 16 16">
@@ -451,8 +486,28 @@
         </div>
     </div>
 
+    <!-- Attendance Records Table -->
+    <div class="chart-card">
+        <div class="chart-header">
+            <div class="chart-title">Recent Attendance Records</div>
+        </div>
+        <div class="table-responsive">
+            <table id="attendanceTable" style="width: 100%; border-collapse: collapse;">
+                <thead>
+                    <tr>
+                        <th>Student</th>
+                        <th>Class</th>
+                        <th>Date</th>
+                        <th>Status</th>
+                        <th>Remarks</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+    </div>
+
     <script>
-        // JavaScript remains unchanged from Teacher Dashboard 1
         const classes = [
             {
                 id: 1,
@@ -555,7 +610,7 @@
         }
 
         function renderAttendanceRecords() {
-            const tbody = document.getElementById('attendanceTable');
+            const tbody = document.getElementById('attendanceTable').querySelector('tbody');
             tbody.innerHTML = '';
 
             attendanceRecords.forEach(record => {

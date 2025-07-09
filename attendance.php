@@ -74,7 +74,7 @@
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-            font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+            font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
         }
 
         body {
@@ -427,39 +427,15 @@
         <div class="table-header">
             <div class="table-title">Attendance Grid</div>
             <div class="table-controls">
-                <input type="date" class="selector-input" id="date-selector" value="2025-06-27">
+                <input type="date" class="selector-input" id="date-selector" value="2025-07-10" min="2025-06-01" max="2025-07-10">
                 <select class="selector-select" id="gradeLevelSelector">
                     <option value="">All Grade Levels</option>
-                    <option value="Grade 7">Grade 7</option>
-                    <option value="Grade 8">Grade 8</option>
-                    <option value="Grade 9">Grade 9</option>
-                    <option value="Grade 10">Grade 10</option>
-                    <option value="Grade 11">Grade 11</option>
-                    <option value="Grade 12">Grade 12</option>
                 </select>
                 <select class="selector-select" id="classSelector">
-                    <option value="">All Classes</option>
-                    <option value="Math">Math</option>
-                    <option value="English">English</option>
-                    <option value="Science">Science</option>
-                    <option value="History">History</option>
+                    <option value="">All Subject</option>
                 </select>
                 <select class="selector-select" id="sectionSelector">
                     <option value="">All Sections</option>
-                    <option value="Sun">Sun</option>
-                    <option value="Moon">Moon</option>
-                    <option value="Jupiter">Jupiter</option>
-                    <option value="A">A</option>
-                    <option value="B">B</option>
-                    <option value="C">C</option>
-                    <option value="D">D</option>
-                </select>
-                <select class="selector-select" id="class-selector">
-                    <option value="">Select Class</option>
-                    <option value="Math 7A">Math 7A</option>
-                    <option value="Science 8B">Science 8B</option>
-                    <option value="English 9C">English 9C</option>
-                    <option value="History 10D">History 10D</option>
                 </select>
                 <button class="quick-action-btn" onclick="markAllPresent()">Mark All Present</button>
             </div>
@@ -470,7 +446,6 @@
                 <option value="Present">Mark Selected as Present</option>
                 <option value="Absent">Mark Selected as Absent</option>
                 <option value="Late">Mark Selected as Late</option>
-                <option value="Excused">Mark Selected as Excused</option>
             </select>
             <button class="bulk-action-btn" onclick="applyBulkAction()">Apply</button>
         </div>
@@ -497,20 +472,83 @@
     </div>
 
     <script>
-        // Updated student data with Grade 7-12
-        const students = [
-            { id: 'STU-001', name: 'Juan Dela Cruz', class: 'Math 7A', photo: 'https://via.placeholder.com/40', status: 'Present', notes: '', gradeLevel: 'Grade 7', subject: 'Math', section: 'A' },
-            { id: 'STU-002', name: 'Maria Santos', class: 'Science 8B', photo: 'https://via.placeholder.com/40', status: 'Absent', notes: 'Sick', gradeLevel: 'Grade 8', subject: 'Science', section: 'B' },
-            { id: 'STU-003', name: 'Pedro Penduko', class: 'English 9C', photo: 'https://via.placeholder.com/40', status: 'Late', notes: 'Traffic', gradeLevel: 'Grade 9', subject: 'English', section: 'C' },
-            { id: 'STU-004', name: 'Anna Reyes', class: 'History 10D', photo: 'https://via.placeholder.com/40', status: 'Present', notes: '', gradeLevel: 'Grade 10', subject: 'History', section: 'D' },
-            { id: 'STU-005', name: 'Carlos Luna', class: 'Math 7A', photo: 'https://via.placeholder.com/40', status: 'Excused', notes: 'Family Emergency', gradeLevel: 'Grade 7', subject: 'Math', section: 'A' },
-            { id: 'STU-006', name: 'Sofia Cruz', class: 'Science 8B', photo: 'https://via.placeholder.com/40', status: 'Present', notes: '', gradeLevel: 'Grade 8', subject: 'Science', section: 'B' },
-            { id: 'STU-007', name: 'Miguel Tan', class: 'English 9C', photo: 'https://via.placeholder.com/40', status: 'Present', notes: '', gradeLevel: 'Grade 9', subject: 'English', section: 'C' },
-            { id: 'STU-008', name: 'Luz Garcia', class: 'History 10D', photo: 'https://via.placeholder.com/40', status: 'Absent', notes: 'No Reason', gradeLevel: 'Grade 10', subject: 'History', section: 'D' }
+        // Data from Student Management
+        const classes = [
+            {
+                id: 1,
+                code: 'MATH-101-A',
+                sectionName: 'Diamond Section',
+                subject: 'Mathematics',
+                gradeLevel: 'Grade 7',
+                room: 'Room 201',
+                attendancePercentage: 10,
+                schedule: {
+                    monday: { start: '08:00', end: '09:30' },
+                    wednesday: { start: '08:00', end: '09:30' },
+                    friday: { start: '08:00', end: '09:30' }
+                },
+                status: 'active',
+                students: [
+                    { id: 1, firstName: 'John', lastName: 'Doe', email: 'john.doe@email.com' },
+                    { id: 2, firstName: 'Jane', lastName: 'Smith', email: 'jane.smith@email.com' },
+                    { id: 3, firstName: 'Mike', lastName: 'Johnson', email: 'mike.johnson@email.com' }
+                ]
+            },
+            {
+                id: 2,
+                code: 'SCI-201-B',
+                sectionName: 'Einstein Section',
+                subject: 'Science',
+                gradeLevel: 'Grade 10',
+                room: 'Lab 1',
+                attendancePercentage: 15,
+                schedule: {
+                    tuesday: { start: '10:00', end: '11:30' },
+                    thursday: { start: '10:00', end: '11:30' }
+                },
+                status: 'active',
+                students: [
+                    { id: 4, firstName: 'Alice', lastName: 'Brown', email: 'alice.brown@email.com' },
+                    { id: 5, firstName: 'Bob', lastName: 'Wilson', email: 'bob.wilson@email.com' }
+                ]
+            },
+            {
+                id: 3,
+                code: 'ENG-301-C',
+                sectionName: 'Shakespeare Section',
+                subject: 'English Literature',
+                gradeLevel: 'Grade 12',
+                room: 'Room 305',
+                attendancePercentage: 20,
+                schedule: {
+                    monday: { start: '14:00', end: '15:30' },
+                    wednesday: { start: '14:00', end: '15:30' }
+                },
+                status: 'inactive',
+                students: [
+                    { id: 6, firstName: 'Carol', lastName: 'Davis', email: 'carol.davis@email.com' },
+                    { id: 7, firstName: 'David', lastName: 'Miller', email: 'david.miller@email.com' },
+                    { id: 8, firstName: 'Emma', lastName: 'Garcia', email: 'emma.garcia@email.com' },
+                    { id: 9, firstName: 'Frank', lastName: 'Rodriguez', email: 'frank.rodriguez@email.com' }
+                ]
+            }
         ];
 
+        // Student data aligned with Student Management
+        const students = classes.flatMap(cls => cls.students.map(student => ({
+            id: student.id,
+            name: `${student.firstName} ${student.lastName}`,
+            class: cls.subject,
+            photo: student.photo || 'https://via.placeholder.com/40',
+            status: 'Present', // Default for initialization
+            notes: '',
+            gradeLevel: cls.gradeLevel,
+            subject: cls.subject,
+            section: cls.sectionName
+        })));
+
         let attendanceData = {};
-        let today = '2025-06-27';
+        let today = '2025-07-10';
 
         // Initialize attendance data for today
         if (!attendanceData[today]) {
@@ -520,18 +558,53 @@
             });
         }
 
+        // Populate dropdowns with data from classes
+        function populateDropdowns() {
+            const gradeLevelSelector = document.getElementById('gradeLevelSelector');
+            const classSelector = document.getElementById('classSelector');
+            const sectionSelector = document.getElementById('sectionSelector');
+
+            // Populate grade levels
+            const gradeLevels = [...new Set(classes.map(c => c.gradeLevel))];
+            gradeLevelSelector.innerHTML = '<option value="">All Grade Levels</option>';
+            gradeLevels.forEach(grade => {
+                const option = document.createElement('option');
+                option.value = grade;
+                option.textContent = grade;
+                gradeLevelSelector.appendChild(option);
+            });
+
+            // Populate subjects
+            const subjects = [...new Set(classes.map(c => c.subject))];
+            classSelector.innerHTML = '<option value="">All Subject</option>';
+            subjects.forEach(subject => {
+                const option = document.createElement('option');
+                option.value = subject;
+                option.textContent = subject;
+                classSelector.appendChild(option);
+            });
+
+            // Populate sections
+            const sections = [...new Set(classes.map(c => c.sectionName))];
+            sectionSelector.innerHTML = '<option value="">All Sections</option>';
+            sections.forEach(section => {
+                const option = document.createElement('option');
+                option.value = section;
+                option.textContent = section;
+                sectionSelector.appendChild(option);
+            });
+        }
+
         // Update stats
         function updateStats() {
             const gradeLevelFilter = gradeLevelSelector.value;
             const classFilter = classSelector.value;
             const sectionFilter = sectionSelector.value;
-            const specificClassFilter = classSelectorSpecific.value;
             const filteredStudents = students.filter(s => {
                 const matchesGradeLevel = gradeLevelFilter ? s.gradeLevel === gradeLevelFilter : true;
                 const matchesClass = classFilter ? s.subject === classFilter : true;
                 const matchesSection = sectionFilter ? s.section === sectionFilter : true;
-                const matchesSpecificClass = specificClassFilter ? s.class === specificClassFilter : true;
-                return matchesGradeLevel && matchesClass && matchesSection && matchesSpecificClass;
+                return matchesGradeLevel && matchesClass && matchesSection;
             });
 
             const total = filteredStudents.length;
@@ -551,17 +624,15 @@
             const gradeLevelFilter = gradeLevelSelector.value;
             const classFilter = classSelector.value;
             const sectionFilter = sectionSelector.value;
-            const specificClassFilter = classSelectorSpecific.value;
             const filteredStudents = students.filter(s => {
                 const matchesGradeLevel = gradeLevelFilter ? s.gradeLevel === gradeLevelFilter : true;
                 const matchesClass = classFilter ? s.subject === classFilter : true;
                 const matchesSection = sectionFilter ? s.section === sectionFilter : true;
-                const matchesSpecificClass = specificClassFilter ? s.class === specificClassFilter : true;
-                return matchesGradeLevel && matchesClass && matchesSection && matchesSpecificClass;
+                return matchesGradeLevel && matchesClass && matchesSection;
             });
 
             filteredStudents.forEach(student => {
-                const isNotesDisabled = attendanceData[today][student.id].status === 'Present' || attendanceData[today][student.id].status === 'Absent';
+                const isNotesDisabled = attendanceData[today][student.id].status === 'Present';
                 const row = document.createElement('tr');
                 row.innerHTML = `
                     <td><input type="checkbox" class="select-student" data-id="${student.id}"></td>
@@ -572,7 +643,6 @@
                             <option value="Present" ${attendanceData[today][student.id].status === 'Present' ? 'selected' : ''}>Present</option>
                             <option value="Absent" ${attendanceData[today][student.id].status === 'Absent' ? 'selected' : ''}>Absent</option>
                             <option value="Late" ${attendanceData[today][student.id].status === 'Late' ? 'selected' : ''}>Late</option>
-                            <option value="Excused" ${attendanceData[today][student.id].status === 'Excused' ? 'selected' : ''}>Excused</option>
                         </select>
                     </td>
                     <td>
@@ -596,8 +666,8 @@
                     const newStatus = select.value;
                     attendanceData[today][studentId].status = newStatus;
                     const notesSelect = tableBody.querySelector(`.notes-select[data-id="${studentId}"]`);
-                    notesSelect.disabled = newStatus === 'Present' || newStatus === 'Absent';
-                    if (newStatus === 'Present' || newStatus === 'Absent') {
+                    notesSelect.disabled = newStatus === 'Present';
+                    if (newStatus === 'Present') {
                         attendanceData[today][studentId].notes = '';
                         notesSelect.value = '';
                     }
@@ -628,13 +698,11 @@
             const gradeLevelFilter = gradeLevelSelector.value;
             const classFilter = classSelector.value;
             const sectionFilter = sectionSelector.value;
-            const specificClassFilter = classSelectorSpecific.value;
             const filteredStudents = students.filter(s => {
                 const matchesGradeLevel = gradeLevelFilter ? s.gradeLevel === gradeLevelFilter : true;
                 const matchesClass = classFilter ? s.subject === classFilter : true;
                 const matchesSection = sectionFilter ? s.section === sectionFilter : true;
-                const matchesSpecificClass = specificClassFilter ? s.class === specificClassFilter : true;
-                return matchesGradeLevel && matchesClass && matchesSection && matchesSpecificClass;
+                return matchesGradeLevel && matchesClass && matchesSection;
             });
 
             filteredStudents.forEach(student => {
@@ -655,7 +723,7 @@
             selected.forEach(checkbox => {
                 const studentId = checkbox.dataset.id;
                 attendanceData[today][studentId].status = action;
-                attendanceData[today][studentId].notes = (action === 'Present' || action === 'Absent') ? '' : 'No Reason';
+                attendanceData[today][studentId].notes = (action === 'Present') ? '' : 'No Reason';
             });
             renderTable();
         }
@@ -678,7 +746,6 @@
         const gradeLevelSelector = document.getElementById('gradeLevelSelector');
         const classSelector = document.getElementById('classSelector');
         const sectionSelector = document.getElementById('sectionSelector');
-        const classSelectorSpecific = document.getElementById('class-selector');
         const selectAllCheckbox = document.getElementById('select-all');
 
         // Event listeners
@@ -695,10 +762,12 @@
         gradeLevelSelector.addEventListener('change', renderTable);
         classSelector.addEventListener('change', renderTable);
         sectionSelector.addEventListener('change', renderTable);
-        classSelectorSpecific.addEventListener('change', renderTable);
 
-        // Initial render
-        renderTable();
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            populateDropdowns();
+            renderTable();
+        });
     </script>
 </body>
 </html>

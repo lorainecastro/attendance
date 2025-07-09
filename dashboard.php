@@ -3,9 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Teacher Dashboard 2 - Student Attendance System</title>
+    <title>Teacher Dashboard - Student Attendance System</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
     <style>
-        
         :root {
             /* Primary Colors */
             --primary-blue: #2563eb;
@@ -27,16 +28,16 @@
             --border-color: #e5e7eb;
             
             /* Additional Colors for Missing Variables */
-            --card-bg: #ffffff; /* Background for cards, using white for clean look */
-            --blackfont-color: #111827; /* Dark color for primary text */
-            --whitefont-color: #ffffff; /* White for text on colored backgrounds */
-            --grayfont-color: #6b7280; /* Medium gray for secondary text */
-            --primary-gradient: linear-gradient(135deg, #2563eb, #a855f7); /* Purple gradient for primary elements */
-            --secondary-gradient: linear-gradient(135deg, #ec4899, #f472b6); /* Pink gradient for secondary elements */
-            --primary-color: #2563eb; /* Matches primary-blue for consistency */
-            --primary-hover: #1d4ed8; /* Matches primary-blue-hover */
-            --inputfield-color: #f3f4f6; /* Light gray for input fields */
-            --inputfieldhover-color: #e5e7eb; /* Slightly darker gray for hover state */
+            --card-bg: #ffffff;
+            --blackfont-color: #111827;
+            --whitefont-color: #ffffff;
+            --grayfont-color: #6b7280;
+            --primary-gradient: linear-gradient(135deg, #2563eb, #a855f7);
+            --secondary-gradient: linear-gradient(135deg, #ec4899, #f472b6);
+            --primary-color: #2563eb;
+            --primary-hover: #1d4ed8;
+            --inputfield-color: #f3f4f6;
+            --inputfieldhover-color: #e5e7eb;
             
             /* Typography */
             --font-family: 'Inter', sans-serif;
@@ -311,6 +312,75 @@
             background: var(--primary-blue-hover);
             transform: translateY(-2px);
         }
+
+        /* Schedule Section */
+        .schedule-card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: var(--shadow-md);
+            margin-bottom: 20px;
+        }
+
+        .schedule-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .schedule-table th, .schedule-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .schedule-table th {
+            font-size: 14px;
+            color: var(--grayfont-color);
+            text-transform: uppercase;
+        }
+
+        .schedule-table td {
+            font-size: 14px;
+            color: var(--blackfont-color);
+        }
+
+        .status-badge {
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .status-badge.active {
+            background: var(--success-green);
+            color: var(--whitefont-color);
+        }
+
+        .status-badge.inactive {
+            background: var(--danger-red);
+            color: var(--whitefont-color);
+        }
+
+        .btn-info {
+            background: var(--primary-color);
+            color: var(--whitefont-color);
+            padding: 6px 12px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: var(--transition-normal);
+        }
+
+        .btn-info:hover {
+            background: var(--primary-hover);
+            transform: translateY(-2px);
+        }
+
+        .no-schedule {
+            color: var(--grayfont-color);
+            font-style: italic;
+        }
     </style>
 </head>
 <body>
@@ -334,10 +404,25 @@
         <div class="card">
             <div class="card-header">
                 <div>
-                    <div class="card-title">Total Students</div>
-                    <div class="card-value">150</div>
+                    <div class="card-title">Total Classes</div>
+                    <div class="card-value" id="totalClasses">3</div>
                 </div>
                 <div class="card-icon bg-purple">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 16 16">
+                        <path d="M3.5 2A1.5 1.5 0 0 1 5 0.5h6A1.5 1.5 0 0 1 12.5 2v10a1.5 1.5 0 0 1-1.5 1.5H5A1.5 1.5 0 0 1 3.5 12V2zm1.5-.5A.5.5 0 0 0 4.5 2v10a.5.5 0 0 0 .5.5h6a.5.5 0 0 0 .5-.5V2a.5.5 0 0 0-.5-.5H5z"/>
+                        <path d="M7 5.5a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-1a.5.5 0 0 1-.5-.5v-1z"/>
+                    </svg>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card">
+            <div class="card-header">
+                <div>
+                    <div class="card-title">Total Students</div>
+                    <div class="card-value" id="totalStudents">150</div>
+                </div>
+                <div class="card-icon bg-blue">
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 16 16">
                         <path d="M7 14s-1 0-1-1 1-4 5-4 5 3 5 4-1 1-1 1H7zm4-6a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"/>
                         <path fill-rule="evenodd" d="M5.216 14A2.238 2.238 0 0 1 5 13c0-1.355.68-2.75 1.936-3.72A6.325 6.325 0 0 0 5 9c-4 0-5 3-5 4s1 1 1 1h4.216z"/>
@@ -350,10 +435,10 @@
         <div class="card">
             <div class="card-header">
                 <div>
-                    <div class="card-title">Attendance Rate</div>
-                    <div class="card-value">92%</div>
+                    <div class="card-title">Today's Attendance Rate</div>
+                    <div class="card-value" id="todayAttendanceRate">94%</div>
                 </div>
-                <div class="card-icon bg-pink">
+                <div class="card-icon bg-green">
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 16 16">
                         <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
                         <path d="M10.97 4.97a.235.235 0 0 0-.02.022L7.477 9.417 5.384 7.323a.75.75 0 0 0-1.06 1.06L6.97 11.03a.75.75 0 0 0 1.079-.02l3.992-4.99a.75.75 0 0 0-1.071-1.05z"/>
@@ -365,27 +450,12 @@
         <div class="card">
             <div class="card-header">
                 <div>
-                    <div class="card-title">At-Risk Students</div>
-                    <div class="card-value">12</div>
+                    <div class="card-title">Students at Risk</div>
+                    <div class="card-value" id="atRiskStudents">12</div>
                 </div>
-                <div class="card-icon bg-blue">
+                <div class="card-icon bg-pink">
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 16 16">
                         <path d="M8 16a2 2 0 0 0 2-2H6a2 2 0 0 0 2 2zm.995-14.901a1 1 0 1 0-1.99 0A5.002 5.002 0 0 0 3 6c0 1.098-.5 6-2 7h14c-1.5-1-2-5.902-2-7 0-2.42-1.72-4.44-4.005-4.901z"/>
-                    </svg>
-                </div>
-            </div>
-        </div>
-        
-        <div class="card">
-            <div class="card-header">
-                <div>
-                    <div class="card-title">Absences This Week</div>
-                    <div class="card-value">45</div>
-                </div>
-                <div class="card-icon bg-green">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 16 16">
-                        <path d="M2 0a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2H2zm0 1h12a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1z"/>
-                        <path d="M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708z"/>
                     </svg>
                 </div>
             </div>
@@ -398,7 +468,6 @@
             <div class="chart-header">
                 <div class="chart-title">Attendance Trends</div>
                 <div class="chart-filter">
-                    <button class="filter-btn" data-period="day" data-chart="attendance">Day</button>
                     <button class="filter-btn active" data-period="week" data-chart="attendance">Week</button>
                     <button class="filter-btn" data-period="month" data-chart="attendance">Month</button>
                 </div>
@@ -410,15 +479,39 @@
         
         <div class="chart-card">
             <div class="chart-header">
-                <div class="chart-title">Total Student by Level</div>
+                <div class="chart-title">Attendance Status Distribution</div>
                 <div class="chart-filter">
-                    <button class="filter-btn" data-period="week" data-chart="grades">Week</button>
-                    <button class="filter-btn active" data-period="month" data-chart="grades">Month</button>
+                    <button class="filter-btn" data-period="week" data-chart="status">Week</button>
+                    <button class="filter-btn active" data-period="month" data-chart="status">Month</button>
                 </div>
             </div>
             <div>
-                <canvas id="grades-chart" style="height: 300px; width: 100%;"></canvas>
+                <canvas id="status-chart" style="height: 300px; width: 100%;"></canvas>
             </div>
+        </div>
+    </div>
+
+    <!-- Today's Schedule Section -->
+    <div class="schedule-card">
+        <div class="chart-header">
+            <div class="chart-title">Today's Schedule</div>
+        </div>
+        <div class="table-responsive">
+            <table class="schedule-table">
+                <thead>
+                    <tr>
+                        <th>Code</th>
+                        <th>Section Name</th>
+                        <th>Subject</th>
+                        <th>Room</th>
+                        <th>Time</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="scheduleTableBody">
+                </tbody>
+            </table>
         </div>
     </div>
 
@@ -436,17 +529,150 @@
         </div>
     </div>
 
-    <!-- Add Chart.js library -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
     <script>
-        // Wait for DOM to be fully loaded
-        document.addEventListener('DOMContentLoaded', function() {
-            // Attendance Trends Data
-            const attendanceData = {
-                day: {
-                    labels: ['8AM', '9AM', '10AM', '11AM', '12PM', '1PM', '2PM', '3PM'],
-                    values: [95, 93, 94, 92, 90, 91, 93, 94]
+        // Sample data for calculations
+        const classes = [
+            {
+                id: 1,
+                code: 'MATH-101-A',
+                sectionName: 'Diamond Section',
+                subject: 'Mathematics',
+                gradeLevel: 'Grade 7',
+                room: 'Room 201',
+                attendancePercentage: 10,
+                schedule: {
+                    monday: { start: '08:00', end: '09:30' },
+                    wednesday: { start: '08:00', end: '09:30' },
+                    saturday: { start: '09:00', end: '10:30' } // Added for demo
                 },
+                status: 'active',
+                students: [
+                    { id: 1, firstName: 'John', lastName: 'Doe', email: 'john.doe@email.com' },
+                    { id: 2, firstName: 'Jane', lastName: 'Smith', email: 'jane.smith@email.com' },
+                    { id: 3, firstName: 'Mike', lastName: 'Johnson', email: 'mike.johnson@email.com' }
+                ]
+            },
+            {
+                id: 2,
+                code: 'SCI-201-B',
+                sectionName: 'Einstein Section',
+                subject: 'Science',
+                gradeLevel: 'Grade 10',
+                room: 'Lab 1',
+                attendancePercentage: 15,
+                schedule: {
+                    tuesday: { start: '10:00', end: '11:30' },
+                    thursday: { start: '10:00', end: '11:30' }
+                },
+                status: 'active',
+                students: [
+                    { id: 4, firstName: 'Alice', lastName: 'Brown', email: 'alice.brown@email.com' },
+                    { id: 5, firstName: 'Bob', lastName: 'Wilson', email: 'bob.wilson@email.com' }
+                ]
+            },
+            {
+                id: 3,
+                code: 'ENG-301-C',
+                sectionName: 'Shakespeare Section',
+                subject: 'English Literature',
+                gradeLevel: 'Grade 12',
+                room: 'Room 305',
+                attendancePercentage: 20,
+                schedule: {
+                    monday: { start: '14:00', end: '15:30' },
+                    wednesday: { start: '14:00', end: '15:30' }
+                },
+                status: 'inactive',
+                students: [
+                    { id: 6, firstName: 'Carol', lastName: 'Davis', email: 'carol.davis@email.com' },
+                    { id: 7, firstName: 'David', lastName: 'Miller', email: 'david.miller@email.com' },
+                    { id: 8, firstName: 'Emma', lastName: 'Garcia', email: 'emma.garcia@email.com' },
+                    { id: 9, firstName: 'Frank', lastName: 'Rodriguez', email: 'frank.rodriguez@email.com' }
+                ]
+            }
+        ];
+
+        const attendanceRecords = [
+            { date: '2025-07-19', studentId: 1, status: 'present' },
+            { date: '2025-07-19', studentId: 2, status: 'absent' },
+            { date: '2025-07-19', studentId: 3, status: 'late' },
+            { date: '2025-07-18', studentId: 1, status: 'present' },
+            { date: '2025-07-18', studentId: 2, status: 'excused' },
+            { date: '2025-07-18', studentId: 3, status: 'absent' },
+            { date: '2025-07-17', studentId: 4, status: 'present' },
+            { date: '2025-07-17', studentId: 5, status: 'late' },
+            { date: '2025-07-16', studentId: 6, status: 'present' },
+            { date: '2025-07-16', studentId: 7, status: 'absent' },
+            { date: '2025-07-15', studentId: 8, status: 'present' },
+            { date: '2025-07-15', studentId: 9, status: 'excused' },
+            ...new Array(100).fill().map((_, i) => ({
+                date: `2025-07-${(i % 19) + 1 < 10 ? '0' : ''}${(i % 19) + 1}`,
+                studentId: (i % 9) + 1,
+                status: ['present', 'absent', 'late', 'excused'][Math.floor(Math.random() * 4)]
+            }))
+        ];
+
+        document.addEventListener('DOMContentLoaded', function() {
+            try {
+                updateDashboardStats();
+                initializeCharts();
+                renderTodaySchedule();
+
+                window.markAttendance = function() {
+                    alert('Mark Attendance functionality to be implemented');
+                };
+
+                window.viewClassDetails = function() {
+                    alert('View Class Details functionality to be implemented');
+                };
+
+                window.generateReport = function() {
+                    alert('Generate Report functionality to be implemented');
+                };
+
+                window.viewClass = function(classId) {
+                    const classItem = classes.find(c => c.id === classId);
+                    if (!classItem) return;
+                    
+                    const scheduleText = formatSchedule(classItem.schedule);
+                    
+                    alert(`
+Class Code: ${classItem.code}
+Section Name: ${classItem.sectionName}
+Subject: ${classItem.subject}
+Grade Level: ${classItem.gradeLevel}
+Room: ${classItem.room}
+Students: ${classItem.students.length}
+Attendance Percentage: ${classItem.attendancePercentage}%
+Schedule: ${scheduleText.replace(/<[^>]+>/g, '')}
+Status: ${classItem.status}
+Students List: ${classItem.students.map(s => `${s.firstName} ${s.lastName}`).join(', ')}
+                    `);
+                };
+            } catch (error) {
+                console.error('Error initializing dashboard:', error);
+                alert('An error occurred while loading the dashboard. Please try again later.');
+            }
+        });
+
+        function updateDashboardStats() {
+            const totalClasses = classes.length;
+            const totalStudents = classes.reduce((sum, c) => sum + c.students.length, 0);
+            const todayRecords = attendanceRecords.filter(r => r.date === '2025-07-19');
+            const todayPresent = todayRecords.filter(r => r.status === 'present').length;
+            const todayAttendanceRate = todayRecords.length > 0 ? (todayPresent / todayRecords.length) * 100 : 0;
+            const atRiskStudents = [...new Set(attendanceRecords
+                .filter(r => r.date >= '2025-07-01' && r.status === 'absent')
+                .map(r => r.studentId))].length || 12;
+
+            document.getElementById('totalClasses').textContent = totalClasses;
+            document.getElementById('totalStudents').textContent = totalStudents;
+            document.getElementById('todayAttendanceRate').textContent = `${Math.round(todayAttendanceRate)}%`;
+            document.getElementById('atRiskStudents').textContent = atRiskStudents;
+        }
+
+        function initializeCharts() {
+            const attendanceData = {
                 week: {
                     labels: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
                     values: [92, 90, 93, 91, 94]
@@ -457,19 +683,27 @@
                 }
             };
 
-            // Attendance by Grade Data
-            const gradesData = {
+            const statusData = {
                 week: {
-                    labels: ['Grade 8', 'Grade 9', 'Grade 10'],
-                    values: [48, 52, 45]
+                    labels: ['Present', 'Absent', 'Late', 'Excused'],
+                    values: [
+                        attendanceRecords.filter(r => r.date >= '2025-07-15' && r.date <= '2025-07-19' && r.status === 'present').length,
+                        attendanceRecords.filter(r => r.date >= '2025-07-15' && r.date <= '2025-07-19' && r.status === 'absent').length,
+                        attendanceRecords.filter(r => r.date >= '2025-07-15' && r.date <= '2025-07-19' && r.status === 'late').length,
+                        attendanceRecords.filter(r => r.date >= '2025-07-15' && r.date <= '2025-07-19' && r.status === 'excused').length
+                    ]
                 },
                 month: {
-                    labels: ['Grade 8', 'Grade 9', 'Grade 10'],
-                    values: [195, 210, 185]
+                    labels: ['Present', 'Absent', 'Late', 'Excused'],
+                    values: [
+                        attendanceRecords.filter(r => r.status === 'present').length,
+                        attendanceRecords.filter(r => r.status === 'absent').length,
+                        attendanceRecords.filter(r => r.status === 'late').length,
+                        attendanceRecords.filter(r => r.status === 'excused').length
+                    ]
                 }
             };
 
-            // Predictive Factors Data
             const factorsData = {
                 week: {
                     labels: ['Health Issue', 'Household Income', 'Transportation', 'Family Structure'],
@@ -481,7 +715,6 @@
                 }
             };
 
-            // Initialize Attendance Chart
             const attendanceChartCtx = document.getElementById('attendance-chart').getContext('2d');
             const attendanceChart = new Chart(attendanceChartCtx, {
                 type: 'line',
@@ -537,17 +770,14 @@
                 }
             });
 
-            // Initialize Grades Chart
-            const gradesChartCtx = document.getElementById('grades-chart').getContext('2d');
-            const gradesChart = new Chart(gradesChartCtx, {
+            const statusChartCtx = document.getElementById('status-chart').getContext('2d');
+            const statusChart = new Chart(statusChartCtx, {
                 type: 'doughnut',
                 data: {
-                    labels: gradesData.month.labels,
+                    labels: statusData.month.labels,
                     datasets: [{
-                        data: gradesData.month.values,
-                        backgroundColor: [
-                            '#6366f1', '#f43f5e', '#3b82f6'
-                        ],
+                        data: statusData.month.values,
+                        backgroundColor: ['#10b981', '#ef4444', '#f59e0b', '#6366f1'],
                         borderWidth: 0,
                         hoverOffset: 5
                     }]
@@ -575,7 +805,6 @@
                 }
             });
 
-            // Initialize Factors Chart
             const factorsChartCtx = document.getElementById('factors-chart').getContext('2d');
             const factorsChart = new Chart(factorsChartCtx, {
                 type: 'bar',
@@ -584,9 +813,7 @@
                     datasets: [{
                         label: 'Impact on Absenteeism (%)',
                         data: factorsData.month.values,
-                        backgroundColor: [
-                            '#6366f1', '#f43f5e', '#3b82f6', '#10b981'
-                        ],
+                        backgroundColor: ['#6366f1', '#f43f5e', '#3b82f6', '#10b981'],
                         borderWidth: 0
                     }]
                 },
@@ -627,17 +854,13 @@
                 }
             });
 
-            // Handle filter buttons clicks
             document.querySelectorAll('.filter-btn').forEach(button => {
                 button.addEventListener('click', function() {
-                    // Remove active class from all buttons in this filter group
                     this.parentNode.querySelectorAll('.filter-btn').forEach(btn => {
                         btn.classList.remove('active');
                     });
-                    // Add active class to clicked button
                     this.classList.add('active');
                     
-                    // Update chart based on selected period
                     const period = this.getAttribute('data-period');
                     const chartType = this.getAttribute('data-chart');
                     
@@ -645,10 +868,10 @@
                         attendanceChart.data.labels = attendanceData[period].labels;
                         attendanceChart.data.datasets[0].data = attendanceData[period].values;
                         attendanceChart.update();
-                    } else if (chartType === 'grades') {
-                        gradesChart.data.labels = gradesData[period].labels;
-                        gradesChart.data.datasets[0].data = gradesData[period].values;
-                        gradesChart.update();
+                    } else if (chartType === 'status') {
+                        statusChart.data.labels = statusData[period].labels;
+                        statusChart.data.datasets[0].data = statusData[period].values;
+                        statusChart.update();
                     } else if (chartType === 'factors') {
                         factorsChart.data.labels = factorsData[period].labels;
                         factorsChart.data.datasets[0].data = factorsData[period].values;
@@ -656,7 +879,65 @@
                     }
                 });
             });
-        });
+        }
+
+        function renderTodaySchedule() {
+            const tbody = document.getElementById('scheduleTableBody');
+            const today = new Date('2025-07-19');
+            const dayName = today.toLocaleString('en-US', { weekday: 'long' }).toLowerCase();
+            const filteredClasses = classes.filter(c => c.schedule[dayName]);
+
+            tbody.innerHTML = '';
+
+            if (filteredClasses.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" class="no-schedule">No classes scheduled today</td></tr>';
+                return;
+            }
+
+            filteredClasses.forEach(classItem => {
+                const schedule = classItem.schedule[dayName];
+                const time = `${formatTime(schedule.start)} - ${formatTime(schedule.end)}`;
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${classItem.code}</td>
+                    <td>${classItem.sectionName}</td>
+                    <td>${classItem.subject}</td>
+                    <td>${classItem.room}</td>
+                    <td>${time}</td>
+                    <td><span class="status-badge ${classItem.status}">${classItem.status}</span></td>
+                    <td>
+                        <button class="btn btn-sm btn-info" onclick="viewClass(${classItem.id})">
+                            <i class="fas fa-eye"></i> View
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        function formatSchedule(schedule) {
+            if (!schedule || Object.keys(schedule).length === 0) {
+                return '<span class="no-schedule">No schedule set</span>';
+            }
+            
+            return Object.entries(schedule).map(([day, times]) => {
+                const dayName = capitalizeFirst(day);
+                return `<div class="schedule-item">${dayName}: ${formatTime(times.start)} - ${formatTime(times.end)}</div>`;
+            }).join('');
+        }
+
+        function formatTime(time) {
+            if (!time) return '';
+            const [hours, minutes] = time.split(':');
+            const hourNum = parseInt(hours);
+            const period = hourNum >= 12 ? 'PM' : 'AM';
+            const displayHour = hourNum % 12 || 12;
+            return `${displayHour}:${minutes} ${period}`;
+        }
+
+        function capitalizeFirst(str) {
+            return str.charAt(0).toUpperCase() + str.slice(1);
+        }
     </script>
 </body>
 </html>

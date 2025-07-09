@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Attendance System Flowchart</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10.9.1/dist/mermaid.min.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .mermaid-container {
+            max-width: 100%;
+            overflow: auto;
+            padding: 1.5rem;
+            border-radius: 0.75rem;
+            background: #ffffff;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            transition: transform 0.2s;
+        }
+        .mermaid-container:hover {
+            transform: translateY(-2px);
+        }
+        .nav-btn {
+            transition: background-color 0.2s, transform 0.2s;
+        }
+        .nav-btn:hover {
+            background-color: #2563eb;
+            transform: scale(1.05);
+        }
+    </style>
+</head>
+<body class="bg-gray-100 flex flex-col min-h-screen">
+    <header class="bg-blue-600 text-white py-4 shadow-md">
+        <div class="container mx-auto px-4">
+            <h1 class="text-xl md:text-2xl font-bold">San Rafael National Trade School</h1>
+            <p class="text-sm">Attendance Monitoring System Flowchart</p>
+        </div>
+    </header>
+
+    <main class="flex-grow container mx-auto px-4 py-8">
+        <div class="bg-white p-6 rounded-lg shadow-md">
+            <div class="flex flex-wrap gap-2 mb-4">
+                <button onclick="scrollToSection('auth')" class="nav-btn bg-blue-500 text-white px-3 py-1 rounded-lg text-sm" aria-label="Scroll to Authentication section">Authentication</button>
+                <button onclick="scrollToSection('dashboard')" class="nav-btn bg-blue-500 text-white px-3 py-1 rounded-lg text-sm" aria-label="Scroll to Dashboard section">Dashboard</button>
+                <button onclick="scrollToSection('class')" class="nav-btn bg-blue-500 text-white px-3 py-1 rounded-lg text-sm" aria-label="Scroll to Class Management section">Classes</button>
+                <button onclick="scrollToSection('student')" class="nav-btn bg-blue-500 text-white px-3 py-1 rounded-lg text-sm" aria-label="Scroll to Student Management section">Students</button>
+                <button onclick="scrollToSection('attendance')" class="nav-btn bg-blue-500 text-white px-3 py-1 rounded-lg text-sm" aria-label="Scroll to Attendance Tracking section">Attendance</button>
+                <button onclick="scrollToSection('analytics')" class="nav-btn bg-blue-500 text-white px-3 py-1 rounded-lg text-sm" aria-label="Scroll to Analytics section">Analytics</button>
+                <button onclick="scrollToSection('recommend')" class="nav-btn bg-blue-500 text-white px-3 py-1 rounded-lg text-sm" aria-label="Scroll to Recommendations section">Recommendations</button>
+                <button onclick="scrollToSection('report')" class="nav-btn bg-blue-500 text-white px-3 py-1 rounded-lg text-sm" aria-label="Scroll to Report Generation section">Reports</button>
+            </div>
+            <div class="mermaid-container">
+                <div id="mermaid-flowchart" class="mermaid">
+                    graph TD
+                        subgraph Authentication
+                            A[Start] --> B[Sign-Up Page]
+                            B -->|Register| C[Sign-In Page]
+                            C -->|Login| D[Teacher Dashboard]
+                            C -->|Logout| L[Settings/Logout]
+                            L --> C
+                        end
+                        subgraph Dashboard
+                            D -->|Manage Classes| E[Class Management Page]
+                            D -->|Manage Students| F[Student Management Page]
+                            D -->|Mark Attendance| G[Attendance Tracking Page]
+                            D -->|View Analytics| H[Analytics Dashboard]
+                            D -->|View Recommendations| J[Recommendation Interface]
+                            D -->|Generate Reports| K[Report Generation Page]
+                        end
+                        subgraph Class Management
+                            E -->|View/Add/Edit| E1[Class List]
+                            E1 --> D
+                        end
+                        subgraph Student Management
+                            F -->|View/Add/Edit| F1[Student List]
+                            F1 -->|View| I[Student Dashboard]
+                            F --> D
+                        end
+                        subgraph Attendance Tracking
+                            G -->|Mark Attendance| G1[Attendance Grid]
+                            G1 --> D
+                        end
+                        subgraph Analytics
+                            H -->|View Trends| H1[Charts & Statistics]
+                            H1 --> D
+                        end
+                        subgraph Recommendations
+                            J -->|View Suggestions| J1[Recommendation List]
+                            J1 -->|View| I
+                            J1 --> D
+                        end
+                        subgraph Student Dashboard
+                            I -->|View Data| I1[Student Summary]
+                            I1 -->|Back| F
+                            I --> D
+                        end
+                        subgraph Report Generation
+                            K -->|Generate| K1[Preview Report]
+                            K1 --> D
+                        end
+                        style Authentication fill:#dbeafe,stroke:#3b82f6,stroke-width:2px,rx:6px,ry:6px
+                        style Dashboard fill:#d1fae5,stroke:#10b981,stroke-width:2px,rx:6px,ry:6px
+                        style Class Management fill:#d1fae5,stroke:#10b981,stroke-width:2px,rx:6px,ry:6px
+                        style Student Management fill:#d1fae5,stroke:#10b981,stroke-width:2px,rx:6px,ry:6px
+                        style Attendance Tracking fill:#d1fae5,stroke:#10b981,stroke-width:2px,rx:6px,ry:6px
+                        style Analytics fill:#fef3c7,stroke:#f59e0b,stroke-width:2px,rx:6px,ry:6px
+                        style Recommendations fill:#fef3c7,stroke:#f59e0b,stroke-width:2px,rx:6px,ry:6px
+                        style Student Dashboard fill:#fef3c7,stroke:#f59e0b,stroke-width:2px,rx:6px,ry:6px
+                        style Report Generation fill:#fef3c7,stroke:#f59e0b,stroke-width:2px,rx:6px,ry:6px
+                </div>
+                <div class="mt-4 p-4 bg-gray-50 rounded-lg">
+                    <h3 class="text-sm font-medium text-gray-900">Legend</h3>
+                    <p class="text-xs text-gray-600">
+                        <span class="inline-block w-3 h-3 bg-blue-100 mr-2"></span>Blue: Authentication<br>
+                        <span class="inline-block w-3 h-3 bg-green-100 mr-2"></span>Green: Dashboard & Core Actions<br>
+                        <span class="inline-block w-3 h-3 bg-yellow-100 mr-2"></span>Orange: Analytics & Reports
+                    </p>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer class="bg-blue-800 text-white py-4">
+        <div class="container mx-auto px-4 text-center text-sm">
+            <p>© 2025 San Rafael National Trade School. All rights reserved.</p>
+            <p class="mt-1">
+                <a href="#" class="underline hover:text-gray-200">Privacy Policy</a> | 
+                <a href="#" class="underline hover:text-gray-200">Contact Support</a>
+            </p>
+        </div>
+    </footer>
+
+    <script>
+        // Initialize Mermaid
+        mermaid.initialize({
+            startOnLoad: true,
+            theme: 'base',
+            flowchart: { 
+                curve: 'basis',
+                nodeSpacing: 40,
+                rankSpacing: 50
+            },
+            themeVariables: {
+                primaryColor: '#3b82f6',
+                secondaryColor: '#10b981',
+                tertiaryColor: '#f59e0b',
+                lineColor: '#4b5563',
+                fontSize: '13px',
+                fontFamily: 'Inter, sans-serif'
+            }
+        });
+
+        // Scroll to Section
+        function scrollToSection(section) {
+            const mermaidDiv = document.getElementById('mermaid-flowchart');
+            mermaidDiv.scrollIntoView({ behavior: 'smooth' });
+            const nodes = document.querySelectorAll(`g[id*="${section}"]`);
+            nodes.forEach(node => {
+                node.style.transition = 'stroke 0.3s';
+                node.style.stroke = '#ff0000';
+                setTimeout(() => node.style.stroke = '', 2000);
+            });
+        }
+    </script>
+</body>
+</html>

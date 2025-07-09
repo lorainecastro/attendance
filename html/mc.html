@@ -1,0 +1,1426 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Class Management System</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        :root {
+            --primary-color: #3b82f6;
+            --primary-dark: #2563eb;
+            --secondary-color: #64748b;
+            --success-color: #10b981;
+            --warning-color: #f59e0b;
+            --danger-color: #ef4444;
+            --background-color: #f8fafc;
+            --card-background: #ffffff;
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --border-color: #e2e8f0;
+            --shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            --border-radius: 0.5rem;
+            --spacing-xs: 0.25rem;
+            --spacing-sm: 0.5rem;
+            --spacing-md: 1rem;
+            --spacing-lg: 1.5rem;
+            --spacing-xl: 2rem;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: var(--background-color);
+            color: var(--text-primary);
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: var(--spacing-xl);
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: var(--spacing-xl);
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: var(--primary-color);
+            margin-bottom: var(--spacing-sm);
+        }
+
+        .header h1 i {
+            margin-right: var(--spacing-sm);
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            color: var(--text-secondary);
+        }
+
+        .controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: var(--spacing-xl);
+            flex-wrap: wrap;
+            gap: var(--spacing-md);
+        }
+
+        .controls-left {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-md);
+            flex-wrap: wrap;
+        }
+
+        .controls-right {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-md);
+        }
+
+        .search-container {
+            position: relative;
+        }
+
+        .search-input {
+            padding-left: 2.5rem;
+            width: 250px;
+        }
+
+        .search-icon {
+            position: absolute;
+            left: 0.75rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-secondary);
+        }
+
+        .form-input, .form-select {
+            padding: 0.75rem 1rem;
+            border: 2px solid var(--border-color);
+            border-radius: var(--border-radius);
+            font-size: 0.875rem;
+            transition: all 0.2s;
+            background-color: var(--card-background);
+        }
+
+        .form-input:focus, .form-select:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+
+        .filter-select {
+            min-width: 150px;
+        }
+
+        .view-toggle {
+            display: flex;
+            border: 2px solid var(--border-color);
+            border-radius: var(--border-radius);
+            overflow: hidden;
+        }
+
+        .view-btn {
+            padding: 0.75rem 1rem;
+            border: none;
+            background-color: var(--card-background);
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .view-btn.active {
+            background-color: var(--primary-color);
+            color: white;
+        }
+
+        .view-btn:hover:not(.active) {
+            background-color: var(--background-color);
+        }
+
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: var(--border-radius);
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            text-decoration: none;
+            font-size: 0.875rem;
+        }
+
+        .btn-primary {
+            background-color: var(--primary-color);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background-color: var(--primary-dark);
+        }
+
+        .btn-secondary {
+            background-color: var(--secondary-color);
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background-color: #475569;
+        }
+
+        .btn-sm {
+            padding: 0.5rem 1rem;
+            font-size: 0.75rem;
+        }
+
+        .class-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: var(--spacing-lg);
+        }
+
+        .class-card {
+            background-color: var(--card-background);
+            border-radius: var(--border-radius);
+            padding: var(--spacing-lg);
+            box-shadow: var(--shadow);
+            transition: all 0.2s;
+            border: 1px solid var(--border-color);
+        }
+
+        .class-card:hover {
+            box-shadow: var(--shadow-lg);
+            transform: translateY(-2px);
+        }
+
+        .class-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: var(--spacing-md);
+        }
+
+        .class-code {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            font-weight: 500;
+            margin-bottom: var(--spacing-xs);
+        }
+
+        .class-name {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .badge {
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 500;
+            text-align: center;
+        }
+
+        .badge-elementary {
+            background-color: #fef3c7;
+            color: #92400e;
+        }
+
+        .badge-high-school {
+            background-color: #dbeafe;
+            color: #1e40af;
+        }
+
+        .badge-college {
+            background-color: #f3e8ff;
+            color: #7c3aed;
+        }
+
+        .badge-active {
+            background-color: #d1fae5;
+            color: #065f46;
+        }
+
+        .badge-inactive {
+            background-color: #fee2e2;
+            color: #991b1b;
+        }
+
+        .class-stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: var(--spacing-md);
+            margin-bottom: var(--spacing-md);
+            padding: var(--spacing-md);
+            background-color: var(--background-color);
+            border-radius: var(--border-radius);
+        }
+
+        .stat-item {
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 1.125rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: var(--spacing-xs);
+        }
+
+        .stat-label {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+        }
+
+        .class-schedule {
+            margin-bottom: var(--spacing-md);
+        }
+
+        .schedule-text {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            padding: var(--spacing-sm);
+            background-color: var(--background-color);
+            border-radius: var(--border-radius);
+        }
+
+        .class-actions {
+            display: flex;
+            gap: var(--spacing-sm);
+        }
+
+        .table-container {
+            background-color: var(--card-background);
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow);
+            overflow: hidden;
+        }
+
+        .table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .table th,
+        .table td {
+            padding: 1rem;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .table th {
+            background-color: var(--background-color);
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .table tr:hover {
+            background-color: var(--background-color);
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+        }
+
+        .modal-content {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: var(--card-background);
+            padding: var(--spacing-xl);
+            border-radius: var(--border-radius);
+            width: 90%;
+            max-width: 500px;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: var(--spacing-lg);
+        }
+
+        .modal-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: var(--text-secondary);
+        }
+
+        .form-group {
+            margin-bottom: var(--spacing-md);
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: var(--spacing-xs);
+            font-weight: 500;
+            color: var(--text-primary);
+        }
+
+        .form-input,
+        .form-select {
+            width: 100%;
+        }
+
+        .form-actions {
+            display: flex;
+            gap: var(--spacing-md);
+            justify-content: flex-end;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: var(--spacing-md);
+            }
+
+            .header h1 {
+                font-size: 2rem;
+            }
+
+            .controls {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .controls-left,
+            .controls-right {
+                justify-content: center;
+            }
+
+            .search-input {
+                width: 100%;
+            }
+
+            .class-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .table-container {
+                overflow-x: auto;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1><i class="fas fa-graduation-cap"></i> Class Management System</h1>
+            <p>Manage your classes, schedules, and student information efficiently</p>
+        </div>
+
+        <div class="controls">
+            <div class="controls-left">
+                <div class="search-container">
+                    <input type="text" class="form-input search-input" placeholder="Search classes..." id="searchInput">
+                    <i class="fas fa-search search-icon"></i>
+                </div>
+                <select class="form-select filter-select" id="levelFilter">
+                    <option value="">All Levels</option>
+                    <option value="elementary">Elementary</option>
+                    <option value="high-school">High School</option>
+                    <option value="college">College</option>
+                </select>
+                <select class="form-select filter-select" id="statusFilter">
+                    <option value="">All Status</option>
+                    <option value="active">Active</option>
+                    <option value="inactive">Inactive</option>
+                </select>
+            </div>
+            <div class="controls-right">
+                <div class="view-toggle">
+                    <button class="view-btn active" onclick="switchView('grid')">
+                        <i class="fas fa-th-large"></i>
+                    </button>
+                    <button class="view-btn" onclick="switchView('table')">
+                        <i class="fas fa-list"></i>
+                    </button>
+                </div>
+                <button class="btn btn-primary" onclick="openModal()">
+                    <i class="fas fa-plus"></i> Add Class
+                </button>
+            </div>
+        </div>
+
+        <!-- Grid View -->
+        <div id="gridView" class="class-grid">
+            <div class="class-card">
+                <div class="class-card-header">
+                    <div>
+                        <div class="class-code">MATH-101-A</div>
+                        <h3 class="class-name">Advanced Mathematics</h3>
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: var(--spacing-xs);">
+                        <span class="badge badge-high-school">High School</span>
+                        <span class="badge badge-active">Active</span>
+                    </div>
+                </div>
+                <div class="class-stats">
+                    <div class="stat-item">
+                        <div class="stat-value">32</div>
+                        <div class="stat-label">Students</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">Grade 11</div>
+                        <div class="stat-label">Level</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">Room 201</div>
+                        <div class="stat-label">Location</div>
+                    </div>
+                </div>
+                <div class="class-schedule">
+                    <p class="schedule-text">Mon, Wed, Fri | 9:00 AM - 10:30 AM</p>
+                </div>
+                <div class="class-actions">
+                    <button class="btn btn-sm btn-primary" onclick="editClass(1)">
+                        <i class="fas fa-edit"></i> Edit
+                    </button>
+                    <button class="btn btn-sm btn-secondary" onclick="viewClass(1)">
+                        <i class="fas fa-eye"></i> View
+                    </button>
+                    <button class="btn btn-sm btn-secondary" onclick="deleteClass(1)">
+                        <i class="fas fa-trash"></i> Delete
+                    </button>
+                </div>
+            </div>
+
+            <div class="class-card">
+                <div class="class-card-header">
+                    <div>
+                        <div class="class-code">ENG-201-B</div>
+                        <h3 class="class-name">English Literature</h3>
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: var(--spacing-xs);">
+                        <span class="badge badge-high-school">High School</span>
+                        <span class="badge badge-active">Active</span>
+                    </div>
+                </div>
+                <div class="class-stats">
+                    <div class="stat-item">
+                        <div class="stat-value">28</div>
+                        <div class="stat-label">Students</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">Grade 12</div>
+                        <div class="stat-label">Level</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">Room 105</div>
+                        <div class="stat-label">Location</div>
+                    </div>
+                </div>
+                <div class="class-schedule">
+                    <p class="schedule-text">Tue, Thu | 10:00 AM - 11:30 AM</p>
+                </div>
+                <div class="class-actions">
+                    <button class="btn btn-sm btn-primary" onclick="editClass(2)">
+                        <i class="fas fa-edit"></i> Edit
+                    </button>
+                    <button class="btn btn-sm btn-secondary" onclick="viewClass(2)">
+                        <i class="fas fa-eye"></i> View
+                    </button>
+                    <button class="btn btn-sm btn-secondary" onclick="deleteClass(2)">
+                        <i class="fas fa-trash"></i> Delete
+                    </button>
+                </div>
+            </div>
+
+            <div class="class-card">
+                <div class="class-card-header">
+                    <div>
+                        <div class="class-code">SCI-301-ADV</div>
+                        <h3 class="class-name">Physics Laboratory</h3>
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: var(--spacing-xs);">
+                        <span class="badge badge-college">College</span>
+                        <span class="badge badge-active">Active</span>
+                    </div>
+                </div>
+                <div class="class-stats">
+                    <div class="stat-item">
+                        <div class="stat-value">24</div>
+                        <div class="stat-label">Students</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">3rd Year</div>
+                        <div class="stat-label">Level</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">Lab 301</div>
+                        <div class="stat-label">Location</div>
+                    </div>
+                </div>
+                <div class="class-schedule">
+                    <p class="schedule-text">Mon, Wed | 2:00 PM - 5:00 PM</p>
+                </div>
+                <div class="class-actions">
+                    <button class="btn btn-sm btn-primary" onclick="editClass(3)">
+                        <i class="fas fa-edit"></i> Edit
+                    </button>
+                    <button class="btn btn-sm btn-secondary" onclick="viewClass(3)">
+                        <i class="fas fa-eye"></i> View
+                    </button>
+                    <button class="btn btn-sm btn-secondary" onclick="deleteClass(3)">
+                        <i class="fas fa-trash"></i> Delete
+                    </button>
+                </div>
+            </div>
+
+            <div class="class-card">
+                <div class="class-card-header">
+                    <div>
+                        <div class="class-code">ELEM-MATH-101</div>
+                        <h3 class="class-name">Basic Mathematics</h3>
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: var(--spacing-xs);">
+                        <span class="badge badge-elementary">Elementary</span>
+                        <span class="badge badge-active">Active</span>
+                    </div>
+                </div>
+                <div class="class-stats">
+                    <div class="stat-item">
+                        <div class="stat-value">25</div>
+                        <div class="stat-label">Students</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">Grade 4</div>
+                        <div class="stat-label">Level</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">Room A12</div>
+                        <div class="stat-label">Location</div>
+                    </div>
+                </div>
+                <div class="class-schedule">
+                    <p class="schedule-text">Mon, Tue, Thu | 8:00 AM - 9:30 AM</p>
+                </div>
+                <div class="class-actions">
+                    <button class="btn btn-sm btn-primary" onclick="editClass(4)">
+                        <i class="fas fa-edit"></i> Edit
+                    </button>
+                    <button class="btn btn-sm btn-secondary" onclick="viewClass(4)">
+                        <i class="fas fa-eye"></i> View
+                    </button>
+                    <button class="btn btn-sm btn-secondary" onclick="deleteClass(4)">
+                        <i class="fas fa-trash"></i> Delete
+                    </button>
+                </div>
+            </div>
+
+            <div class="class-card">
+                <div class="class-card-header">
+                    <div>
+                        <div class="class-code">HIST-501-WORLD</div>
+                        <h3 class="class-name">World History</h3>
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: var(--spacing-xs);">
+                        <span class="badge badge-high-school">High School</span>
+                        <span class="badge badge-inactive">Inactive</span>
+                    </div>
+                </div>
+                <div class="class-stats">
+                    <div class="stat-item">
+                        <div class="stat-value">30</div>
+                        <div class="stat-label">Students</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">Grade 12</div>
+                        <div class="stat-label">Level</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">Room 308</div>
+                        <div class="stat-label">Location</div>
+                    </div>
+                </div>
+                <div class="class-schedule">
+                    <p class="schedule-text">Tue, Thu, Fri | 1:00 PM - 2:30 PM</p>
+                </div>
+                <div class="class-actions">
+                    <button class="btn btn-sm btn-primary" onclick="editClass(5)">
+                        <i class="fas fa-edit"></i> Edit
+                    </button>
+                    <button class="btn btn-sm btn-secondary" onclick="viewClass(5)">
+                        <i class="fas fa-eye"></i> View
+                    </button>
+                    <button class="btn btn-sm btn-secondary" onclick="deleteClass(5)">
+                        <i class="fas fa-trash"></i> Delete
+                    </button>
+                </div>
+            </div>
+
+            <div class="class-card">
+                <div class="class-card-header">
+                    <div>
+                        <div class="class-code">CHEM-401-LAB</div>
+                        <h3 class="class-name">Chemistry Laboratory</h3>
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: var(--spacing-xs);">
+                        <span class="badge badge-college">College</span>
+                        <span class="badge badge-active">Active</span>
+                    </div>
+                </div>
+                <div class="class-stats">
+                    <div class="stat-item">
+                        <div class="stat-value">20</div>
+                        <div class="stat-label">Students</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">2nd Year</div>
+                        <div class="stat-label">Level</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">Lab 205</div>
+                        <div class="stat-label">Location</div>
+                    </div>
+                </div>
+                <div class="class-schedule">
+                    <p class="schedule-text">Wed, Fri | 3:00 PM - 6:00 PM</p>
+                </div>
+                <div class="class-actions">
+                    <button class="btn btn-sm btn-primary" onclick="editClass(6)">
+                        <i class="fas fa-edit"></i> Edit
+                    </button>
+                    <button class="btn btn-sm btn-secondary" onclick="viewClass(6)">
+                        <i class="fas fa-eye"></i> View
+                    </button>
+                    <button class="btn btn-sm btn-secondary" onclick="deleteClass(6)">
+                        <i class="fas fa-trash"></i> Delete
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Table View -->
+        <div id="tableView" class="table-container hidden">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>
+                            <input type="checkbox" id="selectAll" onchange="toggleSelectAll()">
+                        </th>
+                        <th>Class Code & Name</th>
+                        <th>Education Level</th>
+                        <th>Subject</th>
+                        <th>Schedule</th>
+                        <th>Room</th>
+                        <th>Students</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>
+                            <input type="checkbox" class="class-checkbox" data-class-id="1">
+                        </td>
+                        <td>
+                            <div>
+                                <div class="class-code">MATH-101-A</div>
+                                <div class="class-name">Advanced Mathematics</div>
+                            </div>
+                        </td>
+                        <td><span class="badge badge-high-school">High School</span></td>
+                        <td>Mathematics</td>
+                        <td>Mon, Wed, Fri | 9:00 AM - 10:30 AM</td>
+                        <td>Room 201</td>
+                        <td>32</td>
+                        <td><span class="badge badge-active">Active</span></td>
+                        <td>
+                            <div class="class-actions">
+                                <button class="btn btn-sm btn-primary" onclick="editClass(1)">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button class="btn btn-sm btn-secondary" onclick="viewClass(1)">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                                <button class="btn btn-sm btn-secondary" onclick="deleteClass(1)">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>
+                            <input type="checkbox" class="class-checkbox" data-class-id="2">
+                        </td>
+                        <td>
+                            <div>
+                                <div class="class-code">ENG-201-B</div>
+                                <div class="class-name">English Literature</div>
+                            </div>
+                        </td>
+                        <td><span class="badge badge-high-school">High School</span></td>
+                        <td>English</td>
+                        <td>Tue, Thu | 10:00 AM - 11:30 AM</td>
+                        <td>Room 105</td>
+                        <td>28</td>
+                        <td><span class="badge badge-active">Active</span></td>
+                        <td>
+                            <div class="class-actions">
+                                <button class="btn btn-sm btn-primary" onclick="editClass(2)">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button class="btn btn-sm btn-secondary" onclick="viewClass(2)">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                                <button class="btn btn-sm btn-secondary" onclick="deleteClass(2)">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>
+                            <input type="checkbox" class="class-checkbox" data-class-id="3">
+                        </td>
+                        <td>
+                            <div>
+                                <div class="class-code">SCI-301-ADV</div>
+                                <div class="class-name">Physics Laboratory</div>
+                            </div>
+                        </td>
+                        <td><span class="badge badge-college">College</span></td>
+                        <td>Physics</td>
+                        <td>Mon, Wed | 2:00 PM - 5:00 PM</td>
+                        <td>Lab 301</td>
+                        <td>24</td>
+                        <td><span class="badge badge-active">Active</span></td>
+                        <td>
+                            <div class="class-actions">
+                                <button class="btn btn-sm btn-primary" onclick="editClass(3)">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button class="btn btn-sm btn-secondary" onclick="viewClass(3)">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                                <button class="btn btn-sm btn-secondary" onclick="deleteClass(3)">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>
+                            <input type="checkbox" class="class-checkbox" data-class-id="4">
+                        </td>
+                        <td>
+                            <div>
+                                <div class="class-code">ELEM-MATH-101</div>
+                                <div class="class-name">Basic Mathematics</div>
+                            </div>
+                        </td>
+                        <td><span class="badge badge-elementary">Elementary</span></td>
+                        <td>Mathematics</td>
+                        <td>Mon, Tue, Thu | 8:00 AM - 9:30 AM</td>
+                        <td>Room A12</td>
+                        <td>25</td>
+                        <td><span class="badge badge-active">Active</span></td>
+                        <td>
+                            <div class="class-actions">
+                                <button class="btn btn-sm btn-primary" onclick="editClass(4)">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button class="btn btn-sm btn-secondary" onclick="viewClass(4)">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                                <button class="btn btn-sm btn-secondary" onclick="deleteClass(4)">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>
+                            <input type="checkbox" class="class-checkbox" data-class-id="5">
+                        </td>
+                        <td>
+                            <div>
+                                <div class="class-code">HIST-501-WORLD</div>
+                                <div class="class-name">World History</div>
+                            </div>
+                        </td>
+                        <td><span class="badge badge-high-school">High School</span></td>
+                        <td>History</td>
+                        <td>Tue, Thu, Fri | 1:00 PM - 2:30 PM</td>
+                        <td>Room 308</td>
+                        <td>30</td>
+                        <td><span class="badge badge-inactive">Inactive</span></td>
+                        <td>
+                            <div class="class-actions">
+                                <button class="btn btn-sm btn-primary" onclick="editClass(5)">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button class="btn btn-sm btn-secondary" onclick="viewClass(5)">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                                <button class="btn btn-sm btn-secondary" onclick="deleteClass(5)">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>
+                            <input type="checkbox" class="class-checkbox" data-class-id="6">
+                        </td>
+                        <td>
+                            <div>
+                                <div class="class-code">CHEM-401-LAB</div>
+                                <div class="class-name">Chemistry Laboratory</div>
+                            </div>
+                        </td>
+                        <td><span class="badge badge-college">College</span></td>
+                        <td>Chemistry</td>
+                        <td>Wed, Fri | 3:00 PM - 6:00 PM</td>
+                        <td>Lab 205</td>
+                        <td>20</td>
+                        <td><span class="badge badge-active">Active</span></td>
+                        <td>
+                            <div class="class-actions">
+                                <button class="btn btn-sm btn-primary" onclick="editClass(6)">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button class="btn btn-sm btn-secondary" onclick="viewClass(6)">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                                <button class="btn btn-sm btn-secondary" onclick="deleteClass(6)">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Add/Edit Class Modal -->
+    <div id="classModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title" id="modalTitle">Add New Class</h2>
+                <button class="close-btn" onclick="closeModal()">&times;</button>
+            </div>
+            <form id="classForm">
+                <div class="form-group">
+                    <label class="form-label" for="classCode">Class Code</label>
+                    <input type="text" class="form-input" id="classCode" required placeholder="e.g., MATH-101-A">
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="className">Class Name</label>
+                    <input type="text" class="form-input" id="className" required placeholder="e.g., Advanced Mathematics">
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="educationLevel">Education Level</label>
+                    <select class="form-select" id="educationLevel" required>
+                        <option value="">Select Level</option>
+                        <option value="elementary">Elementary</option>
+                        <option value="high-school">High School</option>
+                        <option value="college">College</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="subject">Subject</label>
+                    <input type="text" class="form-input" id="subject" required placeholder="e.g., Mathematics">
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="gradeLevel">Grade Level</label>
+                    <input type="text" class="form-input" id="gradeLevel" required placeholder="e.g., Grade 11">
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="room">Room</label>
+                    <input type="text" class="form-input" id="room" required placeholder="e.g., Room 201">
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="studentCount">Number of Students</label>
+                    <input type="number" class="form-input" id="studentCount" required min="1" placeholder="e.g., 32">
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="schedule">Schedule</label>
+                    <input type="text" class="form-input" id="schedule" required placeholder="e.g., Mon, Wed, Fri | 9:00 AM - 10:30 AM">
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="status">Status</label>
+                    <select class="form-select" id="status" required>
+                        <option value="">Select Status</option>
+                        <option value="active">Active</option>
+                        <option value="inactive">Inactive</option>
+                    </select>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Class</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- View Class Modal -->
+    <div id="viewModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">Class Details</h2>
+                <button class="close-btn" onclick="closeViewModal()">&times;</button>
+            </div>
+            <div id="viewContent">
+                <!-- Content will be populated by JavaScript -->
+            </div>
+            <div class="form-actions">
+                <button type="button" class="btn btn-secondary" onclick="closeViewModal()">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Sample data for classes
+        let classes = [
+            {
+                id: 1,
+                code: 'MATH-101-A',
+                name: 'Advanced Mathematics',
+                level: 'high-school',
+                subject: 'Mathematics',
+                gradeLevel: 'Grade 11',
+                room: 'Room 201',
+                studentCount: 32,
+                schedule: 'Mon, Wed, Fri | 9:00 AM - 10:30 AM',
+                status: 'active'
+            },
+            {
+                id: 2,
+                code: 'ENG-201-B',
+                name: 'English Literature',
+                level: 'high-school',
+                subject: 'English',
+                gradeLevel: 'Grade 12',
+                room: 'Room 105',
+                studentCount: 28,
+                schedule: 'Tue, Thu | 10:00 AM - 11:30 AM',
+                status: 'active'
+            },
+            {
+                id: 3,
+                code: 'SCI-301-ADV',
+                name: 'Physics Laboratory',
+                level: 'college',
+                subject: 'Physics',
+                gradeLevel: '3rd Year',
+                room: 'Lab 301',
+                studentCount: 24,
+                schedule: 'Mon, Wed | 2:00 PM - 5:00 PM',
+                status: 'active'
+            },
+            {
+                id: 4,
+                code: 'ELEM-MATH-101',
+                name: 'Basic Mathematics',
+                level: 'elementary',
+                subject: 'Mathematics',
+                gradeLevel: 'Grade 4',
+                room: 'Room A12',
+                studentCount: 25,
+                schedule: 'Mon, Tue, Thu | 8:00 AM - 9:30 AM',
+                status: 'active'
+            },
+            {
+                id: 5,
+                code: 'HIST-501-WORLD',
+                name: 'World History',
+                level: 'high-school',
+                subject: 'History',
+                gradeLevel: 'Grade 12',
+                room: 'Room 308',
+                studentCount: 30,
+                schedule: 'Tue, Thu, Fri | 1:00 PM - 2:30 PM',
+                status: 'inactive'
+            },
+            {
+                id: 6,
+                code: 'CHEM-401-LAB',
+                name: 'Chemistry Laboratory',
+                level: 'college',
+                subject: 'Chemistry',
+                gradeLevel: '2nd Year',
+                room: 'Lab 205',
+                studentCount: 20,
+                schedule: 'Wed, Fri | 3:00 PM - 6:00 PM',
+                status: 'active'
+            }
+        ];
+
+        let currentEditingId = null;
+        let currentView = 'grid';
+
+        // Initialize the application
+        document.addEventListener('DOMContentLoaded', function() {
+            setupEventListeners();
+            renderClasses();
+        });
+
+        function setupEventListeners() {
+            // Search functionality
+            document.getElementById('searchInput').addEventListener('input', function(e) {
+                filterClasses();
+            });
+
+            // Filter functionality
+            document.getElementById('levelFilter').addEventListener('change', function(e) {
+                filterClasses();
+            });
+
+            document.getElementById('statusFilter').addEventListener('change', function(e) {
+                filterClasses();
+            });
+
+            // Form submission
+            document.getElementById('classForm').addEventListener('submit', function(e) {
+                e.preventDefault();
+                saveClass();
+            });
+
+            // Modal close on background click
+            document.getElementById('classModal').addEventListener('click', function(e) {
+                if (e.target === this) {
+                    closeModal();
+                }
+            });
+
+            document.getElementById('viewModal').addEventListener('click', function(e) {
+                if (e.target === this) {
+                    closeViewModal();
+                }
+            });
+        }
+
+        function switchView(view) {
+            currentView = view;
+            const gridView = document.getElementById('gridView');
+            const tableView = document.getElementById('tableView');
+            const viewBtns = document.querySelectorAll('.view-btn');
+
+            viewBtns.forEach(btn => btn.classList.remove('active'));
+
+            if (view === 'grid') {
+                gridView.classList.remove('hidden');
+                tableView.classList.add('hidden');
+                document.querySelector('.view-btn[onclick="switchView(\'grid\')"]').classList.add('active');
+            } else {
+                gridView.classList.add('hidden');
+                tableView.classList.remove('hidden');
+                document.querySelector('.view-btn[onclick="switchView(\'table\')"]').classList.add('active');
+            }
+        }
+
+        function filterClasses() {
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+            const levelFilter = document.getElementById('levelFilter').value;
+            const statusFilter = document.getElementById('statusFilter').value;
+
+            const filteredClasses = classes.filter(cls => {
+                const matchesSearch = cls.name.toLowerCase().includes(searchTerm) || 
+                                    cls.code.toLowerCase().includes(searchTerm) ||
+                                    cls.subject.toLowerCase().includes(searchTerm);
+                const matchesLevel = !levelFilter || cls.level === levelFilter;
+                const matchesStatus = !statusFilter || cls.status === statusFilter;
+
+                return matchesSearch && matchesLevel && matchesStatus;
+            });
+
+            renderClasses(filteredClasses);
+        }
+
+        function renderClasses(classesToRender = classes) {
+            renderGridView(classesToRender);
+            renderTableView(classesToRender);
+        }
+
+        function renderGridView(classesToRender) {
+            const gridView = document.getElementById('gridView');
+            gridView.innerHTML = '';
+
+            classesToRender.forEach(cls => {
+                const classCard = createClassCard(cls);
+                gridView.appendChild(classCard);
+            });
+        }
+
+        function renderTableView(classesToRender) {
+            const tableBody = document.querySelector('#tableView tbody');
+            tableBody.innerHTML = '';
+
+            classesToRender.forEach(cls => {
+                const row = createTableRow(cls);
+                tableBody.appendChild(row);
+            });
+        }
+
+        function createClassCard(cls) {
+            const card = document.createElement('div');
+            card.className = 'class-card';
+            card.innerHTML = `
+                <div class="class-card-header">
+                    <div>
+                        <div class="class-code">${cls.code}</div>
+                        <h3 class="class-name">${cls.name}</h3>
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: var(--spacing-xs);">
+                        <span class="badge badge-${cls.level}">${getLevelDisplayName(cls.level)}</span>
+                        <span class="badge badge-${cls.status}">${cls.status.charAt(0).toUpperCase() + cls.status.slice(1)}</span>
+                    </div>
+                </div>
+                <div class="class-stats">
+                    <div class="stat-item">
+                        <div class="stat-value">${cls.studentCount}</div>
+                        <div class="stat-label">Students</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">${cls.gradeLevel}</div>
+                        <div class="stat-label">Level</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">${cls.room}</div>
+                        <div class="stat-label">Location</div>
+                    </div>
+                </div>
+                <div class="class-schedule">
+                    <p class="schedule-text">${cls.schedule}</p>
+                </div>
+                <div class="class-actions">
+                    <button class="btn btn-sm btn-primary" onclick="editClass(${cls.id})">
+                        <i class="fas fa-edit"></i> Edit
+                    </button>
+                    <button class="btn btn-sm btn-secondary" onclick="viewClass(${cls.id})">
+                        <i class="fas fa-eye"></i> View
+                    </button>
+                    <button class="btn btn-sm btn-secondary" onclick="deleteClass(${cls.id})">
+                        <i class="fas fa-trash"></i> Delete
+                    </button>
+                </div>
+            `;
+            return card;
+        }
+
+        function createTableRow(cls) {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>
+                    <input type="checkbox" class="class-checkbox" data-class-id="${cls.id}">
+                </td>
+                <td>
+                    <div>
+                        <div class="class-code">${cls.code}</div>
+                        <div class="class-name">${cls.name}</div>
+                    </div>
+                </td>
+                <td><span class="badge badge-${cls.level}">${getLevelDisplayName(cls.level)}</span></td>
+                <td>${cls.subject}</td>
+                <td>${cls.schedule}</td>
+                <td>${cls.room}</td>
+                <td>${cls.studentCount}</td>
+                <td><span class="badge badge-${cls.status}">${cls.status.charAt(0).toUpperCase() + cls.status.slice(1)}</span></td>
+                <td>
+                    <div class="class-actions">
+                        <button class="btn btn-sm btn-primary" onclick="editClass(${cls.id})">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="btn btn-sm btn-secondary" onclick="viewClass(${cls.id})">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                        <button class="btn btn-sm btn-secondary" onclick="deleteClass(${cls.id})">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </td>
+            `;
+            return row;
+        }
+
+        function getLevelDisplayName(level) {
+            switch(level) {
+                case 'elementary': return 'Elementary';
+                case 'high-school': return 'High School';
+                case 'college': return 'College';
+                default: return level;
+            }
+        }
+
+        function openModal(classId = null) {
+            currentEditingId = classId;
+            const modal = document.getElementById('classModal');
+            const modalTitle = document.getElementById('modalTitle');
+            const form = document.getElementById('classForm');
+
+            if (classId) {
+                modalTitle.textContent = 'Edit Class';
+                const classToEdit = classes.find(cls => cls.id === classId);
+                if (classToEdit) {
+                    populateForm(classToEdit);
+                }
+            } else {
+                modalTitle.textContent = 'Add New Class';
+                form.reset();
+            }
+
+            modal.style.display = 'block';
+        }
+
+        function populateForm(cls) {
+            document.getElementById('classCode').value = cls.code;
+            document.getElementById('className').value = cls.name;
+            document.getElementById('educationLevel').value = cls.level;
+            document.getElementById('subject').value = cls.subject;
+            document.getElementById('gradeLevel').value = cls.gradeLevel;
+            document.getElementById('room').value = cls.room;
+            document.getElementById('studentCount').value = cls.studentCount;
+            document.getElementById('schedule').value = cls.schedule;
+            document.getElementById('status').value = cls.status;
+        }
+
+        function closeModal() {
+            document.getElementById('classModal').style.display = 'none';
+            currentEditingId = null;
+        }
+
+        function saveClass() {
+            const formData = {
+                code: document.getElementById('classCode').value,
+                name: document.getElementById('className').value,
+                level: document.getElementById('educationLevel').value,
+                subject: document.getElementById('subject').value,
+                gradeLevel: document.getElementById('gradeLevel').value,
+                room: document.getElementById('room').value,
+                studentCount: parseInt(document.getElementById('studentCount').value),
+                schedule: document.getElementById('schedule').value,
+                status: document.getElementById('status').value
+            };
+
+            if (currentEditingId) {
+                // Update existing class
+                const index = classes.findIndex(cls => cls.id === currentEditingId);
+                if (index !== -1) {
+                    classes[index] = { ...classes[index], ...formData };
+                }
+            } else {
+                // Add new class
+                const newClass = {
+                    id: Math.max(...classes.map(c => c.id)) + 1,
+                    ...formData
+                };
+                classes.push(newClass);
+            }
+
+            renderClasses();
+            closeModal();
+        }
+
+        function editClass(classId) {
+            openModal(classId);
+        }
+
+        function viewClass(classId) {
+            const cls = classes.find(c => c.id === classId);
+            if (!cls) return;
+
+            const viewContent = document.getElementById('viewContent');
+            viewContent.innerHTML = `
+                <div class="form-group">
+                    <label class="form-label">Class Code</label>
+                    <div class="form-input" style="background-color: var(--background-color);">${cls.code}</div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Class Name</label>
+                    <div class="form-input" style="background-color: var(--background-color);">${cls.name}</div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Education Level</label>
+                    <div class="form-input" style="background-color: var(--background-color);">${getLevelDisplayName(cls.level)}</div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Subject</label>
+                    <div class="form-input" style="background-color: var(--background-color);">${cls.subject}</div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Grade Level</label>
+                    <div class="form-input" style="background-color: var(--background-color);">${cls.gradeLevel}</div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Room</label>
+                    <div class="form-input" style="background-color: var(--background-color);">${cls.room}</div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Number of Students</label>
+                    <div class="form-input" style="background-color: var(--background-color);">${cls.studentCount}</div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Schedule</label>
+                    <div class="form-input" style="background-color: var(--background-color);">${cls.schedule}</div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Status</label>
+                    <div class="form-input" style="background-color: var(--background-color);">
+                        <span class="badge badge-${cls.status}">${cls.status.charAt(0).toUpperCase() + cls.status.slice(1)}</span>
+                    </div>
+                </div>
+            `;
+
+            document.getElementById('viewModal').style.display = 'block';
+        }
+
+        function closeViewModal() {
+            document.getElementById('viewModal').style.display = 'none';
+        }
+
+        function deleteClass(classId) {
+            if (confirm('Are you sure you want to delete this class?')) {
+                classes = classes.filter(cls => cls.id !== classId);
+                renderClasses();
+            }
+        }
+
+        function toggleSelectAll() {
+            const selectAll = document.getElementById('selectAll');
+            const checkboxes = document.querySelectorAll('.class-checkbox');
+            
+            checkboxes.forEach(checkbox => {
+                checkbox.checked = selectAll.checked;
+            });
+        }
+    </script>
+</body>
+</html>

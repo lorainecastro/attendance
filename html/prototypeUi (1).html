@@ -1,0 +1,1237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Analytics & Prediction Dashboard</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <style>
+        :root {
+            /* Primary Colors */
+            --primary-blue: #2563eb;
+            --primary-blue-hover: #1d4ed8;
+            --primary-blue-light: #dbeafe;
+            
+            /* Status Colors */
+            --success-green: #16a34a;
+            --warning-yellow: #ca8a04;
+            --danger-red: #dc2626;
+            --info-cyan: #0891b2;
+            
+            /* Neutral Colors */
+            --dark-gray: #374151;
+            --medium-gray: #6b7280;
+            --light-gray: #d1d5db;
+            --background: #f9fafb;
+            --white: #ffffff;
+            --border-color: #e5e7eb;
+    
+            /* Additional Colors */
+            --card-bg: #ffffff;
+            --blackfont-color: #111827;
+            --whitefont-color: #ffffff;
+            --grayfont-color: #6b7280;
+            --primary-gradient: linear-gradient(135deg, #2563eb, #a855f7);
+            --secondary-gradient: linear-gradient(135deg, #ec4899, #f472b6);
+            --primary-color: #2563eb;
+            --primary-hover: #1d4ed8;
+            --inputfield-color: #f3f4f6;
+            --inputfieldhover-color: #e5e7eb;
+            
+            /* Typography */
+            --font-family: 'Inter', sans-serif;
+            --font-size-sm: 0.875rem;
+            --font-size-base: 1rem;
+            --font-size-lg: 1.125rem;
+            --font-size-xl: 1.25rem;
+            --font-size-2xl: 1.5rem;
+    
+            /* Spacing */
+            --spacing-xs: 0.25rem;
+            --spacing-sm: 0.5rem;
+            --spacing-md: 1rem;
+            --spacing-lg: 1.5rem;
+            --spacing-xl: 2rem;
+            --spacing-2xl: 3rem;
+            
+            /* Shadows */
+            --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            
+            /* Border Radius */
+            --radius-sm: 0.25rem;
+            --radius-md: 0.5rem;
+            --radius-lg: 0.75rem;
+            --radius-xl: 1rem;
+    
+            /* Transitions */
+            --transition-fast: 0.15s ease-in-out;
+            --transition-normal: 0.3s ease-in-out;
+            --transition-slow: 0.5s ease-in-out;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: var(--font-family);
+            background-color: var(--background);
+            color: var(--blackfont-color);
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: var(--spacing-lg);
+        }
+
+        /* Header Section */
+        .page-header {
+            background: var(--white);
+            border-radius: var(--radius-xl);
+            padding: var(--spacing-lg);
+            margin-bottom: var(--spacing-xl);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .breadcrumb {
+            display: flex;
+            align-items: center;
+            margin-bottom: var(--spacing-md);
+            color: var(--medium-gray);
+            font-size: var(--font-size-sm);
+        }
+
+        .breadcrumb span {
+            margin: 0 var(--spacing-sm);
+        }
+
+        .page-title {
+            font-size: var(--font-size-2xl);
+            font-weight: 700;
+            color: var(--blackfont-color);
+            margin-bottom: var(--spacing-lg);
+        }
+
+        .header-controls {
+            display: flex;
+            gap: var(--spacing-md);
+            flex-wrap: wrap;
+        }
+
+        .date-range-selector {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+        }
+
+        .date-range-selector input {
+            padding: var(--spacing-sm) var(--spacing-md);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            font-size: var(--font-size-sm);
+            background: var(--inputfield-color);
+        }
+
+        .btn {
+            padding: var(--spacing-sm) var(--spacing-md);
+            border: none;
+            border-radius: var(--radius-md);
+            font-size: var(--font-size-sm);
+            cursor: pointer;
+            transition: var(--transition-normal);
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+            font-weight: 500;
+        }
+
+        .btn-primary {
+            background: var(--primary-blue);
+            color: var(--white);
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-blue-hover);
+        }
+
+        .btn-secondary {
+            background: var(--white);
+            color: var(--medium-gray);
+            border: 1px solid var(--border-color);
+        }
+
+        .btn-secondary:hover {
+            background: var(--inputfield-color);
+        }
+
+        /* Quick Metrics Overview */
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: var(--spacing-lg);
+            margin-bottom: var(--spacing-xl);
+        }
+
+        .metric-card {
+            background: var(--white);
+            padding: var(--spacing-lg);
+            border-radius: var(--radius-xl);
+            box-shadow: var(--shadow-sm);
+            transition: var(--transition-normal);
+        }
+
+        .metric-card:hover {
+            box-shadow: var(--shadow-md);
+        }
+
+        .metric-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: var(--spacing-md);
+        }
+
+        .metric-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: var(--radius-lg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            color: var(--white);
+        }
+
+        .metric-icon.danger {
+            background: var(--danger-red);
+        }
+
+        .metric-icon.success {
+            background: var(--success-green);
+        }
+
+        .metric-icon.warning {
+            background: var(--warning-yellow);
+        }
+
+        .metric-icon.info {
+            background: var(--info-cyan);
+        }
+
+        .metric-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--blackfont-color);
+            margin-bottom: var(--spacing-xs);
+        }
+
+        .metric-label {
+            color: var(--medium-gray);
+            font-size: var(--font-size-sm);
+        }
+
+        /* Main Dashboard Grid */
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: var(--spacing-xl);
+            margin-bottom: var(--spacing-xl);
+        }
+
+        .dashboard-card {
+            background: var(--white);
+            border-radius: var(--radius-xl);
+            padding: var(--spacing-lg);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: var(--spacing-lg);
+            padding-bottom: var(--spacing-md);
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .card-title {
+            font-size: var(--font-size-lg);
+            font-weight: 600;
+            color: var(--blackfont-color);
+        }
+
+        /* Risk Assessment Panel */
+        .risk-levels {
+            display: grid;
+            gap: var(--spacing-md);
+        }
+
+        .risk-level {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: var(--spacing-md);
+            border-radius: var(--radius-md);
+            border: 1px solid var(--border-color);
+            cursor: pointer;
+            transition: var(--transition-normal);
+        }
+
+        .risk-level:hover {
+            background: var(--inputfield-color);
+        }
+
+        .risk-level.high {
+            border-color: var(--danger-red);
+            background: rgba(220, 38, 38, 0.05);
+        }
+
+        .risk-level.medium {
+            border-color: var(--warning-yellow);
+            background: rgba(202, 138, 4, 0.05);
+        }
+
+        .risk-level.low {
+            border-color: var(--success-green);
+            background: rgba(22, 163, 74, 0.05);
+        }
+
+        .risk-info {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-md);
+        }
+
+        .risk-emoji {
+            font-size: 1.5rem;
+        }
+
+        .risk-details h4 {
+            margin-bottom: var(--spacing-xs);
+            color: var(--blackfont-color);
+        }
+
+        .risk-details p {
+            color: var(--medium-gray);
+            font-size: var(--font-size-sm);
+        }
+
+        .risk-count {
+            font-size: var(--font-size-xl);
+            font-weight: 700;
+            color: var(--blackfont-color);
+        }
+
+        /* Student List */
+        .student-list {
+            max-height: 300px;
+            overflow-y: auto;
+            margin-top: var(--spacing-md);
+        }
+
+        .student-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: var(--spacing-md);
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .student-info {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-md);
+        }
+
+        .student-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: var(--primary-gradient);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--white);
+            font-weight: 600;
+        }
+
+        .student-details h5 {
+            margin-bottom: var(--spacing-xs);
+            color: var(--blackfont-color);
+        }
+
+        .student-details p {
+            color: var(--medium-gray);
+            font-size: var(--font-size-sm);
+        }
+
+        .risk-score {
+            padding: var(--spacing-xs) var(--spacing-md);
+            border-radius: var(--radius-md);
+            font-size: var(--font-size-sm);
+            font-weight: 600;
+            color: var(--white);
+        }
+
+        .risk-score.high {
+            background: var(--danger-red);
+        }
+
+        .risk-score.medium {
+            background: var(--warning-yellow);
+        }
+
+        .risk-score.low {
+            background: var(--success-green);
+        }
+
+        /* Chart Container */
+        .chart-container {
+            position: relative;
+            height: 300px;
+            margin-top: var(--spacing-md);
+        }
+
+        /* Alert System */
+        .alert-item {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-md);
+            padding: var(--spacing-md);
+            border-radius: var(--radius-md);
+            margin-bottom: var(--spacing-md);
+            border-left: 4px solid var(--danger-red);
+            background: rgba(220, 38, 38, 0.05);
+        }
+
+        .alert-icon {
+            color: var(--danger-red);
+            font-size: 1.25rem;
+        }
+
+        .alert-content h5 {
+            margin-bottom: var(--spacing-xs);
+            color: var(--blackfont-color);
+        }
+
+        .alert-content p {
+            color: var(--medium-gray);
+            font-size: var(--font-size-sm);
+        }
+
+        .alert-time {
+            color: var(--medium-gray);
+            font-size: var(--font-size-sm);
+            margin-left: auto;
+        }
+
+        /* Recommendation Cards */
+        .recommendation-item {
+            padding: var(--spacing-md);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            margin-bottom: var(--spacing-md);
+        }
+
+        .recommendation-header {
+            display: flex;
+            justify-content: between;
+            align-items: center;
+            margin-bottom: var(--spacing-md);
+        }
+
+        .recommendation-title {
+            font-weight: 600;
+            color: var(--blackfont-color);
+        }
+
+        .success-rate {
+            background: var(--success-green);
+            color: var(--white);
+            padding: var(--spacing-xs) var(--spacing-sm);
+            border-radius: var(--radius-sm);
+            font-size: var(--font-size-sm);
+        }
+
+        .recommendation-description {
+            color: var(--medium-gray);
+            font-size: var(--font-size-sm);
+            margin-bottom: var(--spacing-md);
+        }
+
+        .recommendation-actions {
+            display: flex;
+            gap: var(--spacing-sm);
+        }
+
+        .btn-sm {
+            padding: var(--spacing-xs) var(--spacing-md);
+            font-size: var(--font-size-sm);
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .header-controls {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .date-range-selector {
+                flex-direction: column;
+            }
+        }
+
+        /* Animations */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .fade-in {
+            animation: fadeIn 0.6s ease-out;
+        }
+
+        /* Filter Buttons */
+        .filter-buttons {
+            display: flex;
+            gap: var(--spacing-sm);
+            margin-bottom: var(--spacing-lg);
+        }
+
+        .filter-btn {
+            padding: var(--spacing-sm) var(--spacing-md);
+            border: 1px solid var(--border-color);
+            background: var(--white);
+            border-radius: var(--radius-md);
+            cursor: pointer;
+            transition: var(--transition-normal);
+            font-size: var(--font-size-sm);
+        }
+
+        .filter-btn.active {
+            background: var(--primary-blue);
+            color: var(--white);
+            border-color: var(--primary-blue);
+        }
+
+        .filter-btn:hover {
+            background: var(--primary-blue-light);
+        }
+
+        /* Progress Bars */
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: var(--light-gray);
+            border-radius: var(--radius-sm);
+            overflow: hidden;
+            margin-top: var(--spacing-sm);
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: var(--primary-gradient);
+            transition: width var(--transition-normal);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Page Header -->
+        <div class="page-header fade-in">
+            <div class="breadcrumb">
+                <i class="fas fa-home"></i>
+                <span>/</span>
+                <span>Dashboard</span>
+                <span>/</span>
+                <span>Analytics & Predictions</span>
+            </div>
+            
+            <h1 class="page-title">Analytics & Predictions</h1>
+            
+            <div class="header-controls">
+                <div class="date-range-selector">
+                    <label for="start-date">From:</label>
+                    <input type="date" id="start-date" value="2024-01-01">
+                    <label for="end-date">To:</label>
+                    <input type="date" id="end-date" value="2024-12-31">
+                </div>
+                
+                <button class="btn btn-primary" onclick="exportDashboard()">
+                    <i class="fas fa-download"></i>
+                    Export Dashboard
+                </button>
+                
+                <button class="btn btn-secondary" onclick="refreshData()">
+                    <i class="fas fa-sync-alt"></i>
+                    Refresh Data
+                </button>
+            </div>
+        </div>
+
+        <!-- Quick Metrics Overview -->
+        <div class="metrics-grid fade-in">
+            <div class="metric-card">
+                <div class="metric-header">
+                    <div class="metric-icon danger">
+                        <i class="fas fa-exclamation-triangle"></i>
+                    </div>
+                </div>
+                <div class="metric-value" id="at-risk-count">23</div>
+                <div class="metric-label">At-Risk Students</div>
+            </div>
+            
+            <div class="metric-card">
+                <div class="metric-header">
+                    <div class="metric-icon success">
+                        <i class="fas fa-chart-line"></i>
+                    </div>
+                </div>
+                <div class="metric-value" id="accuracy-score">94.2%</div>
+                <div class="metric-label">Prediction Accuracy</div>
+            </div>
+            
+            <div class="metric-card">
+                <div class="metric-header">
+                    <div class="metric-icon warning">
+                        <i class="fas fa-tools"></i>
+                    </div>
+                </div>
+                <div class="metric-value" id="active-interventions">42</div>
+                <div class="metric-label">Active Interventions</div>
+            </div>
+            
+            <div class="metric-card">
+                <div class="metric-header">
+                    <div class="metric-icon info">
+                        <i class="fas fa-trophy"></i>
+                    </div>
+                </div>
+                <div class="metric-value" id="success-rate">87.5%</div>
+                <div class="metric-label">Success Rate</div>
+            </div>
+        </div>
+
+        <!-- Main Dashboard Grid -->
+        <div class="dashboard-grid fade-in">
+            <!-- Student Risk Assessment Panel -->
+            <div class="dashboard-card">
+                <div class="card-header">
+                    <h3 class="card-title">Student Risk Assessment</h3>
+                    <button class="btn btn-secondary btn-sm" onclick="calculateRiskScores()">
+                        <i class="fas fa-calculator"></i>
+                        Calculate
+                    </button>
+                </div>
+                
+                <div class="filter-buttons">
+                    <button class="filter-btn active" onclick="filterRisk('all')">All</button>
+                    <button class="filter-btn" onclick="filterRisk('high')">High Risk</button>
+                    <button class="filter-btn" onclick="filterRisk('medium')">Medium Risk</button>
+                    <button class="filter-btn" onclick="filterRisk('low')">Low Risk</button>
+                </div>
+                
+                <div class="risk-levels">
+                    <div class="risk-level high" onclick="showRiskDetails('high')">
+                        <div class="risk-info">
+                            <span class="risk-emoji">🔴</span>
+                            <div class="risk-details">
+                                <h4>High Risk Students</h4>
+                                <p>Score: 80-100 | Immediate intervention needed</p>
+                            </div>
+                        </div>
+                        <div class="risk-count">12</div>
+                    </div>
+                    
+                    <div class="risk-level medium" onclick="showRiskDetails('medium')">
+                        <div class="risk-info">
+                            <span class="risk-emoji">🟡</span>
+                            <div class="risk-details">
+                                <h4>Medium Risk Students</h4>
+                                <p>Score: 60-79 | Monitor closely</p>
+                            </div>
+                        </div>
+                        <div class="risk-count">18</div>
+                    </div>
+                    
+                    <div class="risk-level low" onclick="showRiskDetails('low')">
+                        <div class="risk-info">
+                            <span class="risk-emoji">🟢</span>
+                            <div class="risk-details">
+                                <h4>Low Risk Students</h4>
+                                <p>Score: 0-59 | On track</p>
+                            </div>
+                        </div>
+                        <div class="risk-count">147</div>
+                    </div>
+                </div>
+                
+                <div class="student-list" id="studentList">
+                    <!-- Students will be populated by JavaScript -->
+                </div>
+            </div>
+
+            <!-- Early Warning System -->
+            <div class="dashboard-card">
+                <div class="card-header">
+                    <h3 class="card-title">Early Warning System</h3>
+                    <button class="btn btn-secondary btn-sm" onclick="configureAlerts()">
+                        <i class="fas fa-cog"></i>
+                        Configure
+                    </button>
+                </div>
+                
+                <div id="alertsContainer">
+                    <div class="alert-item">
+                        <i class="fas fa-bell alert-icon"></i>
+                        <div class="alert-content">
+                            <h5>Attendance Alert</h5>
+                            <p>John Smith has missed 5 consecutive classes in Mathematics</p>
+                        </div>
+                        <div class="alert-time">2 hours ago</div>
+                    </div>
+                    
+                    <div class="alert-item">
+                        <i class="fas fa-chart-line alert-icon"></i>
+                        <div class="alert-content">
+                            <h5>Performance Drop</h5>
+                            <p>Sarah Johnson's grade dropped by 15% in Science</p>
+                        </div>
+                        <div class="alert-time">4 hours ago</div>
+                    </div>
+                    
+                    <div class="alert-item">
+                        <i class="fas fa-user-clock alert-icon"></i>
+                        <div class="alert-content">
+                            <h5>Behavioral Pattern</h5>
+                            <p>Michael Brown shows signs of disengagement</p>
+                        </div>
+                        <div class="alert-time">6 hours ago</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Prediction Models Section -->
+        <div class="dashboard-grid fade-in">
+            <!-- Time Series Forecasting -->
+            <div class="dashboard-card">
+                <div class="card-header">
+                    <h3 class="card-title">Time Series Forecasting</h3>
+                    <button class="btn btn-secondary btn-sm" onclick="generateForecast()">
+                        <i class="fas fa-chart-area"></i>
+                        Generate
+                    </button>
+                </div>
+                
+                <div class="chart-container">
+                    <canvas id="forecastChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Performance Correlation -->
+            <div class="dashboard-card">
+                <div class="card-header">
+                    <h3 class="card-title">Performance Correlation</h3>
+                    <button class="btn btn-secondary btn-sm" onclick="analyzeCorrelation()">
+                        <i class="fas fa-project-diagram"></i>
+                        Analyze
+                    </button>
+                </div>
+                
+                <div class="chart-container">
+                    <canvas id="correlationChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Enhancement Recommendation Engine -->
+        <div class="dashboard-card fade-in">
+            <div class="card-header">
+                <h3 class="card-title">Enhancement Recommendation Engine</h3>
+                <button class="btn btn-primary" onclick="generateRecommendations()">
+                    <i class="fas fa-magic"></i>
+                    Generate AI Recommendations
+                </button>
+            </div>
+            
+            <div id="recommendationsContainer">
+                <div class="recommendation-item">
+                    <div class="recommendation-header">
+                        <h4 class="recommendation-title">Personalized Tutoring Program</h4>
+                        <span class="success-rate">92% Success Rate</span>
+                    </div>
+                    <p class="recommendation-description">
+                        Implement one-on-one tutoring sessions for high-risk students in Mathematics and Science subjects.
+                    </p>
+                    <div class="recommendation-actions">
+                        <button class="btn btn-primary btn-sm">Implement</button>
+                        <button class="btn btn-secondary btn-sm">View Details</button>
+                    </div>
+                </div>
+                
+                <div class="recommendation-item">
+                    <div class="recommendation-header">
+                        <h4 class="recommendation-title">Attendance Incentive System</h4>
+                        <span class="success-rate">78% Success Rate</span>
+                    </div>
+                    <p class="recommendation-description">
+                        Create a reward system for consistent attendance to improve student engagement.
+                    </p>
+                    <div class="recommendation-actions">
+                        <button class="btn btn-primary btn-sm">Implement</button>
+                        <button class="btn btn-secondary btn-sm">View Details</button>
+                    </div>
+                </div>
+                
+                <div class="recommendation-item">
+                    <div class="recommendation-header">
+                        <h4 class="recommendation-title">Peer Study Groups</h4>
+                        <span class="success-rate">85% Success Rate</span>
+                    </div>
+                    <p class="recommendation-description">
+                        Organize peer study groups pairing high-performing students with at-risk students.
+                    </p>
+                    <div class="recommendation-actions">
+                        <button class="btn btn-primary btn-sm">Implement</button>
+                        <button class="btn btn-secondary btn-sm">View Details</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Sample student data
+        const studentsData = [
+            { id: 1, name: 'John Smith', grade: 'Grade 10', risk: 'high', score: 85, avatar: 'JS' },
+            { id: 2, name: 'Sarah Johnson', grade: 'Grade 11', risk: 'medium', score: 72, avatar: 'SJ' },
+            { id: 3, name: 'Michael Brown', grade: 'Grade 9', risk: 'high', score: 90, avatar: 'MB' },
+            { id: 4, name: 'Emily Davis', grade: 'Grade 12', risk: 'low', score: 45, avatar: 'ED' },
+            { id: 5, name: 'David Wilson', grade: 'Grade 10', risk: 'medium', score: 68, avatar: 'DW' },
+            { id: 6, name: 'Lisa Anderson', grade: 'Grade 11', risk: 'low', score: 35, avatar: 'LA' }
+        ];
+
+        // Initialize dashboard
+        document.addEventListener('DOMContentLoaded', function() {
+            populateStudentList();
+            initCharts();
+            updateMetrics();
+        });
+
+        // Populate student list
+        function populateStudentList(filter = 'all') {
+            const studentList = document.getElementById('studentList');
+            const filteredStudents = filter === 'all' ? studentsData : studentsData.filter(s => s.risk === filter);
+            
+            studentList.innerHTML = filteredStudents.map(student => `
+                <div class="student-item">
+                    <div class="student-info">
+                        <div class="student-avatar">${student.avatar}</div>
+                        <div class="student-details">
+                            <h5>${student.name}</h5>
+                            <p>${student.grade}</p>
+                        </div>
+                    </div>
+                    <div class="risk-score ${student.risk}">${student.score}</div>
+                </div>
+            `).join('');
+        }
+
+        // Filter risk levels
+        function filterRisk(level) {
+            // Update active button
+            document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            // Filter student list
+            populateStudentList(level);
+        }
+
+        // Show risk details
+        function showRiskDetails(level) {
+            const levelNames = {
+                'high': 'High Risk',
+                'medium': 'Medium Risk',
+                'low': 'Low Risk'
+            };
+            
+            alert(`Showing details for ${levelNames[level]} students`);
+        }
+
+        // Calculate risk scores
+        function calculateRiskScores() {
+            // Simulate calculation
+            const button = event.target;
+            const originalText = button.innerHTML;
+            
+            button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Calculating...';
+            button.disabled = true;
+            
+            setTimeout(() => {
+                button.innerHTML = originalText;
+                button.disabled = false;
+                
+                // Update metrics with new calculations
+                updateMetrics();
+                populateStudentList();
+                
+                // Show success message
+                showNotification('Risk scores calculated successfully!', 'success');
+            }, 2000);
+        }
+
+        // Export dashboard
+        function exportDashboard() {
+            const button = event.target;
+            const originalText = button.innerHTML;
+            
+            button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Exporting...';
+            button.disabled = true;
+            
+            setTimeout(() => {
+                button.innerHTML = originalText;
+                button.disabled = false;
+                
+                // Simulate export
+                const link = document.createElement('a');
+                link.download = 'analytics_dashboard_' + new Date().toISOString().split('T')[0] + '.pdf';
+                link.href = '#';
+                link.click();
+                
+                showNotification('Dashboard exported successfully!', 'success');
+            }, 2000);
+        }
+
+        // Refresh data
+        function refreshData() {
+            const button = event.target;
+            const originalText = button.innerHTML;
+            
+            button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Refreshing...';
+            button.disabled = true;
+            
+            setTimeout(() => {
+                button.innerHTML = originalText;
+                button.disabled = false;
+                
+                // Simulate data refresh
+                updateMetrics();
+                populateStudentList();
+                updateCharts();
+                
+                showNotification('Data refreshed successfully!', 'success');
+            }, 1500);
+        }
+
+        // Configure alerts
+        function configureAlerts() {
+            alert('Alert configuration panel would open here. You can set:\n\n' +
+                  '• Attendance thresholds\n' +
+                  '• Grade drop percentages\n' +
+                  '• Behavioral indicators\n' +
+                  '• Notification preferences');
+        }
+
+        // Generate forecast
+        function generateForecast() {
+            const button = event.target;
+            const originalText = button.innerHTML;
+            
+            button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating...';
+            button.disabled = true;
+            
+            setTimeout(() => {
+                button.innerHTML = originalText;
+                button.disabled = false;
+                
+                // Update forecast chart with new data
+                updateForecastChart();
+                
+                showNotification('Forecast generated successfully!', 'success');
+            }, 3000);
+        }
+
+        // Analyze correlation
+        function analyzeCorrelation() {
+            const button = event.target;
+            const originalText = button.innerHTML;
+            
+            button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Analyzing...';
+            button.disabled = true;
+            
+            setTimeout(() => {
+                button.innerHTML = originalText;
+                button.disabled = false;
+                
+                // Update correlation chart
+                updateCorrelationChart();
+                
+                showNotification('Correlation analysis completed!', 'success');
+            }, 2500);
+        }
+
+        // Generate recommendations
+        function generateRecommendations() {
+            const button = event.target;
+            const originalText = button.innerHTML;
+            
+            button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating...';
+            button.disabled = true;
+            
+            setTimeout(() => {
+                button.innerHTML = originalText;
+                button.disabled = false;
+                
+                // Add new recommendation
+                addNewRecommendation();
+                
+                showNotification('AI recommendations generated!', 'success');
+            }, 3000);
+        }
+
+        // Add new recommendation
+        function addNewRecommendation() {
+            const container = document.getElementById('recommendationsContainer');
+            const newRecommendation = document.createElement('div');
+            newRecommendation.className = 'recommendation-item fade-in';
+            newRecommendation.innerHTML = `
+                <div class="recommendation-header">
+                    <h4 class="recommendation-title">AI-Powered Learning Analytics</h4>
+                    <span class="success-rate">96% Success Rate</span>
+                </div>
+                <p class="recommendation-description">
+                    Implement machine learning algorithms to predict student performance and provide real-time interventions.
+                </p>
+                <div class="recommendation-actions">
+                    <button class="btn btn-primary btn-sm">Implement</button>
+                    <button class="btn btn-secondary btn-sm">View Details</button>
+                </div>
+            `;
+            container.insertBefore(newRecommendation, container.firstChild);
+        }
+
+        // Update metrics
+        function updateMetrics() {
+            // Simulate real-time metric updates
+            const metrics = {
+                atRisk: Math.floor(Math.random() * 10) + 20,
+                accuracy: (Math.random() * 5 + 92).toFixed(1),
+                interventions: Math.floor(Math.random() * 20) + 35,
+                successRate: (Math.random() * 10 + 82).toFixed(1)
+            };
+            
+            document.getElementById('at-risk-count').textContent = metrics.atRisk;
+            document.getElementById('accuracy-score').textContent = metrics.accuracy + '%';
+            document.getElementById('active-interventions').textContent = metrics.interventions;
+            document.getElementById('success-rate').textContent = metrics.successRate + '%';
+        }
+
+        // Initialize charts
+        function initCharts() {
+            initForecastChart();
+            initCorrelationChart();
+        }
+
+        // Initialize forecast chart
+        function initForecastChart() {
+            const ctx = document.getElementById('forecastChart').getContext('2d');
+            window.forecastChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+                    datasets: [{
+                        label: 'Historical Performance',
+                        data: [78, 81, 79, 85, 82, 88, 85, 89, 87, 91, 89, 93],
+                        borderColor: '#2563eb',
+                        backgroundColor: 'rgba(37, 99, 235, 0.1)',
+                        fill: true,
+                        tension: 0.4
+                    }, {
+                        label: 'Predicted Performance',
+                        data: [null, null, null, null, null, null, null, null, null, null, 89, 93, 95, 97, 94, 96],
+                        borderColor: '#dc2626',
+                        backgroundColor: 'rgba(220, 38, 38, 0.1)',
+                        borderDash: [5, 5],
+                        fill: false,
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: false,
+                            min: 70,
+                            max: 100
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            position: 'top'
+                        }
+                    }
+                }
+            });
+        }
+
+        // Initialize correlation chart
+        function initCorrelationChart() {
+            const ctx = document.getElementById('correlationChart').getContext('2d');
+            window.correlationChart = new Chart(ctx, {
+                type: 'scatter',
+                data: {
+                    datasets: [{
+                        label: 'Attendance vs Grade',
+                        data: [
+                            {x: 95, y: 92}, {x: 88, y: 85}, {x: 76, y: 78}, {x: 82, y: 80},
+                            {x: 91, y: 89}, {x: 85, y: 83}, {x: 79, y: 75}, {x: 93, y: 94},
+                            {x: 87, y: 86}, {x: 90, y: 88}, {x: 84, y: 82}, {x: 78, y: 76}
+                        ],
+                        backgroundColor: 'rgba(37, 99, 235, 0.6)',
+                        borderColor: '#2563eb',
+                        pointRadius: 6,
+                        pointHoverRadius: 8
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Attendance Rate (%)'
+                            },
+                            min: 70,
+                            max: 100
+                        },
+                        y: {
+                            title: {
+                                display: true,
+                                text: 'Grade Average (%)'
+                            },
+                            min: 70,
+                            max: 100
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            position: 'top'
+                        }
+                    }
+                }
+            });
+        }
+
+        // Update forecast chart
+        function updateForecastChart() {
+            const newData = Array.from({length: 12}, () => Math.floor(Math.random() * 20) + 75);
+            const newPredictions = Array.from({length: 4}, () => Math.floor(Math.random() * 10) + 90);
+            
+            window.forecastChart.data.datasets[0].data = newData;
+            window.forecastChart.data.datasets[1].data = [...Array(8).fill(null), ...newPredictions];
+            window.forecastChart.update();
+        }
+
+        // Update correlation chart
+        function updateCorrelationChart() {
+            const newData = Array.from({length: 12}, () => ({
+                x: Math.floor(Math.random() * 25) + 75,
+                y: Math.floor(Math.random() * 25) + 75
+            }));
+            
+            window.correlationChart.data.datasets[0].data = newData;
+            window.correlationChart.update();
+        }
+
+        // Update charts
+        function updateCharts() {
+            updateForecastChart();
+            updateCorrelationChart();
+        }
+
+        // Show notification
+        function showNotification(message, type = 'info') {
+            const notification = document.createElement('div');
+            notification.className = `notification ${type}`;
+            notification.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                background: ${type === 'success' ? 'var(--success-green)' : 'var(--info-cyan)'};
+                color: white;
+                padding: var(--spacing-md);
+                border-radius: var(--radius-md);
+                box-shadow: var(--shadow-lg);
+                z-index: 1000;
+                animation: slideIn 0.3s ease-out;
+            `;
+            notification.textContent = message;
+            
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.style.animation = 'slideOut 0.3s ease-out';
+                setTimeout(() => {
+                    document.body.removeChild(notification);
+                }, 300);
+            }, 3000);
+        }
+
+        // Add CSS animations for notifications
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes slideIn {
+                from {
+                    transform: translateX(100%);
+                    opacity: 0;
+                }
+                to {
+                    transform: translateX(0);
+                    opacity: 1;
+                }
+            }
+            
+            @keyframes slideOut {
+                from {
+                    transform: translateX(0);
+                    opacity: 1;
+                }
+                to {
+                    transform: translateX(100%);
+                    opacity: 0;
+                }
+            }
+        `;
+        document.head.appendChild(style);
+
+        // Auto-refresh data every 5 minutes
+        setInterval(() => {
+            updateMetrics();
+            updateCharts();
+        }, 300000);
+
+        // Real-time clock update
+        function updateClock() {
+            const now = new Date();
+            const timeString = now.toLocaleTimeString();
+            // You can add a clock display if needed
+        }
+
+        setInterval(updateClock, 1000);
+    </script>
+</body>
+</html>

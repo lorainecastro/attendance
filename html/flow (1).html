@@ -1,0 +1,1135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Complete Attendance Monitoring System Flow</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            padding: 30px;
+            backdrop-filter: blur(10px);
+        }
+
+        h1 {
+            text-align: center;
+            color: #2c3e50;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .flowchart {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+            position: relative;
+            overflow-x: auto;
+            min-height: 100vh;
+        }
+
+        .flow-section {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
+            margin: 20px 0;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 15px;
+            width: 100%;
+        }
+
+        .flow-row {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 30px;
+            flex-wrap: wrap;
+        }
+
+        .flow-node {
+            background: white;
+            padding: 15px 20px;
+            border-radius: 12px;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
+            min-width: 160px;
+            text-align: center;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            border: 2px solid transparent;
+            position: relative;
+            font-size: 0.9em;
+        }
+
+        .flow-node:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+        }
+
+        .start-node {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+            font-weight: bold;
+        }
+
+        .auth-node {
+            background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);
+            color: #8b4513;
+        }
+
+        .dashboard-node {
+            background: linear-gradient(135deg, #d299c2 0%, #fef9d7 100%);
+            color: #4a148c;
+        }
+
+        .feature-node {
+            background: linear-gradient(135deg, #89f7fe 0%, #66a6ff 100%);
+            color: #1565c0;
+        }
+
+        .management-node {
+            background: linear-gradient(135deg, #fdbb2d 0%, #22c1c3 100%);
+            color: #004d40;
+        }
+
+        .process-node {
+            background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+            color: #c2185b;
+        }
+
+        .decision-node {
+            background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%);
+            color: #e91e63;
+            border-radius: 50px;
+            transform: rotate(45deg);
+            min-width: 120px;
+            min-height: 120px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .decision-content {
+            transform: rotate(-45deg);
+            text-align: center;
+        }
+
+        .error-node {
+            background: linear-gradient(135deg, #ff6b6b 0%, #ffa8a8 100%);
+            color: #d32f2f;
+        }
+
+        .success-node {
+            background: linear-gradient(135deg, #51cf66 0%, #8ce99a 100%);
+            color: #2e7d32;
+        }
+
+        .end-node {
+            background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%);
+            color: #e91e63;
+            font-weight: bold;
+        }
+
+        .analytics-node {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .recommendation-node {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+        }
+
+        .report-node {
+            background: linear-gradient(135deg, #4ecdc4 0%, #44a08d 100%);
+            color: white;
+        }
+
+        .arrow {
+            width: 0;
+            height: 0;
+            border-left: 8px solid transparent;
+            border-right: 8px solid transparent;
+            border-top: 12px solid #667eea;
+            margin: 5px auto;
+        }
+
+        .arrow-horizontal {
+            width: 0;
+            height: 0;
+            border-top: 8px solid transparent;
+            border-bottom: 8px solid transparent;
+            border-left: 15px solid #667eea;
+            margin: 0 10px;
+        }
+
+        .connection-line {
+            width: 2px;
+            height: 25px;
+            background: linear-gradient(to bottom, #667eea, #764ba2);
+            margin: 0 auto;
+        }
+
+        .icon {
+            font-size: 1.5em;
+            margin-bottom: 8px;
+        }
+
+        .node-title {
+            font-weight: bold;
+            margin-bottom: 5px;
+            font-size: 1em;
+        }
+
+        .node-description {
+            font-size: 0.8em;
+            opacity: 0.8;
+        }
+
+        .branch-container {
+            display: flex;
+            justify-content: space-around;
+            width: 100%;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+
+        .branch {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+            min-width: 200px;
+        }
+
+        .sub-process {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            margin: 10px 0;
+        }
+
+        .tooltip {
+            position: absolute;
+            background: rgba(0, 0, 0, 0.9);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 0.75em;
+            top: -40px;
+            left: 50%;
+            transform: translateX(-50%);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            z-index: 100;
+            white-space: nowrap;
+            max-width: 200px;
+            white-space: normal;
+        }
+
+        .flow-node:hover .tooltip {
+            opacity: 1;
+        }
+
+        .section-title {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 15px;
+            width: 100%;
+            margin: 15px 0;
+        }
+
+        .legend {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-top: 30px;
+            flex-wrap: wrap;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.9em;
+        }
+
+        .legend-color {
+            width: 16px;
+            height: 16px;
+            border-radius: 4px;
+        }
+
+        .process-flow {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+            background: rgba(255, 255, 255, 0.2);
+            padding: 15px;
+            border-radius: 10px;
+            margin: 10px 0;
+        }
+
+        .charts-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            width: 100%;
+            margin: 15px 0;
+        }
+
+        @media (max-width: 768px) {
+            .flow-row {
+                flex-direction: column;
+                gap: 15px;
+            }
+            
+            .branch-container {
+                flex-direction: column;
+                gap: 15px;
+            }
+            
+            .feature-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .charts-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .flow-node {
+                min-width: 140px;
+                font-size: 0.8em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎓 Complete Attendance Monitoring System Flow</h1>
+        
+        <div class="flowchart">
+            
+            <!-- START -->
+            <div class="flow-section">
+                <div class="section-title">🚀 SYSTEM START</div>
+                <div class="flow-node start-node">
+                    <div class="icon">🎯</div>
+                    <div class="node-title">START</div>
+                    <div class="node-description">System Entry</div>
+                </div>
+                <div class="arrow"></div>
+            </div>
+
+            <!-- AUTHENTICATION DECISION -->
+            <div class="flow-section">
+                <div class="section-title">🔐 AUTHENTICATION</div>
+                <div class="flow-node decision-node">
+                    <div class="decision-content">
+                        <div class="icon">❓</div>
+                        <div class="node-title">User Account?</div>
+                    </div>
+                    <div class="tooltip">Check if user has existing account</div>
+                </div>
+                <div class="arrow"></div>
+                
+                <div class="branch-container">
+                    <!-- SIGN UP BRANCH -->
+                    <div class="branch">
+                        <div class="flow-node auth-node">
+                            <div class="icon">📝</div>
+                            <div class="node-title">Sign-Up Page</div>
+                            <div class="node-description">New User Registration</div>
+                            <div class="tooltip">Register with school email, password, department</div>
+                        </div>
+                        <div class="arrow"></div>
+                        
+                        <div class="process-flow">
+                            <div class="flow-node process-node">
+                                <div class="icon">✍️</div>
+                                <div class="node-title">Fill Form</div>
+                                <div class="node-description">Enter Details</div>
+                                <div class="tooltip">Full name, email, password, department</div>
+                            </div>
+                            <div class="arrow"></div>
+                            
+                            <div class="flow-node decision-node">
+                                <div class="decision-content">
+                                    <div class="icon">✅</div>
+                                    <div class="node-title">Valid?</div>
+                                </div>
+                                <div class="tooltip">Validate email format, password strength</div>
+                            </div>
+                            <div class="arrow"></div>
+                            
+                            <div class="flow-row">
+                                <div class="flow-node error-node">
+                                    <div class="icon">❌</div>
+                                    <div class="node-title">Show Errors</div>
+                                    <div class="node-description">Display Validation Issues</div>
+                                    <div class="tooltip">Invalid email, weak password, mismatched passwords</div>
+                                </div>
+                                <div class="arrow-horizontal"></div>
+                                <div class="flow-node success-node">
+                                    <div class="icon">✅</div>
+                                    <div class="node-title">Create Account</div>
+                                    <div class="node-description">Registration Success</div>
+                                    <div class="tooltip">Account created successfully</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- SIGN IN BRANCH -->
+                    <div class="branch">
+                        <div class="flow-node auth-node">
+                            <div class="icon">🔐</div>
+                            <div class="node-title">Sign-In Page</div>
+                            <div class="node-description">User Login</div>
+                            <div class="tooltip">Login with email and password</div>
+                        </div>
+                        <div class="arrow"></div>
+                        
+                        <div class="process-flow">
+                            <div class="flow-node process-node">
+                                <div class="icon">🔑</div>
+                                <div class="node-title">Enter Credentials</div>
+                                <div class="node-description">Email & Password</div>
+                                <div class="tooltip">Enter registered email and password</div>
+                            </div>
+                            <div class="arrow"></div>
+                            
+                            <div class="flow-node decision-node">
+                                <div class="decision-content">
+                                    <div class="icon">🔍</div>
+                                    <div class="node-title">Valid Login?</div>
+                                </div>
+                                <div class="tooltip">Check credentials against database</div>
+                            </div>
+                            <div class="arrow"></div>
+                            
+                            <div class="flow-row">
+                                <div class="flow-node error-node">
+                                    <div class="icon">🚫</div>
+                                    <div class="node-title">Login Error</div>
+                                    <div class="node-description">Wrong Credentials</div>
+                                    <div class="tooltip">Incorrect email/password or account lockout</div>
+                                </div>
+                                <div class="arrow-horizontal"></div>
+                                <div class="flow-node process-node">
+                                    <div class="icon">🔄</div>
+                                    <div class="node-title">Password Recovery</div>
+                                    <div class="node-description">Reset Password</div>
+                                    <div class="tooltip">Send password reset email</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- MAIN DASHBOARD -->
+            <div class="flow-section">
+                <div class="section-title">📊 MAIN DASHBOARD</div>
+                <div class="flow-node dashboard-node">
+                    <div class="icon">🏠</div>
+                    <div class="node-title">Teacher Dashboard</div>
+                    <div class="node-description">Control Center</div>
+                    <div class="tooltip">Overview cards, trends, notifications, quick actions</div>
+                </div>
+                <div class="arrow"></div>
+                
+                <div class="feature-grid">
+                    <div class="flow-node process-node">
+                        <div class="icon">📈</div>
+                        <div class="node-title">Overview Cards</div>
+                        <div class="node-description">Total Students, Avg Rate</div>
+                        <div class="tooltip">Display key metrics and statistics</div>
+                    </div>
+                    <div class="flow-node process-node">
+                        <div class="icon">📉</div>
+                        <div class="node-title">Attendance Trends</div>
+                        <div class="node-description">Monthly Line Chart</div>
+                        <div class="tooltip">Visual representation of attendance patterns</div>
+                    </div>
+                    <div class="flow-node process-node">
+                        <div class="icon">🔔</div>
+                        <div class="node-title">Notifications</div>
+                        <div class="node-description">Real-time Alerts</div>
+                        <div class="tooltip">Alerts for at-risk students and absences</div>
+                    </div>
+                    <div class="flow-node process-node">
+                        <div class="icon">⚡</div>
+                        <div class="node-title">Quick Actions</div>
+                        <div class="node-description">Mark, View, Generate</div>
+                        <div class="tooltip">Shortcuts to main functions</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- CLASS MANAGEMENT -->
+            <div class="flow-section">
+                <div class="section-title">🏫 CLASS MANAGEMENT</div>
+                <div class="flow-node management-node">
+                    <div class="icon">🏫</div>
+                    <div class="node-title">Class Management</div>
+                    <div class="node-description">Manage Classes</div>
+                    <div class="tooltip">Create, edit, delete class schedules</div>
+                </div>
+                <div class="arrow"></div>
+                
+                <div class="process-flow">
+                    <div class="flow-node process-node">
+                        <div class="icon">📋</div>
+                        <div class="node-title">View Class List</div>
+                        <div class="node-description">Display All Classes</div>
+                        <div class="tooltip">Table with class name, subject, time, section</div>
+                    </div>
+                    <div class="arrow"></div>
+                    
+                    <div class="flow-row">
+                        <div class="flow-node feature-node">
+                            <div class="icon">🔍</div>
+                            <div class="node-title">Search/Filter</div>
+                            <div class="node-description">Find Classes</div>
+                            <div class="tooltip">Search by name or subject</div>
+                        </div>
+                        <div class="flow-node feature-node">
+                            <div class="icon">➕</div>
+                            <div class="node-title">Add Class</div>
+                            <div class="node-description">Create New</div>
+                            <div class="tooltip">Open class creation form</div>
+                        </div>
+                        <div class="flow-node feature-node">
+                            <div class="icon">✏️</div>
+                            <div class="node-title">Edit Class</div>
+                            <div class="node-description">Modify Existing</div>
+                            <div class="tooltip">Update class details</div>
+                        </div>
+                        <div class="flow-node error-node">
+                            <div class="icon">🗑️</div>
+                            <div class="node-title">Delete Class</div>
+                            <div class="node-description">Remove Class</div>
+                            <div class="tooltip">Permanently delete class</div>
+                        </div>
+                    </div>
+                    <div class="arrow"></div>
+                    
+                    <div class="flow-node process-node">
+                        <div class="icon">📝</div>
+                        <div class="node-title">Class Form</div>
+                        <div class="node-description">Enter Details</div>
+                        <div class="tooltip">Class name, subject, time, section</div>
+                    </div>
+                    <div class="arrow"></div>
+                    
+                    <div class="flow-node decision-node">
+                        <div class="decision-content">
+                            <div class="icon">✅</div>
+                            <div class="node-title">Form Valid?</div>
+                        </div>
+                        <div class="tooltip">Validate all required fields</div>
+                    </div>
+                    <div class="arrow"></div>
+                    
+                    <div class="flow-row">
+                        <div class="flow-node error-node">
+                            <div class="icon">❌</div>
+                            <div class="node-title">Show Errors</div>
+                            <div class="node-description">Validation Issues</div>
+                            <div class="tooltip">Display field validation errors</div>
+                        </div>
+                        <div class="arrow-horizontal"></div>
+                        <div class="flow-node success-node">
+                            <div class="icon">💾</div>
+                            <div class="node-title">Save Class</div>
+                            <div class="node-description">Store Data</div>
+                            <div class="tooltip">Save class to database</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- STUDENT MANAGEMENT -->
+            <div class="flow-section">
+                <div class="section-title">👥 STUDENT MANAGEMENT</div>
+                <div class="flow-node management-node">
+                    <div class="icon">👥</div>
+                    <div class="node-title">Student Management</div>
+                    <div class="node-description">Manage Students</div>
+                    <div class="tooltip">Import/export student data, assign to classes</div>
+                </div>
+                <div class="arrow"></div>
+                
+                <div class="process-flow">
+                    <div class="flow-node process-node">
+                        <div class="icon">📋</div>
+                        <div class="node-title">View Student List</div>
+                        <div class="node-description">Display All Students</div>
+                        <div class="tooltip">Table with name, gender, class, actions</div>
+                    </div>
+                    <div class="arrow"></div>
+                    
+                    <div class="flow-row">
+                        <div class="flow-node feature-node">
+                            <div class="icon">🔍</div>
+                            <div class="node-title">Search/Filter</div>
+                            <div class="node-description">Find Students</div>
+                            <div class="tooltip">Search by name or class</div>
+                        </div>
+                        <div class="flow-node feature-node">
+                            <div class="icon">➕</div>
+                            <div class="node-title">Add Student</div>
+                            <div class="node-description">Manual Entry</div>
+                            <div class="tooltip">Create new student record</div>
+                        </div>
+                        <div class="flow-node feature-node">
+                            <div class="icon">📤</div>
+                            <div class="node-title">Import Excel</div>
+                            <div class="node-description">Bulk Import</div>
+                            <div class="tooltip">Upload Excel file with student data</div>
+                        </div>
+                        <div class="flow-node feature-node">
+                            <div class="icon">👁️</div>
+                            <div class="node-title">View Dashboard</div>
+                            <div class="node-description">Student Details</div>
+                            <div class="tooltip">Individual student dashboard</div>
+                        </div>
+                    </div>
+                    <div class="arrow"></div>
+                    
+                    <div class="branch-container">
+                        <!-- MANUAL ENTRY BRANCH -->
+                        <div class="branch">
+                            <div class="flow-node process-node">
+                                <div class="icon">📝</div>
+                                <div class="node-title">Student Form</div>
+                                <div class="node-description">Enter Details</div>
+                                <div class="tooltip">Name, gender, location, income, family structure</div>
+                            </div>
+                            <div class="arrow"></div>
+                            <div class="flow-node decision-node">
+                                <div class="decision-content">
+                                    <div class="icon">✅</div>
+                                    <div class="node-title">Valid?</div>
+                                </div>
+                                <div class="tooltip">Validate student information</div>
+                            </div>
+                            <div class="arrow"></div>
+                            <div class="flow-node success-node">
+                                <div class="icon">💾</div>
+                                <div class="node-title">Save Student</div>
+                                <div class="node-description">Store Data</div>
+                                <div class="tooltip">Save to database</div>
+                            </div>
+                        </div>
+                        
+                        <!-- EXCEL IMPORT BRANCH -->
+                        <div class="branch">
+                            <div class="flow-node process-node">
+                                <div class="icon">📁</div>
+                                <div class="node-title">Upload Excel</div>
+                                <div class="node-description">Select File</div>
+                                <div class="tooltip">Choose Excel file to upload</div>
+                            </div>
+                            <div class="arrow"></div>
+                            <div class="flow-node decision-node">
+                                <div class="decision-content">
+                                    <div class="icon">📊</div>
+                                    <div class="node-title">File Valid?</div>
+                                </div>
+                                <div class="tooltip">Validate file format and data</div>
+                            </div>
+                            <div class="arrow"></div>
+                            <div class="flow-row">
+                                <div class="flow-node error-node">
+                                    <div class="icon">❌</div>
+                                    <div class="node-title">Upload Error</div>
+                                    <div class="node-description">Invalid File</div>
+                                    <div class="tooltip">Show file format or data errors</div>
+                                </div>
+                                <div class="arrow-horizontal"></div>
+                                <div class="flow-node success-node">
+                                    <div class="icon">🔄</div>
+                                    <div class="node-title">Process Import</div>
+                                    <div class="node-description">Import Students</div>
+                                    <div class="tooltip">Bulk import student data</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ATTENDANCE TRACKING -->
+            <div class="flow-section">
+                <div class="section-title">📋 ATTENDANCE TRACKING</div>
+                <div class="flow-node feature-node">
+                    <div class="icon">📋</div>
+                    <div class="node-title">Attendance Tracking</div>
+                    <div class="node-description">Daily Attendance</div>
+                    <div class="tooltip">Mark Present/Absent/Late/Excused status</div>
+                </div>
+                <div class="arrow"></div>
+                
+                <div class="process-flow">
+                    <div class="flow-row">
+                        <div class="flow-node process-node">
+                            <div class="icon">🏫</div>
+                            <div class="node-title">Select Class</div>
+                            <div class="node-description">Choose Class/Section</div>
+                            <div class="tooltip">Dropdown to select class</div>
+                        </div>
+                        <div class="flow-node process-node">
+                            <div class="icon">📅</div>
+                            <div class="node-title">Select Date</div>
+                            <div class="node-description">Pick Date</div>
+                            <div class="tooltip">Date picker (defaults to today)</div>
+                        </div>
+                    </div>
+                    <div class="arrow"></div>
+                    
+                    <div class="flow-node process-node">
+                        <div class="icon">📊</div>
+                        <div class="node-title">Attendance Grid</div>
+                        <div class="node-description">Student List</div>
+                        <div class="tooltip">Table with students and status options</div>
+                    </div>
+                    <div class="arrow"></div>
+                    
+                    <div class="flow-row">
+                        <div class="flow-node feature-node">
+                            <div class="icon">✅</div>
+                            <div class="node-title">Mark Status</div>
+                            <div class="node-description">Present/Absent/Late/Excused</div>
+                            <div class="tooltip">Radio buttons for each student</div>
+                        </div>
+                        <div class="flow-node feature-node">
+                            <div class="icon">📝</div>
+                            <div class="node-title">Add Notes</div>
+                            <div class="node-description">Reason for Absence</div>
+                            <div class="tooltip">Optional notes field</div>
+                        </div>
+                    </div>
+                    <div class="arrow"></div>
+                    
+                    <div class="flow-node process-node">
+                        <div class="icon">💾</div>
+                        <div class="node-title">Save Attendance</div>
+                        <div class="node-description">Submit Data</div>
+                        <div class="tooltip">Validate and save attendance records</div>
+                    </div>
+                    <div class="arrow"></div>
+                    
+                    <div class="flow-node decision-node">
+                        <div class="decision-content">
+                            <div class="icon">✅</div>
+                            <div class="node-title">Data Valid?</div>
+                        </div>
+                        <div class="tooltip">Validate attendance entries</div>
+                    </div>
+                    <div class="arrow"></div>
+                    
+                    <div class="flow-row">
+                        <div class="flow-node error-node">
+                            <div class="icon">❌</div>
+                            <div class="node-title">Show Errors</div>
+                            <div class="node-description">Validation Issues</div>
+                            <div class="tooltip">Display validation errors</div>
+                        </div>
+                        <div class="arrow-horizontal"></div>
+                        <div class="flow-node success-node">
+                            <div class="icon">🔄</div>
+                            <div class="node-title">Update Database</div>
+                            <div class="node-description">Save Records</div>
+                            <div class="tooltip">Store attendance data</div>
+                        </div>
+                    </div>
+                    <div class="arrow"></div>
+                    
+                    <div class="flow-node process-node">
+                        <div class="icon">🔔</div>
+                        <div class="node-title">Real-time Alerts</div>
+                        <div class="node-description">At-risk Notifications</div>
+                        <div class="tooltip">Inline notifications for students flagged as at-risk</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ANALYTICS DASHBOARD -->
+            <div class="flow-section">
+                <div class="section-title">📊 ANALYTICS DASHBOARD</div>
+                <div class="flow-node analytics-node">
+                    <div class="icon">📊</div>
+                    <div class="node-title">Analytics Dashboard</div>
+                    <div class="node-description">Data Visualization</div>
+                    <div class="tooltip">Interactive charts and trend analysis</div>
+                </div>
+                <div class="arrow"></div>
+                
+                <div class="process-flow">
+                    <div class="flow-row">
+                        <div class="flow-node process-node">
+                            <div class="icon">🔍</div>
+                            <div class="node-title">Apply Filters</div>
+                            <div class="node-description">Class, Date, Demographics</div>
+                            <div class="tooltip">Filter by class, date range, gender, income</div>
+                        </div>
+                        <div class="flow-node process-node">
+                            <div class="icon">🔄</div>
+                            <div class="node-title">Refresh Data</div>
+                            <div class="node-description">Update Analytics</div>
+                            <div class="tooltip">Reload latest attendance data</div>
+                        </div>
+                    </div>
+                    <div class="arrow"></div>
+                    
+                    <div class="charts-grid">
+                        <div class="flow-node feature-node">
+                            <div class="icon">📈</div>
+                            <div class="node-title">Trend Line Chart</div>
+                            <div class="node-description">Time Series Forecast</div>
+                            <div class="tooltip">Attendance trends over time with predictions</div>
+                        </div>
+                        <div class="flow-node feature-node">
+                            <div class="icon">📊</div>
+                            <div class="node-title">Demographics Bar Chart</div>
+                            <div class="node-description">Absenteeism by Factor</div>
+                            <div class="tooltip">Analyze by gender, location, income</div>
+                        </div>
+                        <div class="flow-node feature-node">
+                            <div class="icon">🗓️</div>
+                            <div class="node-title">Absence Heatmap</div>
+                            <div class="node-description">Pattern Analysis</div>
+                            <div class="tooltip">Visualize absence patterns by day/week</div>
+                        </div>
+                        <div class="flow-node feature-node">
+                            <div class="icon">🥧</div>
+                            <div class="node-title">Status Pie Chart</div>
+                            <div class="node-description">Attendance Distribution</div>
+                            <div class="tooltip">Present/Absent/Late/Excused breakdown</div>
+                        </div>
+                    </div>
+                    <div class="arrow"></div>
+                    
+                    <div class="flow-node process-node">
+                        <div class="icon">📋</div>
+                        <div class="node-title">Summary Statistics</div>
+                        <div class="node-description">Key Metrics Cards</div>
+                        <div class="tooltip">Average rate, at-risk students, top factors</div>
+                    </div>
+                    <div class="arrow"></div>
+                    
+                    <div class="flow-row">
+                        <div class="flow-node feature-node">
+                            <div class="icon">🖱️</div>
+                            <div class="node-title">Interactive Features</div>
+                            <div class="node-description">Hover & Click</div>
+                            <div class="tooltip">Tooltips and drill-down capabilities</div>
+                        </div>
+                        <div class="flow-node feature-node">
+                            <div class="icon">📤</div>
+                            <div class="node-title">Export Chart</div>
+                            <div class="node-description">Download PNG/PDF</div>
+                            <div class="tooltip">Save charts for external use</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- RECOMMENDATION INTERFACE -->
+            <div class="flow-section">
+                <div class="section-title">🎯 AI RECOMMENDATIONS</div>
+                <div class="flow-node recommendation-node">
+                    <div class="icon">🤖</div>
+                    <div class="node-title">Recommendation Interface</div>
+                    <div class="node-description">AI-Generated Suggestions</div>
+                    <div class="tooltip">Smart suggestions for addressing absenteeism</div>
+                </div>
+                <div class="arrow"></div>
+                
+                <div class="process-flow">
+                    <div class="flow-row">
+                        <div class="flow-node process-node">
+                            <div class="icon">🔍</div>
+                            <div class="node-title">Filter Recommendations</div>
+                            <div class="node-description">By Class/Student/Priority</div>
+                            <div class="tooltip">Filter by class, student, or priority level</div>
+                        </div>
+                        <div class="flow-node process-node">
+                            <div class="icon">⚠️</div>
+                            <div class="node-title">High Priority Only</div>
+                            <div class="node-description">Critical Issues</div>
+                            <div class="tooltip">Show only urgent recommendations</div>
+                        </div>
+                    </div>
+                    <div class="arrow"></div>
+                    
+                    <div class="flow-node process-node">
+                        <div class="icon">📋</div>
+                        <div class="node-title">Recommendation List</div>
+                        <div class="node-description">Cards/Table View</div>
+                        <div class="tooltip">Student, issue, recommendation, actions</div>
+                    </div>
+                    <div class="arrow"></div>
+                    
+                    <div class="flow-row">
+                        <div class="flow-node feature-node">
+                            <div class="icon">✅</div>
+                            <div class="node-title">Acknowledge</div>
+                            <div class="node-description">Mark as Read</div>
+                            <div class="tooltip">Acknowledge recommendation</div>
+                        </div>
+                        <div class="flow-node feature-node">
+                            <div class="icon">❌</div>
+                            <div class="node-title">Dismiss</div>
+                            <div class="node-description">Remove Item</div>
+                            <div class="tooltip">Dismiss recommendation</div>
+                        </div>
+                        <div class="flow-node feature-node">
+                            <div class="icon">👁️</div>
+                            <div class="node-title">View Student</div>
+                            <div class="node-description">Go to Dashboard</div>
+                            <div class="tooltip">Navigate to student's individual dashboard</div>
+                        </div>
+                        <div class="flow-node feature-node">
+                            <div class="icon">🗄️</div>
+                            <div class="node-title">Archive</div>
+                            <div class="node-description">Hide Completed</div>
+                            <div class="tooltip">Archive dismissed recommendations</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- STUDENT DASHBOARD -->
+            <div class="flow-section">
+                <div class="section-title">👤 STUDENT DASHBOARD</div>
+                <div class="flow-node dashboard-node">
+                    <div class="icon">👤</div>
+                    <div class="node-title">Student Dashboard</div>
+                    <div class="node-description">Individual Student View</div>
+                    <div class="tooltip">Per-student attendance insights and recommendations</div>
+                </div>
+                <div class="arrow"></div>
+                
+                <div class="process-flow">
+                    <div class="flow-node process-node">
+                        <div class="icon">📊</div>
+                        <div class="node-title">Student Summary</div>
+                        <div class="node-description">Name, Class, Rate</div>
+                        <div class="tooltip">Display student info and current attendance rate</div>
+                    </div>
+                    <div class="arrow"></div>
+                    
+                    <div class="flow-row">
+                        <div class="flow-node feature-node">
+                            <div class="icon">📈</div>
+                            <div class="node-title">Attendance History</div>
+                            <div class="node-description">30-Day Line Chart</div>
+                            <div class="tooltip">Visual timeline of student's attendance</div>
+                        </div>
+                        <div class="flow-node feature-node">
+                            <div class="icon">🥧</div>
+                            <div class="node-title">Status Breakdown</div>
+                            <div class="node-description">Pie Chart</div>
+                            <div class="tooltip">Present/Absent/Late/Excused distribution</div>
+                        </div>
+                    </div>
+                    <div class="arrow"></div>
+                    
+                    <div class="flow-node process-node">
+                        <div class="icon">💡</div>
+                        <div class="node-title">Personal Recommendations</div>
+                        <div class="node-description">Tailored Suggestions</div>
+                        <div class="tooltip">AI-generated recommendations for this student</div>
+                    </div>
+                    <div class="arrow"></div>
+                    
+                    <div class="flow-row">
+                        <div class="flow-node feature-node">
+                            <div class="icon">⬅️</div>
+                            <div class="node-title">Back to List</div>
+                            <div class="node-description">Return Navigation</div>
+                            <div class="tooltip">Return to student management page</div>
+                        </div>
+                        <div class="flow-node feature-node">
+                            <div class="icon">📤</div>
+                            <div class="node-title">Export Report</div>
+                            <div class="node-description">Download PDF/Excel</div>
+                            <div class="tooltip">Export student's attendance data</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- REPORT GENERATION -->
+            <div class="flow-section">
+                <div class="section-title">📋 REPORT GENERATION</div>
+                <div class="flow-node report-node">
+                    <div class="icon">📋</div>
+                    <div class="node-title">Report Generation</div>
+                    <div class="node-description">Export Reports</div>
+                    <div class="tooltip">Generate and download attendance reports</div>
+                </div>
+                <div class="arrow"></div>
+                
+                <div class="process-flow">
+                    <div class="flow-row">
+                        <div class="flow-node process-node">
+                            <div class="icon">📊</div>
+                            <div class="node-title">Select Report Type</div>
+                            <div class="node-description">Weekly/Monthly/By Class</div>
+                            <div class="tooltip">Choose report format and scope</div>
+                        </div>
+                        <div class="flow-node process-node">
+                            <div class="icon">📄</div>
+                            <div class="node-title">Select Format</div>
+                            <div class="node-description">PDF/Excel</div>
+                            <div class="tooltip">Choose output format</div>
+                        </div>
+                        <div class="flow-node process-node">
+                            <div class="icon">📅</div>
+                            <div class="node-title">Date Range</div>
+                            <div class="node-description">Custom Period</div>
+                            <div class="tooltip">Select date range for report</div>
+                        </div>
+                    </div>
+                    <div class="arrow"></div>
+                    
+                    <div class="flow-node process-node">
+                        <div class="icon">👁️</div>
+                        <div class="node-title">Report Preview</div>
+                        <div class="node-description">Table/Chart Preview</div>
+                        <div class="tooltip">Preview report content before generation</div>
+                    </div>
+                    <div class="arrow"></div>
+                    
+                    <div class="flow-node process-node">
+                        <div class="icon">⚙️</div>
+                        <div class="node-title">Generate Report</div>
+                        <div class="node-description">Create File</div>
+                        <div class="tooltip">Process and create report file</div>
+                    </div>
+                    <div class="arrow"></div>
+                    
+                    <div class="flow-node decision-node">
+                        <div class="decision-content">
+                            <div class="icon">✅</div>
+                            <div class="node-title">Generated?</div>
+                        </div>
+                        <div class="tooltip">Check if report was created successfully</div>
+                    </div>
+                    <div class="arrow"></div>
+                    
+                    <div class="flow-row">
+                        <div class="flow-node error-node">
+                            <div class="icon">❌</div>
+                            <div class="node-title">Generation Error</div>
+                            <div class="node-description">Report Failed</div>
+                            <div class="tooltip">Show error message and retry option</div>
+                        </div>
+                        <div class="arrow-horizontal"></div>
+                        <div class="flow-node success-node">
+                            <div class="icon">📥</div>
+                            <div class="node-title">Download Report</div>
+                            <div class="node-description">Export Success</div>
+                            <div class="tooltip">Download generated report file</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SYSTEM END -->
+            <div class="flow-section">
+                <div class="section-title">🔚 SYSTEM END</div>
+                <div class="flow-node end-node">
+                    <div class="icon">🔚</div>
+                    <div class="node-title">END</div>
+                    <div class="node-description">System Exit</div>
+                    <div class="tooltip">User logout or session end</div>
+                </div>
+            </div>
+
+            <!-- LEGEND -->
+            <div class="legend">
+                <div class="legend-item">
+                    <div class="legend-color" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);"></div>
+                    <span>Start/End Points</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);"></div>
+                    <span>Authentication</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: linear-gradient(135deg, #d299c2 0%, #fef9d7 100%);"></div>
+                    <span>Dashboard</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: linear-gradient(135deg, #89f7fe 0%, #66a6ff 100%);"></div>
+                    <span>Features</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: linear-gradient(135deg, #fdbb2d 0%, #22c1c3 100%);"></div>
+                    <span>Management</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);"></div>
+                    <span>Process</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);"></div>
+                    <span>Analytics</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);"></div>
+                    <span>Recommendations</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: linear-gradient(135deg, #4ecdc4 0%, #44a08d 100%);"></div>
+                    <span>Reports</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: linear-gradient(135deg, #ff6b6b 0%, #ffa8a8 100%);"></div>
+                    <span>Errors</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: linear-gradient(135deg, #51cf66 0%, #8ce99a 100%);"></div>
+                    <span>Success</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

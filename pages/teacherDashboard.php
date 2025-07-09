@@ -808,31 +808,31 @@
                     let pageFile;
                     switch (index) {
                         case 0: // Dashboard
-                            pageFile = './teacher/dashboard.php';
+                            pageFile = 'dashboard.php';
                             break;
                         case 1: // Manage Classes
-                            pageFile = './teacher/manage-classes.php';
+                            pageFile = 'manage-classes.php';
                             break;
                         case 2: // Manage Students
-                            pageFile = './teacher/manage-students.php';
+                            pageFile = 'manage-students.php';
                             break;
                         case 3: // Attendance
-                            pageFile = './teacher/attendance.php';
+                            pageFile = 'attendance.php';
                             break;
                         case 4: // Analytics & Predictions
-                            pageFile = './teacher/analytics.php';
+                            pageFile = 'analytics.php';
                             break;
                         case 5: // Reports & Export
-                            pageFile = './teacher/reports.php';
+                            pageFile = 'reports.php';
                             break;
                         case 6: // Profile
-                            pageFile = './teacher/profile.php';
+                            pageFile = 'profile.php';
                             break;
                         case 7: // Settings
-                            pageFile = './teacher/settings.php';
+                            pageFile = 'settings.php';
                             break;
                         case 8: // Support
-                            pageFile = './teacher/support.php';
+                            pageFile = 'support.php';
                             break;
                         case 9: // Logout
                             if (confirm('Are you sure you want to log out?')) {
@@ -847,7 +847,7 @@
             });
             
             // Load default page
-            loadPage('./teacher/dashboard.php');
+            loadPage('dashboard.php');
         });
         
         // Function to load page into iframe

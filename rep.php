@@ -497,8 +497,6 @@
     </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.3/jspdf.plugin.autotable.min.js"></script>
     <script>
         // Data from Class Management
         const classes = [
@@ -765,7 +763,7 @@
             for (let i = 1; i < rows.length; i++) {
                 const row = {};
                 rows[i].querySelectorAll('td').forEach((td, index) => {
-                    const text = td.textContent.trim().replace(/^.*?(Present|Late|Absent|Excellent|Good|Fair|Poor)$/g, '$1');
+                    const text = td.textContent.trim();
                     row[headers[index]] = text;
                 });
                 data.push(row);
@@ -780,7 +778,7 @@
                     exportCSV(data, headers, reportType);
                     break;
                 case 'pdf':
-                    exportPDF(data, headers, reportType);
+                    alert('PDF export functionality would be implemented with a PDF library');
                     break;
             }
         }
@@ -809,73 +807,6 @@
             a.download = `${reportType}-report-${new Date().toISOString().split('T')[0]}.csv`;
             a.click();
             URL.revokeObjectURL(url);
-        }
-
-        function exportPDF(data, headers, reportType) {
-            const { jsPDF } = window.jspdf;
-            const doc = new jsPDF();
-            
-            // Set document properties
-            doc.setFont('helvetica', 'normal');
-            doc.setFontSize(16);
-            doc.text(document.getElementById('report-title').textContent, 14, 20);
-            
-            // Add date range
-            const dateFrom = document.getElementById('date-from').value;
-            const dateTo = document.getElementById('date-to').value;
-            doc.setFontSize(10);
-            doc.text(`Date Range: ${dateFrom} to ${dateTo}`, 14, 30);
-            
-            // Prepare table data
-            const tableData = data.map(row => headers.map(header => row[header] || ''));
-            
-            // Generate table using autoTable
-            doc.autoTable({
-                startY: 40,
-                head: [headers],
-                body: tableData,
-                theme: 'grid',
-                styles: {
-                    fontSize: 8,
-                    cellPadding: 2,
-                    overflow: 'linebreak',
-                    minCellHeight: 10
-                },
-                headStyles: {
-                    fillColor: [37, 99, 235],
-                    textColor: [255, 255, 255],
-                    fontStyle: 'bold'
-                },
-                columnStyles: {
-                    0: { cellWidth: reportType === 'all-class' ? 30 : 20 },
-                    1: { cellWidth: reportType === 'all-class' ? 30 : 30 },
-                    2: { cellWidth: reportType === 'all-class' ? 30 : 20 },
-                    3: { cellWidth: reportType === 'all-class' ? 30 : 30 },
-                    4: { cellWidth: reportType === 'all-class' ? 30 : 30 },
-                    5: { cellWidth: reportType === 'all-class' ? 30 : 20 },
-                    6: { cellWidth: reportType !== 'all-class' ? 20 : undefined },
-                    7: { cellWidth: reportType !== 'all-class' ? 20 : undefined },
-                    8: { cellWidth: reportType !== 'all-class' ? 20 : undefined }
-                },
-                didParseCell: function(data) {
-                    if (data.section === 'body' && data.column.index === headers.indexOf('Status')) {
-                        const status = data.cell.text[0];
-                        if (status === 'Present' || status === 'Excellent') {
-                            data.cell.styles.fillColor = [220, 252, 231];
-                            data.cell.styles.textColor = [22, 101, 52];
-                        } else if (status === 'Late' || status === 'Good' || status === 'Fair') {
-                            data.cell.styles.fillColor = [254, 243, 199];
-                            data.cell.styles.textColor = [146, 64, 14];
-                        } else if (status === 'Absent' || status === 'Poor') {
-                            data.cell.styles.fillColor = [254, 202, 202];
-                            data.cell.styles.textColor = [153, 27, 27];
-                        }
-                    }
-                }
-            });
-            
-            // Save the PDF
-            doc.save(`${reportType}-report-${new Date().toISOString().split('T')[0]}.pdf`);
         }
         
         // Initialize with default date range

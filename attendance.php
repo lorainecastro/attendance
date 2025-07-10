@@ -427,7 +427,7 @@
         <div class="table-header">
             <div class="table-title">Attendance Grid</div>
             <div class="table-controls">
-                <input type="date" class="selector-input" id="date-selector" value="2025-07-10" min="2025-06-01" max="2025-07-10">
+                <input type="date" class="selector-input" id="date-selector" value="2025-07-11" min="2025-06-01" max="2025-07-11">
                 <select class="selector-select" id="gradeLevelSelector">
                     <option value="">All Grade Levels</option>
                 </select>

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Reports & Recommendations - Student Attendance System</title>
+    <title>Reports - Student Attendance System</title>
     <style>
         :root {
             /* Primary Colors */
@@ -84,11 +84,11 @@
         }
 
         h1 {
-            font-size: var(--font-size-2xl);
-            margin-bottom: var(--spacing-md);
+            font-size: 24px;
+            margin-bottom: 20px;
             color: var(--blackfont-color);
             position: relative;
-            padding-bottom: var(--spacing-xs);
+            padding-bottom: 10px;
         }
 
         h1:after {

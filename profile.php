@@ -251,26 +251,6 @@
         <button class="action-btn" id="save-profile">Save Changes</button>
     </div>
 
-    <!-- Notification Preferences -->
-    <h2>Notification Preferences</h2>
-    <div class="card">
-        <h3>Manage Notifications</h3>
-        <div class="checkbox-group">
-            <label><input type="checkbox" id="absence-alerts" checked> Absence Alerts</label>
-            <label><input type="checkbox" id="system-updates" checked> System Updates</label>
-            <label><input type="checkbox" id="report-reminders"> Report Reminders</label>
-        </div>
-        <div class="form-group">
-            <label for="notification-method">Notification Method</label>
-            <select id="notification-method">
-                <option value="in-app" selected>In-App</option>
-                <option value="email">Email</option>
-                <option value="both">Both</option>
-            </select>
-        </div>
-        <button class="action-btn" id="save-notifications">Save Preferences</button>
-    </div>
-
     <!-- Password Management -->
     <h2>Password Management</h2>
     <div class="card">
@@ -297,8 +277,6 @@
     <h2>Account Actions</h2>
     <div class="card">
         <h3>Manage Account</h3>
-        <button class="action-btn" id="export-data">Export Account Data</button>
-        <button class="action-btn" id="logout">Logout</button>
         <button class="action-btn danger-btn" id="delete-account">Delete Account</button>
     </div>
 

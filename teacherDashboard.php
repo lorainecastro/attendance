@@ -774,8 +774,8 @@
                 <div class="nav-item">
                     <a href="#" class="nav-link menu-item">
                         <i class="fas fa-file-export nav-icon"></i>
-                        <span class="nav-text">Reports</span>
-                        <span class="nav-tooltip">Reports</span>
+                        <span class="nav-text">Reports & Export</span>
+                        <span class="nav-tooltip">Reports & Export</span>
                     </a>
                 </div>
             </div>

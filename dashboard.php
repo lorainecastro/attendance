@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -12,13 +13,13 @@
             --primary-blue: #2563eb;
             --primary-blue-hover: #1d4ed8;
             --primary-blue-light: #dbeafe;
-            
+
             /* Status Colors */
             --success-green: #16a34a;
             --warning-yellow: #ca8a04;
             --danger-red: #dc2626;
             --info-cyan: #0891b2;
-            
+
             /* Neutral Colors */
             --dark-gray: #374151;
             --medium-gray: #6b7280;
@@ -26,7 +27,7 @@
             --background: #f9fafb;
             --white: #ffffff;
             --border-color: #e5e7eb;
-            
+
             /* Additional Colors for Missing Variables */
             --card-bg: #ffffff;
             --blackfont-color: #111827;
@@ -38,7 +39,7 @@
             --primary-hover: #1d4ed8;
             --inputfield-color: #f3f4f6;
             --inputfieldhover-color: #e5e7eb;
-            
+
             /* Typography */
             --font-family: 'Inter', sans-serif;
             --font-size-sm: 0.875rem;
@@ -46,7 +47,7 @@
             --font-size-lg: 1.125rem;
             --font-size-xl: 1.25rem;
             --font-size-2xl: 1.5rem;
-    
+
             /* Spacing */
             --spacing-xs: 0.25rem;
             --spacing-sm: 0.5rem;
@@ -54,23 +55,23 @@
             --spacing-lg: 1.5rem;
             --spacing-xl: 2rem;
             --spacing-2xl: 3rem;
-            
+
             /* Layout */
             --sidebar-width: 280px;
             --sidebar-collapsed-width: 70px;
             --header-height: 70px;
-            
+
             /* Shadows */
             --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
             --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
             --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-            
+
             /* Border Radius */
             --radius-sm: 0.25rem;
             --radius-md: 0.5rem;
             --radius-lg: 0.75rem;
             --radius-xl: 1rem;
-    
+
             /* Transitions */
             --transition-fast: 0.15s ease-in-out;
             --transition-normal: 0.3s ease-in-out;
@@ -264,11 +265,12 @@
             .dashboard-grid {
                 grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
             }
-            
-            th, td {
+
+            th,
+            td {
                 padding: 10px;
             }
-            
+
             .card-value {
                 font-size: 20px;
             }
@@ -278,7 +280,7 @@
             .table-responsive {
                 overflow-x: auto;
             }
-            
+
             .dashboard-grid {
                 grid-template-columns: 1fr;
             }
@@ -327,7 +329,8 @@
             border-collapse: collapse;
         }
 
-        .schedule-table th, .schedule-table td {
+        .schedule-table th,
+        .schedule-table td {
             padding: 12px;
             text-align: left;
             border-bottom: 1px solid var(--border-color);
@@ -383,23 +386,24 @@
         }
     </style>
 </head>
+
 <body>
     <h1>Teacher Dashboard</h1>
 
     <!-- Quick Actions -->
-     <!-- Quick Actions -->
+    <!-- Quick Actions -->
     <div class="quick-actions">
-    <a href="attendance.php" class="action-btn">
-        <i class="fas fa-check-circle"></i> Mark Attendance
-    </a>
-    <a href="manage-classes.php" class="action-btn">
-        <i class="fas fa-book"></i> View Class Details
-    </a>
-    <a href="reports.php" class="action-btn">
-        <i class="fas fa-file-alt"></i> Generate Report
-    </a>
-</div>
-    
+        <a href="attendance.php" class="action-btn">
+            <i class="fas fa-check-circle"></i> Mark Attendance
+        </a>
+        <a href="manage-classes.php" class="action-btn">
+            <i class="fas fa-book"></i> View Class Details
+        </a>
+        <a href="reports.php" class="action-btn">
+            <i class="fas fa-file-alt"></i> Generate Report
+        </a>
+    </div>
+
     <!-- Stats Cards -->
     <div class="dashboard-grid">
         <div class="card">
@@ -410,13 +414,13 @@
                 </div>
                 <div class="card-icon bg-purple">
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 16 16">
-                        <path d="M3.5 2A1.5 1.5 0 0 1 5 0.5h6A1.5 1.5 0 0 1 12.5 2v10a1.5 1.5 0 0 1-1.5 1.5H5A1.5 1.5 0 0 1 3.5 12V2zm1.5-.5A.5.5 0 0 0 4.5 2v10a.5.5 0 0 0 .5.5h6a.5.5 0 0 0 .5-.5V2a.5.5 0 0 0-.5-.5H5z"/>
-                        <path d="M7 5.5a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-1a.5.5 0 0 1-.5-.5v-1z"/>
+                        <path d="M3.5 2A1.5 1.5 0 0 1 5 0.5h6A1.5 1.5 0 0 1 12.5 2v10a1.5 1.5 0 0 1-1.5 1.5H5A1.5 1.5 0 0 1 3.5 12V2zm1.5-.5A.5.5 0 0 0 4.5 2v10a.5.5 0 0 0 .5.5h6a.5.5 0 0 0 .5-.5V2a.5.5 0 0 0-.5-.5H5z" />
+                        <path d="M7 5.5a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-1a.5.5 0 0 1-.5-.5v-1z" />
                     </svg>
                 </div>
             </div>
         </div>
-        
+
         <div class="card">
             <div class="card-header">
                 <div>
@@ -425,14 +429,14 @@
                 </div>
                 <div class="card-icon bg-blue">
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 16 16">
-                        <path d="M7 14s-1 0-1-1 1-4 5-4 5 3 5 4-1 1-1 1H7zm4-6a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"/>
-                        <path fill-rule="evenodd" d="M5.216 14A2.238 2.238 0 0 1 5 13c0-1.355.68-2.75 1.936-3.72A6.325 6.325 0 0 0 5 9c-4 0-5 3-5 4s1 1 1 1h4.216z"/>
-                        <path d="M4.5 8a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z"/>
+                        <path d="M7 14s-1 0-1-1 1-4 5-4 5 3 5 4-1 1-1 1H7zm4-6a3 3 0 1 0 0-6 3 3 0 0 0 0 6z" />
+                        <path fill-rule="evenodd" d="M5.216 14A2.238 2.238 0 0 1 5 13c0-1.355.68-2.75 1.936-3.72A6.325 6.325 0 0 0 5 9c-4 0-5 3-5 4s1 1 1 1h4.216z" />
+                        <path d="M4.5 8a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z" />
                     </svg>
                 </div>
             </div>
         </div>
-        
+
         <div class="card">
             <div class="card-header">
                 <div>
@@ -441,13 +445,13 @@
                 </div>
                 <div class="card-icon bg-green">
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 16 16">
-                        <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
-                        <path d="M10.97 4.97a.235.235 0 0 0-.02.022L7.477 9.417 5.384 7.323a.75.75 0 0 0-1.06 1.06L6.97 11.03a.75.75 0 0 0 1.079-.02l3.992-4.99a.75.75 0 0 0-1.071-1.05z"/>
+                        <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z" />
+                        <path d="M10.97 4.97a.235.235 0 0 0-.02.022L7.477 9.417 5.384 7.323a.75.75 0 0 0-1.06 1.06L6.97 11.03a.75.75 0 0 0 1.079-.02l3.992-4.99a.75.75 0 0 0-1.071-1.05z" />
                     </svg>
                 </div>
             </div>
         </div>
-        
+
         <div class="card">
             <div class="card-header">
                 <div>
@@ -456,14 +460,14 @@
                 </div>
                 <div class="card-icon bg-pink">
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 16 16">
-                        <path d="M8 16a2 2 0 0 0 2-2H6a2 2 0 0 0 2 2zm.995-14.901a1 1 0 1 0-1.99 0A5.002 5.002 0 0 0 3 6c0 1.098-.5 6-2 7h14c-1.5-1-2-5.902-2-7 0-2.42-1.72-4.44-4.005-4.901z"/>
+                        <path d="M8 16a2 2 0 0 0 2-2H6a2 2 0 0 0 2 2zm.995-14.901a1 1 0 1 0-1.99 0A5.002 5.002 0 0 0 3 6c0 1.098-.5 6-2 7h14c-1.5-1-2-5.902-2-7 0-2.42-1.72-4.44-4.005-4.901z" />
                     </svg>
                 </div>
             </div>
         </div>
     </div>
-    
-    <!-- Charts Section -->       
+
+    <!-- Charts Section -->
     <div class="charts-row">
         <div class="chart-card">
             <div class="chart-header">
@@ -477,7 +481,7 @@
                 <canvas id="attendance-chart" style="height: 300px; width: 100%;"></canvas>
             </div>
         </div>
-        
+
         <div class="chart-card">
             <div class="chart-header">
                 <div class="chart-title">Attendance Status Distribution</div>
@@ -532,8 +536,7 @@
 
     <script>
         // Sample data for calculations
-        const classes = [
-            {
+        const classes = [{
                 id: 1,
                 code: 'MATH-101-A',
                 sectionName: 'Diamond Section',
@@ -542,15 +545,38 @@
                 room: 'Room 201',
                 attendancePercentage: 10,
                 schedule: {
-                    monday: { start: '08:00', end: '09:30' },
-                    wednesday: { start: '08:00', end: '09:30' },
-                    saturday: { start: '09:00', end: '10:30' } // Added for demo
+                    monday: {
+                        start: '08:00',
+                        end: '09:30'
+                    },
+                    wednesday: {
+                        start: '08:00',
+                        end: '09:30'
+                    },
+                    saturday: {
+                        start: '09:00',
+                        end: '10:30'
+                    } // Added for demo
                 },
                 status: 'active',
-                students: [
-                    { id: 1, firstName: 'John', lastName: 'Doe', email: 'john.doe@email.com' },
-                    { id: 2, firstName: 'Jane', lastName: 'Smith', email: 'jane.smith@email.com' },
-                    { id: 3, firstName: 'Mike', lastName: 'Johnson', email: 'mike.johnson@email.com' }
+                students: [{
+                        id: 1,
+                        firstName: 'John',
+                        lastName: 'Doe',
+                        email: 'john.doe@email.com'
+                    },
+                    {
+                        id: 2,
+                        firstName: 'Jane',
+                        lastName: 'Smith',
+                        email: 'jane.smith@email.com'
+                    },
+                    {
+                        id: 3,
+                        firstName: 'Mike',
+                        lastName: 'Johnson',
+                        email: 'mike.johnson@email.com'
+                    }
                 ]
             },
             {
@@ -562,13 +588,28 @@
                 room: 'Lab 1',
                 attendancePercentage: 15,
                 schedule: {
-                    tuesday: { start: '10:00', end: '11:30' },
-                    thursday: { start: '10:00', end: '11:30' }
+                    tuesday: {
+                        start: '10:00',
+                        end: '11:30'
+                    },
+                    thursday: {
+                        start: '10:00',
+                        end: '11:30'
+                    }
                 },
                 status: 'active',
-                students: [
-                    { id: 4, firstName: 'Alice', lastName: 'Brown', email: 'alice.brown@email.com' },
-                    { id: 5, firstName: 'Bob', lastName: 'Wilson', email: 'bob.wilson@email.com' }
+                students: [{
+                        id: 4,
+                        firstName: 'Alice',
+                        lastName: 'Brown',
+                        email: 'alice.brown@email.com'
+                    },
+                    {
+                        id: 5,
+                        firstName: 'Bob',
+                        lastName: 'Wilson',
+                        email: 'bob.wilson@email.com'
+                    }
                 ]
             },
             {
@@ -580,32 +621,104 @@
                 room: 'Room 305',
                 attendancePercentage: 20,
                 schedule: {
-                    monday: { start: '14:00', end: '15:30' },
-                    wednesday: { start: '14:00', end: '15:30' }
+                    monday: {
+                        start: '14:00',
+                        end: '15:30'
+                    },
+                    wednesday: {
+                        start: '14:00',
+                        end: '15:30'
+                    }
                 },
                 status: 'inactive',
-                students: [
-                    { id: 6, firstName: 'Carol', lastName: 'Davis', email: 'carol.davis@email.com' },
-                    { id: 7, firstName: 'David', lastName: 'Miller', email: 'david.miller@email.com' },
-                    { id: 8, firstName: 'Emma', lastName: 'Garcia', email: 'emma.garcia@email.com' },
-                    { id: 9, firstName: 'Frank', lastName: 'Rodriguez', email: 'frank.rodriguez@email.com' }
+                students: [{
+                        id: 6,
+                        firstName: 'Carol',
+                        lastName: 'Davis',
+                        email: 'carol.davis@email.com'
+                    },
+                    {
+                        id: 7,
+                        firstName: 'David',
+                        lastName: 'Miller',
+                        email: 'david.miller@email.com'
+                    },
+                    {
+                        id: 8,
+                        firstName: 'Emma',
+                        lastName: 'Garcia',
+                        email: 'emma.garcia@email.com'
+                    },
+                    {
+                        id: 9,
+                        firstName: 'Frank',
+                        lastName: 'Rodriguez',
+                        email: 'frank.rodriguez@email.com'
+                    }
                 ]
             }
         ];
 
-        const attendanceRecords = [
-            { date: '2025-07-19', studentId: 1, status: 'present' },
-            { date: '2025-07-19', studentId: 2, status: 'absent' },
-            { date: '2025-07-19', studentId: 3, status: 'late' },
-            { date: '2025-07-18', studentId: 1, status: 'present' },
-            { date: '2025-07-18', studentId: 2, status: 'excused' },
-            { date: '2025-07-18', studentId: 3, status: 'absent' },
-            { date: '2025-07-17', studentId: 4, status: 'present' },
-            { date: '2025-07-17', studentId: 5, status: 'late' },
-            { date: '2025-07-16', studentId: 6, status: 'present' },
-            { date: '2025-07-16', studentId: 7, status: 'absent' },
-            { date: '2025-07-15', studentId: 8, status: 'present' },
-            { date: '2025-07-15', studentId: 9, status: 'excused' },
+        const attendanceRecords = [{
+                date: '2025-07-19',
+                studentId: 1,
+                status: 'present'
+            },
+            {
+                date: '2025-07-19',
+                studentId: 2,
+                status: 'absent'
+            },
+            {
+                date: '2025-07-19',
+                studentId: 3,
+                status: 'late'
+            },
+            {
+                date: '2025-07-18',
+                studentId: 1,
+                status: 'present'
+            },
+            {
+                date: '2025-07-18',
+                studentId: 2,
+                status: 'excused'
+            },
+            {
+                date: '2025-07-18',
+                studentId: 3,
+                status: 'absent'
+            },
+            {
+                date: '2025-07-17',
+                studentId: 4,
+                status: 'present'
+            },
+            {
+                date: '2025-07-17',
+                studentId: 5,
+                status: 'late'
+            },
+            {
+                date: '2025-07-16',
+                studentId: 6,
+                status: 'present'
+            },
+            {
+                date: '2025-07-16',
+                studentId: 7,
+                status: 'absent'
+            },
+            {
+                date: '2025-07-15',
+                studentId: 8,
+                status: 'present'
+            },
+            {
+                date: '2025-07-15',
+                studentId: 9,
+                status: 'excused'
+            },
             ...new Array(100).fill().map((_, i) => ({
                 date: `2025-07-${(i % 19) + 1 < 10 ? '0' : ''}${(i % 19) + 1}`,
                 studentId: (i % 9) + 1,
@@ -634,9 +747,9 @@
                 window.viewClass = function(classId) {
                     const classItem = classes.find(c => c.id === classId);
                     if (!classItem) return;
-                    
+
                     const scheduleText = formatSchedule(classItem.schedule);
-                    
+
                     alert(`
 Class Code: ${classItem.code}
 Section Name: ${classItem.sectionName}
@@ -861,10 +974,10 @@ Students List: ${classItem.students.map(s => `${s.firstName} ${s.lastName}`).joi
                         btn.classList.remove('active');
                     });
                     this.classList.add('active');
-                    
+
                     const period = this.getAttribute('data-period');
                     const chartType = this.getAttribute('data-chart');
-                    
+
                     if (chartType === 'attendance') {
                         attendanceChart.data.labels = attendanceData[period].labels;
                         attendanceChart.data.datasets[0].data = attendanceData[period].values;
@@ -885,7 +998,9 @@ Students List: ${classItem.students.map(s => `${s.firstName} ${s.lastName}`).joi
         function renderTodaySchedule() {
             const tbody = document.getElementById('scheduleTableBody');
             const today = new Date('2025-07-19');
-            const dayName = today.toLocaleString('en-US', { weekday: 'long' }).toLowerCase();
+            const dayName = today.toLocaleString('en-US', {
+                weekday: 'long'
+            }).toLowerCase();
             const filteredClasses = classes.filter(c => c.schedule[dayName]);
 
             tbody.innerHTML = '';
@@ -920,7 +1035,7 @@ Students List: ${classItem.students.map(s => `${s.firstName} ${s.lastName}`).joi
             if (!schedule || Object.keys(schedule).length === 0) {
                 return '<span class="no-schedule">No schedule set</span>';
             }
-            
+
             return Object.entries(schedule).map(([day, times]) => {
                 const dayName = capitalizeFirst(day);
                 return `<div class="schedule-item">${dayName}: ${formatTime(times.start)} - ${formatTime(times.end)}</div>`;
@@ -941,4 +1056,5 @@ Students List: ${classItem.students.map(s => `${s.firstName} ${s.lastName}`).joi
         }
     </script>
 </body>
+
 </html>

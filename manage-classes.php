@@ -23,7 +23,7 @@
             --dark-gray: #1f2937;
             --medium-gray: #6b7280;
             --light-gray: #e5e7eb;
-            --background: #f4f7fe;
+            --background: #f9fafb;
             --white: #ffffff;
             --border-color: #e2e8f0;
     
@@ -80,7 +80,7 @@
         body {
             background-color: var(--background);
             color: var(--blackfont-color);
-            min-height: 100vh;
+            /* min-height: 100vh; */
             padding: 20px;
         }
 

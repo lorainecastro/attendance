@@ -387,17 +387,18 @@
     <h1>Teacher Dashboard</h1>
 
     <!-- Quick Actions -->
+     <!-- Quick Actions -->
     <div class="quick-actions">
-        <button class="action-btn" onclick="markAttendance()">
-            <i class="fas fa-check-circle"></i> Mark Attendance
-        </button>
-        <button class="action-btn" onclick="viewClassDetails()">
-            <i class="fas fa-book"></i> View Class Details
-        </button>
-        <button class="action-btn" onclick="generateReport()">
-            <i class="fas fa-file-alt"></i> Generate Report
-        </button>
-    </div>
+    <a href="attendance.php" class="action-btn">
+        <i class="fas fa-check-circle"></i> Mark Attendance
+    </a>
+    <a href="manage-classes.php" class="action-btn">
+        <i class="fas fa-book"></i> View Class Details
+    </a>
+    <a href="reports.php" class="action-btn">
+        <i class="fas fa-file-alt"></i> Generate Report
+    </a>
+</div>
     
     <!-- Stats Cards -->
     <div class="dashboard-grid">

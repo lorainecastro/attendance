@@ -25,7 +25,7 @@
             --white: #ffffff;
             --border-color: #e5e7eb;
             
-            /* Additional Colors for Missing Variables */
+            /* Additional Colors */
             --card-bg: #ffffff;
             --blackfont-color: #111827;
             --whitefont-color: #ffffff;
@@ -242,49 +242,6 @@
             background-color: var(--inputfield-color);
         }
 
-        /* Modal */
-        .modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.5);
-            justify-content: center;
-            align-items: center;
-            z-index: 1000;
-        }
-
-        .modal-content {
-            background: var(--card-bg);
-            border-radius: var(--radius-md);
-            padding: var(--spacing-md);
-            max-width: 800px;
-            width: 90%;
-            max-height: 80vh;
-            overflow-y: auto;
-            box-shadow: var(--shadow-lg);
-        }
-
-        .modal-content h3 {
-            margin-bottom: var(--spacing-sm);
-        }
-
-        .close-btn {
-            float: right;
-            font-size: 20px;
-            cursor: pointer;
-            color: var(--grayfont-color);
-        }
-
-        /* Chart */
-        .chart-container {
-            margin-top: var(--spacing-md);
-            position: relative;
-            height: 300px;
-        }
-
         /* Status badges */
         .status-badge {
             padding: var(--spacing-xs) var(--spacing-sm);
@@ -351,7 +308,7 @@
             <div class="card-header">
                 <div>
                     <div class="card-title">Total Students</div>
-                    <div class="card-value">342</div>
+                    <div class="card-value">9</div>
                 </div>
                 <div class="card-icon bg-blue">
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 16 16">
@@ -365,7 +322,7 @@
             <div class="card-header">
                 <div>
                     <div class="card-title">Overall Attendance</div>
-                    <div class="card-value">91.5%</div>
+                    <div class="card-value">15%</div>
                 </div>
                 <div class="card-icon bg-green">
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 16 16">
@@ -379,7 +336,7 @@
             <div class="card-header">
                 <div>
                     <div class="card-title">Active Classes</div>
-                    <div class="card-value">18</div>
+                    <div class="card-value">3</div>
                 </div>
                 <div class="card-icon bg-purple">
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 16 16">
@@ -393,7 +350,7 @@
             <div class="card-header">
                 <div>
                     <div class="card-title">Total Records</div>
-                    <div class="card-value">2,856</div>
+                    <div class="card-value">9</div>
                 </div>
                 <div class="card-icon bg-pink">
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 16 16">
@@ -410,28 +367,34 @@
         <div class="table-header">
             <div class="table-title">Report Generator</div>
             <div class="table-controls">
-                <input type="text" class="selector-input" id="search-student" placeholder="Search Student">
+                <select class="selector-select" id="grade-filter">
+                    <option value="">All Grades</option>
+                    <option value="Grade 7">Grade 7</option>
+                    <option value="Grade 10">Grade 10</option>
+                    <option value="Grade 12">Grade 12</option>
+                </select>
+                <select class="selector-select" id="subject-filter">
+                    <option value="">All Subjects</option>
+                    <option value="Mathematics">Mathematics</option>
+                    <option value="Science">Science</option>
+                    <option value="English Literature">English Literature</option>
+                </select>
+                <select class="selector-select" id="section-filter">
+                    <option value="">All Sections</option>
+                    <option value="Diamond Section">Diamond Section</option>
+                    <option value="Einstein Section">Einstein Section</option>
+                    <option value="Shakespeare Section">Shakespeare Section</option>
+                </select>
+                <select class="selector-select" id="student-filter">
+                    <option value="">All Students</option>
+                </select>
                 <select class="selector-select" id="report-type">
                     <option value="">Select Report Type</option>
                     <option value="student">Attendance History per Student</option>
                     <option value="class">Attendance per Class</option>
-                    <option value="class-report">Class Report</option>
+                    <option value="all-class">All Class Report</option>
                 </select>
-                <select class="selector-select" id="report-filter">
-                    <option value="">Select Class/Student</option>
-                    <option value="all">All Students</option>
-                    <option value="math-algebra">Math - Algebra I</option>
-                    <option value="math-geometry">Math - Geometry</option>
-                    <option value="english-9">English 9</option>
-                    <option value="english-10">English 10</option>
-                    <option value="biology">Biology</option>
-                    <option value="chemistry">Chemistry</option>
-                    <option value="world-history">World History</option>
-                    <option value="us-history">US History</option>
-                    <option value="spanish">Spanish I</option>
-                    <option value="pe">Physical Education</option>
-                </select>
-                <input type="date" class="selector-input" id="date-from" value="2024-01-01">
+                <input type="date" class="selector-input" id="date-from" value="2024-09-01">
                 <input type="date" class="selector-input" id="date-to" value="2024-12-31">
                 <select class="selector-select" id="export-format">
                     <option value="">Select Export Format</option>
@@ -452,23 +415,26 @@
         </div>
         
         <div class="attendance-grid">
-            <table id="report-table">
-                <thead id="report-thead">
-                    <tr>
-                        <th>Student ID</th>
-                        <th>Name</th>
-                        <th>Grade</th>
-                        <th>Class</th>
-                        <th>Date</th>
-                        <th>Status</th>
-                        <th>Time In</th>
-                        <th>Time Out</th>
-                    </tr>
-                </thead>
-                <tbody id="report-tbody">
-                    <!-- Sample data will be populated here -->
-                </tbody>
-            </table>
+            <div class="table-responsive">
+                <table id="report-table">
+                    <thead id="report-thead">
+                        <tr>
+                            <th>Student ID</th>
+                            <th>Name</th>
+                            <th>Grade</th>
+                            <th>Subject</th>
+                            <th>Section</th>
+                            <th>Date</th>
+                            <th>Status</th>
+                            <th>Time In</th>
+                            <th>Time Out</th>
+                        </tr>
+                    </thead>
+                    <tbody id="report-tbody">
+                        <!-- Data will be populated here -->
+                    </tbody>
+                </table>
+            </div>
         </div>
     </div>
 
@@ -483,51 +449,48 @@
                     <th>Date</th>
                     <th>Student</th>
                     <th>Grade</th>
-                    <th>Class</th>
+                    <th>Subject</th>
+                    <th>Section</th>
                     <th>Status</th>
                     <th>Time</th>
                 </tr>
             </thead>
             <tbody>
                 <tr>
-                    <td>2024-07-09</td>
-                    <td>Emma Wilson</td>
-                    <td>9th</td>
-                    <td>Algebra I</td>
+                    <td>2024-09-01</td>
+                    <td>John Doe</td>
+                    <td>Grade 7</td>
+                    <td>Mathematics</td>
+                    <td>Diamond Section</td>
                     <td><span class="status-badge status-present">Present</span></td>
                     <td>08:00 AM</td>
                 </tr>
                 <tr>
-                    <td>2024-07-09</td>
-                    <td>Liam Johnson</td>
-                    <td>10th</td>
-                    <td>World History</td>
+                    <td>2024-09-01</td>
+                    <td>Jane Smith</td>
+                    <td>Grade 7</td>
+                    <td>Mathematics</td>
+                    <td>Diamond Section</td>
                     <td><span class="status-badge status-late">Late</span></td>
                     <td>08:15 AM</td>
                 </tr>
                 <tr>
-                    <td>2024-07-09</td>
-                    <td>Sophia Rodriguez</td>
-                    <td>11th</td>
-                    <td>Chemistry</td>
+                    <td>2024-09-01</td>
+                    <td>Alice Brown</td>
+                    <td>Grade 10</td>
+                    <td>Science</td>
+                    <td>Einstein Section</td>
                     <td><span class="status-badge status-absent">Absent</span></td>
                     <td>--</td>
                 </tr>
                 <tr>
-                    <td>2024-07-09</td>
-                    <td>Noah Davis</td>
-                    <td>12th</td>
-                    <td>English 12</td>
+                    <td>2024-09-01</td>
+                    <td>Carol Davis</td>
+                    <td>Grade 12</td>
+                    <td>English Literature</td>
+                    <td>Shakespeare Section</td>
                     <td><span class="status-badge status-present">Present</span></td>
-                    <td>09:30 AM</td>
-                </tr>
-                <tr>
-                    <td>2024-07-08</td>
-                    <td>Olivia Martinez</td>
-                    <td>9th</td>
-                    <td>Biology</td>
-                    <td><span class="status-badge status-present">Present</span></td>
-                    <td>10:45 AM</td>
+                    <td>14:00 PM</td>
                 </tr>
             </tbody>
         </table>
@@ -535,35 +498,89 @@
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
     <script>
-        // Sample data for high school
-        const sampleData = {
-            students: [
-                { id: 'HS001', name: 'Emma Wilson', grade: '9th', class: 'Algebra I', date: '2024-07-09', status: 'Present', timeIn: '08:00 AM', timeOut: '08:50 AM' },
-                { id: 'HS002', name: 'Liam Johnson', grade: '10th', class: 'World History', date: '2024-07-09', status: 'Late', timeIn: '08:15 AM', timeOut: '09:05 AM' },
-                { id: 'HS003', name: 'Sophia Rodriguez', grade: '11th', class: 'Chemistry', date: '2024-07-09', status: 'Absent', timeIn: '--', timeOut: '--' },
-                { id: 'HS004', name: 'Noah Davis', grade: '12th', class: 'English 12', date: '2024-07-09', status: 'Present', timeIn: '09:30 AM', timeOut: '10:20 AM' },
-                { id: 'HS005', name: 'Olivia Martinez', grade: '9th', class: 'Biology', date: '2024-07-08', status: 'Present', timeIn: '10:45 AM', timeOut: '11:35 AM' },
-                { id: 'HS006', name: 'Ethan Brown', grade: '10th', class: 'Geometry', date: '2024-07-08', status: 'Present', timeIn: '11:50 AM', timeOut: '12:40 PM' },
-                { id: 'HS007', name: 'Ava Garcia', grade: '11th', class: 'US History', date: '2024-07-08', status: 'Late', timeIn: '01:05 PM', timeOut: '01:55 PM' },
-                { id: 'HS008', name: 'Mason Anderson', grade: '12th', class: 'Spanish I', date: '2024-07-08', status: 'Present', timeIn: '02:10 PM', timeOut: '03:00 PM' },
-                { id: 'HS009', name: 'Isabella Thompson', grade: '9th', class: 'English 9', date: '2024-07-08', status: 'Present', timeIn: '08:00 AM', timeOut: '08:50 AM' },
-                { id: 'HS010', name: 'Lucas White', grade: '10th', class: 'Physical Education', date: '2024-07-08', status: 'Present', timeIn: '09:05 AM', timeOut: '09:55 AM' },
-                { id: 'HS011', name: 'Mia Harris', grade: '11th', class: 'Algebra II', date: '2024-07-07', status: 'Present', timeIn: '10:00 AM', timeOut: '10:50 AM' },
-                { id: 'HS012', name: 'James Wilson', grade: '12th', class: 'Physics', date: '2024-07-07', status: 'Late', timeIn: '11:05 AM', timeOut: '11:55 AM' }
-            ],
-            classes: [
-                { name: 'Algebra I (9th Grade)', totalStudents: 28, presentToday: 26, avgAttendance: 93 },
-                { name: 'Geometry (10th Grade)', totalStudents: 25, presentToday: 22, avgAttendance: 88 },
-                { name: 'English 9 (9th Grade)', totalStudents: 30, presentToday: 28, avgAttendance: 93 },
-                { name: 'English 10 (10th Grade)', totalStudents: 27, presentToday: 25, avgAttendance: 90 },
-                { name: 'Biology (9th Grade)', totalStudents: 32, presentToday: 29, avgAttendance: 91 },
-                { name: 'Chemistry (11th Grade)', totalStudents: 24, presentToday: 21, avgAttendance: 87 },
-                { name: 'World History (10th Grade)', totalStudents: 29, presentToday: 26, avgAttendance: 89 },
-                { name: 'US History (11th Grade)', totalStudents: 26, presentToday: 24, avgAttendance: 92 },
-                { name: 'Spanish I (9th-12th Grade)', totalStudents: 22, presentToday: 20, avgAttendance: 91 },
-                { name: 'Physical Education (9th-12th Grade)', totalStudents: 35, presentToday: 33, avgAttendance: 94 }
-            ]
-        };
+        // Data from Class Management
+        const classes = [
+            {
+                id: 1,
+                code: 'MATH-101-A',
+                sectionName: 'Diamond Section',
+                subject: 'Mathematics',
+                gradeLevel: 'Grade 7',
+                room: 'Room 201',
+                attendancePercentage: 10,
+                schedule: {
+                    monday: { start: '08:00', end: '09:30' },
+                    wednesday: { start: '08:00', end: '09:30' },
+                    friday: { start: '08:00', end: '09:30' }
+                },
+                status: 'active',
+                students: [
+                    { id: 1, firstName: 'John', lastName: 'Doe', email: 'john.doe@email.com' },
+                    { id: 2, firstName: 'Jane', lastName: 'Smith', email: 'jane.smith@email.com' },
+                    { id: 3, firstName: 'Mike', lastName: 'Johnson', email: 'mike.johnson@email.com' }
+                ]
+            },
+            {
+                id: 2,
+                code: 'SCI-201-B',
+                sectionName: 'Einstein Section',
+                subject: 'Science',
+                gradeLevel: 'Grade 10',
+                room: 'Lab 1',
+                attendancePercentage: 15,
+                schedule: {
+                    tuesday: { start: '10:00', end: '11:30' },
+                    thursday: { start: '10:00', end: '11:30' }
+                },
+                status: 'active',
+                students: [
+                    { id: 4, firstName: 'Alice', lastName: 'Brown', email: 'alice.brown@email.com' },
+                    { id: 5, firstName: 'Bob', lastName: 'Wilson', email: 'bob.wilson@email.com' }
+                ]
+            },
+            {
+                id: 3,
+                code: 'ENG-301-C',
+                sectionName: 'Shakespeare Section',
+                subject: 'English Literature',
+                gradeLevel: 'Grade 12',
+                room: 'Room 305',
+                attendancePercentage: 20,
+                schedule: {
+                    monday: { start: '14:00', end: '15:30' },
+                    wednesday: { start: '14:00', end: '15:30' }
+                },
+                status: 'inactive',
+                students: [
+                    { id: 6, firstName: 'Carol', lastName: 'Davis', email: 'carol.davis@email.com' },
+                    { id: 7, firstName: 'David', lastName: 'Miller', email: 'david.miller@email.com' },
+                    { id: 8, firstName: 'Emma', lastName: 'Garcia', email: 'emma.garcia@email.com' },
+                    { id: 9, firstName: 'Frank', lastName: 'Rodriguez', email: 'frank.rodriguez@email.com' }
+                ]
+            }
+        ];
+
+        // Sample attendance data (aligned with new structure)
+        const attendanceData = [
+            { studentId: 1, classId: 1, date: '2024-09-01', status: 'Present', timeIn: '08:00 AM', timeOut: '09:30 AM' },
+            { studentId: 2, classId: 1, date: '2024-09-01', status: 'Late', timeIn: '08:15 AM', timeOut: '09:30 AM' },
+            { studentId: 3, classId: 1, date: '2024-09-01', status: 'Present', timeIn: '08:00 AM', timeOut: '09:30 AM' },
+            { studentId: 4, classId: 2, date: '2024-09-01', status: 'Absent', timeIn: '--', timeOut: '--' },
+            { studentId: 5, classId: 2, date: '2024-09-01', status: 'Present', timeIn: '10:00 AM', timeOut: '11:30 AM' },
+            { studentId: 6, classId: 3, date: '2024-09-01', status: 'Present', timeIn: '14:00 PM', timeOut: '15:30 PM' },
+            { studentId: 7, classId: 3, date: '2024-09-01', status: 'Late', timeIn: '14:15 PM', timeOut: '15:30 PM' },
+            { studentId: 8, classId: 3, date: '2024-09-01', status: 'Present', timeIn: '14:00 PM', timeOut: '15:30 PM' },
+            { studentId: 9, classId: 3, date: '2024-09-01', status: 'Absent', timeIn: '--', timeOut: '--' }
+        ];
+
+        // Populate student filter
+        const studentFilter = document.getElementById('student-filter');
+        classes.flatMap(cls => cls.students).forEach(student => {
+            const option = document.createElement('option');
+            option.value = student.id;
+            option.textContent = `${student.firstName} ${student.lastName}`;
+            studentFilter.appendChild(option);
+        });
 
         // Event listeners
         document.getElementById('generate-report').addEventListener('click', generateReport);
@@ -571,7 +588,10 @@
 
         function generateReport() {
             const reportType = document.getElementById('report-type').value;
-            const reportFilter = document.getElementById('report-filter').value;
+            const gradeFilter = document.getElementById('grade-filter').value;
+            const subjectFilter = document.getElementById('subject-filter').value;
+            const sectionFilter = document.getElementById('section-filter').value;
+            const studentFilter = document.getElementById('student-filter').value;
             const dateFrom = document.getElementById('date-from').value;
             const dateTo = document.getElementById('date-to').value;
 
@@ -582,7 +602,6 @@
 
             const reportResults = document.getElementById('report-results');
             const reportTitle = document.getElementById('report-title');
-            const reportTable = document.getElementById('report-table');
             const reportThead = document.getElementById('report-thead');
             const reportTbody = document.getElementById('report-tbody');
 
@@ -593,41 +612,59 @@
             let title = '';
             switch (reportType) {
                 case 'student':
-                    title = 'Student Attendance History';
+                    title = 'Attendance History per Student';
                     break;
                 case 'class':
-                    title = 'Class Attendance Report';
+                    title = 'Attendance per Class';
                     break;
-                case 'class-report':
-                    title = 'Detailed Class Report';
+                case 'all-class':
+                    title = 'All Class Report';
                     break;
             }
             reportTitle.textContent = title;
 
             // Generate table headers based on report type
-            if (reportType === 'class-report') {
+            if (reportType === 'all-class') {
                 reportThead.innerHTML = `
                     <tr>
-                        <th>Class</th>
+                        <th>Subject</th>
+                        <th>Section</th>
+                        <th>Grade Level</th>
                         <th>Total Students</th>
-                        <th>Present Today</th>
                         <th>Average Attendance</th>
                         <th>Status</th>
                     </tr>
                 `;
-                
+
+                // Filter classes
+                let filteredClasses = classes;
+                if (gradeFilter) {
+                    filteredClasses = filteredClasses.filter(cls => cls.gradeLevel === gradeFilter);
+                }
+                if (subjectFilter) {
+                    filteredClasses = filteredClasses.filter(cls => cls.subject === subjectFilter);
+                }
+                if (sectionFilter) {
+                    filteredClasses = filteredClasses.filter(cls => cls.sectionName === sectionFilter);
+                }
+
                 // Populate class report data
-                sampleData.classes.forEach(cls => {
+                filteredClasses.forEach(cls => {
                     const row = document.createElement('tr');
-                    const attendanceRate = (cls.presentToday / cls.totalStudents * 100).toFixed(1);
-                    const status = attendanceRate >= 90 ? 'Excellent' : attendanceRate >= 80 ? 'Good' : attendanceRate >= 70 ? 'Fair' : 'Poor';
-                    const statusClass = attendanceRate >= 90 ? 'status-present' : attendanceRate >= 80 ? 'status-late' : 'status-absent';
+                    const totalStudents = cls.students.length;
+                    const attendanceRate = cls.attendancePercentage;
+                    const status = attendanceRate >= 90 ? 'Excellent' : 
+                                  attendanceRate >= 80 ? 'Good' : 
+                                  attendanceRate >= 70 ? 'Fair' : 'Poor';
+                    const statusClass = attendanceRate >= 90 ? 'status-present' : 
+                                       attendanceRate >= 80 ? 'status-late' : 'status-absent';
                     
                     row.innerHTML = `
-                        <td>${cls.name}</td>
-                        <td>${cls.totalStudents}</td>
-                        <td>${cls.presentToday}</td>
-                        <td>${cls.avgAttendance}%</td>
+                        <td>${cls.subject}</td>
+                        <td>${cls.sectionName}</td>
+                        <td>${cls.gradeLevel}</td>
+                        <td>${totalStudents}</td>
+                        <td>${attendanceRate}%</td>
                         <td><span class="status-badge ${statusClass}">${status}</span></td>
                     `;
                     reportTbody.appendChild(row);
@@ -639,7 +676,8 @@
                         <th>Student ID</th>
                         <th>Name</th>
                         <th>Grade</th>
-                        <th>Class</th>
+                        <th>Subject</th>
+                        <th>Section</th>
                         <th>Date</th>
                         <th>Status</th>
                         <th>Time In</th>
@@ -647,30 +685,49 @@
                     </tr>
                 `;
 
-                // Filter data based on selection
-                let filteredData = sampleData.students;
+                // Filter attendance data
+                let filteredData = attendanceData;
                 
-                if (reportFilter && reportFilter !== 'all') {
-                    filteredData = sampleData.students.filter(student => 
-                        student.class.toLowerCase().includes(reportFilter.replace('-', ' '))
-                    );
+                if (gradeFilter) {
+                    const classIds = classes.filter(cls => cls.gradeLevel === gradeFilter).map(cls => cls.id);
+                    filteredData = filteredData.filter(record => classIds.includes(record.classId));
+                }
+                if (subjectFilter) {
+                    const classIds = classes.filter(cls => cls.subject === subjectFilter).map(cls => cls.id);
+                    filteredData = filteredData.filter(record => classIds.includes(record.classId));
+                }
+                if (sectionFilter) {
+                    const classIds = classes.filter(cls => cls.sectionName === sectionFilter).map(cls => cls.id);
+                    filteredData = filteredData.filter(record => classIds.includes(record.classId));
+                }
+                if (studentFilter) {
+                    filteredData = filteredData.filter(record => record.studentId === parseInt(studentFilter));
+                }
+                if (dateFrom) {
+                    filteredData = filteredData.filter(record => record.date >= dateFrom);
+                }
+                if (dateTo) {
+                    filteredData = filteredData.filter(record => record.date <= dateTo);
                 }
 
                 // Populate student data
-                filteredData.forEach(student => {
+                filteredData.forEach(record => {
+                    const cls = classes.find(c => c.id === record.classId);
+                    const student = cls.students.find(s => s.id === record.studentId);
                     const row = document.createElement('tr');
-                    const statusClass = student.status === 'Present' ? 'status-present' : 
-                                       student.status === 'Late' ? 'status-late' : 'status-absent';
+                    const statusClass = record.status === 'Present' ? 'status-present' : 
+                                       record.status === 'Late' ? 'status-late' : 'status-absent';
                     
                     row.innerHTML = `
-                        <td>${student.id}</td>
-                        <td>${student.name}</td>
-                        <td>${student.grade}</td>
-                        <td>${student.class}</td>
-                        <td>${student.date}</td>
-                        <td><span class="status-badge ${statusClass}">${student.status}</span></td>
-                        <td>${student.timeIn}</td>
-                        <td>${student.timeOut}</td>
+                        <td>${record.studentId}</td>
+                        <td>${student.firstName} ${student.lastName}</td>
+                        <td>${cls.gradeLevel}</td>
+                        <td>${cls.subject}</td>
+                        <td>${cls.sectionName}</td>
+                        <td>${record.date}</td>
+                        <td><span class="status-badge ${statusClass}">${record.status}</span></td>
+                        <td>${record.timeIn}</td>
+                        <td>${record.timeOut}</td>
                     `;
                     reportTbody.appendChild(row);
                 });
@@ -706,7 +763,6 @@
             for (let i = 1; i < rows.length; i++) {
                 const row = {};
                 rows[i].querySelectorAll('td').forEach((td, index) => {
-                    // Remove badge styling for export
                     const text = td.textContent.trim();
                     row[headers[index]] = text;
                 });
@@ -754,8 +810,8 @@
         }
         
         // Initialize with default date range
-        document.getElementById('date-from').value = '2024-07-01';
-        document.getElementById('date-to').value = '2024-07-31';
+        document.getElementById('date-from').value = '2024-09-01';
+        document.getElementById('date-to').value = '2024-09-30';
     </script>
 </body>
 </html>

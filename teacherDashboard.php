@@ -13,58 +13,41 @@
     
     <style>
         :root {
-            /* Primary Colors */
             --primary-blue: #2563eb;
             --primary-blue-hover: #1d4ed8;
             --primary-blue-light: #dbeafe;
-            
-            /* Status Colors */
             --success-green: #16a34a;
             --warning-yellow: #ca8a04;
             --danger-red: #dc2626;
             --info-cyan: #0891b2;
-            
-            /* Neutral Colors */
             --dark-gray: #374151;
             --medium-gray: #6b7280;
             --light-gray: #d1d5db;
             --background: #f9fafb;
             --white: #ffffff;
             --border-color: #e5e7eb;
-            
-            /* Typography */
             --font-family: 'Inter', sans-serif;
             --font-size-sm: 0.875rem;
             --font-size-base: 1rem;
             --font-size-lg: 1.125rem;
             --font-size-xl: 1.25rem;
             --font-size-2xl: 1.5rem;
-            
-            /* Spacing */
             --spacing-xs: 0.25rem;
             --spacing-sm: 0.5rem;
             --spacing-md: 1rem;
             --spacing-lg: 1.5rem;
             --spacing-xl: 2rem;
             --spacing-2xl: 3rem;
-            
-            /* Layout */
             --sidebar-width: 280px;
             --sidebar-collapsed-width: 70px;
             --header-height: 70px;
-            
-            /* Shadows */
             --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
             --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
             --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-            
-            /* Border Radius */
             --radius-sm: 0.25rem;
             --radius-md: 0.5rem;
             --radius-lg: 0.75rem;
             --radius-xl: 1rem;
-            
-            /* Transitions */
             --transition-fast: 0.15s ease-in-out;
             --transition-normal: 0.3s ease-in-out;
             --transition-slow: 0.5s ease-in-out;
@@ -464,7 +447,7 @@
         .nav-icon {
             font-size: var(--font-size-lg);
             width: 20px;
-            text_allinea: center;
+            text-align: center;
             flex-shrink: 0;
         }
         
@@ -499,7 +482,7 @@
         .main-content {
             margin-left: var(--sidebar-width);
             margin-top: var(--header-height);
-            padding: 0px;
+            padding: 0;
             transition: var(--transition-normal);
             min-height: calc(100vh - var(--header-height));
         }
@@ -522,6 +505,109 @@
             height: 100%;
             border: none;
             overflow: hidden;
+        }
+        
+        /* Notification Modal */
+        .notification-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1002;
+            opacity: 0;
+            visibility: hidden;
+            transition: var(--transition-fast);
+        }
+        
+        .notification-modal.active {
+            opacity: 1;
+            visibility: visible;
+        }
+        
+        .notification-modal-content {
+            background-color: var(--white);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-lg);
+            width: 100%;
+            max-width: 500px;
+            max-height: 80vh;
+            overflow-y: auto;
+            position: relative;
+        }
+        
+        .notification-modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: var(--spacing-md);
+            border-bottom: 1px solid var(--border-color);
+        }
+        
+        .notification-modal-title {
+            font-size: var(--font-size-lg);
+            font-weight: 600;
+            color: var(--dark-gray);
+        }
+        
+        .notification-modal-close {
+            background: none;
+            border: none;
+            color: var(--medium-gray);
+            font-size: var(--font-size-lg);
+            cursor: pointer;
+            padding: var(--spacing-sm);
+            transition: var(--transition-fast);
+        }
+        
+        .notification-modal-close:hover {
+            color: var(--danger-red);
+        }
+        
+        .notification-modal-body {
+            padding: var(--spacing-md);
+        }
+        
+        .notification-item {
+            display: flex;
+            align-items: flex-start;
+            gap: var(--spacing-sm);
+            padding: var(--spacing-sm);
+            border-bottom: 1px solid var(--border-color);
+            transition: var(--transition-fast);
+        }
+        
+        .notification-item:last-child {
+            border-bottom: none;
+        }
+        
+        .notification-item:hover {
+            background-color: var(--primary-blue-light);
+        }
+        
+        .notification-icon {
+            color: var(--danger-red);
+            font-size: var(--font-size-lg);
+            margin-top: var(--spacing-xs);
+        }
+        
+        .notification-details {
+            flex: 1;
+        }
+        
+        .notification-message {
+            font-size: var(--font-size-sm);
+            color: var(--dark-gray);
+            margin-bottom: var(--spacing-xs);
+        }
+        
+        .notification-meta {
+            font-size: 0.75rem;
+            color: var(--medium-gray);
         }
         
         /* Responsive Design */
@@ -566,6 +652,10 @@
             
             .header-center {
                 display: none;
+            }
+            
+            .notification-modal-content {
+                max-width: 90%;
             }
         }
         
@@ -727,9 +817,9 @@
         </div>
         
         <div class="header-right">
-            <button class="notification-btn">
+            <button class="notification-btn" id="notificationBtn">
                 <i class="fas fa-bell"></i>
-                <span class="notification-badge">5</span>
+                <span class="notification-badge" id="notificationCount">0</span>
             </button>
             
             <div class="profile-dropdown" id="profileDropdown">
@@ -770,6 +860,21 @@
         </div>
     </header>
     
+    <!-- Notification Modal -->
+    <div class="notification-modal" id="notificationModal">
+        <div class="notification-modal-content">
+            <div class="notification-modal-header">
+                <h2 class="notification-modal-title">Notifications</h2>
+                <button class="notification-modal-close" id="notificationModalClose">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="notification-modal-body" id="notificationList">
+                <!-- Notifications will be populated here -->
+            </div>
+        </div>
+    </div>
+    
     <!-- Main Content -->
     <main class="main-content" id="mainContent">
         <div class="dashboard-body">
@@ -781,176 +886,297 @@
         // Global state
         let sidebarCollapsed = false;
         let isMobile = window.innerWidth < 1024;
-        
+
+        // Data from Class Management
+        let classes = [
+            {
+                id: 1,
+                code: 'MATH-101-A',
+                sectionName: 'Diamond Section',
+                subject: 'Mathematics',
+                gradeLevel: 'Grade 7',
+                room: 'Room 201',
+                attendancePercentage: 10,
+                schedule: {
+                    monday: { start: '08:00', end: '09:30' },
+                    wednesday: { start: '08:00', end: '09:30' },
+                    friday: { start: '08:00', end: '09:30' }
+                },
+                status: 'active',
+                students: [
+                    { id: 1, firstName: 'John', lastName: 'Doe', email: 'john.doe@email.com' },
+                    { id: 2, firstName: 'Jane', lastName: 'Smith', email: 'jane.smith@email.com' },
+                    { id: 3, firstName: 'Mike', lastName: 'Johnson', email: 'mike.johnson@email.com' }
+                ]
+            },
+            {
+                id: 2,
+                code: 'SCI-201-B',
+                sectionName: 'Einstein Section',
+                subject: 'Science',
+                gradeLevel: 'Grade 10',
+                room: 'Lab 1',
+                attendancePercentage: 15,
+                schedule: {
+                    tuesday: { start: '10:00', end: '11:30' },
+                    thursday: { start: '10:00', end: '11:30' }
+                },
+                status: 'active',
+                students: [
+                    { id: 4, firstName: 'Alice', lastName: 'Brown', email: 'alice.brown@email.com' },
+                    { id: 5, firstName: 'Bob', lastName: 'Wilson', email: 'bob.wilson@email.com' }
+                ]
+            },
+            {
+                id: 3,
+                code: 'ENG-301-C',
+                sectionName: 'Shakespeare Section',
+                subject: 'English Literature',
+                gradeLevel: 'Grade 12',
+                room: 'Room 305',
+                attendancePercentage: 20,
+                schedule: {
+                    monday: { start: '14:00', end: '15:30' },
+                    wednesday: { start: '14:00', end: '15:30' }
+                },
+                status: 'inactive',
+                students: [
+                    { id: 6, firstName: 'Carol', lastName: 'Davis', email: 'carol.davis@email.com' },
+                    { id: 7, firstName: 'David', lastName: 'Miller', email: 'david.miller@email.com' },
+                    { id: 8, firstName: 'Emma', lastName: 'Garcia', email: 'emma.garcia@email.com' },
+                    { id: 9, firstName: 'Frank', lastName: 'Rodriguez', email: 'frank.rodriguez@email.com' }
+                ]
+            }
+        ];
+
+        // Student data
+        let students = classes.flatMap(cls => cls.students.map(student => ({
+            id: student.id,
+            firstName: student.firstName,
+            lastName: student.lastName,
+            email: student.email || '',
+            fullName: `${student.firstName} ${student.lastName}`,
+            gender: student.gender || 'Male',
+            dob: student.dob || '2010-01-01',
+            gradeLevel: cls.gradeLevel,
+            class: cls.subject,
+            section: cls.sectionName,
+            address: student.address || '123 Sample St',
+            parentName: student.parentName || 'Parent Name',
+            emergencyContact: student.emergencyContact || '09234567890',
+            attendanceRate: student.attendanceRate || Math.floor(Math.random() * 20) + 70, // Random attendance rate for demo
+            dateAdded: student.dateAdded || '2024-09-01',
+            photo: student.photo || 'https://via.placeholder.com/100'
+        })));
+
         // Initialize
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', () => {
             updateLayout();
             updateDateTime();
+            updateNotifications();
             window.addEventListener('resize', handleResize);
-            
+
             // Update time every second
             setInterval(updateDateTime, 1000);
-            
-            // Close dropdowns when clicking outside
-            document.addEventListener('click', function(e) {
+
+            // Close modals/dropdowns on outside click
+            document.addEventListener('click', (e) => {
                 const profileDropdown = document.getElementById('profileDropdown');
-                if (!profileDropdown.contains(e.target)) {
+                const notificationModal = document.getElementById('notificationModal');
+                const notificationBtn = document.getElementById('notificationBtn');
+
+                if (profileDropdown && !profileDropdown.contains(e.target)) {
                     profileDropdown.classList.remove('active');
                 }
+
+                if (notificationModal && !notificationModal.contains(e.target) && !notificationBtn.contains(e.target)) {
+                    notificationModal.classList.remove('active');
+                }
             });
-            
-            // Set up menu item click handlers
+
+            // Menu item click handlers
             document.querySelectorAll('.menu-item').forEach((menuItem, index) => {
                 menuItem.addEventListener('click', (e) => {
                     e.preventDefault();
                     setActiveMenuItem(menuItem);
-                    
+
                     let pageFile;
                     switch (index) {
-                        case 0: // Dashboard
-                            pageFile = 'dashboard.php';
-                            break;
-                        case 1: // Manage Classes
-                            pageFile = 'manage-classes.php';
-                            break;
-                        case 2: // Manage Students
-                            pageFile = 'manage-students.php';
-                            break;
-                        case 3: // Attendance
-                            pageFile = 'attendance.php';
-                            break;
-                        case 4: // Analytics & Predictions
-                            pageFile = 'analytics.php';
-                            break;
-                        case 5: // Reports & Export
-                            pageFile = 'reports.php';
-                            break;
-                        case 6: // Profile
-                            pageFile = 'profile.php';
-                            break;
-                        case 7: // Settings
-                            pageFile = 'support.php';
-                            break;
-                        case 8: // Logout
+                        case 0: pageFile = 'dashboard.php'; break;
+                        case 1: pageFile = 'manage-classes.php'; break;
+                        case 2: pageFile = 'manage-students.php'; break;
+                        case 3: pageFile = 'attendance.php'; break;
+                        case 4: pageFile = 'analytics.php'; break;
+                        case 5: pageFile = 'reports.php'; break;
+                        case 6: pageFile = 'profile.php'; break;
+                        case 7: pageFile = 'support.php'; break;
+                        case 8:
                             if (confirm('Are you sure you want to log out?')) {
                                 window.location.href = 'index.php';
                             }
                             return;
-                        default:
-                            pageFile = '404.html';
+                        default: pageFile = '404.html';
                     }
                     loadPage(pageFile);
                 });
             });
-            
+
+            // Notification button handler
+            const notificationBtn = document.getElementById('notificationBtn');
+            if (notificationBtn) {
+                notificationBtn.addEventListener('click', toggleNotificationModal);
+            }
+
+            // Notification close button handler
+            const closeBtn = document.getElementById('notificationModalClose');
+            if (closeBtn) {
+                closeBtn.addEventListener('click', () => {
+                    document.getElementById('notificationModal').classList.remove('active');
+                });
+            }
+
             // Load default page
             loadPage('dashboard.php');
         });
-        
-        // Function to load page into iframe
+
+        // Load page into iframe
         function loadPage(pageFile) {
             const iframe = document.getElementById('dashboard-frame');
-            iframe.src = pageFile;
+            if (iframe) {
+                iframe.src = `./teacher/${pageFile}`;
+            }
         }
-        
-        // Function to set active menu item
+
+        // Set active menu item
         function setActiveMenuItem(clickedItem) {
             document.querySelectorAll('.menu-item').forEach(item => {
                 item.classList.remove('active');
             });
             clickedItem.classList.add('active');
         }
-        
+
         // Update date and time
         function updateDateTime() {
             const now = new Date();
-            
-            // Format date
-            const dateOptions = { 
-                year: 'numeric', 
-                month: 'short', 
-                day: 'numeric' 
-            };
-            const dateString = now.toLocaleDateString('en-US', dateOptions);
-            
-            // Format time
-            const timeOptions = { 
-                hour: '2-digit', 
-                minute: '2-digit', 
-                second: '2-digit',
-                hour12: true
-            };
-            const timeString = now.toLocaleTimeString('en-US', timeOptions);
-            
-            // Format day
+            const dateOptions = { year: 'numeric', month: 'short', day: 'numeric' };
+            const timeOptions = { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true };
             const dayOptions = { weekday: 'long' };
-            const dayString = now.toLocaleDateString('en-US', dayOptions);
-            
-            // Update DOM elements
-            document.getElementById('currentDate').textContent = dateString;
-            document.getElementById('currentTime').textContent = timeString;
-            document.getElementById('currentDay').textContent = dayString;
+
+            const currentDate = document.getElementById('currentDate');
+            const currentTime = document.getElementById('currentTime');
+            const currentDay = document.getElementById('currentDay');
+
+            if (currentDate) currentDate.textContent = now.toLocaleDateString('en-US', dateOptions);
+            if (currentTime) currentTime.textContent = now.toLocaleTimeString('en-US', timeOptions);
+            if (currentDay) currentDay.textContent = now.toLocaleDateString('en-US', dayOptions);
         }
-        
+
         // Toggle sidebar
         function toggleSidebar() {
             const sidebar = document.getElementById('sidebar');
             const header = document.getElementById('header');
             const mainContent = document.getElementById('mainContent');
             const overlay = document.getElementById('sidebarOverlay');
-            
+
             if (isMobile) {
-                // Mobile behavior
                 sidebar.classList.toggle('mobile-open');
                 overlay.classList.toggle('active');
             } else {
-                // Desktop behavior
                 sidebarCollapsed = !sidebarCollapsed;
                 sidebar.classList.toggle('collapsed');
                 header.classList.toggle('sidebar-collapsed');
                 mainContent.classList.toggle('sidebar-collapsed');
             }
         }
-        
+
         // Toggle profile dropdown
         function toggleProfileDropdown() {
             const profileDropdown = document.getElementById('profileDropdown');
-            profileDropdown.classList.toggle('active');
+            if (profileDropdown) {
+                profileDropdown.classList.toggle('active');
+            }
         }
-        
+
+        // Toggle notification modal
+        function toggleNotificationModal() {
+            const notificationModal = document.getElementById('notificationModal');
+            if (notificationModal) {
+                notificationModal.classList.toggle('active');
+                updateNotifications(); // Refresh notifications when opening
+            }
+        }
+
+        // Update notifications
+        function updateNotifications() {
+            const notificationList = document.getElementById('notificationList');
+            const notificationCount = document.getElementById('notificationCount');
+
+            if (!notificationList || !notificationCount) return;
+
+            // Filter students with low attendance (e.g., < 80%) and select up to 3
+            const atRiskStudents = students
+                .filter(student => student.attendanceRate < 80)
+                .sort(() => Math.random() - 0.5)
+                .slice(0, Math.min(3, students.length))
+                .map(student => ({
+                    id: student.id,
+                    fullName: student.fullName,
+                    gradeLevel: student.gradeLevel,
+                    subject: student.class,
+                    section: student.section,
+                    message: `${student.fullName} is at risk due to excessive absences (Attendance: ${student.attendanceRate}%).`,
+                    timestamp: new Date().toLocaleString('en-US', {
+                        month: 'short',
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        hour12: true
+                    })
+                }));
+
+            notificationCount.textContent = atRiskStudents.length;
+
+            notificationList.innerHTML = atRiskStudents.length === 0
+                ? '<div class="notification-item"><div class="notification-details"><div class="notification-message">No new notifications.</div></div></div>'
+                : atRiskStudents.map(student => `
+                    <div class="notification-item">
+                        <i class="fas fa-exclamation-triangle notification-icon"></i>
+                        <div class="notification-details">
+                            <div class="notification-message">${student.message}</div>
+                            <div class="notification-meta">
+                                Grade: ${student.gradeLevel} | Subject: ${student.subject} | Section: ${student.section} | ${student.timestamp}
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+        }
+
         // Handle window resize
         function handleResize() {
             const wasMobile = isMobile;
             isMobile = window.innerWidth < 1024;
-            
             if (wasMobile !== isMobile) {
                 updateLayout();
             }
         }
-        
+
         // Update layout based on screen size
         function updateLayout() {
             const sidebar = document.getElementById('sidebar');
             const header = document.getElementById('header');
             const mainContent = document.getElementById('mainContent');
             const overlay = document.getElementById('sidebarOverlay');
-            
+
             if (isMobile) {
-                // Mobile layout
                 sidebar.classList.remove('collapsed');
                 sidebar.classList.remove('mobile-open');
                 header.classList.remove('sidebar-collapsed');
                 mainContent.classList.remove('sidebar-collapsed');
                 overlay.classList.remove('active');
-                
-                // Reset sidebar state for mobile
                 sidebarCollapsed = false;
             } else {
-                // Desktop layout
                 sidebar.classList.remove('mobile-open');
                 overlay.classList.remove('active');
-                
-                // Apply collapsed state if previously set
                 if (sidebarCollapsed) {
                     sidebar.classList.add('collapsed');
                     header.classList.add('sidebar-collapsed');
@@ -962,12 +1188,14 @@
                 }
             }
         }
-        
-        // Adjust iframe height dynamically based on content
+
+        // Adjust iframe height
         const iframe = document.getElementById('dashboard-frame');
-        iframe.onload = () => {
-            iframe.style.height = iframe.contentWindow.document.body.scrollHeight + 'px';
-        };
+        if (iframe) {
+            iframe.onload = () => {
+                iframe.style.height = iframe.contentWindow.document.body.scrollHeight + 'px';
+            };
+        }
     </script>
 </body>
 </html>

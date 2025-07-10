@@ -826,7 +826,7 @@
                 <button class="profile-btn" onclick="toggleProfileDropdown()">
                     <div class="profile-avatar">DS</div>
                     <div class="profile-info">
-                        <div class="profile-name">Dr. Smith</div>
+                        <div class="profile-name">Daniel Smith</div>
                         <div class="profile-role">Teacher</div>
                     </div>
                     <i class="fas fa-chevron-down" style="color: var(--medium-gray); font-size: 0.875rem;"></i>
@@ -836,8 +836,8 @@
                     <div class="profile-dropdown-header">
                         <div class="profile-avatar">DS</div>
                         <div class="profile-info">
-                            <div class="profile-name">Dr. Smith</div>
-                            <div class="profile-role">Mathematics Teacher</div>
+                            <div class="profile-name">Daniel Smith</div>
+                            <div class="profile-role">Teacher</div>
                         </div>
                     </div>
                     
@@ -1036,7 +1036,7 @@
             }
 
             // Load default page
-            loadPage('dashboard.php');
+            loadPage('dashboard.php'); 
         });
 
         // Load page into iframe

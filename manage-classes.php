@@ -78,7 +78,7 @@
         }
 
         body {
-            background-color: var(--background);
+            background-color: var(--card-bg);
             color: var(--blackfont-color);
             /* min-height: 100vh; */
             padding: 20px;

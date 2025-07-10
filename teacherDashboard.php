@@ -774,8 +774,8 @@
                 <div class="nav-item">
                     <a href="#" class="nav-link menu-item">
                         <i class="fas fa-file-export nav-icon"></i>
-                        <span class="nav-text">Reports & Export</span>
-                        <span class="nav-tooltip">Reports & Export</span>
+                        <span class="nav-text">Reports</span>
+                        <span class="nav-tooltip">Reports</span>
                     </a>
                 </div>
             </div>
@@ -1043,7 +1043,7 @@
         function loadPage(pageFile) {
             const iframe = document.getElementById('dashboard-frame');
             if (iframe) {
-                iframe.src = `./teacher/${pageFile}`;
+                iframe.src = `${pageFile}`;
             }
         }
 

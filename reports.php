@@ -300,7 +300,7 @@
     </style>
 </head>
 <body>
-    <h1>Reports & Export</h1>
+    <h1>Reports</h1>
 
     <!-- Quick Stats -->
     <div class="stats-grid">

@@ -648,9 +648,10 @@
                     <td>
                         <select class="notes-select" data-id="${student.id}" ${isNotesDisabled ? 'disabled' : ''}>
                             <option value="" ${attendanceData[today][student.id].notes === '' ? 'selected' : ''}>Select Reason</option>
-                            <option value="Sick" ${attendanceData[today][student.id].notes === 'Sick' ? 'selected' : ''}>Sick</option>
-                            <option value="Family Emergency" ${attendanceData[today][student.id].notes === 'Family Emergency' ? 'selected' : ''}>Family Emergency</option>
-                            <option value="Traffic" ${attendanceData[today][student.id].notes === 'Traffic' ? 'selected' : ''}>Traffic</option>
+                            <option value="Health Issue" ${attendanceData[today][student.id].notes === 'Health Issue' ? 'selected' : ''}>Health Issue</option>
+                            <option value="Household Income" ${attendanceData[today][student.id].notes === 'Household Income' ? 'selected' : ''}>Household Income</option>
+                            <option value="Transportation" ${attendanceData[today][student.id].notes === 'Transportation' ? 'selected' : ''}>Transportation</option>
+                            <option value="Family Structure" ${attendanceData[today][student.id].notes === 'Family Structure' ? 'selected' : ''}>Family Structure</option>
                             <option value="No Reason" ${attendanceData[today][student.id].notes === 'No Reason' ? 'selected' : ''}>No Reason</option>
                             <option value="Other" ${attendanceData[today][student.id].notes === 'Other' ? 'selected' : ''}>Other</option>
                         </select>

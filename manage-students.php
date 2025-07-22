@@ -5,28 +5,22 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Student Management - Student Attendance System</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
         :root {
-            /* Primary Colors */
             --primary-blue: #2563eb;
             --primary-blue-hover: #1d4ed8;
             --primary-blue-light: #dbeafe;
-            
-            /* Status Colors */
             --success-green: #16a34a;
             --warning-yellow: #ca8a04;
             --danger-red: #dc2626;
             --info-cyan: #0891b2;
-            
-            /* Neutral Colors */
             --dark-gray: #374151;
             --medium-gray: #6b7280;
             --light-gray: #d1d5db;
             --background: #f9fafb;
             --white: #ffffff;
             --border-color: #e5e7eb;
-    
-            /* Additional Colors */
             --card-bg: #ffffff;
             --blackfont-color: #111827;
             --whitefont-color: #ffffff;
@@ -37,35 +31,25 @@
             --primary-hover: #1d4ed8;
             --inputfield-color: #f3f4f6;
             --inputfieldhover-color: #e5e7eb;
-            
-            /* Typography */
             --font-family: 'Inter', sans-serif;
             --font-size-sm: 0.875rem;
             --font-size-base: 1rem;
             --font-size-lg: 1.125rem;
             --font-size-xl: 1.25rem;
             --font-size-2xl: 1.5rem;
-    
-            /* Spacing */
             --spacing-xs: 0.25rem;
             --spacing-sm: 0.5rem;
             --spacing-md: 1rem;
             --spacing-lg: 1.5rem;
             --spacing-xl: 2rem;
             --spacing-2xl: 3rem;
-            
-            /* Shadows */
             --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
             --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
             --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-            
-            /* Border Radius */
             --radius-sm: 0.25rem;
             --radius-md: 0.5rem;
             --radius-lg: 0.75rem;
             --radius-xl: 1rem;
-    
-            /* Transitions */
             --transition-fast: 0.15s ease-in-out;
             --transition-normal: 0.3s ease-in-out;
             --transition-slow: 0.5s ease-in-out;
@@ -591,6 +575,36 @@
             background: var(--inputfieldhover-color);
         }
 
+        .qr-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .qr-code {
+            width: 100px;
+            height: 100px;
+        }
+
+        .print-btn {
+            border: none;
+            background: var(--primary-color);
+            color: var(--whitefont-color);
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: var(--transition-normal);
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .print-btn:hover {
+            background: var(--primary-hover);
+        }
+
         @media (max-width: 768px) {
             .controls {
                 grid-template-columns: 1fr;
@@ -628,6 +642,15 @@
 
             .student-card-actions {
                 flex-direction: column;
+            }
+
+            .photo-upload {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .qr-container {
+                align-items: flex-start;
             }
         }
     </style>
@@ -675,7 +698,7 @@
             <select class="filter-select" id="sortSelect">
                 <option value="name-asc">Name (A-Z)</option>
                 <option value="name-desc">Name (Z-A)</option>
-                <option value="id">Student ID</option>
+                <option value="id">LRN</option>
                 <option value="attendance">Attendance Rate</option>
             </select>
             <button class="clear-btn" onclick="clearFilters()">
@@ -721,7 +744,7 @@
                     <tr>
                         <th><input type="checkbox" id="tableSelectAll" onchange="toggleSelectAll()"></th>
                         <th>Photo</th>
-                        <th>Student ID</th>
+                        <th>LRN</th>
                         <th>Full Name</th>
                         <th>Contact</th>
                         <th>Grade Level</th>
@@ -748,12 +771,19 @@
             <div class="modal-body">
                 <div class="tab-content active" id="personal-tab">
                     <div class="form-group">
-                        <label>Student ID</label>
+                        <label>LRN</label>
                         <input type="text" id="student-id" readonly>
                     </div>
                     <div class="form-group photo-upload">
-                        <label>Photo</label>
-                        <img id="student-photo-preview" src="https://via.placeholder.com/100" alt="Student Photo" style="width: 100px; height: 100px; border-radius: 8px;">
+                        <div class="photo-container">
+                            <label>Photo</label>
+                            <img id="student-photo-preview" src="no-icon.png" alt="Student Photo" style="width: 100px; height: 100px; border-radius: 8px;">
+                        </div>
+                        <div id="qr-container" class="qr-container" style="display: none;">
+                            <label>QR Code</label>
+                            <div id="qr-code" class="qr-code"></div>
+                            <button class="print-btn" onclick="printQRCode()"><i class="fas fa-print"></i> Print</button>
+                        </div>
                         <input type="file" id="student-photo" accept="image/*" onchange="previewPhoto(event)">
                         <button class="action-btn" onclick="document.getElementById('student-photo').click()">Change Photo</button>
                     </div>
@@ -897,16 +927,16 @@
             lastName: student.lastName,
             email: student.email || '',
             fullName: `${student.firstName} ${student.lastName}`,
-            gender: student.gender || 'Male', // Default for demo
-            dob: student.dob || '2010-01-01', // Default for demo
+            gender: student.gender || 'Male',
+            dob: student.dob || '2010-01-01',
             gradeLevel: cls.gradeLevel,
             class: cls.subject,
             section: cls.sectionName,
-            address: student.address || '123 Sample St', // Default for demo
-            parentName: student.parentName || 'Parent Name', // Default for demo
-            emergencyContact: student.emergencyContact || '09234567890', // Default for demo
-            attendanceRate: student.attendanceRate || 90, // Default for demo
-            dateAdded: student.dateAdded || '2024-09-01', // Default for demo
+            address: student.address || '123 Sample St',
+            parentName: student.parentName || 'Parent Name',
+            emergencyContact: student.emergencyContact || '09234567890',
+            attendanceRate: student.attendanceRate || 90,
+            dateAdded: student.dateAdded || '2024-09-01',
             photo: student.photo || 'https://via.placeholder.com/100'
         })));
 
@@ -1203,7 +1233,7 @@
             );
             
             const csv = [
-                'Student ID,First Name,Last Name,Email,Gender,Grade Level,Subject,Section,Address,Emergency Contact,Attendance Rate',
+                'LRN,First Name,Last Name,Email,Gender,Grade Level,Subject,Section,Address,Emergency Contact,Attendance Rate',
                 ...selectedStudents.map(s => 
                     `${s.id},${s.firstName},${s.lastName},${s.email},${s.gender},${s.gradeLevel},${s.class},${s.section},${s.address},${s.emergencyContact},${s.attendanceRate}`
                 )
@@ -1224,12 +1254,10 @@
             const checkboxes = document.querySelectorAll('.row-checkbox:checked');
             const ids = Array.from(checkboxes).map(cb => cb.dataset.id);
             
-            // Remove students from classes
             classes.forEach(cls => {
                 cls.students = cls.students.filter(s => !ids.includes(s.id.toString()));
             });
             
-            // Remove students from students array
             students = students.filter(s => !ids.includes(s.id.toString()));
             applyFilters();
         }
@@ -1265,6 +1293,12 @@
                 else input.value = '';
             });
 
+            // Clear and hide QR code container
+            const qrContainer = document.getElementById('qr-container');
+            const qrCodeDiv = document.getElementById('qr-code');
+            qrCodeDiv.innerHTML = '';
+            qrContainer.style.display = 'none';
+
             if (mode !== 'add' && id) {
                 const student = students.find(s => s.id == id);
                 document.getElementById('profile-modal-title').textContent = `${student.fullName}'s Profile`;
@@ -1281,9 +1315,33 @@
                 form.parentName.value = student.parentName;
                 form.emergencyContact.value = student.emergencyContact;
                 form.photoPreview.src = student.photo;
+
+                // Show QR code only in view mode
+                if (mode === 'view') {
+                    qrContainer.style.display = 'flex';
+                    const qrData = JSON.stringify({
+                        id: student.id,
+                        fullName: student.fullName,
+                        gradeLevel: student.gradeLevel,
+                        class: student.class,
+                        section: student.section
+                    });
+                    new QRCode(qrCodeDiv, {
+                        text: qrData,
+                        width: 100,
+                        height: 100
+                    });
+                }
             } else {
                 document.getElementById('profile-modal-title').textContent = 'Add New Student';
             }
+
+            // Disable inputs for view mode
+            Object.values(form).forEach(input => {
+                if (input.tagName !== 'IMG') input.disabled = mode === 'view';
+            });
+            document.querySelector('.photo-upload .action-btn').style.display = mode === 'view' ? 'none' : 'inline-flex';
+            document.querySelector('.modal-footer .save-btn').style.display = mode === 'view' ? 'none' : 'inline-flex';
 
             profileModal.classList.add('show');
         }
@@ -1380,12 +1438,10 @@
         function deleteStudent(id) {
             if (!confirm('Are you sure you want to delete this student?')) return;
             
-            // Remove from classes
             classes.forEach(cls => {
                 cls.students = cls.students.filter(s => s.id != id);
             });
             
-            // Remove from students array
             students = students.filter(s => s.id != id);
             applyFilters();
         }
@@ -1395,6 +1451,31 @@
             if (type === 'profile') {
                 profileModal.classList.remove('show');
             }
+        }
+
+        // Print QR code
+        function printQRCode() {
+            const qrCanvas = document.querySelector('#qr-code canvas');
+            if (!qrCanvas) return;
+
+            const printWindow = window.open('', '_blank');
+            printWindow.document.write(`
+                <html>
+                    <head>
+                        <title>Print QR Code</title>
+                        <style>
+                            body { margin: 0; display: flex; justify-content: center; align-items: center; height: 100vh; }
+                            img { max-width: 100%; }
+                        </style>
+                    </head>
+                    <body>
+                        <img src="${qrCanvas.toDataURL('image/png')}" alt="QR Code">
+                    </body>
+                </html>
+            `);
+            printWindow.document.close();
+            printWindow.focus();
+            printWindow.print();
         }
 
         // Close dropdowns

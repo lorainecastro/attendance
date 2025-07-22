@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Attendance Tracking - Student Attendance System</title>
+    <title>Attendance Management - Student Attendance System</title>
     <style>
         :root {
             --primary-blue: #2563eb;
@@ -88,26 +88,19 @@
         .status-select, .notes-select { padding: 8px 12px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 14px; background: var(--inputfield-color); transition: var(--transition-normal); width: 100%; }
         .status-select:focus, .notes-select:focus { outline: none; border-color: var(--primary-color); background: var(--inputfieldhover-color); }
         .notes-select:disabled { background: var(--light-gray); cursor: not-allowed; }
-        .attendance-rate { color: var(--success-green); font-weight: 600; }
         .action-buttons { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
         .save-btn, .submit-btn { padding: 8px 16px; border: none; border-radius: 8px; font-size: 14px; cursor: pointer; transition: var(--transition-normal); }
         .save-btn { background: var(--inputfield-color); color: var(--blackfont-color); }
         .save-btn:hover { background: var(--inputfieldhover-color); }
         .submit-btn { background: var(--primary-color); color: var(--whitefont-color); }
         .submit-btn:hover { background: var(--primary-hover); }
-        .qr-scanner-container { margin-bottom: 15px; text-align: center; }
-        #qr-video { width: 100%; max-width: 300px; border-radius: 8px; }
-        #qr-canvas { display: none; }
-        .notification { position: fixed; top: 20px; right: 20px; padding: 10px 20px; border-radius: 8px; color: var(--whitefont-color); z-index: 1000; transition: opacity var(--transition-normal); }
-        .notification.success { background: var(--success-green); }
-        .notification.error { background: var(--danger-red); }
         @media (max-width: 1024px) { .stats-grid { grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); } }
         @media (max-width: 768px) { th, td { padding: 10px; } .card-value { font-size: 20px; } .table-controls { flex-direction: column; align-items: flex-start; } }
         @media (max-width: 576px) { .table-responsive { overflow-x: auto; } .stats-grid { grid-template-columns: 1fr; } }
     </style>
 </head>
 <body>
-    <h1>Attendance Tracking</h1>
+    <h1>Attendance Management</h1>
 
     <div class="stats-grid">
         <div class="card">
@@ -173,24 +166,18 @@
         <div class="table-header">
             <div class="table-title">Attendance Grid</div>
             <div class="table-controls">
-                <input type="date" class="selector-input" id="date-selector" value="2025-07-23" min="2025-06-01" max="2025-07-23">
+                <input type="date" class="selector-input" id="date-selector" value="2025-07-11" min="2025-06-01" max="2025-07-11">
                 <select class="selector-select" id="gradeLevelSelector">
                     <option value="">All Grade Levels</option>
                 </select>
                 <select class="selector-select" id="classSelector">
-                    <option value="">All Subjects</option>
+                    <option value="">All Subject</option>
                 </select>
                 <select class="selector-select" id="sectionSelector">
                     <option value="">All Sections</option>
                 </select>
                 <button class="quick-action-btn" onclick="markAllPresent()">Mark All Present</button>
-                <button class="quick-action-btn" onclick="startQRScanner()">Scan QR Code</button>
             </div>
-        </div>
-        <div class="qr-scanner-container" id="qr-scanner" style="display: none;">
-            <video id="qr-video"></video>
-            <canvas id="qr-canvas"></canvas>
-            <button class="quick-action-btn" onclick="stopQRScanner()">Stop Scanner</button>
         </div>
         <div class="bulk-actions">
             <select class="bulk-action-btn" id="bulk-action-select">
@@ -212,7 +199,6 @@
                         <th>Status</th>
                         <th>Notes</th>
                         <th>Time Checked</th>
-                        <th>Attendance Rate</th>
                     </tr>
                 </thead>
                 <tbody></tbody>
@@ -221,10 +207,10 @@
     </div>
 
     <div class="action-buttons">
+        <button class="save-btn" onclick="saveDraft()">Save Draft</button>
         <button class="submit-btn" onclick="submitAttendance()">Submit Attendance</button>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
     <script>
         const classes = [
             {
@@ -296,31 +282,17 @@
             notes: '',
             gradeLevel: cls.gradeLevel,
             subject: cls.subject,
-            section: cls.sectionName,
-            attendanceRate: 90
+            section: cls.sectionName
         })));
 
         let attendanceData = {};
-        let today = '2025-07-23';
-        let videoStream = null;
-        let scannedStudents = new Set();
+        let today = '2025-07-10';
 
         if (!attendanceData[today]) {
             attendanceData[today] = {};
             students.forEach(student => {
-                attendanceData[today][student.id] = { status: 'Present', notes: '', timeChecked: '', attendanceRate: 90 };
+                attendanceData[today][student.id] = { status: 'Present', notes: '', timeChecked: '' };
             });
-        }
-
-        function showNotification(message, type) {
-            const notification = document.createElement('div');
-            notification.className = `notification ${type}`;
-            notification.textContent = message;
-            document.body.appendChild(notification);
-            setTimeout(() => {
-                notification.style.opacity = '0';
-                setTimeout(() => notification.remove(), 300);
-            }, 3000);
         }
 
         function populateDropdowns() {
@@ -338,7 +310,7 @@
             });
 
             const subjects = [...new Set(classes.map(c => c.subject))];
-            classSelector.innerHTML = '<option value="">All Subjects</option>';
+            classSelector.innerHTML = '<option value="">All Subject</option>';
             subjects.forEach(subject => {
                 const option = document.createElement('option');
                 option.value = subject;
@@ -430,7 +402,6 @@
                         </select>
                     </td>
                     <td>${attendanceData[today][student.id].timeChecked || '-'}</td>
-                    <td class="attendance-rate">${student.attendanceRate}%</td>
                 `;
                 tableBody.appendChild(row);
             });
@@ -486,7 +457,6 @@
                 attendanceData[today][student.id].status = 'Present';
                 attendanceData[today][student.id].notes = '';
                 attendanceData[today][student.id].timeChecked = formatDateTime(new Date());
-                attendanceData[today][student.id].attendanceRate = 90;
             });
             renderTable();
         }
@@ -494,7 +464,7 @@
         function applyBulkAction() {
             const action = document.getElementById('bulk-action-select').value;
             if (!action) {
-                showNotification('Please select a bulk action.', 'error');
+                alert('Please select a bulk action.');
                 return;
             }
             const selected = document.querySelectorAll('.select-student:checked');
@@ -503,84 +473,18 @@
                 attendanceData[today][studentId].status = action;
                 attendanceData[today][studentId].notes = (action === 'Present') ? '' : 'No Reason';
                 attendanceData[today][studentId].timeChecked = formatDateTime(new Date());
-                attendanceData[today][studentId].attendanceRate = 90;
             });
             renderTable();
         }
 
         function saveDraft() {
             localStorage.setItem('attendanceDraft', JSON.stringify(attendanceData));
-            showNotification('Attendance draft saved locally.', 'success');
+            alert('Attendance draft saved locally.');
         }
 
         function submitAttendance() {
             console.log('Submitted Attendance:', attendanceData[today]);
-            showNotification('Attendance submitted successfully.', 'success');
-        }
-
-        function startQRScanner() {
-            const qrScanner = document.getElementById('qr-scanner');
-            const video = document.getElementById('qr-video');
-            const canvasElement = document.getElementById('qr-canvas');
-            const canvas = canvasElement.getContext('2d');
-
-            qrScanner.style.display = 'block';
-            scannedStudents.clear();
-
-            navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
-                .then(stream => {
-                    videoStream = stream;
-                    video.srcObject = stream;
-                    video.play();
-                    requestAnimationFrame(tick);
-                })
-                .catch(err => {
-                    showNotification('Error accessing camera: ' + err.message, 'error');
-                    qrScanner.style.display = 'none';
-                });
-
-            function tick() {
-                if (video.readyState === video.HAVE_ENOUGH_DATA) {
-                    canvasElement.height = video.videoHeight;
-                    canvasElement.width = video.videoWidth;
-                    canvas.drawImage(video, 0, 0, canvasElement.width, canvasElement.height);
-                    const imageData = canvas.getImageData(0, 0, canvasElement.width, canvasElement.height);
-                    const code = jsQR(imageData.data, imageData.width, imageData.height, {
-                        inversionAttempts: 'dontInvert',
-                    });
-
-                    if (code) {
-                        const lrn = code.data;
-                        const student = students.find(s => s.id.toString() === lrn);
-                        if (student) {
-                            if (scannedStudents.has(lrn)) {
-                                showNotification(`Student ${student.name} already scanned today.`, 'error');
-                            } else {
-                                attendanceData[today][lrn].status = 'Present';
-                                attendanceData[today][lrn].notes = '';
-                                attendanceData[today][lrn].timeChecked = formatDateTime(new Date());
-                                attendanceData[today][lrn].attendanceRate = 90;
-                                scannedStudents.add(lrn);
-                                showNotification(`Student ${student.name} marked as Present.`, 'success');
-                                renderTable();
-                            }
-                        } else {
-                            showNotification('Invalid LRN.', 'error');
-                        }
-                    }
-                }
-                if (qrScanner.style.display !== 'none') {
-                    requestAnimationFrame(tick);
-                }
-            }
-        }
-
-        function stopQRScanner() {
-            if (videoStream) {
-                videoStream.getTracks().forEach(track => track.stop());
-                videoStream = null;
-            }
-            document.getElementById('qr-scanner').style.display = 'none';
+            alert('Attendance submitted successfully.');
         }
 
         const tableBody = document.querySelector('#attendance-table tbody');
@@ -595,7 +499,7 @@
             if (!attendanceData[today]) {
                 attendanceData[today] = {};
                 students.forEach(student => {
-                    attendanceData[today][student.id] = { status: 'Present', notes: '', timeChecked: '', attendanceRate: 90 };
+                    attendanceData[today][student.id] = { status: 'Present', notes: '', timeChecked: '' };
                 });
             }
             renderTable();

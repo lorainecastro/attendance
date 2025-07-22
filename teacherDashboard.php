@@ -755,10 +755,17 @@
                 <div class="nav-item">
                     <a href="#" class="nav-link menu-item">
                         <i class="fas fa-user-check nav-icon"></i>
-                        <span class="nav-text">Attendance</span>
-                        <span class="nav-tooltip">Attendance</span>
+                        <span class="nav-text">Attendance Tracking</span>
+                        <span class="nav-tooltip">Attendance Tracking</span>
                     </a>
                 </div>
+                <div class="nav-item">
+    <a href="#" class="nav-link menu-item">
+        <i class="fas fa-clipboard-list nav-icon"></i>
+        <span class="nav-text">Overall Attendance</span>
+        <span class="nav-tooltip">Overall Attendance</span>
+    </a>
+</div>
             </div>
             
             <div class="nav-section">
@@ -1006,11 +1013,12 @@
                         case 1: pageFile = 'manage-classes.php'; break;
                         case 2: pageFile = 'manage-students.php'; break;
                         case 3: pageFile = 'attendance.php'; break;
-                        case 4: pageFile = 'analytics.php'; break;
-                        case 5: pageFile = 'reports.php'; break;
-                        case 6: pageFile = 'profile.php'; break;
-                        case 7: pageFile = 'support.php'; break;
-                        case 8:
+                        case 4: pageFile = 'overall-attendance.php'; break;
+                        case 5: pageFile = 'analytics.php'; break;
+                        case 6: pageFile = 'reports.php'; break;
+                        case 7: pageFile = 'profile.php'; break;
+                        case 8: pageFile = 'support.php'; break;
+                        case 9:
                             if (confirm('Are you sure you want to log out?')) {
                                 window.location.href = 'index.php';
                             }

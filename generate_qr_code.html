@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Generate Student QR Code</title>
+    <style>
+        :root {
+            --primary-blue: #2563eb;
+            --primary-blue-hover: #1d4ed8;
+            --white: #ffffff;
+            --blackfont-color: #111827;
+            --grayfont-color: #6b7280;
+            --inputfield-color: #f3f4f6;
+            --inputfieldhover-color: #e5e7eb;
+            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            --radius-md: 0.5rem;
+            --transition-normal: 0.3s ease-in-out;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif; }
+        body { background-color: var(--white); color: var(--blackfont-color); padding: 20px; text-align: center; }
+        h1 { font-size: 24px; margin-bottom: 20px; color: var(--blackfont-color); }
+        .qr-container { background: var(--white); border-radius: 12px; padding: 20px; box-shadow: var(--shadow-md); display: inline-block; margin-bottom: 20px; }
+        .qr-info { margin-bottom: 20px; }
+        .qr-info p { font-size: 16px; color: var(--grayfont-color); }
+        .qr-input { padding: 8px 12px; border: 1px solid var(--inputfield-color); border-radius: 8px; font-size: 14px; background: var(--inputfield-color); transition: var(--transition-normal); margin: 10px; width: 200px; }
+        .qr-input:focus { outline: none; border-color: var(--primary-blue); background: var(--inputfieldhover-color); }
+        .generate-btn, .download-btn { border: none; background: var(--primary-blue); color: var(--white); padding: 8px 16px; border-radius: 8px; font-size: 14px; cursor: pointer; transition: var(--transition-normal); margin: 5px; }
+        .generate-btn:hover, .download-btn:hover { background: var(--primary-blue-hover); }
+        #qr-code { margin-top: 20px; }
+        #qr-code canvas, #qr-code img { border: 2px solid var(--grayfont-color); border-radius: 8px; }
+        .error-message { color: #dc2626; font-size: 14px; margin-top: 10px; }
+    </style>
+</head>
+<body>
+    <h1>Generate Student QR Code</h1>
+    <div class="qr-container">
+        <div class="qr-info">
+            <p>Enter Student ID to generate QR code</p>
+            <input type="text" id="student-id" class="qr-input" value="1" placeholder="Student ID">
+            <input type="text" id="student-name" class="qr-input" value="John Doe" placeholder="Student Name">
+            <button class="generate-btn" onclick="generateQRCode()">Generate QR Code</button>
+            <button class="download-btn" onclick="downloadQRCode()" style="display: none;">Download QR Code</button>
+            <p id="error-message" class="error-message"></p>
+        </div>
+        <div id="qr-code"></div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script> line in generate_qr_code.html
+    <script>
+      function generateQRCode() {
+    const studentId = document.getElementById('student-id').value.trim();
+    const studentName = document.getElementById('student-name').value.trim();
+    const qrCodeDiv = document.getElementById('qr-code');
+    const errorMessage = document.getElementById('error-message');
+    const downloadBtn = document.querySelector('.download-btn');
+
+    // Clear previous content
+    qrCodeDiv.innerHTML = '';
+    errorMessage.textContent = '';
+    downloadBtn.style.display = 'none';
+
+    if (!studentId) {
+        errorMessage.textContent = 'Please enter a student ID.';
+        return;
+    }
+
+    try {
+        if (typeof QRCode === 'undefined') {
+            errorMessage.textContent = 'QRCode library failed to load. Please check your internet connection or try a different browser.';
+            return;
+        }
+
+        // Create a container div
+        const qrContainer = document.createElement('div');
+        qrCodeDiv.appendChild(qrContainer);
+
+        // Generate QR code inside the container
+        new QRCode(qrContainer, {
+            text: studentId,
+            width: 200,
+            height: 200,
+            colorDark: "#000000",
+            colorLight: "#ffffff",
+            correctLevel: QRCode.CorrectLevel.L
+        });
+
+        // Try to grab the canvas or img
+        currentCanvas = qrContainer.querySelector('canvas') || qrContainer.querySelector('img');
+
+        if (!currentCanvas) {
+            errorMessage.textContent = 'Failed to render QR code. Try refreshing the page.';
+            qrCodeDiv.innerHTML = '';
+            return;
+        }
+
+        qrCodeDiv.innerHTML += `<p>QR Code for ${studentName} (ID: ${studentId})</p>`;
+        downloadBtn.style.display = 'inline-block';
+    } catch (err) {
+        errorMessage.textContent = 'Error generating QR code: ' + err.message;
+        qrCodeDiv.innerHTML = '';
+    }
+}
+
+
+        function downloadQRCode() {
+            if (!currentCanvas) {
+                document.getElementById('error-message').textContent = 'No QR code available to download.';
+                return;
+            }
+            const studentName = document.getElementById('student-name').value.trim().replace(/\s+/g, '_') || 'student';
+            const studentId = document.getElementById('student-id').value.trim();
+            const link = document.createElement('a');
+            link.href = currentCanvas.toDataURL('image/png');
+            link.download = `qr_code_${studentName}_ID_${studentId}.png`;
+            link.click();
+        }
+
+        // Check if QRCode library loaded
+        window.addEventListener('load', () => {
+            if (typeof QRCode === 'undefined') {
+                document.getElementById('error-message').textContent = 'QRCode library failed to load. Please check your internet connection or try a different browser.';
+            } else {
+                generateQRCode(); // Generate QR code for John Doe on page load
+            }
+        });
+    </script>
+</body>
+</html>

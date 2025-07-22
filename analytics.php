@@ -332,14 +332,12 @@
             box-shadow: var(--shadow-md);
             margin-bottom: var(--spacing-lg);
         }
-
         .prediction-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
             margin-bottom: var(--spacing-md);
         }
-
         .prediction-details {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -1184,10 +1182,9 @@
             predictionCard.style.display = 'block';
 
             const avgAttendanceRate = student.attendanceRate;
-            const trend = student.attendanceRate > 90 ? 'Improving' : student.attendanceRate > 85 ? 'Stable' : 'Declining';
             const riskLevel = student.attendanceRate < 85 ? 'High' : student.attendanceRate < 90 ? 'Medium' : 'Low';
-            const predictedAttendance = Math.min(100, student.attendanceRate + (trend === 'Improving' ? 2 : trend === 'Declining' ? -1 : 0));
-            const probabilityPresentTomorrow = Math.min(100, Math.max(0, student.attendanceRate + (trend === 'Improving' ? 5 : trend === 'Declining' ? -5 : 0)));
+            const predictedAttendance = Math.min(100, student.attendanceRate);
+            const probabilityPresentTomorrow = Math.min(100, Math.max(0, student.attendanceRate));
             const chronicAbsenteeism = Math.min(100, ((student.consecutiveAbsences / 180) * 100).toFixed(1));
 
             predictionDetails.innerHTML = `
@@ -1199,9 +1196,6 @@
                 </div>
                 <div class="detail-item">
                     <strong>Predicted Next Month:</strong> ${predictedAttendance.toFixed(1)}%
-                </div>
-                <div class="detail-item">
-                    <strong>Trend:</strong> ${trend}
                 </div>
                 <div class="detail-item">
                     <strong>Risk Level:</strong> <span class="risk-${riskLevel.toLowerCase()}">${riskLevel}</span>

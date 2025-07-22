@@ -113,7 +113,7 @@
         .system-title {
             font-size: var(--font-size-xl);
             font-weight: 600;
-            color: var(--dark-gray);
+            color: #1a1a1a;
             display: flex;
             align-items: center;
             gap: var(--spacing-sm);

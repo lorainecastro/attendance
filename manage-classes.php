@@ -997,7 +997,7 @@
                     <i class="fas fa-search search-icon"></i>
                 </div>
                 <select class="form-select filter-select" id="gradeFilter">
-                    <option value="">All Grades</option>
+                    <option value="">All Grade Levels</option>
                     <option value="Grade 7">Grade 7</option>
                     <option value="Grade 8">Grade 8</option>
                     <option value="Grade 9">Grade 9</option>

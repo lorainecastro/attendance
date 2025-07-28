@@ -6,27 +6,51 @@
     <title>Account Settings - Student Attendance System</title>
     <style>
         :root {
-            --primary-color: #1a1a1a;
-            --primary-gradient: linear-gradient(135deg, #2c2c2c, #1a1a1a);
-            --primary-hover: #2c2c2c;
-            --secondary-color: #f43f5e;
-            --secondary-gradient: linear-gradient(135deg, #f43f5e, #ec4899);
-            --nav-color: #101010;
-            --background-color: #f8fafc;
+            --primary-blue: #2563eb;
+            --primary-blue-hover: #1d4ed8;
+            --primary-blue-light: #dbeafe;
+            --success-green: #16a34a;
+            --warning-yellow: #ca8a04;
+            --danger-red: #dc2626;
+            --info-cyan: #0891b2;
+            --dark-gray: #374151;
+            --medium-gray: #6b7280;
+            --light-gray: #d1d5db;
+            --background: #f9fafb;
+            --white: #ffffff;
+            --border-color: #e5e7eb;
             --card-bg: #ffffff;
-            --division-color: #e5e7eb;
-            --boxshadow-color: rgba(0, 0, 0, 0.05);
-            --blackfont-color: #1a1a1a;
+            --blackfont-color: #111827;
             --whitefont-color: #ffffff;
             --grayfont-color: #6b7280;
-            --border-color: #e5e7eb;
+            --primary-gradient: linear-gradient(135deg, #2563eb, #a855f7);
+            --secondary-gradient: linear-gradient(135deg, #ec4899, #f472b6);
+            --primary-color: #2563eb;
+            --primary-hover: #1d4ed8;
             --inputfield-color: #f3f4f6;
             --inputfieldhover-color: #e5e7eb;
-            --buttonhover-color: #2c2c2c;
-            --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
-            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-            --transition: all 0.3s ease;
+            --font-family: 'Inter', sans-serif;
+            --font-size-sm: 0.875rem;
+            --font-size-base: 1rem;
+            --font-size-lg: 1.125rem;
+            --font-size-xl: 1.25rem;
+            --font-size-2xl: 1.5rem;
+            --spacing-xs: 0.25rem;
+            --spacing-sm: 0.5rem;
+            --spacing-md: 1rem;
+            --spacing-lg: 1.5rem;
+            --spacing-xl: 2rem;
+            --spacing-2xl: 3rem;
+            --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            --radius-sm: 0.25rem;
+            --radius-md: 0.5rem;
+            --radius-lg: 0.75rem;
+            --radius-xl: 1rem;
+            --transition-fast: 0.15s ease-in-out;
+            --transition-normal: 0.3s ease-in-out;
+            --transition-slow: 0.5s ease-in-out;
         }
 
         * {
@@ -73,13 +97,12 @@
             margin-bottom: 10px;
         }
 
-        /* Cards */
         .card {
             background: var(--card-bg);
             border-radius: 12px;
             padding: 20px;
             box-shadow: var(--shadow-md);
-            transition: var(--transition);
+            transition: var(--transition-normal);
             margin-bottom: 20px;
         }
 
@@ -88,7 +111,6 @@
             box-shadow: var(--shadow-lg);
         }
 
-        /* Form Elements */
         .form-group {
             margin-bottom: 15px;
         }
@@ -107,13 +129,14 @@
             border-radius: 8px;
             font-size: 14px;
             background: var(--inputfield-color);
-            transition: var(--transition);
+            transition: var(--transition-normal);
         }
 
         input:focus, select:focus {
             outline: none;
             border-color: var(--primary-color);
-            background: var(--inputfieldhover-color);
+            background: var(--white);
+            box-shadow: 0 0 0 4px var(--primary-blue-light);
         }
 
         .action-btn {
@@ -125,7 +148,7 @@
             background: var(--primary-color);
             color: var(--whitefont-color);
             margin: 5px;
-            transition: var(--transition);
+            transition: var(--transition-normal);
         }
 
         .action-btn:hover {
@@ -133,14 +156,13 @@
         }
 
         .danger-btn {
-            background: var(--secondary-color);
+            background: var(--danger-red);
         }
 
         .danger-btn:hover {
-            background: var(--secondary-gradient);
+            background: #b91c1c;
         }
 
-        /* Checkbox Group */
         .checkbox-group {
             display: flex;
             flex-direction: column;
@@ -159,7 +181,6 @@
             margin-right: 10px;
         }
 
-        /* Modal */
         .modal {
             display: none;
             position: fixed;
@@ -193,14 +214,17 @@
             color: var(--grayfont-color);
         }
 
+        .close-btn:hover {
+            color: var(--primary-color);
+        }
+
         .error {
-            color: var(--secondary-color);
+            color: var(--danger-red);
             font-size: 12px;
             margin-top: 5px;
             display: none;
         }
 
-        /* Responsive adjustments */
         @media (max-width: 1024px) {
             .form-group input, .form-group select {
                 width: 100%;
@@ -223,7 +247,6 @@
 <body>
     <h1>Account Settings</h1>
 
-    <!-- Profile Information -->
     <h2>Profile Information</h2>
     <div class="card">
         <h3>Update Profile</h3>
@@ -251,7 +274,6 @@
         <button class="action-btn" id="save-profile">Save Changes</button>
     </div>
 
-    <!-- Password Management -->
     <h2>Password Management</h2>
     <div class="card">
         <h3>Change Password</h3>
@@ -273,14 +295,12 @@
         <button class="action-btn" id="change-password">Change Password</button>
     </div>
 
-    <!-- Account Actions -->
     <h2>Account Actions</h2>
     <div class="card">
         <h3>Manage Account</h3>
         <button class="action-btn danger-btn" id="delete-account">Delete Account</button>
     </div>
 
-    <!-- Modal for Confirmation -->
     <div class="modal" id="confirmation-modal">
         <div class="modal-content">
             <span class="close-btn" id="close-modal">×</span>
@@ -292,25 +312,14 @@
     </div>
 
     <script>
-        // Sample user data
         const user = {
             name: 'John Doe',
             email: 'john.doe@example.com',
-            role: 'teacher',
-            notifications: {
-                absenceAlerts: true,
-                systemUpdates: true,
-                reportReminders: false,
-                method: 'in-app'
-            }
+            role: 'teacher'
         };
 
-        // DOM Elements
         const saveProfile = document.getElementById('save-profile');
-        const saveNotifications = document.getElementById('save-notifications');
         const changePassword = document.getElementById('change-password');
-        const exportData = document.getElementById('export-data');
-        const logout = document.getElementById('logout');
         const deleteAccount = document.getElementById('delete-account');
         const confirmationModal = document.getElementById('confirmation-modal');
         const modalTitle = document.getElementById('modal-title');
@@ -319,7 +328,6 @@
         const cancelAction = document.getElementById('cancel-action');
         const closeModal = document.getElementById('close-modal');
 
-        // Validation functions
         function validateEmail(email) {
             return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
         }
@@ -328,7 +336,6 @@
             document.getElementById(id).style.display = show ? 'block' : 'none';
         }
 
-        // Profile Save
         saveProfile.addEventListener('click', () => {
             const name = document.getElementById('name').value;
             const email = document.getElementById('email').value;
@@ -351,17 +358,6 @@
             }
         });
 
-        // Notification Preferences Save
-        saveNotifications.addEventListener('click', () => {
-            user.notifications.absenceAlerts = document.getElementById('absence-alerts').checked;
-            user.notifications.systemUpdates = document.getElementById('system-updates').checked;
-            user.notifications.reportReminders = document.getElementById('report-reminders').checked;
-            user.notifications.method = document.getElementById('notification-method').value;
-            localStorage.setItem('user', JSON.stringify(user));
-            showModal('Preferences Saved', 'Your notification preferences have been saved.');
-        });
-
-        // Password Change
         changePassword.addEventListener('click', () => {
             const currentPassword = document.getElementById('current-password').value;
             const newPassword = document.getElementById('new-password').value;
@@ -381,25 +377,6 @@
             }
         });
 
-        // Export Account Data
-        exportData.addEventListener('click', () => {
-            const blob = new Blob([JSON.stringify(user, null, 2)], { type: 'application/json' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `account_data_${new Date().toISOString().split('T')[0]}.json`;
-            a.click();
-            URL.revokeObjectURL(url);
-        });
-
-        // Logout
-        logout.addEventListener('click', () => {
-            showModal('Confirm Logout', 'Are you sure you want to log out?', () => {
-                alert('Logged out successfully.');
-            });
-        });
-
-        // Delete Account
         deleteAccount.addEventListener('click', () => {
             showModal('Confirm Account Deletion', 'Are you sure you want to delete your account? This action cannot be undone.', () => {
                 localStorage.removeItem('user');
@@ -407,7 +384,6 @@
             });
         });
 
-        // Modal Handling
         function showModal(title, message, confirmCallback) {
             modalTitle.textContent = title;
             modalMessage.textContent = message;

@@ -38,7 +38,7 @@
             --spacing-lg: 1.5rem;
             --spacing-xl: 2rem;
             --spacing-2xl: 3rem;
-            --sidebar-width: 280px;
+            --sidebar-width: 260px;
             --sidebar-collapsed-width: 70px;
             --header-height: 70px;
             --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);

@@ -87,6 +87,61 @@
             border-radius: 2px;
         }
 
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: var(--shadow-md);
+            transition: var(--transition-normal);
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .card-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            color: var(--whitefont-color);
+        }
+
+        .bg-purple { background: var(--primary-gradient); }
+        .bg-pink { background: var(--secondary-gradient); }
+        .bg-blue { background: linear-gradient(135deg, #3b82f6, #60a5fa); }
+        .bg-green { background: linear-gradient(135deg, #10b981, #34d399); }
+
+        .card-title {
+            font-size: 14px;
+            color: var(--grayfont-color);
+            margin-bottom: 5px;
+        }
+
+        .card-value {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--blackfont-color);
+        }
+
         .controls {
             background: var(--card-bg);
             border-radius: 12px;
@@ -97,6 +152,7 @@
             grid-template-columns: 2fr 1fr;
             gap: 10px;
             align-items: center;
+            border: 1px solid var(--border-color);
         }
 
         .controls-left {
@@ -131,7 +187,7 @@
             outline: none;
             border-color: var(--primary-color);
             background: var(--white);
-            box-shadow: 0 0 0 3px var(--primary-blue-light);
+            box-shadow: 0 0 0 4px var(--primary-blue-light);
         }
 
         .search-icon {
@@ -149,12 +205,14 @@
             font-size: 14px;
             background: var(--inputfield-color);
             transition: var(--transition-normal);
+            min-width: 140px;
         }
 
         .filter-select:focus, .date-input:focus {
             outline: none;
-            border-color: var(--primary-color);
+            border-color: var(--primary-blue);
             background: var(--white);
+            box-shadow: 0 0 0 4px var(--primary-blue-light);
         }
 
         .advanced-search {
@@ -529,6 +587,7 @@
             outline: none;
             border-color: var(--primary-color);
             background: var(--white);
+            box-shadow: 0 0 0 4px var(--primary-blue-light);
         }
 
         .photo-upload {
@@ -614,6 +673,10 @@
                 justify-content: flex-start;
             }
 
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+
             th, td {
                 padding: 10px;
             }
@@ -657,6 +720,68 @@
 </head>
 <body>
     <h1>Student Management</h1>
+
+    <!-- Stats Grid -->
+    <div class="stats-grid">
+        <div class="card">
+            <div class="card-header">
+                <div>
+                    <div class="card-title">Total Students</div>
+                    <div class="card-value" id="total-students">0</div>
+                </div>
+                <div class="card-icon bg-purple">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 16 16">
+                        <path d="M7 14s-1 0-1-1 1-4 5-4 5 3 5 4-1 1-1 1H7zm4-6a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"/>
+                        <path fill-rule="evenodd" d="M5.216 14A2.238 2.238 0 0 1 5 13c0-1.355.68-2.75 1.936-3.72A6.325 6.325 0 0 0 5 9c-4 0-5 3-5 4s1 1 1 1h4.216z"/>
+                        <path d="M4.5 8a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z"/>
+                    </svg>
+                </div>
+            </div>
+        </div>
+        <div class="card">
+            <div class="card-header">
+                <div>
+                    <div class="card-title">Active Students</div>
+                    <div class="card-value" id="active-students">0</div>
+                </div>
+                <div class="card-icon bg-green">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 16 16">
+                        <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
+                        <path d="M10.97 4.97a.235.235 0 0 0-.02.022L7.477 9.417 5.384 7.323a.75.75 0 0 0-1.06 1.06L6.97 11.03a.75.75 0 0 0 1.079-.02l3.992-4.99a.75.75 0 0 0-1.071-1.05z"/>
+                    </svg>
+                </div>
+            </div>
+        </div>
+        <div class="card">
+            <div class="card-header">
+                <div>
+                    <div class="card-title">Average Attendance</div>
+                    <div class="card-value" id="average-attendance">0%</div>
+                </div>
+                <div class="card-icon bg-blue">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 16 16">
+                        <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
+                        <path d="M4 8a.5.5 0 0 1 .5-.5h7a.5.5 0 0 1 0 1h-7A.5.5 0 0 1 4 8z"/>
+                    </svg>
+                </div>
+            </div>
+        </div>
+        <div class="card">
+            <div class="card-header">
+                <div>
+                    <div class="card-title">Classes Enrolled</div>
+                    <div class="card-value" id="classes-enrolled">0</div>
+                </div>
+                <div class="card-icon bg-pink">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 16 16">
+                        <path d="M7 14s-1 0-1-1 1-4 5-4 5 3 5 4-1 1-1 1H7zm4-6a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"/>
+                        <path fill-rule="evenodd" d="M5.216 14A2.238 2.238 0 0 1 5 13c0-1.355.68-2.75 1.936-3.72A6.325 6.325 0 0 0 5 9c-4 0-5 3-5 4s1 1 1 1h4.216z"/>
+                        <path d="M4.5 8a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z"/>
+                    </svg>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <!-- Controls -->
     <div class="controls">
@@ -960,11 +1085,25 @@
 
         // Initialize
         document.addEventListener('DOMContentLoaded', () => {
+            updateStats();
             populateClassAndSectionFilters();
             applyFilters();
             setupAutocomplete();
             setupEventListeners();
         });
+
+        // Update stats for cards
+        function updateStats() {
+            const totalStudents = students.length;
+            const activeStudents = students.filter(s => classes.find(c => c.subject === s.class && c.sectionName === s.section)?.status === 'active').length;
+            const averageAttendance = students.length ? (students.reduce((sum, s) => sum + s.attendanceRate, 0) / students.length).toFixed(1) : 0;
+            const classesEnrolled = [...new Set(students.map(s => `${s.class}-${s.section}`))].length;
+
+            document.getElementById('total-students').textContent = totalStudents;
+            document.getElementById('active-students').textContent = activeStudents;
+            document.getElementById('average-attendance').textContent = `${averageAttendance}%`;
+            document.getElementById('classes-enrolled').textContent = classesEnrolled;
+        }
 
         // Populate class and section filters
         function populateClassAndSectionFilters() {
@@ -1026,12 +1165,10 @@
             searchInput.addEventListener('input', () => {
                 const term = searchInput.value.toLowerCase();
                 if (term.length < 2) return;
-
-                const suggestions = students.filter(s => 
-                    s.fullName.toLowerCase().includes(term) || 
+                const suggestions = students.filter(s =>
+                    s.fullName.toLowerCase().includes(term) ||
                     s.id.toString().includes(term)
                 ).map(s => s.fullName).slice(0, 5);
-
                 console.log('Suggestions:', suggestions);
             });
         }
@@ -1070,9 +1207,8 @@
             const paginatedData = data.slice(start, end);
 
             paginatedData.forEach(student => {
-                const attendanceClass = student.attendanceRate >= 90 ? 'high' : 
-                                      student.attendanceRate >= 80 ? 'medium' : 'low';
-                
+                const attendanceClass = student.attendanceRate >= 90 ? 'high' :
+                    student.attendanceRate >= 80 ? 'medium' : 'low';
                 const row = document.createElement('tr');
                 row.innerHTML = `
                     <td><input type="checkbox" class="row-checkbox" data-id="${student.id}"></td>
@@ -1109,9 +1245,8 @@
             const paginatedData = data.slice(start, end);
 
             paginatedData.forEach(student => {
-                const attendanceClass = student.attendanceRate >= 90 ? 'high' : 
-                                      student.attendanceRate >= 80 ? 'medium' : 'low';
-                
+                const attendanceClass = student.attendanceRate >= 90 ? 'high' :
+                    student.attendanceRate >= 80 ? 'medium' : 'low';
                 const card = document.createElement('div');
                 card.className = 'student-card';
                 card.innerHTML = `
@@ -1173,8 +1308,8 @@
             const attendanceRange = attendanceRateFilter.value;
 
             let filteredStudents = students.filter(student => {
-                const matchesSearch = student.fullName.toLowerCase().includes(searchTerm) || 
-                                    student.id.toString().includes(searchTerm);
+                const matchesSearch = student.fullName.toLowerCase().includes(searchTerm) ||
+                    student.id.toString().includes(searchTerm);
                 const matchesGender = gender ? student.gender === gender : true;
                 const matchesGradeLevel = gradeLevel ? student.gradeLevel === gradeLevel : true;
                 const matchesClass = className ? student.class === className : true;
@@ -1184,7 +1319,6 @@
                     attendanceRange === '80-90' ? student.attendanceRate >= 80 && student.attendanceRate < 90 :
                     student.attendanceRate < 80
                 ) : true;
-
                 return matchesSearch && matchesGender && matchesGradeLevel && matchesClass && matchesSection && matchesAttendance;
             });
 
@@ -1220,7 +1354,6 @@
             const checkboxes = document.querySelectorAll('.row-checkbox:checked');
             const selectedCount = document.getElementById('selectedCount');
             const bulkButtons = document.querySelectorAll('.bulk-btn');
-            
             selectedCount.textContent = `${checkboxes.length} selected`;
             bulkButtons.forEach(btn => btn.disabled = checkboxes.length === 0);
         }
@@ -1228,17 +1361,17 @@
         // Bulk actions
         function bulkExport() {
             const checkboxes = document.querySelectorAll('.row-checkbox:checked');
-            const selectedStudents = Array.from(checkboxes).map(cb => 
+            const selectedStudents = Array.from(checkboxes).map(cb =>
                 students.find(s => s.id == cb.dataset.id)
             );
-            
+
             const csv = [
                 'LRN,First Name,Last Name,Email,Gender,Grade Level,Subject,Section,Address,Emergency Contact,Attendance Rate',
-                ...selectedStudents.map(s => 
+                ...selectedStudents.map(s =>
                     `${s.id},${s.firstName},${s.lastName},${s.email},${s.gender},${s.gradeLevel},${s.class},${s.section},${s.address},${s.emergencyContact},${s.attendanceRate}`
                 )
             ].join('\n');
-            
+
             const blob = new Blob([csv], { type: 'text/csv' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
@@ -1250,14 +1383,11 @@
 
         function bulkDelete() {
             if (!confirm('Are you sure you want to delete selected students?')) return;
-            
             const checkboxes = document.querySelectorAll('.row-checkbox:checked');
             const ids = Array.from(checkboxes).map(cb => cb.dataset.id);
-            
             classes.forEach(cls => {
                 cls.students = cls.students.filter(s => !ids.includes(s.id.toString()));
             });
-            
             students = students.filter(s => !ids.includes(s.id.toString()));
             applyFilters();
         }
@@ -1340,9 +1470,9 @@
             Object.values(form).forEach(input => {
                 if (input.tagName !== 'IMG') input.disabled = mode === 'view';
             });
+
             document.querySelector('.photo-upload .action-btn').style.display = mode === 'view' ? 'none' : 'inline-flex';
             document.querySelector('.modal-footer .save-btn').style.display = mode === 'view' ? 'none' : 'inline-flex';
-
             profileModal.classList.add('show');
         }
 
@@ -1376,7 +1506,7 @@
                 photo: document.getElementById('student-photo-preview').src
             };
 
-            if (!form.firstName || !form.lastName || !form.gender || !form.dob || !form.gradeLevel || 
+            if (!form.firstName || !form.lastName || !form.gender || !form.dob || !form.gradeLevel ||
                 !form.class || !form.section || !form.address || !form.parentName || !form.emergencyContact) {
                 alert('Please fill in all required fields.');
                 return;
@@ -1437,11 +1567,9 @@
         // Delete student
         function deleteStudent(id) {
             if (!confirm('Are you sure you want to delete this student?')) return;
-            
             classes.forEach(cls => {
                 cls.students = cls.students.filter(s => s.id != id);
             });
-            
             students = students.filter(s => s.id != id);
             applyFilters();
         }
@@ -1457,20 +1585,19 @@
         function printQRCode() {
             const qrCanvas = document.querySelector('#qr-code canvas');
             if (!qrCanvas) return;
-
             const printWindow = window.open('', '_blank');
             printWindow.document.write(`
                 <html>
-                    <head>
-                        <title>Print QR Code</title>
-                        <style>
-                            body { margin: 0; display: flex; justify-content: center; align-items: center; height: 100vh; }
-                            img { max-width: 100%; }
-                        </style>
-                    </head>
-                    <body>
-                        <img src="${qrCanvas.toDataURL('image/png')}" alt="QR Code">
-                    </body>
+                <head>
+                    <title>Print QR Code</title>
+                    <style>
+                        body { margin: 0; display: flex; justify-content: center; align-items: center; height: 100vh; }
+                        img { max-width: 100%; }
+                    </style>
+                </head>
+                <body>
+                    <img src="${qrCanvas.toDataURL('image/png')}" alt="QR Code">
+                </body>
                 </html>
             `);
             printWindow.document.close();

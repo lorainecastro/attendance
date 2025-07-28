@@ -51,6 +51,9 @@
             --transition-fast: 0.15s ease-in-out;
             --transition-normal: 0.3s ease-in-out;
             --transition-slow: 0.5s ease-in-out;
+            --status-present-bg: #e6ffed;
+            --status-absent-bg: #ffe6e6;
+            --status-late-bg: #fff8e6;
         }
 
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif; }
@@ -85,8 +88,14 @@
         tbody tr { transition: var(--transition-normal); }
         tbody tr:hover { background-color: var(--inputfield-color); }
         .student-photo { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; }
-        .status-select, .notes-select { padding: 8px 12px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 14px; background: var(--inputfield-color); transition: var(--transition-normal); width: 100%; }
+        .status-select, .notes-select { padding: 8px 12px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 14px; transition: var(--transition-normal); width: 100%; }
         .status-select:focus, .notes-select:focus { outline: none; border-color: var(--primary-color); background: var(--inputfieldhover-color); }
+        .status-select option[value="Present"] { background-color: var(--status-present-bg); }
+        .status-select option[value="Absent"] { background-color: var(--status-absent-bg); }
+        .status-select option[value="Late"] { background-color: var(--status-late-bg); }
+        .status-select.present { background-color: var(--status-present-bg); }
+        .status-select.absent { background-color: var(--status-absent-bg); }
+        .status-select.late { background-color: var(--status-late-bg); }
         .notes-select:disabled { background: var(--light-gray); cursor: not-allowed; }
         .attendance-rate { color: var(--success-green); font-weight: 600; }
         .action-buttons { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
@@ -182,6 +191,12 @@
                 </select>
                 <select class="selector-select" id="sectionSelector">
                     <option value="">All Sections</option>
+                </select>
+                <select class="selector-select" id="statusSelector">
+                    <option value="">All Statuses</option>
+                    <option value="Present">Present</option>
+                    <option value="Absent">Absent</option>
+                    <option value="Late">Late</option>
                 </select>
                 <button class="quick-action-btn" onclick="markAllPresent()">Mark All Present</button>
                 <button class="quick-action-btn" onclick="startQRScanner()">Scan QR Code</button>
@@ -360,11 +375,13 @@
             const gradeLevelFilter = gradeLevelSelector.value;
             const classFilter = classSelector.value;
             const sectionFilter = sectionSelector.value;
+            const statusFilter = statusSelector.value;
             const filteredStudents = students.filter(s => {
                 const matchesGradeLevel = gradeLevelFilter ? s.gradeLevel === gradeLevelFilter : true;
                 const matchesClass = classFilter ? s.subject === classFilter : true;
                 const matchesSection = sectionFilter ? s.section === sectionFilter : true;
-                return matchesGradeLevel && matchesClass && matchesSection;
+                const matchesStatus = statusFilter ? attendanceData[today][s.id].status === statusFilter : true;
+                return matchesGradeLevel && matchesClass && matchesSection && matchesStatus;
             });
 
             const total = filteredStudents.length;
@@ -396,15 +413,18 @@
             const gradeLevelFilter = gradeLevelSelector.value;
             const classFilter = classSelector.value;
             const sectionFilter = sectionSelector.value;
+            const statusFilter = statusSelector.value;
             const filteredStudents = students.filter(s => {
                 const matchesGradeLevel = gradeLevelFilter ? s.gradeLevel === gradeLevelFilter : true;
                 const matchesClass = classFilter ? s.subject === classFilter : true;
                 const matchesSection = sectionFilter ? s.section === sectionFilter : true;
-                return matchesGradeLevel && matchesClass && matchesSection;
+                const matchesStatus = statusFilter ? attendanceData[today][s.id].status === statusFilter : true;
+                return matchesGradeLevel && matchesClass && matchesSection && matchesStatus;
             });
 
             filteredStudents.forEach(student => {
                 const isNotesDisabled = attendanceData[today][student.id].status === 'Present';
+                const statusClass = attendanceData[today][student.id].status.toLowerCase();
                 const row = document.createElement('tr');
                 row.innerHTML = `
                     <td><input type="checkbox" class="select-student" data-id="${student.id}"></td>
@@ -412,7 +432,7 @@
                     <td>${student.id}</td>
                     <td>${student.name}</td>
                     <td>
-                        <select class="status-select" data-id="${student.id}">
+                        <select class="status-select ${statusClass}" data-id="${student.id}">
                             <option value="Present" ${attendanceData[today][student.id].status === 'Present' ? 'selected' : ''}>Present</option>
                             <option value="Absent" ${attendanceData[today][student.id].status === 'Absent' ? 'selected' : ''}>Absent</option>
                             <option value="Late" ${attendanceData[today][student.id].status === 'Late' ? 'selected' : ''}>Late</option>
@@ -447,6 +467,8 @@
                         attendanceData[today][studentId].notes = '';
                         notesSelect.value = '';
                     }
+                    select.classList.remove('present', 'absent', 'late');
+                    select.classList.add(newStatus.toLowerCase());
                     updateStats();
                     renderTable();
                 });
@@ -475,11 +497,13 @@
             const gradeLevelFilter = gradeLevelSelector.value;
             const classFilter = classSelector.value;
             const sectionFilter = sectionSelector.value;
+            const statusFilter = statusSelector.value;
             const filteredStudents = students.filter(s => {
                 const matchesGradeLevel = gradeLevelFilter ? s.gradeLevel === gradeLevelFilter : true;
                 const matchesClass = classFilter ? s.subject === classFilter : true;
                 const matchesSection = sectionFilter ? s.section === sectionFilter : true;
-                return matchesGradeLevel && matchesClass && matchesSection;
+                const matchesStatus = statusFilter ? attendanceData[today][s.id].status === statusFilter : true;
+                return matchesGradeLevel && matchesClass && matchesSection && matchesStatus;
             });
 
             filteredStudents.forEach(student => {
@@ -588,6 +612,7 @@
         const gradeLevelSelector = document.getElementById('gradeLevelSelector');
         const classSelector = document.getElementById('classSelector');
         const sectionSelector = document.getElementById('sectionSelector');
+        const statusSelector = document.getElementById('statusSelector');
         const selectAllCheckbox = document.getElementById('select-all');
 
         dateSelector.addEventListener('change', () => {
@@ -603,6 +628,7 @@
         gradeLevelSelector.addEventListener('change', renderTable);
         classSelector.addEventListener('change', renderTable);
         sectionSelector.addEventListener('change', renderTable);
+        statusSelector.addEventListener('change', renderTable);
 
         document.addEventListener('DOMContentLoaded', () => {
             populateDropdowns();

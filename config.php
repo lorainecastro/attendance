@@ -65,8 +65,9 @@ function createUserSession($teacherId)
 
 function validateSession()
 {
-    // session_start(); // Ensure session is started
+    // session_start();
     if (!isset($_SESSION['teacher_id']) || !isset($_SESSION['session_token'])) {
+        error_log("Session validation failed: Missing teacher_id or session_token");
         return false;
     }
 
@@ -82,8 +83,10 @@ function validateSession()
         $teacher = $stmt->fetch();
 
         if ($teacher) {
+            error_log("Session validated successfully for teacher_id: {$_SESSION['teacher_id']}");
             return $teacher;
         } else {
+            error_log("Session validation failed: No matching session for teacher_id: {$_SESSION['teacher_id']}, token: {$_SESSION['session_token']}");
             destroySession();
             return false;
         }

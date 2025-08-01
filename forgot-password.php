@@ -111,7 +111,7 @@ include('header.php')
 
         .forgot-password-container {
             width: 100%;
-            max-width: 400px;
+            max-width: 500px;
             background: var(--white);
             border-radius: var(--radius-xl);
             box-shadow: var(--shadow-lg);
@@ -335,6 +335,7 @@ include('header.php')
         }
 
         .back-to-signin {
+            margin-top: 20px;
             text-align: center;
             color: var(--medium-gray);
             font-size: var(--font-size-sm);
@@ -398,7 +399,7 @@ include('header.php')
             <!-- Header -->
             <div class="forgot-password-header">
                 <h1>Forgot Password</h1>
-                <p>Student Attendance Enhancement System</p>
+                <p>Student Attendance Monitoring System</p>
             </div>
 
             <!-- Form -->
@@ -435,11 +436,6 @@ include('header.php')
                         Send Reset Link
                     </button>
                 </form>
-
-                <!-- Divider -->
-                <div class="divider">
-                    <span>or</span>
-                </div>
 
                 <!-- Back to Sign In Link -->
                 <div class="back-to-signin">

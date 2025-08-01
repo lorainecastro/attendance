@@ -4,27 +4,27 @@ session_start();
 
 require 'PHPMailer/vendor/autoload.php';
 
-
 use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\SMTP;
 use PHPMailer\PHPMailer\Exception;
 
 // reCAPTCHA configuration
-define('RECAPTCHA_SITE_KEY', '6LciX5crAAAAAC2it-A4UJYDSDCp4wp8Hz5hE_N2'); // Replace with your actual site key
-define('RECAPTCHA_SECRET_KEY', '6LciX5crAAAAAJOSEAjZZCHgqESEl-aTnRLemz8N'); // Replace with your actual secret key
+define('RECAPTCHA_SITE_KEY', '6LciX5crAAAAAC2it-A4UJYDSDCp4wp8Hz5hE_N2');
+define('RECAPTCHA_SECRET_KEY', '6LciX5crAAAAAJOSEAjZZCHgqESEl-aTnRLemz8N');
 
 $notification = ['message' => '', 'type' => ''];
 $firstname = $lastname = $institution = $username = $email = '';
 
 // Function to verify reCAPTCHA
-function verifyRecaptcha($recaptcha_response) {
+function verifyRecaptcha($recaptcha_response)
+{
     $url = 'https://www.google.com/recaptcha/api/siteverify';
     $data = [
         'secret' => RECAPTCHA_SECRET_KEY,
         'response' => $recaptcha_response,
         'remoteip' => $_SERVER['REMOTE_ADDR']
     ];
-    
+
     $options = [
         'http' => [
             'header' => "Content-type: application/x-www-form-urlencoded\r\n",
@@ -32,11 +32,11 @@ function verifyRecaptcha($recaptcha_response) {
             'content' => http_build_query($data)
         ]
     ];
-    
+
     $context = stream_context_create($options);
     $result = file_get_contents($url, false, $context);
     $resultJson = json_decode($result);
-    
+
     return $resultJson->success;
 }
 
@@ -83,8 +83,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 // Insert user with OTP
                 $stmt = $pdo->prepare("
-                    INSERT INTO teachers (firstname, lastname, institution, username, email, password, otp_code, otp_purpose, otp_expires_at, isActive, isVerified, created_at, otp_created_at)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, 'EMAIL_VERIFICATION', ?, 0, 0, NOW(), NOW())
+                    INSERT INTO teachers (firstname, lastname, institution, username, email, password, picture, otp_code, otp_purpose, otp_expires_at, otp_is_used, isActive, isVerified, created_at, otp_created_at)
+                    VALUES (?, ?, ?, ?, ?, ?, 'no-icon.png', ?, 'EMAIL_VERIFICATION', ?, 0, 0, 0, CURRENT_TIMESTAMP, NOW())
                 ");
                 $stmt->execute([$firstname, $lastname, $institution, $username, $email, $hashed_password, $otp, $otp_expires]);
 
@@ -99,13 +99,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $mail->isSMTP();
                     $mail->Host = 'smtp.gmail.com';
                     $mail->SMTPAuth = true;
-                    $mail->Username = 'your_smtp_email@gmail.com'; // Replace with your SMTP email
-                    $mail->Password = 'your_smtp_password'; // Replace with your SMTP password
+                    $mail->Username = 'elci.bank@gmail.com'; // Replace with your SMTP email
+                    $mail->Password = 'misxfqnfsovohfwh'; // Replace with your SMTP password
                     $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
                     $mail->Port = 587;
 
                     // Recipients
-                    $mail->setFrom('no-reply@sams.com', 'SAMS');
+                    $mail->setFrom('elci.bank@gmail.com', 'SAMS');
                     $mail->addAddress($email);
 
                     // Content
@@ -136,6 +136,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -144,7 +145,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <script src="https://www.google.com/recaptcha/api.js" async defer></script>
     <style>
-        /* Your provided SAMS CSS styles */
         :root {
             --primary-blue: #2563eb;
             --primary-blue-hover: #1d4ed8;
@@ -482,7 +482,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         @keyframes pulse {
-            0%, 100% {
+
+            0%,
+            100% {
                 transform: scale(1);
                 opacity: 0.5;
             }
@@ -662,7 +664,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         @keyframes spin {
-            to { transform: rotate(360deg); }
+            to {
+                transform: rotate(360deg);
+            }
         }
 
         .divider {
@@ -952,6 +956,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         @media (max-width: 768px) {
+
             .nav-links,
             .auth-buttons {
                 display: none;
@@ -1014,9 +1019,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     </style>
 </head>
+
 <body>
     <script>
-        document.addEventListener("DOMContentLoaded", function () {
+        document.addEventListener("DOMContentLoaded", function() {
             const firstnameInput = document.querySelector('input[name="firstname"]');
             if (firstnameInput) {
                 firstnameInput.focus();
@@ -1099,16 +1105,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 <input type="text" id="institution" name="institution" class="form-input" placeholder="Enter your institution name" value="<?php echo htmlspecialchars($institution, ENT_QUOTES, 'UTF-8'); ?>">
                             </div>
                         </div>
-                        <!-- <div class="form-group">
-                            <label for="username" class="form-label">Username</label>
-                            <div class="input-icon username-icon">
-                                <input type="text" id="username" name="username" class="form-input" placeholder="Choose a username" value="<?php echo htmlspecialchars($username, ENT_QUOTES, 'UTF-8'); ?>" required>
-                            </div>
-                            <div id="usernameFeedback" class="password-match"></div>
-                        </div> -->
+
                     </div>
                     <div class="form-row">
-                        
                         <div class="form-group">
                             <label for="email" class="form-label">Email Address</label>
                             <div class="input-icon email-icon">
@@ -1122,7 +1121,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             </div>
                             <div id="usernameFeedback" class="password-match"></div>
                         </div>
-                        
+
                     </div>
                     <div class="form-row">
                         <div class="form-group">
@@ -1262,7 +1261,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         const sectionId = href.split('#')[1];
                         const target = document.getElementById(sectionId);
                         if (target) {
-                            target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                            target.scrollIntoView({
+                                behavior: 'smooth',
+                                block: 'start'
+                            });
                         }
                     }
                 }
@@ -1285,7 +1287,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 const target = document.querySelector(window.location.hash);
                 if (target) {
                     setTimeout(() => {
-                        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                        target.scrollIntoView({
+                            behavior: 'smooth',
+                            block: 'start'
+                        });
                     }, 100);
                 }
             }
@@ -1326,6 +1331,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // Password match checker
         const confirmPasswordInput = document.getElementById('confirmPassword');
         const matchElement = document.getElementById('passwordMatch');
+
         function checkPasswordMatch() {
             const password = passwordInput.value;
             const confirmPassword = confirmPasswordInput.value;
@@ -1463,4 +1469,5 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     </script>
 </body>
+
 </html>

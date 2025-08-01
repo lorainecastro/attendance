@@ -1,3 +1,18 @@
+<?php
+require 'config.php';
+session_start();
+
+$currentUser = validateSession();
+if (!$currentUser) {
+    header("Location: sign-in.php");
+    exit;
+}
+
+$profileImageUrl = $currentUser['picture'] ?? 'no-icon.png';
+$profileInitials = strtoupper(substr($currentUser['firstname'] ?? 'D', 0, 1) . substr($currentUser['lastname'] ?? 'S', 0, 1));
+$profileName = htmlspecialchars($currentUser['firstname'] . ' ' . $currentUser['lastname'], ENT_QUOTES, 'UTF-8');
+?>
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -831,9 +846,9 @@
             
             <div class="profile-dropdown" id="profileDropdown">
                 <button class="profile-btn" onclick="toggleProfileDropdown()">
-                    <div class="profile-avatar">DS</div>
+                    <div class="profile-avatar"><?php echo htmlspecialchars($profileInitials); ?></div>
                     <div class="profile-info">
-                        <div class="profile-name">Daniel Smith</div>
+                        <div class="profile-name"><?php echo htmlspecialchars($profileName); ?></div>
                         <div class="profile-role">Teacher</div>
                     </div>
                     <i class="fas fa-chevron-down" style="color: var(--medium-gray); font-size: 0.875rem;"></i>
@@ -1020,7 +1035,7 @@
                         case 8: pageFile = 'support.php'; break;
                         case 9:
                             if (confirm('Are you sure you want to log out?')) {
-                                window.location.href = 'index.php';
+                                window.location.href = 'destroyer.php';
                             }
                             return;
                         default: pageFile = '404.html';

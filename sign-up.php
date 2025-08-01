@@ -1,66 +1,186 @@
+<?php
+require 'config.php'; // Your provided config file
+session_start();
+
+require 'PHPMailer/vendor/autoload.php';
+
+
+use PHPMailer\PHPMailer\PHPMailer;
+use PHPMailer\PHPMailer\SMTP;
+use PHPMailer\PHPMailer\Exception;
+
+// reCAPTCHA configuration
+define('RECAPTCHA_SITE_KEY', '6LciX5crAAAAAC2it-A4UJYDSDCp4wp8Hz5hE_N2'); // Replace with your actual site key
+define('RECAPTCHA_SECRET_KEY', '6LciX5crAAAAAJOSEAjZZCHgqESEl-aTnRLemz8N'); // Replace with your actual secret key
+
+$notification = ['message' => '', 'type' => ''];
+$firstname = $lastname = $institution = $username = $email = '';
+
+// Function to verify reCAPTCHA
+function verifyRecaptcha($recaptcha_response) {
+    $url = 'https://www.google.com/recaptcha/api/siteverify';
+    $data = [
+        'secret' => RECAPTCHA_SECRET_KEY,
+        'response' => $recaptcha_response,
+        'remoteip' => $_SERVER['REMOTE_ADDR']
+    ];
+    
+    $options = [
+        'http' => [
+            'header' => "Content-type: application/x-www-form-urlencoded\r\n",
+            'method' => 'POST',
+            'content' => http_build_query($data)
+        ]
+    ];
+    
+    $context = stream_context_create($options);
+    $result = file_get_contents($url, false, $context);
+    $resultJson = json_decode($result);
+    
+    return $resultJson->success;
+}
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    // Validate input
+    $firstname = htmlspecialchars(trim($_POST['firstname'] ?? ''), ENT_QUOTES, 'UTF-8');
+    $lastname = htmlspecialchars(trim($_POST['lastname'] ?? ''), ENT_QUOTES, 'UTF-8');
+    $institution = htmlspecialchars(trim($_POST['institution'] ?? ''), ENT_QUOTES, 'UTF-8');
+    $username = htmlspecialchars(trim($_POST['username'] ?? ''), ENT_QUOTES, 'UTF-8');
+    $email = filter_input(INPUT_POST, 'email', FILTER_SANITIZE_EMAIL);
+    $password = $_POST['password'] ?? '';
+    $confirm_password = $_POST['confirmPassword'] ?? '';
+    $recaptcha_response = $_POST['g-recaptcha-response'] ?? '';
+
+    // Validation
+    if (empty($firstname) || empty($lastname) || empty($username) || empty($email) || empty($password) || empty($confirm_password)) {
+        $notification = ['message' => 'Please fill in all required fields', 'type' => 'error'];
+    } elseif (empty($recaptcha_response)) {
+        $notification = ['message' => 'Please complete the reCAPTCHA verification', 'type' => 'error'];
+    } elseif (!verifyRecaptcha($recaptcha_response)) {
+        $notification = ['message' => 'reCAPTCHA verification failed. Please try again.', 'type' => 'error'];
+    } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        $notification = ['message' => 'Invalid email format', 'type' => 'error'];
+    } elseif ($password !== $confirm_password) {
+        $notification = ['message' => 'Passwords do not match', 'type' => 'error'];
+    } elseif (strlen($password) < 8) {
+        $notification = ['message' => 'Password must be at least 8 characters long', 'type' => 'error'];
+    } else {
+        try {
+            $pdo = getDBConnection();
+
+            // Check if email or username already exists
+            $stmt = $pdo->prepare("SELECT COUNT(*) FROM teachers WHERE email = ? OR username = ?");
+            $stmt->execute([$email, $username]);
+            if ($stmt->fetchColumn() > 0) {
+                $notification = ['message' => 'Email or username already exists', 'type' => 'error'];
+            } else {
+                // Generate OTP
+                $otp = sprintf("%06d", mt_rand(100000, 999999));
+                $otp_expires = date('Y-m-d H:i:s', strtotime('+15 minutes'));
+
+                // Hash password
+                $hashed_password = password_hash($password, PASSWORD_DEFAULT);
+
+                // Insert user with OTP
+                $stmt = $pdo->prepare("
+                    INSERT INTO teachers (firstname, lastname, institution, username, email, password, otp_code, otp_purpose, otp_expires_at, isActive, isVerified, created_at, otp_created_at)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, 'EMAIL_VERIFICATION', ?, 0, 0, NOW(), NOW())
+                ");
+                $stmt->execute([$firstname, $lastname, $institution, $username, $email, $hashed_password, $otp, $otp_expires]);
+
+                // Store user data in session for verification
+                $_SESSION['signup_email'] = $email;
+                $_SESSION['signup_teacher_id'] = $pdo->lastInsertId();
+
+                // Send OTP email
+                $mail = new PHPMailer(true);
+                try {
+                    // Server settings
+                    $mail->isSMTP();
+                    $mail->Host = 'smtp.gmail.com';
+                    $mail->SMTPAuth = true;
+                    $mail->Username = 'your_smtp_email@gmail.com'; // Replace with your SMTP email
+                    $mail->Password = 'your_smtp_password'; // Replace with your SMTP password
+                    $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
+                    $mail->Port = 587;
+
+                    // Recipients
+                    $mail->setFrom('no-reply@sams.com', 'SAMS');
+                    $mail->addAddress($email);
+
+                    // Content
+                    $mail->isHTML(true);
+                    $mail->Subject = 'Verify Your SAMS Account';
+                    $mail->Body = "
+                        <h2>Welcome to SAMS!</h2>
+                        <p>Your OTP for email verification is: <strong>$otp</strong></p>
+                        <p>This code is valid for 15 minutes. Please enter it on the verification page.</p>
+                        <p>If you did not request this, please ignore this email.</p>
+                    ";
+
+                    $mail->send();
+
+                    // Redirect to verification page
+                    header("Location: verify-email.php");
+                    exit();
+                } catch (Exception $e) {
+                    $notification = ['message' => 'Failed to send OTP. Please try again.', 'type' => 'error'];
+                }
+            }
+        } catch (PDOException $e) {
+            $notification = ['message' => 'Database error: ' . $e->getMessage(), 'type' => 'error'];
+        }
+    }
+}
+?>
+
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sign Up - Student Attendance System</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <script src="https://www.google.com/recaptcha/api.js" async defer></script>
     <style>
+        /* Your provided SAMS CSS styles */
         :root {
-            /* Primary Colors */
             --primary-blue: #2563eb;
             --primary-blue-hover: #1d4ed8;
             --primary-blue-light: #dbeafe;
-
-            /* Status Colors */
             --success-green: #16a34a;
             --warning-yellow: #ca8a04;
             --danger-red: #dc2626;
             --info-cyan: #0891b2;
-
-            /* Neutral Colors */
             --dark-gray: #374151;
             --medium-gray: #6b7280;
             --light-gray: #d1d5db;
             --background: #f9fafb;
             --white: #ffffff;
             --border-color: #e5e7eb;
-
-            /* Typography */
             --font-family: 'Inter', sans-serif;
             --font-size-sm: 0.875rem;
             --font-size-base: 1rem;
             --font-size-lg: 1.125rem;
             --font-size-xl: 1.25rem;
             --font-size-2xl: 1.5rem;
-
-            /* Spacing */
             --spacing-xs: 0.25rem;
             --spacing-sm: 0.5rem;
             --spacing-md: 1rem;
             --spacing-lg: 1.5rem;
             --spacing-xl: 2rem;
             --spacing-2xl: 3rem;
-
-            /* Layout */
             --sidebar-width: 280px;
             --sidebar-collapsed-width: 70px;
             --header-height: 70px;
-
-            /* Shadows */
             --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
             --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
             --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-
-            /* Border Radius */
             --radius-sm: 0.25rem;
             --radius-md: 0.5rem;
             --radius-lg: 0.75rem;
             --radius-xl: 1rem;
-
-            /* Transitions */
             --transition-fast: 0.15s ease-in-out;
             --transition-normal: 0.3s ease-in-out;
             --transition-slow: 0.5s ease-in-out;
@@ -82,7 +202,6 @@
             line-height: 1.6;
         }
 
-        /* Header Styles */
         .header {
             background: linear-gradient(135deg, var(--white) 0%, rgba(37, 99, 235, 0.02) 100%);
             backdrop-filter: blur(10px);
@@ -226,7 +345,7 @@
         }
 
         .btn-primary {
-            background: linear-gradient(135deg, var(--primary-blue), var(--primary-blue-hover));
+            background: linear-gradient(135deg, var(--primary-blue) 0%, var(--primary-blue-hover) 100%);
             color: var(--white);
             border: 1px solid transparent;
         }
@@ -304,7 +423,6 @@
             border-top: 1px solid var(--border-color);
         }
 
-        /* Main Content */
         .main-content {
             flex: 1;
             display: flex;
@@ -364,9 +482,7 @@
         }
 
         @keyframes pulse {
-
-            0%,
-            100% {
+            0%, 100% {
                 transform: scale(1);
                 opacity: 0.5;
             }
@@ -526,6 +642,29 @@
             transform: translateY(0);
         }
 
+        .signup-btn.loading .spinner {
+            display: inline-block;
+        }
+
+        .signup-btn.loading span {
+            display: none;
+        }
+
+        .spinner {
+            display: none;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-top-color: var(--white);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
         .divider {
             text-align: center;
             margin: var(--spacing-xl) 0;
@@ -576,7 +715,7 @@
             font-size: var(--font-size-sm);
             margin-bottom: var(--spacing-lg);
             border: 1px solid #fecaca;
-            display: none;
+            display: <?php echo $notification['message'] ? 'block' : 'none'; ?>;
         }
 
         .success-message {
@@ -620,7 +759,38 @@
             color: var(--danger-red);
         }
 
-        /* Footer Styles */
+        .recaptcha-container {
+            margin: var(--spacing-lg) 0;
+            display: flex;
+            justify-content: center;
+        }
+
+        .terms-checkbox {
+            display: flex;
+            align-items: center;
+            margin: var(--spacing-lg) 0;
+        }
+
+        .terms-checkbox input {
+            margin-right: var(--spacing-sm);
+            accent-color: var(--primary-blue);
+        }
+
+        .terms-checkbox label {
+            font-size: var(--font-size-sm);
+            color: var(--dark-gray);
+        }
+
+        .terms-checkbox a {
+            color: var(--primary-blue);
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        .terms-checkbox a:hover {
+            text-decoration: underline;
+        }
+
         .footer {
             background: linear-gradient(135deg, var(--dark-gray), #1f2937);
             color: var(--white);
@@ -781,9 +951,7 @@
             color: var(--primary-blue);
         }
 
-        /* Responsive Design */
         @media (max-width: 768px) {
-
             .nav-links,
             .auth-buttons {
                 display: none;
@@ -846,22 +1014,27 @@
         }
     </style>
 </head>
-
 <body>
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            const firstnameInput = document.querySelector('input[name="firstname"]');
+            if (firstnameInput) {
+                firstnameInput.focus();
+            }
+        });
+    </script>
     <header class="header">
         <nav class="navbar">
             <a href="index.php" class="logo">
                 <i class="fas fa-graduation-cap"></i>
                 <span>SAMS</span>
             </a>
-
             <ul class="nav-links">
                 <li><a href="index.php">Home</a></li>
                 <li><a href="index.php#about">About</a></li>
                 <li><a href="index.php#features">Features</a></li>
                 <li><a href="index.php#contact">Contact</a></li>
             </ul>
-
             <div class="auth-buttons">
                 <a href="sign-in.php" class="btn btn-outline">
                     <i class="fas fa-sign-in-alt"></i>
@@ -872,12 +1045,10 @@
                     Sign Up
                 </a>
             </div>
-
             <button class="mobile-menu-toggle" onclick="toggleMobileMenu()">
                 <i class="fas fa-bars"></i>
             </button>
         </nav>
-
         <div class="mobile-menu" id="mobileMenu">
             <div class="mobile-nav-links">
                 <a href="index.php" onclick="closeMobileMenu()">Home</a>
@@ -897,146 +1068,96 @@
             </div>
         </div>
     </header>
-
     <div class="main-content">
         <div class="signup-container">
             <div class="signup-header">
                 <h1>Create Account</h1>
                 <p>Join the Student Attendance Monitoring System</p>
             </div>
-
             <div class="signup-form">
-                <div id="errorMessage" class="error-message"></div>
+                <div id="errorMessage" class="error-message"><?php echo htmlspecialchars($notification['message'], ENT_QUOTES, 'UTF-8'); ?></div>
                 <div id="successMessage" class="success-message"></div>
-
                 <form id="signupForm" action="sign-up.php" method="POST">
                     <div class="form-row">
                         <div class="form-group">
                             <label for="firstname" class="form-label">First Name</label>
                             <div class="input-icon user-icon">
-                                <input
-                                    type="text"
-                                    id="firstname"
-                                    name="firstname"
-                                    class="form-input"
-                                    placeholder="Enter your first name"
-                                    required>
+                                <input type="text" id="firstname" name="firstname" class="form-input" placeholder="Enter your first name" value="<?php echo htmlspecialchars($firstname, ENT_QUOTES, 'UTF-8'); ?>" required>
                             </div>
                         </div>
                         <div class="form-group">
                             <label for="lastname" class="form-label">Last Name</label>
                             <div class="input-icon user-icon">
-                                <input
-                                    type="text"
-                                    id="lastname"
-                                    name="lastname"
-                                    class="form-input"
-                                    placeholder="Enter your last name"
-                                    required>
+                                <input type="text" id="lastname" name="lastname" class="form-input" placeholder="Enter your last name" value="<?php echo htmlspecialchars($lastname, ENT_QUOTES, 'UTF-8'); ?>" required>
                             </div>
                         </div>
                     </div>
-
                     <div class="form-row">
                         <div class="form-group">
-                            <label for="institution" class="form-label">Institution Name (Optional)</label>
+                            <label for="institution" class="form-label">Institution Name</label>
                             <div class="input-icon institution-icon">
-                                <input
-                                    type="text"
-                                    id="institution"
-                                    name="institution"
-                                    class="form-input"
-                                    placeholder="Enter your institution name (Optional)"
-                                    required>
+                                <input type="text" id="institution" name="institution" class="form-input" placeholder="Enter your institution name" value="<?php echo htmlspecialchars($institution, ENT_QUOTES, 'UTF-8'); ?>">
                             </div>
                         </div>
-
                         <!-- <div class="form-group">
                             <label for="username" class="form-label">Username</label>
                             <div class="input-icon username-icon">
-                                <input
-                                    type="text"
-                                    id="username"
-                                    name="username"
-                                    class="form-input"
-                                    placeholder="Choose a username"
-                                    required>
+                                <input type="text" id="username" name="username" class="form-input" placeholder="Choose a username" value="<?php echo htmlspecialchars($username, ENT_QUOTES, 'UTF-8'); ?>" required>
                             </div>
+                            <div id="usernameFeedback" class="password-match"></div>
                         </div> -->
-
                     </div>
-
                     <div class="form-row">
+                        
                         <div class="form-group">
                             <label for="email" class="form-label">Email Address</label>
                             <div class="input-icon email-icon">
-                                <input
-                                    type="email"
-                                    id="email"
-                                    name="email"
-                                    class="form-input"
-                                    placeholder="Enter your email address"
-                                    required>
+                                <input type="email" id="email" name="email" class="form-input" placeholder="Enter your email address" value="<?php echo htmlspecialchars($email, ENT_QUOTES, 'UTF-8'); ?>" required>
                             </div>
                         </div>
-
                         <div class="form-group">
                             <label for="username" class="form-label">Username</label>
                             <div class="input-icon username-icon">
-                                <input
-                                    type="text"
-                                    id="username"
-                                    name="username"
-                                    class="form-input"
-                                    placeholder="Choose a username"
-                                    required>
+                                <input type="text" id="username" name="username" class="form-input" placeholder="Choose a username" value="<?php echo htmlspecialchars($username, ENT_QUOTES, 'UTF-8'); ?>" required>
                             </div>
+                            <div id="usernameFeedback" class="password-match"></div>
                         </div>
-
                         
                     </div>
-
                     <div class="form-row">
                         <div class="form-group">
                             <label for="password" class="form-label">Password</label>
                             <div class="input-icon password-icon">
-                                <input
-                                    type="password"
-                                    id="password"
-                                    name="password"
-                                    class="form-input"
-                                    placeholder="Create a password"
-                                    required>
+                                <input type="password" id="password" name="password" class="form-input" placeholder="Create a password" required>
                             </div>
                             <div id="passwordStrength" class="password-strength"></div>
                         </div>
                         <div class="form-group">
                             <label for="confirmPassword" class="form-label">Confirm Password</label>
                             <div class="input-icon confirm-password-icon">
-                                <input
-                                    type="password"
-                                    id="confirmPassword"
-                                    name="confirmPassword"
-                                    class="form-input"
-                                    placeholder="Confirm your password"
-                                    required>
+                                <input type="password" id="confirmPassword" name="confirmPassword" class="form-input" placeholder="Confirm your password" required>
                             </div>
                             <div id="passwordMatch" class="password-match"></div>
                         </div>
                     </div>
-
+                    <div class="recaptcha-container">
+                        <div class="g-recaptcha" data-sitekey="<?php echo RECAPTCHA_SITE_KEY; ?>"></div>
+                    </div>
+                    <div class="terms-checkbox">
+                        <input type="checkbox" id="terms" name="terms" required>
+                        <label for="terms">I agree to the <a href="#">Terms of Service</a> and <a href="#">Privacy Policy</a></label>
+                    </div>
                     <button type="submit" class="signup-btn">
-                        Create Account
+                        <span>Create Account</span>
+                        <div class="spinner"></div>
                     </button>
                 </form>
-
                 <div class="signin-link">
                     Already have an account? <a href="sign-in.php">Sign in here</a>
                 </div>
             </div>
         </div>
     </div>
-
     <footer class="footer">
         <div class="footer-content">
             <div class="footer-grid">
@@ -1057,7 +1178,6 @@
                         <a href="#" class="social-link"><i class="fab fa-instagram"></i></a>
                     </div>
                 </div>
-
                 <div class="footer-section">
                     <h4>Quick Links</h4>
                     <ul class="footer-links">
@@ -1067,7 +1187,6 @@
                         <li><a href="#contact">Contact</a></li>
                     </ul>
                 </div>
-
                 <div class="footer-section">
                     <h4>Solutions</h4>
                     <ul class="footer-links">
@@ -1078,7 +1197,6 @@
                         <li><a href="#">Custom Reports</a></li>
                     </ul>
                 </div>
-
                 <div class="footer-section">
                     <h4>Resources</h4>
                     <ul class="footer-links">
@@ -1090,9 +1208,7 @@
                     </ul>
                 </div>
             </div>
-
             <div class="footer-divider"></div>
-
             <div class="footer-bottom">
                 <p>&copy; 2025 SAMS - Student Attendance Monitoring System. All rights reserved.</p>
                 <div class="footer-bottom-links">
@@ -1103,28 +1219,19 @@
             </div>
         </div>
     </footer>
-
     <script>
-        // Mobile menu toggle functionality
+        // Mobile menu toggle
         function toggleMobileMenu() {
             const mobileMenu = document.getElementById('mobileMenu');
             const toggleBtn = document.querySelector('.mobile-menu-toggle i');
-
             mobileMenu.classList.toggle('active');
-
-            if (mobileMenu.classList.contains('active')) {
-                toggleBtn.classList.remove('fa-bars');
-                toggleBtn.classList.add('fa-times');
-            } else {
-                toggleBtn.classList.remove('fa-times');
-                toggleBtn.classList.add('fa-bars');
-            }
+            toggleBtn.classList.toggle('fa-bars');
+            toggleBtn.classList.toggle('fa-times');
         }
 
         function closeMobileMenu() {
             const mobileMenu = document.getElementById('mobileMenu');
             const toggleBtn = document.querySelector('.mobile-menu-toggle i');
-
             mobileMenu.classList.remove('active');
             toggleBtn.classList.remove('fa-times');
             toggleBtn.classList.add('fa-bars');
@@ -1134,10 +1241,8 @@
         document.addEventListener('DOMContentLoaded', function() {
             const currentPage = window.location.pathname.split('/').pop() || 'index.php';
             const navLinks = document.querySelectorAll('.nav-links a, .mobile-nav-links a');
-
             navLinks.forEach(link => {
                 const href = link.getAttribute('href');
-
                 if (currentPage === 'index.php' && href === 'index.php') {
                     link.classList.add('active');
                 } else if (href.includes(currentPage) && !href.includes('#')) {
@@ -1146,49 +1251,32 @@
             });
         });
 
-        // Enhanced navigation for hash links
-        document.addEventListener('DOMContentLoaded', function() {
-            const navLinks = document.querySelectorAll('.nav-links a, .mobile-nav-links a');
-
-            navLinks.forEach(link => {
-                link.addEventListener('click', function(e) {
-                    const href = this.getAttribute('href');
-
-                    if (href.includes('#') && href.startsWith('index.php#')) {
-                        const currentPage = window.location.pathname.split('/').pop() || 'index.php';
-
-                        if (currentPage === 'index.php') {
-                            e.preventDefault();
-                            const sectionId = href.split('#')[1];
-                            const target = document.getElementById(sectionId);
-
-                            if (target) {
-                                target.scrollIntoView({
-                                    behavior: 'smooth',
-                                    block: 'start'
-                                });
-                            }
+        // Smooth scroll for hash links
+        document.querySelectorAll('.nav-links a, .mobile-nav-links a').forEach(link => {
+            link.addEventListener('click', function(e) {
+                const href = this.getAttribute('href');
+                if (href.includes('#') && href.startsWith('index.php#')) {
+                    const currentPage = window.location.pathname.split('/').pop() || 'index.php';
+                    if (currentPage === 'index.php') {
+                        e.preventDefault();
+                        const sectionId = href.split('#')[1];
+                        const target = document.getElementById(sectionId);
+                        if (target) {
+                            target.scrollIntoView({ behavior: 'smooth', block: 'start' });
                         }
                     }
-
-                    navLinks.forEach(l => l.classList.remove('active'));
-                    this.classList.add('active');
-
-                    closeMobileMenu();
-                });
+                }
+                document.querySelectorAll('.nav-links a, .mobile-nav-links a').forEach(l => l.classList.remove('active'));
+                this.classList.add('active');
+                closeMobileMenu();
             });
         });
 
         // Header scroll effect
         window.addEventListener('scroll', function() {
             const header = document.querySelector('.header');
-            if (window.scrollY > 50) {
-                header.style.boxShadow = 'var(--shadow-lg)';
-                header.style.backgroundColor = 'rgba(255, 255, 255, 0.95)';
-            } else {
-                header.style.boxShadow = 'var(--shadow-md)';
-                header.style.backgroundColor = '';
-            }
+            header.style.boxShadow = window.scrollY > 50 ? 'var(--shadow-lg)' : 'var(--shadow-md)';
+            header.style.backgroundColor = window.scrollY > 50 ? 'rgba(255, 255, 255, 0.95)' : '';
         });
 
         // Handle hash navigation on load
@@ -1197,190 +1285,182 @@
                 const target = document.querySelector(window.location.hash);
                 if (target) {
                     setTimeout(() => {
-                        target.scrollIntoView({
-                            behavior: 'smooth',
-                            block: 'start'
-                        });
+                        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
                     }, 100);
                 }
             }
         });
 
         // Password strength checker
-        function checkPasswordStrength(password) {
-            const strengthElement = document.getElementById('passwordStrength');
+        const passwordInput = document.getElementById('password');
+        const strengthElement = document.getElementById('passwordStrength');
+        passwordInput.addEventListener('input', function() {
+            const password = this.value;
             let strength = 0;
-            let feedback = '';
-
+            strengthElement.textContent = '';
             if (password.length >= 8) strength++;
             if (/[a-z]/.test(password)) strength++;
             if (/[A-Z]/.test(password)) strength++;
             if (/[0-9]/.test(password)) strength++;
             if (/[^A-Za-z0-9]/.test(password)) strength++;
-
             switch (strength) {
                 case 0:
                 case 1:
                 case 2:
-                    feedback = 'Weak password';
+                    strengthElement.textContent = 'Weak password';
                     strengthElement.className = 'password-strength strength-weak';
                     break;
                 case 3:
                 case 4:
-                    feedback = 'Medium password';
+                    strengthElement.textContent = 'Medium password';
                     strengthElement.className = 'password-strength strength-medium';
                     break;
                 case 5:
-                    feedback = 'Strong password';
+                    strengthElement.textContent = 'Strong password';
                     strengthElement.className = 'password-strength strength-strong';
                     break;
             }
-
-            strengthElement.textContent = password ? feedback : '';
-            return strength;
-        }
+            checkPasswordMatch();
+        });
 
         // Password match checker
+        const confirmPasswordInput = document.getElementById('confirmPassword');
+        const matchElement = document.getElementById('passwordMatch');
         function checkPasswordMatch() {
-            const password = document.getElementById('password').value;
-            const confirmPassword = document.getElementById('confirmPassword').value;
-            const matchElement = document.getElementById('passwordMatch');
-
+            const password = passwordInput.value;
+            const confirmPassword = confirmPasswordInput.value;
             if (confirmPassword === '') {
                 matchElement.textContent = '';
-                return true;
+                return;
             }
-
-            if (password === confirmPassword) {
-                matchElement.textContent = 'Passwords match';
-                matchElement.className = 'password-match match-success';
-                return true;
-            } else {
-                matchElement.textContent = 'Passwords do not match';
-                matchElement.className = 'password-match match-error';
-                return false;
-            }
+            matchElement.textContent = password === confirmPassword ? 'Passwords match' : 'Passwords do not match';
+            matchElement.className = password === confirmPassword ? 'password-match match-success' : 'password-match match-error';
         }
+        confirmPasswordInput.addEventListener('input', checkPasswordMatch);
 
-        // Form validation and submission
-        document.getElementById('signupForm').addEventListener('submit', function(e) {
-            e.preventDefault();
+        // Username availability check
+        const usernameInput = document.getElementById('username');
+        const usernameFeedback = document.getElementById('usernameFeedback');
+        let usernameTimer;
+        usernameInput.addEventListener('input', function() {
+            clearTimeout(usernameTimer);
+            usernameFeedback.textContent = '';
+            if (this.value.trim().length >= 3) {
+                usernameTimer = setTimeout(() => {
+                    const xhr = new XMLHttpRequest();
+                    xhr.open('POST', 'check-username.php', true);
+                    xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+                    xhr.onreadystatechange = function() {
+                        if (xhr.readyState === 4 && xhr.status === 200) {
+                            const response = JSON.parse(xhr.responseText);
+                            usernameFeedback.textContent = response.message;
+                            usernameFeedback.className = response.status === 'error' ? 'password-match match-error' : 'password-match match-success';
+                        }
+                    };
+                    xhr.send('username=' + encodeURIComponent(this.value.trim()));
+                }, 800);
+            }
+        });
 
+        // Form validation
+        const form = document.getElementById('signupForm');
+        const submitButton = form.querySelector('.signup-btn');
+        const spinner = submitButton.querySelector('.spinner');
+        const buttonText = submitButton.querySelector('span');
+        form.addEventListener('submit', function(e) {
             const firstname = document.getElementById('firstname').value.trim();
             const lastname = document.getElementById('lastname').value.trim();
-            const institution = document.getElementById('institution').value.trim();
             const username = document.getElementById('username').value.trim();
             const email = document.getElementById('email').value.trim();
             const password = document.getElementById('password').value;
             const confirmPassword = document.getElementById('confirmPassword').value;
+            const terms = document.getElementById('terms').checked;
+            const recaptcha = grecaptcha.getResponse();
             const errorMessage = document.getElementById('errorMessage');
-            const successMessage = document.getElementById('successMessage');
-
             errorMessage.style.display = 'none';
-            successMessage.style.display = 'none';
 
-            if (!firstname || !lastname || !institution || !username || !email || !password || !confirmPassword) {
-                showError('Please fill in all required fields.');
+            if (!firstname || !lastname || !username || !email || !password || !confirmPassword) {
+                e.preventDefault();
+                errorMessage.textContent = 'Please fill in all required fields.';
+                errorMessage.style.display = 'block';
                 return;
             }
-
             if (firstname.length < 2) {
-                showError('First name must be at least 2 characters long.');
+                e.preventDefault();
+                errorMessage.textContent = 'First name must be at least 2 characters long.';
+                errorMessage.style.display = 'block';
                 return;
             }
-
             if (lastname.length < 2) {
-                showError('Last name must be at least 2 characters long.');
+                e.preventDefault();
+                errorMessage.textContent = 'Last name must be at least 2 characters long.';
+                errorMessage.style.display = 'block';
                 return;
             }
-
-            if (institution.length < 3) {
-                showError('Institution name must be at least 3 characters long.');
-                return;
-            }
-
             if (username.length < 3) {
-                showError('Username must be at least 3 characters long.');
+                e.preventDefault();
+                errorMessage.textContent = 'Username must be at least 3 characters long.';
+                errorMessage.style.display = 'block';
                 return;
             }
-
             if (!/^[a-zA-Z0-9_]+$/.test(username)) {
-                showError('Username can only contain letters, numbers, and underscores.');
+                e.preventDefault();
+                errorMessage.textContent = 'Username can only contain letters, numbers, and underscores.';
+                errorMessage.style.display = 'block';
                 return;
             }
-
-            if (!isValidEmail(email)) {
-                showError('Please enter a valid email address.');
+            if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+                e.preventDefault();
+                errorMessage.textContent = 'Please enter a valid email address.';
+                errorMessage.style.display = 'block';
                 return;
             }
-
             if (password.length < 8) {
-                showError('Password must be at least 8 characters long.');
+                e.preventDefault();
+                errorMessage.textContent = 'Password must be at least 8 characters long.';
+                errorMessage.style.display = 'block';
                 return;
             }
-
-            if (checkPasswordStrength(password) < 3) {
-                showError('Password is too weak. Please use a stronger password.');
-                return;
-            }
-
             if (password !== confirmPassword) {
-                showError('Passwords do not match.');
+                e.preventDefault();
+                errorMessage.textContent = 'Passwords do not match.';
+                errorMessage.style.display = 'block';
                 return;
             }
-
-            showSuccess('Creating account...');
-
-            setTimeout(() => {
-                showSuccess('Account created successfully! Please check your email for verification.');
-
-                setTimeout(() => {
-                    showSuccess('Ready to redirect to sign in page!');
-                }, 2000);
-            }, 1000);
+            if (!terms) {
+                e.preventDefault();
+                errorMessage.textContent = 'You must agree to the Terms of Service and Privacy Policy.';
+                errorMessage.style.display = 'block';
+                return;
+            }
+            if (!recaptcha) {
+                e.preventDefault();
+                errorMessage.textContent = 'Please complete the reCAPTCHA verification.';
+                errorMessage.style.display = 'block';
+                return;
+            }
+            submitButton.disabled = true;
+            spinner.style.display = 'inline-block';
+            buttonText.textContent = 'Creating Account...';
         });
 
-        function showError(message) {
-            const errorMessage = document.getElementById('errorMessage');
-            errorMessage.textContent = message;
-            errorMessage.style.display = 'block';
-
-            errorMessage.scrollIntoView({
-                behavior: 'smooth',
-                block: 'center'
-            });
-        }
-
-        function showSuccess(message) {
-            const successMessage = document.getElementById('successMessage');
-            successMessage.textContent = message;
-            successMessage.style.display = 'block';
-        }
-
-        function isValidEmail(email) {
-            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-            return emailRegex.test(email);
-        }
-
+        // Input animations
         document.querySelectorAll('.form-input').forEach(input => {
             input.addEventListener('focus', function() {
                 this.parentElement.style.transform = 'translateY(-2px)';
             });
-
             input.addEventListener('blur', function() {
                 this.parentElement.style.transform = 'translateY(0)';
             });
         });
 
-        document.getElementById('password').addEventListener('input', function() {
-            checkPasswordStrength(this.value);
-            checkPasswordMatch();
-        });
-
-        document.getElementById('confirmPassword').addEventListener('input', function() {
-            checkPasswordMatch();
-        });
+        // Show PHP notifications
+        if (document.getElementById('errorMessage').textContent.trim()) {
+            document.getElementById('errorMessage').style.display = 'block';
+            setTimeout(() => {
+                document.getElementById('errorMessage').style.display = 'none';
+            }, 5000);
+        }
     </script>
 </body>
-
 </html>

@@ -1,21 +1,10 @@
 <?php
-ini_set('display_errors', 1);
-ini_set('display_startup_errors', 1);
-error_reporting(E_ALL);
-
-if ($_SERVER['HTTP_HOST'] === 'localhost' || $_SERVER['HTTP_HOST'] === '127.0.0.1') {
-    define('DB_HOST', 'localhost');
-    define('DB_PORT', '3307');
-    define('DB_NAME', 'attendance');
-    define('DB_USER', 'root');
-    define('DB_PASS', '');
-} else {
-    define('DB_HOST', 'localhost');
-    define('DB_PORT', '3306');
-    define('DB_NAME', 'u801377270_attendance_db');
-    define('DB_USER', 'u801377270_attendance_db');
-    define('DB_PASS', 'Attendance@2025');
-}
+// Database configuration
+define('DB_HOST', '127.0.0.1');
+define('DB_PORT', '3307');
+define('DB_NAME', 'attendance');
+define('DB_USER', 'root');
+define('DB_PASS', '');
 
 // Create database connection
 function getDBConnection()
@@ -44,7 +33,7 @@ function generateSessionToken($length = 64)
 }
 
 // Session management
-function createUserSession($userId)
+function createUserSession($teacherId)
 {
     $pdo = getDBConnection();
     $token = generateSessionToken();
@@ -52,19 +41,19 @@ function createUserSession($userId)
 
     try {
         // Delete any existing sessions for the user
-        $stmt = $pdo->prepare("DELETE FROM user_sessions WHERE user_id = ?");
-        $stmt->execute([$userId]);
+        $stmt = $pdo->prepare("DELETE FROM teacher_sessions WHERE teacher_id = ?");
+        $stmt->execute([$teacherId]);
 
         // Create new session
         $stmt = $pdo->prepare("
-            INSERT INTO user_sessions (user_id, session_token, expires_at, created_at)
+            INSERT INTO teacher_sessions (teacher_id, session_token, expires_at, created_at)
             VALUES (?, ?, ?, NOW())
         ");
-        $stmt->execute([$userId, $token, $expiresAt]);
+        $stmt->execute([$teacherId, $token, $expiresAt]);
 
         // Store session data
         session_start(); // Ensure session is started
-        $_SESSION['user_id'] = $userId;
+        $_SESSION['teacher_id'] = $teacherId;
         $_SESSION['session_token'] = $token;
 
         return $token;
@@ -77,7 +66,7 @@ function createUserSession($userId)
 function validateSession()
 {
     // session_start(); // Ensure session is started
-    if (!isset($_SESSION['user_id']) || !isset($_SESSION['session_token'])) {
+    if (!isset($_SESSION['teacher_id']) || !isset($_SESSION['session_token'])) {
         return false;
     }
 
@@ -85,15 +74,15 @@ function validateSession()
     try {
         $stmt = $pdo->prepare("
             SELECT u.*, s.expires_at, s.session_token
-            FROM users u 
-            JOIN user_sessions s ON u.user_id = s.user_id 
-            WHERE s.user_id = ? AND s.session_token = ? AND s.expires_at > NOW()
+            FROM teachers u 
+            JOIN teacher_sessions s ON u.teacher_id = s.teacher_id 
+            WHERE s.teacher_id = ? AND s.session_token = ? AND s.expires_at > NOW()
         ");
-        $stmt->execute([$_SESSION['user_id'], $_SESSION['session_token']]);
-        $user = $stmt->fetch();
+        $stmt->execute([$_SESSION['teacher_id'], $_SESSION['session_token']]);
+        $teacher = $stmt->fetch();
 
-        if ($user) {
-            return $user;
+        if ($teacher) {
+            return $teacher;
         } else {
             destroySession();
             return false;
@@ -108,10 +97,10 @@ function destroySession()
 {
     $pdo = getDBConnection(); // Use getDBConnection instead of global $pdo
     session_start(); // Ensure session is started
-    if (isset($_SESSION['user_id'])) {
+    if (isset($_SESSION['teacher_id'])) {
         try {
-            $stmt = $pdo->prepare("DELETE FROM user_sessions WHERE user_id = ?");
-            $stmt->execute([$_SESSION['user_id']]);
+            $stmt = $pdo->prepare("DELETE FROM teacher_sessions WHERE teacher_id = ?");
+            $stmt->execute([$_SESSION['teacher_id']]);
         } catch (PDOException $e) {
             error_log("Session deletion error: " . $e->getMessage());
         }

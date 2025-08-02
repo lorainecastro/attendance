@@ -1,4 +1,5 @@
 <?php
+ob_start(); // Start output buffering
 require 'config.php';
 session_start();
 
@@ -17,48 +18,144 @@ if (!isset($_SESSION['reset_email'])) {
 $email = $_SESSION['reset_email'];
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $otp = trim($_POST['otp'] ?? '');
-    $new_password = $_POST['new_password'] ?? '';
-    $confirm_password = $_POST['confirm_password'] ?? '';
-
-    if (empty($otp) || empty($new_password) || empty($confirm_password)) {
-        $notification = ['message' => 'Please fill in all fields', 'type' => 'error'];
-    } elseif ($new_password !== $confirm_password) {
-        $notification = ['message' => 'Passwords do not match', 'type' => 'error'];
-    } elseif (strlen($new_password) < 8) {
-        $notification = ['message' => 'Password must be at least 8 characters long', 'type' => 'error'];
-    } else {
+    if (isset($_POST['action']) && $_POST['action'] === 'request_new_otp') {
+        // Handle new OTP request
         try {
             $pdo = getDBConnection();
-            $stmt = $pdo->prepare("SELECT teacher_id, otp_code, otp_expires_at, otp_is_used FROM teachers WHERE email = ? AND otp_purpose = 'PASSWORD_RESET'");
+            // Check if email exists and user status
+            $stmt = $pdo->prepare("
+                SELECT teacher_id, email, isActive, isVerified, isDeleted 
+                FROM teachers 
+                WHERE email = ?
+            ");
             $stmt->execute([$email]);
             $user = $stmt->fetch();
 
             if (!$user) {
-                $notification = ['message' => 'Invalid or expired OTP request', 'type' => 'error'];
-            } elseif ($user['otp_is_used'] == 1) {
-                $notification = ['message' => 'OTP has already been used', 'type' => 'error'];
-            } elseif (strtotime($user['otp_expires_at']) < time()) {
-                $notification = ['message' => 'OTP has expired', 'type' => 'error'];
-            } elseif ($otp !== $user['otp_code']) {
-                $notification = ['message' => 'Invalid OTP', 'type' => 'error'];
+                $notification = ['message' => 'No account found with that email.', 'type' => 'error'];
+            } elseif ($user['isDeleted'] == 1) {
+                $notification = ['message' => 'No account found with that email.', 'type' => 'error'];
+                error_log("Password reset attempt for deleted account: $email");
+            } elseif ($user['isActive'] == 0 || $user['isVerified'] == 0) {
+                $notification = ['message' => 'Account is not active or verified.', 'type' => 'error'];
             } else {
-                $hashed_password = password_hash($new_password, PASSWORD_DEFAULT);
-                $stmt = $pdo->prepare("UPDATE teachers SET password = ?, otp_is_used = 1, otp_code = NULL, otp_expires_at = NULL, otp_purpose = NULL WHERE email = ?");
-                $stmt->execute([$hashed_password, $email]);
+                // Generate new OTP
+                $otp = sprintf("%06d", mt_rand(0, 999999));
+                $otp_expires = date('Y-m-d H:i:s', strtotime('+15 minutes'));
 
-                unset($_SESSION['reset_email']);
-                $notification = ['message' => 'Password reset successfully', 'type' => 'success'];
-                header("Location: sign-in.php");
-                exit();
+                // Store OTP in database
+                $stmt = $pdo->prepare("
+                    UPDATE teachers 
+                    SET otp_code = ?, otp_purpose = 'PASSWORD_RESET', 
+                        otp_created_at = NOW(), otp_expires_at = ?, otp_is_used = 0 
+                    WHERE email = ?
+                ");
+                $stmt->execute([$otp, $otp_expires, $email]);
+
+                // Send OTP email
+                $mail = new PHPMailer(true);
+                try {
+                    $mail->isSMTP();
+                    $mail->Host = 'smtp.gmail.com';
+                    $mail->SMTPAuth = true;
+                    $mail->Username = 'elci.bank@gmail.com';
+                    $mail->Password = 'misxfqnfsovohfwh';
+                    $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
+                    $mail->Port = 587;
+
+                    $mail->setFrom('elci.bank@gmail.com', 'SAMS');
+                    $mail->addAddress($email);
+
+                    $mail->isHTML(true);
+                    $mail->Subject = 'SAMS Password Reset OTP';
+                    $mail->Body = "
+                        <h2>Password Reset Request</h2>
+                        <p>Your new OTP for password reset is: <strong>$otp</strong></p>
+                        <p>This code is valid for 15 minutes. If you did not request this, please ignore this email.</p>
+                    ";
+
+                    $mail->send();
+
+                    $notification = [
+                        'success' => true,
+                        'message' => 'A new OTP has been sent to your email.',
+                        'redirect' => 'reset-password.php'
+                    ];
+                } catch (Exception $e) {
+                    $notification = ['message' => 'Failed to send OTP. Please try again.', 'type' => 'error'];
+                    error_log("Password reset email error: " . $e->getMessage());
+                }
             }
         } catch (PDOException $e) {
-            $notification = ['message' => 'Database error: ' . $e->getMessage(), 'type' => 'error'];
+            $notification = ['message' => 'An error occurred. Please try again.', 'type' => 'error'];
+            error_log("Password reset error: " . $e->getMessage());
+        }
+
+        // Return JSON response for AJAX
+        if (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest') {
+            ob_clean();
+            header('Content-Type: application/json');
+            echo json_encode($notification);
+            exit;
+        } else {
+            header("Location: reset-password.php");
+            exit;
+        }
+    } else {
+        // Handle password reset form submission
+        $otp = trim($_POST['otp'] ?? '');
+        $new_password = $_POST['new_password'] ?? '';
+        $confirm_password = $_POST['confirm_password'] ?? '';
+
+        if (empty($otp) || empty($new_password) || empty($confirm_password)) {
+            $notification = ['message' => 'Please fill in all fields', 'type' => 'error'];
+        } elseif ($new_password !== $confirm_password) {
+            $notification = ['message' => 'Passwords do not match', 'type' => 'error'];
+        } elseif (strlen($new_password) < 8) {
+            $notification = ['message' => 'Password must be at least 8 characters long', 'type' => 'error'];
+        } else {
+            try {
+                $pdo = getDBConnection();
+                $stmt = $pdo->prepare("SELECT teacher_id, otp_code, otp_expires_at, otp_is_used FROM teachers WHERE email = ? AND otp_purpose = 'PASSWORD_RESET'");
+                $stmt->execute([$email]);
+                $user = $stmt->fetch();
+
+                if (!$user) {
+                    $notification = ['message' => 'Invalid or expired OTP request', 'type' => 'error'];
+                } elseif ($user['otp_is_used'] == 1) {
+                    $notification = ['message' => 'OTP has already been used', 'type' => 'error'];
+                } elseif (strtotime($user['otp_expires_at']) < time()) {
+                    $notification = ['message' => 'OTP has expired', 'type' => 'error'];
+                } elseif ($otp !== $user['otp_code']) {
+                    $notification = ['message' => 'Invalid OTP', 'type' => 'error'];
+                } else {
+                    $hashed_password = password_hash($new_password, PASSWORD_DEFAULT);
+                    $stmt = $pdo->prepare("UPDATE teachers SET password = ?, otp_is_used = 1, otp_code = NULL, otp_expires_at = NULL, otp_purpose = NULL WHERE email = ?");
+                    $stmt->execute([$hashed_password, $email]);
+
+                    unset($_SESSION['reset_email']);
+                    $notification = [
+                        'success' => true,
+                        'message' => 'Password reset successfully',
+                        'redirect' => 'sign-in.php'
+                    ];
+                }
+            } catch (PDOException $e) {
+                $notification = ['message' => 'Database error: ' . $e->getMessage(), 'type' => 'error'];
+            }
+        }
+
+        // Return JSON response for AJAX
+        if (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest') {
+            ob_clean();
+            header('Content-Type: application/json');
+            echo json_encode($notification);
+            exit;
+        } else {
+            header("Location: sign-in.php");
+            exit;
         }
     }
-
-    header('Content-Type: application/json');
-    echo json_encode($notification);
 }
 ?>
 
@@ -188,7 +285,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <div class="form-group">
                         <label for="otp" class="form-label">OTP</label>
                         <div class="input-icon otp-icon">
-                            <input type="text" id="otp" name="otp" class="form-input" placeholder="Enter the 6-digit OTP" required>
+                            <input type="text" id="otp" name="otp" class="form-input" placeholder="Enter the 6-digit OTP" maxlength="6" min="0" pattern="[0-9]{6}" required>
                         </div>
                     </div>
                     <div class="form-group">
@@ -206,7 +303,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <button type="submit" class="reset-btn">Reset Password</button>
                 </form>
                 <div class="request-new-otp">
-                    <a href="forgot-password.php">Request a new OTP</a>
+                    <a href="#" id="requestNewOtp">Request a new OTP</a>
                 </div>
             </div>
         </div>
@@ -238,6 +335,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             const successMessage = document.getElementById('successMessage');
             const inputs = document.querySelectorAll('.form-input');
             const resetPasswordContainer = document.querySelector('.reset-password-container');
+            const requestNewOtpLink = document.getElementById('requestNewOtp');
+            const otpInput = document.getElementById('otp');
 
             document.getElementById('otp').focus();
 
@@ -247,6 +346,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 target.style.display = 'block';
                 setTimeout(() => target.style.display = 'none', 5000);
             }
+
+            // Restrict OTP input to 6 digits
+            otpInput.addEventListener('input', function() {
+                this.value = this.value.replace(/[^0-9]/g, '').slice(0, 6);
+            });
 
             inputs.forEach(input => {
                 input.addEventListener('focus', function() {
@@ -298,24 +402,64 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 const formData = new FormData(this);
                 fetch('reset-password.php', {
                     method: 'POST',
-                    body: formData
+                    body: formData,
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
                 })
                 .then(response => response.json())
                 .then(data => {
                     resetBtn.disabled = false;
-                    showNotification(data.message, data.type);
-                    if (data.type === 'success') {
+                    showNotification(data.message, data.success ? 'success' : 'error');
+                    if (data.success) {
                         resetPasswordContainer.style.transform = 'scale(0.95)';
                         resetPasswordContainer.style.opacity = '0.8';
-                        setTimeout(() => window.location.href = 'sign-in.php', 1000);
+                        setTimeout(() => window.location.href = data.redirect, 1000);
                     } else {
                         resetPasswordContainer.style.animation = 'shake 0.5s ease-in-out';
                         setTimeout(() => resetPasswordContainer.style.animation = '', 500);
                     }
                 })
-                .catch(() => {
+                .catch(error => {
                     resetBtn.disabled = false;
                     showNotification('An error occurred. Please try again.', 'error');
+                    console.error('Error:', error);
+                });
+            });
+
+            requestNewOtpLink.addEventListener('click', function(e) {
+                e.preventDefault();
+                errorMessage.style.display = 'none';
+                successMessage.style.display = 'none';
+                requestNewOtpLink.style.pointerEvents = 'none';
+
+                const formData = new FormData();
+                formData.append('action', 'request_new_otp');
+
+                fetch('reset-password.php', {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    requestNewOtpLink.style.pointerEvents = 'auto';
+                    showNotification(data.message, data.success ? 'success' : 'error');
+                    if (data.success) {
+                        resetPasswordContainer.style.transform = 'scale(0.95)';
+                        resetPasswordContainer.style.opacity = '0.8';
+                        setTimeout(() => window.location.href = data.redirect, 1000);
+                    } else {
+                        resetPasswordContainer.style.animation = 'shake 0.5s ease-in-out';
+                        setTimeout(() => resetPasswordContainer.style.animation = '', 500);
+                    }
+                })
+                .catch(error => {
+                    requestNewOtpLink.style.pointerEvents = 'auto';
+                    showNotification('An error occurred. Please try again.', 'error');
+                    console.error('Error:', error);
                 });
             });
 

@@ -58,8 +58,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                     $mail->send();
                     $notification = ['message' => 'OTP sent to your email', 'type' => 'success'];
-                    header("Location: reset-password.php");
-                    exit();
                 } catch (Exception $e) {
                     $notification = ['message' => 'Failed to send OTP: ' . $e->getMessage(), 'type' => 'error'];
                     error_log("PHPMailer error: " . $e->getMessage());
@@ -76,6 +74,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     echo json_encode($notification);
     exit();
 }
+
+// For GET requests, render the HTML form
+ob_end_clean(); // Clear any output before rendering HTML
 ?>
 
 <!DOCTYPE html>

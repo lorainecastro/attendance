@@ -240,12 +240,8 @@ $profileName = htmlspecialchars($currentUser['firstname'] . ' ' . $currentUser['
             width: 36px;
             height: 36px;
             border-radius: 50%;
-            background-color: var(--primary-blue);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: var(--white);
-            font-weight: 600;
+            object-fit: cover;
+            border: 1px solid var(--border-color);
         }
 
         .profile-info {
@@ -826,7 +822,7 @@ $profileName = htmlspecialchars($currentUser['firstname'] . ' ' . $currentUser['
 
             <div class="profile-dropdown" id="profileDropdown">
                 <button class="profile-btn" onclick="toggleProfileDropdown()">
-                    <div class="profile-avatar"><?php echo htmlspecialchars($profileInitials); ?></div>
+                    <img src="Uploads/<?php echo htmlspecialchars($currentUser['picture'] ?? 'no-icon.png'); ?>" alt="Profile" class="profile-avatar">
                     <div class="profile-info">
                         <div class="profile-name"><?php echo htmlspecialchars($profileName); ?></div>
                         <div class="profile-role">Teacher</div>
@@ -835,7 +831,6 @@ $profileName = htmlspecialchars($currentUser['firstname'] . ' ' . $currentUser['
                 </button>
 
                 <div class="profile-dropdown-menu">
-
                     <a href="#" class="profile-dropdown-item menu-item">
                         <i class="fas fa-user"></i>
                         <span>View Profile</span>

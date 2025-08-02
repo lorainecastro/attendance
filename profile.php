@@ -504,7 +504,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <div class="profile-header-content">
             <div class="profile-image-section">
                 <div class="profile-image-container">
-                    <img src="uploads/<?php echo htmlspecialchars($user['picture'] ?? 'Uploads/no-icon.png'); ?>" alt="Profile" class="profile-image" id="profilePreview">
+                    <img src="uploads/<?php echo htmlspecialchars($user['picture'] ?? 'uploads/no-icon.png'); ?>" alt="Profile" class="profile-image" id="profilePreview">
                 </div>
             </div>
             <div class="profile-info">

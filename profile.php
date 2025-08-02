@@ -29,33 +29,45 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $firstname = trim($_POST['firstname'] ?? '');
                 $lastname = trim($_POST['lastname'] ?? '');
                 $institution = trim($_POST['institution'] ?? '');
+                $username = trim($_POST['username'] ?? '');
 
                 // Handle file upload
                 $picture = $user['picture'];
                 if (isset($_FILES['profile-picture']) && $_FILES['profile-picture']['error'] === UPLOAD_ERR_OK) {
-                    $upload_dir = 'Uploads/';
+                    $upload_dir = 'uploads/';
                     if (!is_dir($upload_dir)) {
                         mkdir($upload_dir, 0755, true);
                     }
                     $ext = pathinfo($_FILES['profile-picture']['name'], PATHINFO_EXTENSION);
+                    $allowed_extensions = ['jpg', 'jpeg', 'png', 'gif'];
+                    if (!in_array(strtolower($ext), $allowed_extensions)) {
+                        throw new Exception('Invalid file type. Only JPG, PNG, and GIF are allowed.');
+                    }
                     $picture = 'profile_' . $user['teacher_id'] . '_' . time() . '.' . $ext;
-                    move_uploaded_file($_FILES['profile-picture']['tmp_name'], $upload_dir . $picture);
+                    if (!move_uploaded_file($_FILES['profile-picture']['tmp_name'], $upload_dir . $picture)) {
+                        throw new Exception('Failed to upload profile picture.');
+                    }
                 }
 
-                if (empty($firstname) || empty($lastname)) {
-                    $notification = ['message' => 'First name and last name are required.', 'type' => 'error'];
+                if (empty($firstname) || empty($lastname) || empty($username)) {
+                    $notification = ['message' => 'First name, last name, and username are required.', 'type' => 'error'];
                 } else {
                     $stmt = $pdo->prepare("
                         UPDATE teachers 
-                        SET firstname = ?, lastname = ?, institution = ?, picture = ?
+                        SET firstname = ?, lastname = ?, institution = ?, picture = ?, username = ?
                         WHERE teacher_id = ?
                     ");
-                    $stmt->execute([$firstname, $lastname, $institution, $picture, $user['teacher_id']]);
+                    $stmt->execute([$firstname, $lastname, $institution, $picture, $username, $user['teacher_id']]);
+                    if ($stmt->rowCount() === 0) {
+                        throw new Exception('No changes made to profile.');
+                    }
                     $notification = ['message' => 'Profile updated successfully.', 'type' => 'success'];
                     $user['firstname'] = $firstname;
                     $user['lastname'] = $lastname;
                     $user['institution'] = $institution;
                     $user['picture'] = $picture;
+                    $user['username'] = $username;
+                    $_SESSION['user'] = $user; // Update session
                 }
             } elseif ($action === 'change_password') {
                 $current_password = $_POST['current-password'] ?? '';
@@ -73,22 +85,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $stmt->execute([$user['teacher_id']]);
                     $stored_password = $stmt->fetchColumn();
 
-                    if (!password_verify($current_password, $stored_password)) {
+                    if (!$stored_password || !password_verify($current_password, $stored_password)) {
                         $notification = ['message' => 'Current password is incorrect.', 'type' => 'error'];
                     } else {
                         $hashed_password = password_hash($new_password, PASSWORD_DEFAULT);
                         $stmt = $pdo->prepare("UPDATE teachers SET password = ? WHERE teacher_id = ?");
                         $stmt->execute([$hashed_password, $user['teacher_id']]);
+                        if ($stmt->rowCount() === 0) {
+                            throw new Exception('No changes made to password.');
+                        }
                         $notification = ['message' => 'Password changed successfully.', 'type' => 'success'];
                     }
                 }
-            } elseif ($action === 'delete_account') {
-                $stmt = $pdo->prepare("UPDATE teachers SET isDeleted = 1 WHERE teacher_id = ?");
-                $stmt->execute([$user['teacher_id']]);
-                $stmt = $pdo->prepare("DELETE FROM teacher_sessions WHERE teacher_id = ?");
-                $stmt->execute([$user['teacher_id']]);
-                destroySession();
-                $notification = ['message' => 'Account deleted successfully.', 'type' => 'success', 'redirect' => 'sign-in.php'];
             }
 
             if (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest') {
@@ -96,13 +104,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 header('Content-Type: application/json');
                 echo json_encode($notification);
                 exit;
-            } elseif (isset($notification['redirect'])) {
-                header("Location: " . $notification['redirect']);
-                exit;
             }
-        } catch (PDOException $e) {
+        } catch (Exception $e) {
             error_log("Action error: " . $e->getMessage());
-            $notification = ['message' => 'An error occurred. Please try again.', 'type' => 'error'];
+            $notification = ['message' => $e->getMessage(), 'type' => 'error'];
             if (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest') {
                 ob_clean();
                 header('Content-Type: application/json');
@@ -116,7 +121,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -388,7 +392,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         @media (max-width: 576px) {
-
             .card,
             .modal-content {
                 overflow-x: auto;
@@ -464,7 +467,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     </style>
 </head>
-
 <body>
     <h1>Profile</h1>
 
@@ -472,8 +474,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <div class="profile-header-content">
             <div class="profile-image-section">
                 <div class="profile-image-container">
-                    <img src="no-icon.png" alt="Profile" class="profile-image" id="profilePreview">
-
+                    <img src="<?php echo htmlspecialchars($user['picture'] ?? 'no-icon.png'); ?>" alt="Profile" class="profile-image" id="profilePreview">
                 </div>
             </div>
             <div class="profile-info">
@@ -496,7 +497,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <h3>Update Profile</h3>
                 <form id="profile-form" enctype="multipart/form-data">
                     <input type="hidden" name="action" value="update_profile">
-
                     <div class="form-row">
                         <div class="form-group">
                             <label for="firstname">First Name</label>
@@ -509,9 +509,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             <div class="error" id="lastname-error">Last name is required</div>
                         </div>
                     </div>
-
                     <div class="form-row">
-
                         <div class="form-group">
                             <label for="email">Email Address</label>
                             <input type="email" id="email" name="email" value="<?php echo htmlspecialchars($user['email']); ?>" placeholder="Your email address" readonly>
@@ -520,9 +518,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         <div class="form-group">
                             <label for="username">Username</label>
                             <input type="text" id="username" name="username" value="<?php echo htmlspecialchars($user['username'] ?? ''); ?>" placeholder="Enter your username" required>
+                            <div class="error" id="username-error">Username is required</div>
                         </div>
                     </div>
-
                     <div class="form-row">
                         <div class="form-group">
                             <label for="institution">Institution</label>
@@ -531,12 +529,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         <div class="form-group">
                             <label for="profile-picture">Profile Picture</label>
                             <input type="file" id="profile-picture" name="profile-picture" accept="image/*">
+                            <div class="error" id="profile-picture-error">Invalid file type</div>
                         </div>
                     </div>
-
                     <button type="submit" class="action-btn">Save Changes</button>
                 </form>
-
             </div>
         </div>
 
@@ -598,6 +595,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             const confirmAction = document.getElementById('confirm-action');
             const cancelAction = document.getElementById('cancel-action');
             const closeModal = document.getElementById('close-modal');
+            const profilePictureInput = document.getElementById('profile-picture');
+            const profilePreview = document.getElementById('profilePreview');
 
             function validateEmail(email) {
                 return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
@@ -617,6 +616,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 };
             }
 
+            // Preview profile picture
+            profilePictureInput.addEventListener('change', function() {
+                const file = this.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        profilePreview.src = e.target.result;
+                    };
+                    reader.readAsDataURL(file);
+                }
+            });
+
             tabs.forEach(tab => {
                 tab.addEventListener('click', () => {
                     tabs.forEach(t => t.classList.remove('active'));
@@ -630,36 +641,56 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 e.preventDefault();
                 const firstname = document.getElementById('firstname').value;
                 const lastname = document.getElementById('lastname').value;
+                const username = document.getElementById('username').value;
                 const institution = document.getElementById('institution').value;
+                const profilePicture = document.getElementById('profile-picture').files[0];
 
                 let valid = true;
                 showError('firstname-error', !firstname);
                 showError('lastname-error', !lastname);
+                showError('username-error', !username);
+                if (profilePicture) {
+                    const allowedExtensions = ['image/jpeg', 'image/png', 'image/gif'];
+                    showError('profile-picture-error', !allowedExtensions.includes(profilePicture.type));
+                    valid = valid && allowedExtensions.includes(profilePicture.type);
+                }
 
-                if (!firstname || !lastname) {
+                if (!firstname || !lastname || !username) {
                     valid = false;
                 }
 
                 if (valid) {
                     const formData = new FormData(this);
                     fetch('account-settings.php', {
-                            method: 'POST',
-                            body: formData,
-                            headers: {
-                                'X-Requested-With': 'XMLHttpRequest'
+                        method: 'POST',
+                        body: formData,
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest'
+                        }
+                    })
+                    .then(response => {
+                        if (!response.ok) throw new Error('Network response was not ok');
+                        return response.json();
+                    })
+                    .then(data => {
+                        showModal(data.type === 'success' ? 'Success' : 'Error', data.message);
+                        if (data.type === 'success') {
+                            // Update profile picture preview
+                            if (profilePicture) {
+                                const reader = new FileReader();
+                                reader.onload = function(e) {
+                                    profilePreview.src = e.target.result;
+                                };
+                                reader.readAsDataURL(profilePicture);
                             }
-                        })
-                        .then(response => response.json())
-                        .then(data => {
-                            showModal(data.type === 'success' ? 'Success' : 'Error', data.message);
-                            if (data.redirect) {
-                                setTimeout(() => window.location.href = data.redirect, 1000);
-                            }
-                        })
-                        .catch(error => {
-                            showModal('Error', 'An error occurred. Please try again.');
-                            console.error('Error:', error);
-                        });
+                            // Update displayed name
+                            document.querySelector('.profile-name').textContent = `${firstname} ${lastname}`;
+                        }
+                    })
+                    .catch(error => {
+                        showModal('Error', 'An error occurred. Please try again.');
+                        console.error('Error:', error);
+                    });
                 }
             });
 
@@ -681,23 +712,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if (valid) {
                     const formData = new FormData(this);
                     fetch('account-settings.php', {
-                            method: 'POST',
-                            body: formData,
-                            headers: {
-                                'X-Requested-With': 'XMLHttpRequest'
-                            }
-                        })
-                        .then(response => response.json())
-                        .then(data => {
-                            showModal(data.type === 'success' ? 'Success' : 'Error', data.message);
-                            if (data.redirect) {
-                                setTimeout(() => window.location.href = data.redirect, 1000);
-                            }
-                        })
-                        .catch(error => {
-                            showModal('Error', 'An error occurred. Please try again.');
-                            console.error('Error:', error);
-                        });
+                        method: 'POST',
+                        body: formData,
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest'
+                        }
+                    })
+                    .then(response => {
+                        if (!response.ok) throw new Error('Network response was not ok');
+                        return response.json();
+                    })
+                    .then(data => {
+                        showModal(data.type === 'success' ? 'Success' : 'Error', data.message);
+                        if (data.type === 'success') {
+                            passwordForm.reset();
+                        }
+                    })
+                    .catch(error => {
+                        showModal('Error', 'An error occurred. Please try again.');
+                        console.error('Error:', error);
+                    });
                 }
             });
 
@@ -706,23 +740,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     const formData = new FormData();
                     formData.append('action', 'delete_account');
                     fetch('account-settings.php', {
-                            method: 'POST',
-                            body: formData,
-                            headers: {
-                                'X-Requested-With': 'XMLHttpRequest'
-                            }
-                        })
-                        .then(response => response.json())
-                        .then(data => {
-                            showModal(data.type === 'success' ? 'Success' : 'Error', data.message);
-                            if (data.redirect) {
-                                setTimeout(() => window.location.href = data.redirect, 1000);
-                            }
-                        })
-                        .catch(error => {
-                            showModal('Error', 'An error occurred. Please try again.');
-                            console.error('Error:', error);
-                        });
+                        method: 'POST',
+                        body: formData,
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest'
+                        }
+                    })
+                    .then(response => {
+                        if (!response.ok) throw new Error('Network response was not ok');
+                        return response.json();
+                    })
+                    .then(data => {
+                        showModal(data.type === 'success' ? 'Success' : 'Error', data.message);
+                        if (data.redirect) {
+                            setTimeout(() => window.location.href = data.redirect, 1000);
+                        }
+                    })
+                    .catch(error => {
+                        showModal('Error', 'An error occurred. Please try again.');
+                        console.error('Error:', error);
+                    });
                 });
             });
 
@@ -736,5 +773,4 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         });
     </script>
 </body>
-
 </html>

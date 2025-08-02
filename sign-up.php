@@ -436,6 +436,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         .signup-container {
             width: 100%;
+            min-width: 1000px;
             background: var(--white);
             border-radius: var(--radius-xl);
             box-shadow: var(--shadow-lg);
@@ -511,7 +512,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         .signup-form {
-            padding: var(--spacing-2xl);
+            padding: 2rem;
             flex: 1;
         }
 

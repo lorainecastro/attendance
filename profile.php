@@ -1,7 +1,7 @@
 <?php
 ob_start();
 require 'config.php';
-session_start();
+session_start(); // Start session at the top
 
 require 'PHPMailer/vendor/autoload.php';
 
@@ -9,7 +9,7 @@ use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\SMTP;
 use PHPMailer\PHPMailer\Exception;
 
-// Check if user is logged in using validateSession()
+// Validate session
 $user = validateSession();
 if (!$user) {
     destroySession();
@@ -32,71 +32,101 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $username = trim($_POST['username'] ?? '');
 
                 // Handle file upload
-                $picture = $user['picture'];
-                if (isset($_FILES['profile-picture']) && $_FILES['profile-picture']['error'] === UPLOAD_ERR_OK) {
-                    $upload_dir = 'uploads/';
-                    if (!is_dir($upload_dir)) {
-                        mkdir($upload_dir, 0755, true);
+                $picture = $user['picture'] ?? 'no-icon.png';
+                $upload_dir = 'Uploads/';
+                // Ensure upload directory exists with proper permissions
+                if (!is_dir($upload_dir)) {
+                    if (!mkdir($upload_dir, 0755, true)) {
+                        throw new Exception('Failed to create upload directory.');
                     }
-                    $ext = pathinfo($_FILES['profile-picture']['name'], PATHINFO_EXTENSION);
+                }
+                // Verify default image exists
+                if (!file_exists($upload_dir . 'no-icon.png')) {
+                    error_log("Default image 'no-icon.png' not found in Uploads/ folder.");
+                }
+
+                if (isset($_FILES['profile-picture']) && $_FILES['profile-picture']['error'] === UPLOAD_ERR_OK) {
+                    $ext = strtolower(pathinfo($_FILES['profile-picture']['name'], PATHINFO_EXTENSION));
                     $allowed_extensions = ['jpg', 'jpeg', 'png', 'gif'];
-                    if (!in_array(strtolower($ext), $allowed_extensions)) {
+                    if (!in_array($ext, $allowed_extensions)) {
                         throw new Exception('Invalid file type. Only JPG, PNG, and GIF are allowed.');
                     }
                     $picture = 'profile_' . $user['teacher_id'] . '_' . time() . '.' . $ext;
-                    if (!move_uploaded_file($_FILES['profile-picture']['tmp_name'], $upload_dir . $picture)) {
+                    $upload_path = $upload_dir . $picture;
+                    if (!move_uploaded_file($_FILES['profile-picture']['tmp_name'], $upload_path)) {
                         throw new Exception('Failed to upload profile picture.');
                     }
                 }
 
                 if (empty($firstname) || empty($lastname) || empty($username)) {
-                    $notification = ['message' => 'First name, last name, and username are required.', 'type' => 'error'];
-                } else {
-                    $stmt = $pdo->prepare("
-                        UPDATE teachers 
-                        SET firstname = ?, lastname = ?, institution = ?, picture = ?, username = ?
-                        WHERE teacher_id = ?
-                    ");
-                    $stmt->execute([$firstname, $lastname, $institution, $picture, $username, $user['teacher_id']]);
-                    if ($stmt->rowCount() === 0) {
-                        throw new Exception('No changes made to profile.');
-                    }
-                    $notification = ['message' => 'Profile updated successfully.', 'type' => 'success'];
-                    $user['firstname'] = $firstname;
-                    $user['lastname'] = $lastname;
-                    $user['institution'] = $institution;
-                    $user['picture'] = $picture;
-                    $user['username'] = $username;
-                    $_SESSION['user'] = $user; // Update session
+                    throw new Exception('First name, last name, and username are required.');
                 }
+
+                // Check for duplicate username
+                $stmt = $pdo->prepare("SELECT teacher_id FROM teachers WHERE username = ? AND teacher_id != ?");
+                $stmt->execute([$username, $user['teacher_id']]);
+                if ($stmt->fetch()) {
+                    throw new Exception('Username is already taken.');
+                }
+
+                $stmt = $pdo->prepare("
+                    UPDATE teachers 
+                    SET firstname = ?, lastname = ?, institution = ?, picture = ?, username = ?
+                    WHERE teacher_id = ?
+                ");
+                $stmt->execute([$firstname, $lastname, $institution, $picture, $username, $user['teacher_id']]);
+                if ($stmt->rowCount() === 0 && !isset($_FILES['profile-picture'])) {
+                    throw new Exception('No changes made to profile.');
+                }
+                $notification = ['message' => 'Profile updated successfully.', 'type' => 'success'];
+                $user = array_merge($user, [
+                    'firstname' => $firstname,
+                    'lastname' => $lastname,
+                    'institution' => $institution,
+                    'picture' => $picture,
+                    'username' => $username
+                ]);
+                $_SESSION['teacher_id'] = $user['teacher_id'];
+                $_SESSION['session_token'] = $user['session_token'];
+
             } elseif ($action === 'change_password') {
                 $current_password = $_POST['current-password'] ?? '';
                 $new_password = $_POST['new-password'] ?? '';
                 $confirm_password = $_POST['confirm-password'] ?? '';
 
                 if (empty($current_password) || empty($new_password) || empty($confirm_password)) {
-                    $notification = ['message' => 'Please fill in all fields.', 'type' => 'error'];
-                } elseif ($new_password !== $confirm_password) {
-                    $notification = ['message' => 'Passwords do not match.', 'type' => 'error'];
-                } elseif (strlen($new_password) < 8) {
-                    $notification = ['message' => 'Password must be at least 8 characters.', 'type' => 'error'];
-                } else {
-                    $stmt = $pdo->prepare("SELECT password FROM teachers WHERE teacher_id = ?");
-                    $stmt->execute([$user['teacher_id']]);
-                    $stored_password = $stmt->fetchColumn();
-
-                    if (!$stored_password || !password_verify($current_password, $stored_password)) {
-                        $notification = ['message' => 'Current password is incorrect.', 'type' => 'error'];
-                    } else {
-                        $hashed_password = password_hash($new_password, PASSWORD_DEFAULT);
-                        $stmt = $pdo->prepare("UPDATE teachers SET password = ? WHERE teacher_id = ?");
-                        $stmt->execute([$hashed_password, $user['teacher_id']]);
-                        if ($stmt->rowCount() === 0) {
-                            throw new Exception('No changes made to password.');
-                        }
-                        $notification = ['message' => 'Password changed successfully.', 'type' => 'success'];
-                    }
+                    throw new Exception('Please fill in all fields.');
                 }
+                if ($new_password !== $confirm_password) {
+                    throw new Exception('Passwords do not match.');
+                }
+                if (strlen($new_password) < 8) {
+                    throw new Exception('Password must be at least 8 characters.');
+                }
+
+                $stmt = $pdo->prepare("SELECT password FROM teachers WHERE teacher_id = ?");
+                $stmt->execute([$user['teacher_id']]);
+                $stored_password = $stmt->fetchColumn();
+
+                if (!$stored_password || !password_verify($current_password, $stored_password)) {
+                    throw new Exception('Current password is incorrect.');
+                }
+
+                $hashed_password = password_hash($new_password, PASSWORD_DEFAULT);
+                $stmt = $pdo->prepare("UPDATE teachers SET password = ? WHERE teacher_id = ?");
+                $stmt->execute([$hashed_password, $user['teacher_id']]);
+                if ($stmt->rowCount() === 0) {
+                    throw new Exception('No changes made to password.');
+                }
+                $notification = ['message' => 'Password changed successfully.', 'type' => 'success'];
+
+            } elseif ($action === 'delete_account') {
+                $stmt = $pdo->prepare("DELETE FROM teacher_sessions WHERE teacher_id = ?");
+                $stmt->execute([$user['teacher_id']]);
+                $stmt = $pdo->prepare("DELETE FROM teachers WHERE teacher_id = ?");
+                $stmt->execute([$user['teacher_id']]);
+                destroySession();
+                $notification = ['message' => 'Account deleted successfully.', 'type' => 'success', 'redirect' => 'sign-in.php'];
             }
 
             if (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest') {
@@ -474,7 +504,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <div class="profile-header-content">
             <div class="profile-image-section">
                 <div class="profile-image-container">
-                    <img src="<?php echo htmlspecialchars($user['picture'] ?? 'no-icon.png'); ?>" alt="Profile" class="profile-image" id="profilePreview">
+                    <img src="uploads/<?php echo htmlspecialchars($user['picture'] ?? 'Uploads/no-icon.png'); ?>" alt="Profile" class="profile-image" id="profilePreview">
                 </div>
             </div>
             <div class="profile-info">
@@ -598,10 +628,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             const profilePictureInput = document.getElementById('profile-picture');
             const profilePreview = document.getElementById('profilePreview');
 
-            function validateEmail(email) {
-                return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-            }
-
             function showError(id, show) {
                 document.getElementById(id).style.display = show ? 'block' : 'none';
             }
@@ -642,7 +668,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 const firstname = document.getElementById('firstname').value;
                 const lastname = document.getElementById('lastname').value;
                 const username = document.getElementById('username').value;
-                const institution = document.getElementById('institution').value;
                 const profilePicture = document.getElementById('profile-picture').files[0];
 
                 let valid = true;
@@ -661,21 +686,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 if (valid) {
                     const formData = new FormData(this);
-                    fetch('account-settings.php', {
+                    fetch('profile.php', {
                         method: 'POST',
                         body: formData,
                         headers: {
                             'X-Requested-With': 'XMLHttpRequest'
                         }
                     })
-                    .then(response => {
-                        if (!response.ok) throw new Error('Network response was not ok');
-                        return response.json();
-                    })
+                    .then(response => response.json())
                     .then(data => {
                         showModal(data.type === 'success' ? 'Success' : 'Error', data.message);
                         if (data.type === 'success') {
-                            // Update profile picture preview
                             if (profilePicture) {
                                 const reader = new FileReader();
                                 reader.onload = function(e) {
@@ -683,12 +704,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 };
                                 reader.readAsDataURL(profilePicture);
                             }
-                            // Update displayed name
                             document.querySelector('.profile-name').textContent = `${firstname} ${lastname}`;
                         }
                     })
                     .catch(error => {
-                        showModal('Error', 'An error occurred. Please try again.');
+                        showModal('Error', `An error occurred: ${error.message}`);
                         console.error('Error:', error);
                     });
                 }
@@ -711,17 +731,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 if (valid) {
                     const formData = new FormData(this);
-                    fetch('account-settings.php', {
+                    fetch('profile.php', {
                         method: 'POST',
                         body: formData,
                         headers: {
                             'X-Requested-With': 'XMLHttpRequest'
                         }
                     })
-                    .then(response => {
-                        if (!response.ok) throw new Error('Network response was not ok');
-                        return response.json();
-                    })
+                    .then(response => response.json())
                     .then(data => {
                         showModal(data.type === 'success' ? 'Success' : 'Error', data.message);
                         if (data.type === 'success') {
@@ -729,7 +746,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         }
                     })
                     .catch(error => {
-                        showModal('Error', 'An error occurred. Please try again.');
+                        showModal('Error', `An error occurred: ${error.message}`);
                         console.error('Error:', error);
                     });
                 }
@@ -739,17 +756,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 showModal('Confirm Account Deletion', 'Are you sure you want to delete your account? This action cannot be undone.', () => {
                     const formData = new FormData();
                     formData.append('action', 'delete_account');
-                    fetch('account-settings.php', {
+                    fetch('profile.php', {
                         method: 'POST',
                         body: formData,
                         headers: {
                             'X-Requested-With': 'XMLHttpRequest'
                         }
                     })
-                    .then(response => {
-                        if (!response.ok) throw new Error('Network response was not ok');
-                        return response.json();
-                    })
+                    .then(response => response.json())
                     .then(data => {
                         showModal(data.type === 'success' ? 'Success' : 'Error', data.message);
                         if (data.redirect) {
@@ -757,7 +771,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         }
                     })
                     .catch(error => {
-                        showModal('Error', 'An error occurred. Please try again.');
+                        showModal('Error', `An error occurred: ${error.message}`);
                         console.error('Error:', error);
                     });
                 });

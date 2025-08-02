@@ -955,6 +955,74 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             color: var(--primary-blue);
         }
 
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-content {
+            background-color: var(--white);
+            padding: var(--spacing-xl);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-lg);
+            max-width: 400px;
+            width: 90%;
+            text-align: center;
+        }
+
+        .modal-content p {
+            font-size: var(--font-size-base);
+            color: var(--dark-gray);
+            margin-bottom: var(--spacing-lg);
+        }
+
+        .modal-buttons {
+            display: flex;
+            justify-content: center;
+            gap: var(--spacing-md);
+        }
+
+        .modal-btn {
+            padding: var(--spacing-sm) var(--spacing-lg);
+            border-radius: var(--radius-md);
+            font-size: var(--font-size-base);
+            font-weight: 500;
+            cursor: pointer;
+            transition: var(--transition-normal);
+        }
+
+        .modal-btn-cancel {
+            background: transparent;
+            color: var(--medium-gray);
+            border: 1px solid var(--border-color);
+        }
+
+        .modal-btn-cancel:hover {
+            background-color: var(--light-gray);
+            transform: translateY(-2px);
+        }
+
+        .modal-btn-verify {
+            background: linear-gradient(135deg, var(--primary-blue) 0%, var(--primary-blue-hover) 100%);
+            color: var(--white);
+            border: none;
+        }
+
+        .modal-btn-verify:hover {
+            background: linear-gradient(135deg, var(--primary-blue-hover), var(--primary-blue));
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-lg);
+        }
+
         @media (max-width: 768px) {
 
             .nav-links,
@@ -1109,7 +1177,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                     </div>
                     <div class="form-row">
-
+                        
                         <div class="form-group">
                             <label for="firstname" class="form-label">First Name</label>
                             <div class="input-icon user-icon">
@@ -1218,6 +1286,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             </div>
         </div>
     </footer>
+    <div id="unverifiedModal" class="modal">
+        <div class="modal-content">
+            <p>This email is already registered but not verified. To continue, verify your account first.</p>
+            <div class="modal-buttons">
+                <button class="modal-btn modal-btn-cancel" onclick="closeModal()">Cancel</button>
+                <button class="modal-btn modal-btn-verify" onclick="redirectToVerify()">Verify</button>
+            </div>
+        </div>
+    </div>
     <script>
         // Mobile menu toggle
         function toggleMobileMenu() {
@@ -1367,6 +1444,45 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }, 800);
             }
         });
+
+        // Email availability check
+        const emailInput = document.getElementById('email');
+        let emailTimer;
+        emailInput.addEventListener('input', function() {
+            clearTimeout(emailTimer);
+            if (this.value.trim().length >= 3 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(this.value.trim())) {
+                emailTimer = setTimeout(() => {
+                    const xhr = new XMLHttpRequest();
+                    xhr.open('POST', 'check-email.php', true);
+                    xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+                    xhr.onreadystatechange = function() {
+                        if (xhr.readyState === 4 && xhr.status === 200) {
+                            const response = JSON.parse(xhr.responseText);
+                            if (response.status === 'unverified') {
+                                document.getElementById('unverifiedModal').style.display = 'flex';
+                                sessionStorage.setItem('signup_email', emailInput.value.trim());
+                            }
+                        }
+                    };
+                    xhr.send('email=' + encodeURIComponent(this.value.trim()));
+                }, 800);
+            }
+        });
+
+        // Modal functions
+        function closeModal() {
+            document.getElementById('unverifiedModal').style.display = 'none';
+            document.getElementById('email').value = '';
+        }
+
+        function redirectToVerify() {
+            const email = sessionStorage.getItem('signup_email');
+            if (email) {
+                window.location.href = 'verify-email.php?email=' + encodeURIComponent(email);
+            } else {
+                window.location.href = 'verify-email.php';
+            }
+        }
 
         // Form validation
         const form = document.getElementById('signupForm');

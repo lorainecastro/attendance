@@ -237,8 +237,8 @@ $profileName = htmlspecialchars($currentUser['firstname'] . ' ' . $currentUser['
         }
 
         .profile-avatar {
-            width: 36px;
-            height: 36px;
+            width: 40px;
+            height: 40px;
             border-radius: 50%;
             object-fit: cover;
             border: 1px solid var(--border-color);
@@ -822,7 +822,7 @@ $profileName = htmlspecialchars($currentUser['firstname'] . ' ' . $currentUser['
 
             <div class="profile-dropdown" id="profileDropdown">
                 <button class="profile-btn" onclick="toggleProfileDropdown()">
-                    <img src="Uploads/<?php echo htmlspecialchars($currentUser['picture'] ?? 'no-icon.png'); ?>" alt="Profile" class="profile-avatar">
+                    <img src="uploads/<?php echo htmlspecialchars($currentUser['picture'] ?? 'uploads/no-icon.png'); ?>" alt="Profile" class="profile-avatar">
                     <div class="profile-info">
                         <div class="profile-name"><?php echo htmlspecialchars($profileName); ?></div>
                         <div class="profile-role">Teacher</div>

@@ -1086,29 +1086,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <form id="signupForm" action="sign-up.php" method="POST">
                     <div class="form-row">
                         <div class="form-group">
-                            <label for="firstname" class="form-label">First Name</label>
-                            <div class="input-icon user-icon">
-                                <input type="text" id="firstname" name="firstname" class="form-input" placeholder="Enter your first name" value="<?php echo htmlspecialchars($firstname, ENT_QUOTES, 'UTF-8'); ?>" required>
-                            </div>
-                        </div>
-                        <div class="form-group">
-                            <label for="lastname" class="form-label">Last Name</label>
-                            <div class="input-icon user-icon">
-                                <input type="text" id="lastname" name="lastname" class="form-input" placeholder="Enter your last name" value="<?php echo htmlspecialchars($lastname, ENT_QUOTES, 'UTF-8'); ?>" required>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="institution" class="form-label">Institution Name</label>
-                            <div class="input-icon institution-icon">
-                                <input type="text" id="institution" name="institution" class="form-input" placeholder="Enter your institution name" value="<?php echo htmlspecialchars($institution, ENT_QUOTES, 'UTF-8'); ?>">
-                            </div>
-                        </div>
-
-                    </div>
-                    <div class="form-row">
-                        <div class="form-group">
                             <label for="email" class="form-label">Email Address</label>
                             <div class="input-icon email-icon">
                                 <input type="email" id="email" name="email" class="form-input" placeholder="Enter your email address" value="<?php echo htmlspecialchars($email, ENT_QUOTES, 'UTF-8'); ?>" required>
@@ -1121,7 +1098,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             </div>
                             <div id="usernameFeedback" class="password-match"></div>
                         </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="institution" class="form-label">Institution Name</label>
+                            <div class="input-icon institution-icon">
+                                <input type="text" id="institution" name="institution" class="form-input" placeholder="Enter your institution name" value="<?php echo htmlspecialchars($institution, ENT_QUOTES, 'UTF-8'); ?>">
+                            </div>
+                        </div>
 
+                    </div>
+                    <div class="form-row">
+
+                        <div class="form-group">
+                            <label for="firstname" class="form-label">First Name</label>
+                            <div class="input-icon user-icon">
+                                <input type="text" id="firstname" name="firstname" class="form-input" placeholder="Enter your first name" value="<?php echo htmlspecialchars($firstname, ENT_QUOTES, 'UTF-8'); ?>" required>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="lastname" class="form-label">Last Name</label>
+                            <div class="input-icon user-icon">
+                                <input type="text" id="lastname" name="lastname" class="form-input" placeholder="Enter your last name" value="<?php echo htmlspecialchars($lastname, ENT_QUOTES, 'UTF-8'); ?>" required>
+                            </div>
+                        </div>
                     </div>
                     <div class="form-row">
                         <div class="form-group">

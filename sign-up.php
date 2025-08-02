@@ -1091,9 +1091,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <body>
     <script>
         document.addEventListener("DOMContentLoaded", function() {
-            const firstnameInput = document.querySelector('input[name="firstname"]');
-            if (firstnameInput) {
-                firstnameInput.focus();
+            const emailInput = document.querySelector('input[name="email"]');
+            if (emailInput) {
+                emailInput.focus();
             }
         });
     </script>

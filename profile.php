@@ -4,6 +4,7 @@ require 'config.php';
 session_start();
 
 require 'PHPMailer/vendor/autoload.php';
+
 use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\SMTP;
 use PHPMailer\PHPMailer\Exception;
@@ -115,10 +116,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Account Settings - Student Attendance System</title>
+    <title>Profile - Student Attendance System</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -386,15 +388,102 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         @media (max-width: 576px) {
+
             .card,
             .modal-content {
                 overflow-x: auto;
             }
         }
+
+        .form-row {
+            display: flex;
+            gap: var(--spacing-lg);
+            flex-wrap: wrap;
+        }
+
+        .form-row .form-group {
+            flex: 1;
+            min-width: 220px;
+        }
+
+        .profile-header {
+            background: var(--card-bg);
+            border-radius: 8px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: var(--shadow-md);
+        }
+
+        .profile-header-content {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .profile-image-section {
+            text-align: center;
+        }
+
+        .profile-image-container {
+            position: relative;
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            overflow: hidden;
+            border: 4px solid #2d2d2d;
+            margin: 0 auto 15px;
+        }
+
+        .profile-image {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .profile-info {
+            flex: 1;
+        }
+
+        .profile-name {
+            font-size: 28px;
+            font-weight: 700;
+            margin-bottom: 5px;
+            color: var(--blackfont-color);
+        }
+
+        .profile-role {
+            font-size: 16px;
+            color: var(--primary-color);
+            margin-bottom: 10px;
+        }
+
+        .profile-email {
+            font-size: 14px;
+            color: var(--grayfont-color);
+            margin-bottom: 10px;
+        }
     </style>
 </head>
+
 <body>
-    <h1>Account Settings</h1>
+    <h1>Profile</h1>
+
+    <div class="profile-header">
+        <div class="profile-header-content">
+            <div class="profile-image-section">
+                <div class="profile-image-container">
+                    <img src="no-icon.png" alt="Profile" class="profile-image" id="profilePreview">
+
+                </div>
+            </div>
+            <div class="profile-info">
+                <h1 class="profile-name"><?php echo htmlspecialchars($user['firstname'] . ' ' . $user['lastname']); ?></h1>
+                <p class="profile-role">Teacher</p>
+                <p class="profile-email"><?php echo htmlspecialchars($user['email']); ?></p>
+            </div>
+        </div>
+    </div>
+
     <div class="container">
         <div class="tabs">
             <div class="tab active" data-tab="profile">Profile Information</div>
@@ -407,34 +496,47 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <h3>Update Profile</h3>
                 <form id="profile-form" enctype="multipart/form-data">
                     <input type="hidden" name="action" value="update_profile">
-                    <div class="form-group">
-                        <label for="firstname">First Name</label>
-                        <input type="text" id="firstname" name="firstname" value="<?php echo htmlspecialchars($user['firstname']); ?>" placeholder="Enter your first name" required>
-                        <div class="error" id="firstname-error">First name is required</div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="firstname">First Name</label>
+                            <input type="text" id="firstname" name="firstname" value="<?php echo htmlspecialchars($user['firstname']); ?>" placeholder="Enter your first name" required>
+                            <div class="error" id="firstname-error">First name is required</div>
+                        </div>
+                        <div class="form-group">
+                            <label for="lastname">Last Name</label>
+                            <input type="text" id="lastname" name="lastname" value="<?php echo htmlspecialchars($user['lastname']); ?>" placeholder="Enter your last name" required>
+                            <div class="error" id="lastname-error">Last name is required</div>
+                        </div>
                     </div>
-                    <div class="form-group">
-                        <label for="lastname">Last Name</label>
-                        <input type="text" id="lastname" name="lastname" value="<?php echo htmlspecialchars($user['lastname']); ?>" placeholder="Enter your last name" required>
-                        <div class="error" id="lastname-error">Last name is required</div>
+
+                    <div class="form-row">
+
+                        <div class="form-group">
+                            <label for="email">Email Address</label>
+                            <input type="email" id="email" name="email" value="<?php echo htmlspecialchars($user['email']); ?>" placeholder="Your email address" readonly>
+                            <div class="error" id="email-error">Invalid email format</div>
+                        </div>
+                        <div class="form-group">
+                            <label for="username">Username</label>
+                            <input type="text" id="username" name="username" value="<?php echo htmlspecialchars($user['username'] ?? ''); ?>" placeholder="Enter your username" required>
+                        </div>
                     </div>
-                    <div class="form-group">
-                        <label for="email">Email Address</label>
-                        <input type="email" id="email" name="email" value="<?php echo htmlspecialchars($user['email']); ?>" placeholder="Your email address" readonly>
-                        <div class="error" id="email-error">Invalid email format</div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="institution">Institution</label>
+                            <input type="text" id="institution" name="institution" value="<?php echo htmlspecialchars($user['institution'] ?? ''); ?>" placeholder="Enter your institution">
+                        </div>
+                        <div class="form-group">
+                            <label for="profile-picture">Profile Picture</label>
+                            <input type="file" id="profile-picture" name="profile-picture" accept="image/*">
+                        </div>
                     </div>
-                    <div class="form-group">
-                        <label for="institution">Institution</label>
-                        <input type="text" id="institution" name="institution" value="<?php echo htmlspecialchars($user['institution'] ?? ''); ?>" placeholder="Enter your institution">
-                    </div>
-                    <div class="form-group">
-                        <label for="profile-picture">Profile Picture</label>
-                        <input type="file" id="profile-picture" name="profile-picture" accept="image/*">
-                        <?php if ($user['picture'] !== 'no-icon.png'): ?>
-                            <div>Current: <img src="Uploads/<?php echo htmlspecialchars($user['picture']); ?>" alt="Profile Picture" style="max-width: 100px; margin-top: var(--spacing-sm);"></div>
-                        <?php endif; ?>
-                    </div>
+
                     <button type="submit" class="action-btn">Save Changes</button>
                 </form>
+
             </div>
         </div>
 
@@ -541,23 +643,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if (valid) {
                     const formData = new FormData(this);
                     fetch('account-settings.php', {
-                        method: 'POST',
-                        body: formData,
-                        headers: {
-                            'X-Requested-With': 'XMLHttpRequest'
-                        }
-                    })
-                    .then(response => response.json())
-                    .then(data => {
-                        showModal(data.type === 'success' ? 'Success' : 'Error', data.message);
-                        if (data.redirect) {
-                            setTimeout(() => window.location.href = data.redirect, 1000);
-                        }
-                    })
-                    .catch(error => {
-                        showModal('Error', 'An error occurred. Please try again.');
-                        console.error('Error:', error);
-                    });
+                            method: 'POST',
+                            body: formData,
+                            headers: {
+                                'X-Requested-With': 'XMLHttpRequest'
+                            }
+                        })
+                        .then(response => response.json())
+                        .then(data => {
+                            showModal(data.type === 'success' ? 'Success' : 'Error', data.message);
+                            if (data.redirect) {
+                                setTimeout(() => window.location.href = data.redirect, 1000);
+                            }
+                        })
+                        .catch(error => {
+                            showModal('Error', 'An error occurred. Please try again.');
+                            console.error('Error:', error);
+                        });
                 }
             });
 
@@ -579,23 +681,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if (valid) {
                     const formData = new FormData(this);
                     fetch('account-settings.php', {
-                        method: 'POST',
-                        body: formData,
-                        headers: {
-                            'X-Requested-With': 'XMLHttpRequest'
-                        }
-                    })
-                    .then(response => response.json())
-                    .then(data => {
-                        showModal(data.type === 'success' ? 'Success' : 'Error', data.message);
-                        if (data.redirect) {
-                            setTimeout(() => window.location.href = data.redirect, 1000);
-                        }
-                    })
-                    .catch(error => {
-                        showModal('Error', 'An error occurred. Please try again.');
-                        console.error('Error:', error);
-                    });
+                            method: 'POST',
+                            body: formData,
+                            headers: {
+                                'X-Requested-With': 'XMLHttpRequest'
+                            }
+                        })
+                        .then(response => response.json())
+                        .then(data => {
+                            showModal(data.type === 'success' ? 'Success' : 'Error', data.message);
+                            if (data.redirect) {
+                                setTimeout(() => window.location.href = data.redirect, 1000);
+                            }
+                        })
+                        .catch(error => {
+                            showModal('Error', 'An error occurred. Please try again.');
+                            console.error('Error:', error);
+                        });
                 }
             });
 
@@ -604,23 +706,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     const formData = new FormData();
                     formData.append('action', 'delete_account');
                     fetch('account-settings.php', {
-                        method: 'POST',
-                        body: formData,
-                        headers: {
-                            'X-Requested-With': 'XMLHttpRequest'
-                        }
-                    })
-                    .then(response => response.json())
-                    .then(data => {
-                        showModal(data.type === 'success' ? 'Success' : 'Error', data.message);
-                        if (data.redirect) {
-                            setTimeout(() => window.location.href = data.redirect, 1000);
-                        }
-                    })
-                    .catch(error => {
-                        showModal('Error', 'An error occurred. Please try again.');
-                        console.error('Error:', error);
-                    });
+                            method: 'POST',
+                            body: formData,
+                            headers: {
+                                'X-Requested-With': 'XMLHttpRequest'
+                            }
+                        })
+                        .then(response => response.json())
+                        .then(data => {
+                            showModal(data.type === 'success' ? 'Success' : 'Error', data.message);
+                            if (data.redirect) {
+                                setTimeout(() => window.location.href = data.redirect, 1000);
+                            }
+                        })
+                        .catch(error => {
+                            showModal('Error', 'An error occurred. Please try again.');
+                            console.error('Error:', error);
+                        });
                 });
             });
 
@@ -634,4 +736,5 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         });
     </script>
 </body>
+
 </html>

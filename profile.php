@@ -504,7 +504,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <div class="profile-header-content">
             <div class="profile-image-section">
                 <div class="profile-image-container">
-                    <img src="uploads/<?php echo htmlspecialchars($user['picture'] ?? 'uploads/no-icon.png'); ?>" alt="Profile" class="profile-image" id="profilePreview">
+                    <img src="Uploads/<?php echo htmlspecialchars($user['picture'] ?? 'no-icon.png'); ?>" alt="Profile" class="profile-image" id="profilePreview">
                 </div>
             </div>
             <div class="profile-info">
@@ -604,9 +604,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <span class="close-btn" id="close-modal">×</span>
                 <h3 id="modal-title">Confirm Action</h3>
                 <p id="modal-message"></p>
-                <div class="modal-actions">
-                    <button class="action-btn" id="confirm-action">Confirm</button>
-                    <button class="action-btn" id="cancel-action">Cancel</button>
+                <div class="modal-actions" id="modal-actions">
+                    <!-- Buttons will be dynamically set by JavaScript -->
                 </div>
             </div>
         </div>
@@ -622,8 +621,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             const confirmationModal = document.getElementById('confirmation-modal');
             const modalTitle = document.getElementById('modal-title');
             const modalMessage = document.getElementById('modal-message');
-            const confirmAction = document.getElementById('confirm-action');
-            const cancelAction = document.getElementById('cancel-action');
+            const modalActions = document.getElementById('modal-actions');
             const closeModal = document.getElementById('close-modal');
             const profilePictureInput = document.getElementById('profile-picture');
             const profilePreview = document.getElementById('profilePreview');
@@ -632,14 +630,35 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 document.getElementById(id).style.display = show ? 'block' : 'none';
             }
 
-            function showModal(title, message, confirmCallback) {
+            function showModal(title, message, actionType, confirmCallback = null) {
                 modalTitle.textContent = title;
                 modalMessage.textContent = message;
                 confirmationModal.style.display = 'flex';
-                confirmAction.onclick = () => {
-                    if (confirmCallback) confirmCallback();
-                    confirmationModal.style.display = 'none';
-                };
+
+                // Set modal buttons based on action type
+                if (actionType === 'confirmation') {
+                    modalActions.innerHTML = `
+                        <button class="action-btn" id="confirm-action">Confirm</button>
+                        <button class="action-btn" id="cancel-action">Cancel</button>
+                    `;
+                    const confirmAction = document.getElementById('confirm-action');
+                    const cancelAction = document.getElementById('cancel-action');
+                    confirmAction.onclick = () => {
+                        if (confirmCallback) confirmCallback();
+                        confirmationModal.style.display = 'none';
+                    };
+                    cancelAction.onclick = () => {
+                        confirmationModal.style.display = 'none';
+                    };
+                } else {
+                    modalActions.innerHTML = `
+                        <button class="action-btn" id="ok-action">Ok</button>
+                    `;
+                    const okAction = document.getElementById('ok-action');
+                    okAction.onclick = () => {
+                        confirmationModal.style.display = 'none';
+                    };
+                }
             }
 
             // Preview profile picture
@@ -695,7 +714,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     })
                     .then(response => response.json())
                     .then(data => {
-                        showModal(data.type === 'success' ? 'Success' : 'Error', data.message);
+                        showModal(data.type === 'success' ? 'Success' : 'Error', data.message, 'notification');
                         if (data.type === 'success') {
                             if (profilePicture) {
                                 const reader = new FileReader();
@@ -708,7 +727,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         }
                     })
                     .catch(error => {
-                        showModal('Error', `An error occurred: ${error.message}`);
+                        showModal('Error', `An error occurred: ${error.message}`, 'notification');
                         console.error('Error:', error);
                     });
                 }
@@ -740,20 +759,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     })
                     .then(response => response.json())
                     .then(data => {
-                        showModal(data.type === 'success' ? 'Success' : 'Error', data.message);
+                        showModal(data.type === 'success' ? 'Success' : 'Error', data.message, 'notification');
                         if (data.type === 'success') {
                             passwordForm.reset();
                         }
                     })
                     .catch(error => {
-                        showModal('Error', `An error occurred: ${error.message}`);
+                        showModal('Error', `An error occurred: ${error.message}`, 'notification');
                         console.error('Error:', error);
                     });
                 }
             });
 
             deleteAccount.addEventListener('click', () => {
-                showModal('Confirm Account Deletion', 'Are you sure you want to delete your account? This action cannot be undone.', () => {
+                showModal('Confirm Account Deletion', 'Are you sure you want to delete your account? This action cannot be undone.', 'confirmation', () => {
                     const formData = new FormData();
                     formData.append('action', 'delete_account');
                     fetch('profile.php', {
@@ -765,20 +784,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     })
                     .then(response => response.json())
                     .then(data => {
-                        showModal(data.type === 'success' ? 'Success' : 'Error', data.message);
+                        showModal(data.type === 'success' ? 'Success' : 'Error', data.message, 'notification');
                         if (data.redirect) {
                             setTimeout(() => window.location.href = data.redirect, 1000);
                         }
                     })
                     .catch(error => {
-                        showModal('Error', `An error occurred: ${error.message}`);
+                        showModal('Error', `An error occurred: ${error.message}`, 'notification');
                         console.error('Error:', error);
                     });
                 });
-            });
-
-            cancelAction.addEventListener('click', () => {
-                confirmationModal.style.display = 'none';
             });
 
             closeModal.addEventListener('click', () => {

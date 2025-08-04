@@ -446,7 +446,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             flex-direction: row;
         }
 
-        
+
 
         @keyframes slideUp {
             from {
@@ -519,32 +519,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         .signup-form {
-    width: 100%;
-    /* padding: 40px; */
-    overflow-y: auto;
-    max-height: 700px;
-    scrollbar-width: thin;
-    scrollbar-color: var(--primary-blue);
-  }
+            width: 100%;
+            /* padding: 40px; */
+            overflow-y: auto;
+            max-height: 700px;
+            scrollbar-width: thin;
+            scrollbar-color: var(--primary-blue);
+        }
 
-  .signup-form::-webkit-scrollbar {
-    width: 8px;
-  }
+        .signup-form::-webkit-scrollbar {
+            width: 8px;
+        }
 
-  .signup-form::-webkit-scrollbar-track {
-    background: var(--primary-blue);
-    border-radius: 10px;
-  }
+        .signup-form::-webkit-scrollbar-track {
+            background: var(--primary-blue);
+            border-radius: 10px;
+        }
 
-  .signup-form::-webkit-scrollbar-thumb {
-    background: var(--primary-blue);
-    border-radius: 10px;
-    transition: var(--transition);
-  }
+        .signup-form::-webkit-scrollbar-thumb {
+            background: var(--primary-blue);
+            border-radius: 10px;
+            transition: var(--transition);
+        }
 
-  .signup-form::-webkit-scrollbar-thumb:hover {
-    background: var(--primary-blue);
-  }
+        .signup-form::-webkit-scrollbar-thumb:hover {
+            background: var(--primary-blue);
+        }
 
         .form-group {
             margin-bottom: var(--spacing-lg);
@@ -1208,7 +1208,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                     </div>
                     <div class="form-row">
-                        
+
                         <div class="form-group">
                             <label for="firstname" class="form-label">First Name</label>
                             <div class="input-icon user-icon">

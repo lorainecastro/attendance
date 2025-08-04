@@ -47,40 +47,40 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 $notification = ['message' => 'Account is not active or verified.', 'type' => 'error'];
             } elseif (password_verify($password, $teacher['password'])) {
                 // Login successful
-$sessionToken = createUserSession($teacher['teacher_id']);
+                $sessionToken = createUserSession($teacher['teacher_id']);
                 if ($sessionToken) {
-        // Update last login
-        $stmt = $pdo->prepare("UPDATE teachers SET created_at = NOW() WHERE teacher_id = ?");
-        $stmt->execute([$teacher['teacher_id']]);
+                    // Update last login
+                    $stmt = $pdo->prepare("UPDATE teachers SET created_at = NOW() WHERE teacher_id = ?");
+                    $stmt->execute([$teacher['teacher_id']]);
 
-        $_SESSION['loggedin'] = true;
-        $_SESSION['teacher_id'] = $teacher['teacher_id'];
-        $_SESSION['username'] = $teacher['username'];
-        $_SESSION['session_token'] = $sessionToken;
+                    $_SESSION['loggedin'] = true;
+                    $_SESSION['teacher_id'] = $teacher['teacher_id'];
+                    $_SESSION['username'] = $teacher['username'];
+                    $_SESSION['session_token'] = $sessionToken;
 
-        // Handle "Remember me"
-        if ($rememberMe) {
-            $cookieLifetime = 7 * 24 * 60 * 60; // 7 days
-            session_set_cookie_params($cookieLifetime);
-            session_regenerate_id(true);
-        }
+                    // Handle "Remember me"
+                    if ($rememberMe) {
+                        $cookieLifetime = 7 * 24 * 60 * 60; // 7 days
+                        session_set_cookie_params($cookieLifetime);
+                        session_regenerate_id(true);
+                    }
 
-        // Return JSON response for AJAX request
-        if (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest') {
-            ob_clean();
-            echo json_encode([
-                'success' => true,
-                'message' => "Welcome back, {$teacher['username']}!",
-                'redirect' => 'teacherDashboard.php'
-            ]);
-            exit;
-        } else {
-            header("Location: teacherDashboard.php");
-            exit;
-        }
-    } else {
-        $notification = ['message' => 'Failed to create session.', 'type' => 'error'];
-    }
+                    // Return JSON response for AJAX request
+                    if (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest') {
+                        ob_clean();
+                        echo json_encode([
+                            'success' => true,
+                            'message' => "Welcome back, {$teacher['username']}!",
+                            'redirect' => 'teacherDashboard.php'
+                        ]);
+                        exit;
+                    } else {
+                        header("Location: teacherDashboard.php");
+                        exit;
+                    }
+                } else {
+                    $notification = ['message' => 'Failed to create session.', 'type' => 'error'];
+                }
             } else {
                 $notification = ['message' => 'Invalid username/email or password', 'type' => 'error'];
             }
@@ -101,6 +101,7 @@ $sessionToken = createUserSession($teacher['teacher_id']);
 
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -408,6 +409,7 @@ $sessionToken = createUserSession($teacher['teacher_id']);
                 opacity: 0;
                 transform: translateY(30px);
             }
+
             to {
                 opacity: 1;
                 transform: translateY(0);
@@ -430,13 +432,22 @@ $sessionToken = createUserSession($teacher['teacher_id']);
             left: -50%;
             width: 200%;
             height: 200%;
-            background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+            background: radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, transparent 70%);
             animation: pulse 3s ease-in-out infinite;
         }
 
         @keyframes pulse {
-            0%, 100% { transform: scale(1); opacity: 0.5; }
-            50% { transform: scale(1.1); opacity: 0.8; }
+
+            0%,
+            100% {
+                transform: scale(1);
+                opacity: 0.5;
+            }
+
+            50% {
+                transform: scale(1.1);
+                opacity: 0.8;
+            }
         }
 
         .signin-header h1 {
@@ -580,7 +591,7 @@ $sessionToken = createUserSession($teacher['teacher_id']);
             left: -100%;
             width: 100%;
             height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
             transition: var(--transition);
         }
 
@@ -659,17 +670,37 @@ $sessionToken = createUserSession($teacher['teacher_id']);
         }
 
         @keyframes spin {
-            to { transform: rotate(360deg); }
+            to {
+                transform: rotate(360deg);
+            }
         }
 
         @keyframes shake {
-            0%, 100% { transform: translateX(0); }
-            10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
-            20%, 40%, 60%, 80% { transform: translateX(5px); }
+
+            0%,
+            100% {
+                transform: translateX(0);
+            }
+
+            10%,
+            30%,
+            50%,
+            70%,
+            90% {
+                transform: translateX(-5px);
+            }
+
+            20%,
+            40%,
+            60%,
+            80% {
+                transform: translateX(5px);
+            }
         }
 
         /* Responsive Design */
         @media (max-width: 768px) {
+
             .nav-links,
             .auth-buttons {
                 display: none;
@@ -697,6 +728,7 @@ $sessionToken = createUserSession($teacher['teacher_id']);
         }
     </style>
 </head>
+
 <body>
     <?php include('header.php'); ?>
 
@@ -716,29 +748,27 @@ $sessionToken = createUserSession($teacher['teacher_id']);
                     <div class="form-group">
                         <label for="login" class="form-label">Username or Email</label>
                         <div class="input-icon login-icon">
-                            <input 
-                                type="text" 
-                                id="login" 
-                                name="login" 
-                                class="form-input" 
+                            <input
+                                type="text"
+                                id="login"
+                                name="login"
+                                class="form-input"
                                 placeholder="Enter your username or email"
                                 value="<?php echo htmlspecialchars($loginInput, ENT_QUOTES, 'UTF-8'); ?>"
-                                required
-                            >
+                                required>
                         </div>
                     </div>
 
                     <div class="form-group">
                         <label for="password" class="form-label">Password</label>
                         <div class="input-icon password-icon">
-                            <input 
-                                type="password" 
-                                id="password" 
-                                name="password" 
-                                class="form-input" 
+                            <input
+                                type="password"
+                                id="password"
+                                name="password"
+                                class="form-input"
                                 placeholder="Enter your password"
-                                required
-                            >
+                                required>
                         </div>
                     </div>
 
@@ -834,35 +864,35 @@ $sessionToken = createUserSession($teacher['teacher_id']);
                 const formData = new FormData(this);
 
                 fetch('', {
-                    method: 'POST',
-                    body: formData,
-                    headers: {
-                        'X-Requested-With': 'XMLHttpRequest'
-                    }
-                })
-                .then(response => response.json())
-                .then(data => {
-                    signinBtn.classList.remove('loading');
-                    showNotification(data.message, data.success ? 'success' : 'error');
+                        method: 'POST',
+                        body: formData,
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest'
+                        }
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        signinBtn.classList.remove('loading');
+                        showNotification(data.message, data.success ? 'success' : 'error');
 
-                    if (data.success) {
-                        signinContainer.style.transform = 'scale(0.95)';
-                        signinContainer.style.opacity = '0.8';
-                        setTimeout(() => {
-                            window.location.href = data.redirect;
-                        }, 1500);
-                    } else {
-                        signinContainer.style.animation = 'shake 0.5s ease-in-out';
-                        setTimeout(() => {
-                            signinContainer.style.animation = '';
-                        }, 500);
-                    }
-                })
-                .catch(error => {
-                    signinBtn.classList.remove('loading');
-                    showNotification('An error occurred. Please try again.', 'error');
-                    console.error('Error:', error);
-                });
+                        if (data.success) {
+                            signinContainer.style.transform = 'scale(0.95)';
+                            signinContainer.style.opacity = '0.8';
+                            setTimeout(() => {
+                                window.location.href = data.redirect;
+                            }, 1500);
+                        } else {
+                            signinContainer.style.animation = 'shake 0.5s ease-in-out';
+                            setTimeout(() => {
+                                signinContainer.style.animation = '';
+                            }, 500);
+                        }
+                    })
+                    .catch(error => {
+                        signinBtn.classList.remove('loading');
+                        showNotification('An error occurred. Please try again.', 'error');
+                        console.error('Error:', error);
+                    });
             });
 
             // Navigation handling
@@ -888,7 +918,10 @@ $sessionToken = createUserSession($teacher['teacher_id']);
                             const sectionId = href.split('#')[1];
                             const target = document.getElementById(sectionId);
                             if (target) {
-                                target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                                target.scrollIntoView({
+                                    behavior: 'smooth',
+                                    block: 'start'
+                                });
                             }
                         }
                     }
@@ -910,7 +943,10 @@ $sessionToken = createUserSession($teacher['teacher_id']);
                 const target = document.querySelector(window.location.hash);
                 if (target) {
                     setTimeout(() => {
-                        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                        target.scrollIntoView({
+                            behavior: 'smooth',
+                            block: 'start'
+                        });
                     }, 100);
                 }
             }
@@ -931,4 +967,5 @@ $sessionToken = createUserSession($teacher['teacher_id']);
         });
     </script>
 </body>
+
 </html>

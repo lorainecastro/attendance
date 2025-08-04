@@ -202,7 +202,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         .logo i {
             font-size: 1.5rem;
             background: linear-gradient(135deg, var(--primary-blue), var(--info-cyan));
-            -webkit-background-clip: text;
+            background-clip: text;
             -webkit-text-fill-color: transparent;
         }
 

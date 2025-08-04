@@ -40,159 +40,95 @@ function verifyRecaptcha($recaptcha_response)
     return $resultJson->success;
 }
 
-// Function to send OTP email
-function sendOtpEmail($email, $otp)
-{
-    $mail = new PHPMailer(true);
-    try {
-        // Server settings
-        $mail->isSMTP();
-        $mail->Host = 'smtp.gmail.com';
-        $mail->SMTPAuth = true;
-        $mail->Username = 'elci.bank@gmail.com'; // Replace with your SMTP email
-        $mail->Password = 'misxfqnfsovohfwh'; // Replace with your SMTP password
-        $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
-        $mail->Port = 587;
-
-        // Recipients
-        $mail->setFrom('elci.bank@gmail.com', 'SAMS');
-        $mail->addAddress($email);
-
-        // Content
-        $mail->isHTML(true);
-        $mail->Subject = 'Verify Your SAMS Account';
-        $mail->Body = "
-            <h2>Welcome to SAMS!</h2>
-            <p>Your OTP for email verification is: <strong>$otp</strong></p>
-            <p>This code is valid for 15 minutes. Please enter it on the verification page.</p>
-            <p>If you did not request this, please ignore this email.</p>
-        ";
-
-        $mail->send();
-        return true;
-    } catch (Exception $e) {
-        return false;
-    }
-}
-
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    if (isset($_POST['action']) && $_POST['action'] === 'verify_unverified_email') {
-        // Handle verify button click from modal
-        $email = filter_input(INPUT_POST, 'email', FILTER_SANITIZE_EMAIL);
-        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-            $notification = ['message' => 'Invalid email format', 'type' => 'error'];
-        } else {
-            try {
-                $pdo = getDBConnection();
-                $stmt = $pdo->prepare("SELECT teacher_id FROM teachers WHERE email = ? AND isVerified = 0");
-                $stmt->execute([$email]);
-                $user = $stmt->fetch();
+    // Validate input
+    $firstname = htmlspecialchars(trim($_POST['firstname'] ?? ''), ENT_QUOTES, 'UTF-8');
+    $lastname = htmlspecialchars(trim($_POST['lastname'] ?? ''), ENT_QUOTES, 'UTF-8');
+    $institution = htmlspecialchars(trim($_POST['institution'] ?? ''), ENT_QUOTES, 'UTF-8');
+    $username = htmlspecialchars(trim($_POST['username'] ?? ''), ENT_QUOTES, 'UTF-8');
+    $email = filter_input(INPUT_POST, 'email', FILTER_SANITIZE_EMAIL);
+    $password = $_POST['password'] ?? '';
+    $confirm_password = $_POST['confirmPassword'] ?? '';
+    $recaptcha_response = $_POST['g-recaptcha-response'] ?? '';
 
-                if ($user) {
-                    // Generate new OTP
-                    $otp = sprintf("%06d", mt_rand(100000, 999999));
-                    $otp_expires = date('Y-m-d H:i:s', strtotime('+15 minutes'));
-
-                    // Update OTP in database
-                    $stmt = $pdo->prepare("
-                        UPDATE teachers 
-                        SET otp_code = ?, otp_purpose = 'EMAIL_VERIFICATION', otp_expires_at = ?, otp_is_used = 0, otp_created_at = NOW()
-                        WHERE email = ? AND isVerified = 0
-                    ");
-                    $stmt->execute([$otp, $otp_expires, $email]);
-
-                    // Store teacher_id in session
-                    $_SESSION['signup_email'] = $email;
-                    $_SESSION['signup_teacher_id'] = $user['teacher_id'];
-
-                    // Send OTP email
-                    if (sendOtpEmail($email, $otp)) {
-                        header("Location: verify-email.php");
-                        exit();
-                    } else {
-                        $notification = ['message' => 'Failed to send OTP. Please try again.', 'type' => 'error'];
-                    }
-                } else {
-                    $notification = ['message' => 'No unverified account found with this email', 'type' => 'error'];
-                }
-            } catch (PDOException $e) {
-                $notification = ['message' => 'Database error: ' . $e->getMessage(), 'type' => 'error'];
-            }
-        }
-        // Return JSON response for AJAX
-        header('Content-Type: application/json');
-        echo json_encode($notification);
-        exit();
+    // Validation
+    if (empty($firstname) || empty($lastname) || empty($username) || empty($email) || empty($password) || empty($confirm_password)) {
+        $notification = ['message' => 'Please fill in all required fields', 'type' => 'error'];
+    } elseif (empty($recaptcha_response)) {
+        $notification = ['message' => 'Please complete the reCAPTCHA verification', 'type' => 'error'];
+    } elseif (!verifyRecaptcha($recaptcha_response)) {
+        $notification = ['message' => 'reCAPTCHA verification failed. Please try again.', 'type' => 'error'];
+    } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        $notification = ['message' => 'Invalid email format', 'type' => 'error'];
+    } elseif ($password !== $confirm_password) {
+        $notification = ['message' => 'Passwords do not match', 'type' => 'error'];
+    } elseif (strlen($password) < 8) {
+        $notification = ['message' => 'Password must be at least 8 characters long', 'type' => 'error'];
     } else {
-        // Existing signup form submission logic
-        $firstname = htmlspecialchars(trim($_POST['firstname'] ?? ''), ENT_QUOTES, 'UTF-8');
-        $lastname = htmlspecialchars(trim($_POST['lastname'] ?? ''), ENT_QUOTES, 'UTF-8');
-        $institution = htmlspecialchars(trim($_POST['institution'] ?? ''), ENT_QUOTES, 'UTF-8');
-        $username = htmlspecialchars(trim($_POST['username'] ?? ''), ENT_QUOTES, 'UTF-8');
-        $email = filter_input(INPUT_POST, 'email', FILTER_SANITIZE_EMAIL);
-        $password = $_POST['password'] ?? '';
-        $confirm_password = $_POST['confirmPassword'] ?? '';
-        $recaptcha_response = $_POST['g-recaptcha-response'] ?? '';
+        try {
+            $pdo = getDBConnection();
 
-        // Validation
-        if (empty($firstname) || empty($lastname) || empty($username) || empty($email) || empty($password) || empty($confirm_password)) {
-            $notification = ['message' => 'Please fill in all required fields', 'type' => 'error'];
-        } elseif (empty($recaptcha_response)) {
-            $notification = ['message' => 'Please complete the reCAPTCHA verification', 'type' => 'error'];
-        } elseif (!verifyRecaptcha($recaptcha_response)) {
-            $notification = ['message' => 'reCAPTCHA verification failed. Please try again.', 'type' => 'error'];
-        } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-            $notification = ['message' => 'Invalid email format', 'type' => 'error'];
-        } elseif ($password !== $confirm_password) {
-            $notification = ['message' => 'Passwords do not match', 'type' => 'error'];
-        } elseif (strlen($password) < 8) {
-            $notification = ['message' => 'Password must be at least 8 characters long', 'type' => 'error'];
-        } else {
-            try {
-                $pdo = getDBConnection();
+            // Check if email or username already exists
+            $stmt = $pdo->prepare("SELECT COUNT(*) FROM teachers WHERE email = ? OR username = ?");
+            $stmt->execute([$email, $username]);
+            if ($stmt->fetchColumn() > 0) {
+                $notification = ['message' => 'Email or username already exists', 'type' => 'error'];
+            } else {
+                // Generate OTP
+                $otp = sprintf("%06d", mt_rand(100000, 999999));
+                $otp_expires = date('Y-m-d H:i:s', strtotime('+15 minutes'));
 
-                // Check if email or username already exists
-                $stmt = $pdo->prepare("SELECT teacher_id, isVerified FROM teachers WHERE email = ? OR username = ?");
-                $stmt->execute([$email, $username]);
-                $existing_user = $stmt->fetch();
+                // Hash password
+                $hashed_password = password_hash($password, PASSWORD_DEFAULT);
 
-                if ($existing_user) {
-                    if ($existing_user['isVerified'] == 0 && $email == $email) {
-                        // Unverified email found, trigger modal
-                        $notification = ['message' => 'This email is already registered but not verified.', 'type' => 'unverified', 'email' => $email];
-                    } else {
-                        $notification = ['message' => 'Email or username already exists', 'type' => 'error'];
-                    }
-                } else {
-                    // Generate OTP
-                    $otp = sprintf("%06d", mt_rand(100000, 999999));
-                    $otp_expires = date('Y-m-d H:i:s', strtotime('+15 minutes'));
+                // Insert user with OTP
+                $stmt = $pdo->prepare("
+                    INSERT INTO teachers (firstname, lastname, institution, username, email, password, picture, otp_code, otp_purpose, otp_expires_at, otp_is_used, isActive, isVerified, created_at, otp_created_at)
+                    VALUES (?, ?, ?, ?, ?, ?, 'no-icon.png', ?, 'EMAIL_VERIFICATION', ?, 0, 0, 0, CURRENT_TIMESTAMP, NOW())
+                ");
+                $stmt->execute([$firstname, $lastname, $institution, $username, $email, $hashed_password, $otp, $otp_expires]);
 
-                    // Hash password
-                    $hashed_password = password_hash($password, PASSWORD_DEFAULT);
+                // Store user data in session for verification
+                $_SESSION['signup_email'] = $email;
+                $_SESSION['signup_teacher_id'] = $pdo->lastInsertId();
 
-                    // Insert user with OTP
-                    $stmt = $pdo->prepare("
-                        INSERT INTO teachers (firstname, lastname, institution, username, email, password, picture, otp_code, otp_purpose, otp_expires_at, otp_is_used, isActive, isVerified, created_at, otp_created_at)
-                        VALUES (?, ?, ?, ?, ?, ?, 'no-icon.png', ?, 'EMAIL_VERIFICATION', ?, 0, 0, 0, CURRENT_TIMESTAMP, NOW())
-                    ");
-                    $stmt->execute([$firstname, $lastname, $institution, $username, $email, $hashed_password, $otp, $otp_expires]);
+                // Send OTP email
+                $mail = new PHPMailer(true);
+                try {
+                    // Server settings
+                    $mail->isSMTP();
+                    $mail->Host = 'smtp.gmail.com';
+                    $mail->SMTPAuth = true;
+                    $mail->Username = 'elci.bank@gmail.com'; // Replace with your SMTP email
+                    $mail->Password = 'misxfqnfsovohfwh'; // Replace with your SMTP password
+                    $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
+                    $mail->Port = 587;
 
-                    // Store user data in session for verification
-                    $_SESSION['signup_email'] = $email;
-                    $_SESSION['signup_teacher_id'] = $pdo->lastInsertId();
+                    // Recipients
+                    $mail->setFrom('elci.bank@gmail.com', 'SAMS');
+                    $mail->addAddress($email);
 
-                    // Send OTP email
-                    if (sendOtpEmail($email, $otp)) {
-                        header("Location: verify-email.php");
-                        exit();
-                    } else {
-                        $notification = ['message' => 'Failed to send OTP. Please try again.', 'type' => 'error'];
-                    }
+                    // Content
+                    $mail->isHTML(true);
+                    $mail->Subject = 'Verify Your SAMS Account';
+                    $mail->Body = "
+                        <h2>Welcome to SAMS!</h2>
+                        <p>Your OTP for email verification is: <strong>$otp</strong></p>
+                        <p>This code is valid for 15 minutes. Please enter it on the verification page.</p>
+                        <p>If you did not request this, please ignore this email.</p>
+                    ";
+
+                    $mail->send();
+
+                    // Redirect to verification page
+                    header("Location: verify-email.php");
+                    exit();
+                } catch (Exception $e) {
+                    $notification = ['message' => 'Failed to send OTP. Please try again.', 'type' => 'error'];
                 }
-            } catch (PDOException $e) {
-                $notification = ['message' => 'Database error: ' . $e->getMessage(), 'type' => 'error'];
             }
+        } catch (PDOException $e) {
+            $notification = ['message' => 'Database error: ' . $e->getMessage(), 'type' => 'error'];
         }
     }
 }
@@ -200,6 +136,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -509,11 +446,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             flex-direction: row;
         }
 
+
+
         @keyframes slideUp {
             from {
                 opacity: 0;
                 transform: translateY(30px);
             }
+
             to {
                 opacity: 1;
                 transform: translateY(0);
@@ -545,10 +485,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         @keyframes pulse {
-            0%, 100% {
+
+            0%,
+            100% {
                 transform: scale(1);
                 opacity: 0.5;
             }
+
             50% {
                 transform: scale(1.1);
                 opacity: 0.8;
@@ -573,7 +516,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         .signup-form {
             padding: 2rem;
             flex: 1;
+        }
+
+        .signup-form {
             width: 100%;
+            /* padding: 40px; */
             overflow-y: auto;
             max-height: 700px;
             scrollbar-width: thin;
@@ -803,7 +750,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             font-size: var(--font-size-sm);
             margin-bottom: var(--spacing-lg);
             border: 1px solid #fecaca;
-            display: <?php echo $notification['message'] && $notification['type'] !== 'unverified' ? 'block' : 'none'; ?>;
+            display: <?php echo $notification['message'] ? 'block' : 'none'; ?>;
         }
 
         .success-message {
@@ -1108,6 +1055,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         @media (max-width: 768px) {
+
             .nav-links,
             .auth-buttons {
                 display: none;
@@ -1170,6 +1118,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     </style>
 </head>
+
 <body>
     <script>
         document.addEventListener("DOMContentLoaded", function() {
@@ -1256,8 +1205,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 <input type="text" id="institution" name="institution" class="form-input" placeholder="Enter your institution name" value="<?php echo htmlspecialchars($institution, ENT_QUOTES, 'UTF-8'); ?>">
                             </div>
                         </div>
+
                     </div>
                     <div class="form-row">
+
                         <div class="form-group">
                             <label for="firstname" class="form-label">First Name</label>
                             <div class="input-icon user-icon">
@@ -1371,7 +1322,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <p>This email is already registered but not verified. To continue, verify your account first.</p>
             <div class="modal-buttons">
                 <button class="modal-btn modal-btn-cancel" onclick="closeModal()">Cancel</button>
-                <button class="modal-btn modal-btn-verify" onclick="verifyEmail()">Verify</button>
+                <button class="modal-btn modal-btn-verify" onclick="redirectToVerify()">Verify</button>
             </div>
         </div>
     </div>
@@ -1555,44 +1506,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             document.getElementById('email').value = '';
         }
 
-        function verifyEmail() {
+        function redirectToVerify() {
             const email = sessionStorage.getItem('signup_email');
-            if (!email) {
-                document.getElementById('errorMessage').textContent = 'No email found. Please try again.';
-                document.getElementById('errorMessage').style.display = 'block';
-                return;
+            if (email) {
+                window.location.href = 'verify-email.php?email=' + encodeURIComponent(email);
+            } else {
+                window.location.href = 'verify-email.php';
             }
-
-            const formData = new FormData();
-            formData.append('action', 'verify_unverified_email');
-            formData.append('email', email);
-
-            fetch('sign-up.php', {
-                method: 'POST',
-                body: formData
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.type === 'error') {
-                    document.getElementById('errorMessage').textContent = data.message;
-                    document.getElementById('errorMessage').style.display = 'block';
-                    document.getElementById('unverifiedModal').style.display = 'none';
-                    setTimeout(() => {
-                        document.getElementById('errorMessage').style.display = 'none';
-                    }, 5000);
-                } else {
-                    window.location.href = 'verify-email.php';
-                }
-            })
-            .catch(error => {
-                console.error('Verify email error:', error);
-                document.getElementById('errorMessage').textContent = 'Failed to process verification request. Please try again.';
-                document.getElementById('errorMessage').style.display = 'block';
-                document.getElementById('unverifiedModal').style.display = 'none';
-                setTimeout(() => {
-                    document.getElementById('errorMessage').style.display = 'none';
-                }, 5000);
-            });
         }
 
         // Form validation
@@ -1688,16 +1608,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         });
 
         // Show PHP notifications
-        <?php if ($notification['message'] && $notification['type'] !== 'unverified') { ?>
+        if (document.getElementById('errorMessage').textContent.trim()) {
             document.getElementById('errorMessage').style.display = 'block';
             setTimeout(() => {
                 document.getElementById('errorMessage').style.display = 'none';
             }, 5000);
-        <?php } ?>
-        <?php if ($notification['type'] === 'unverified') { ?>
-            document.getElementById('unverifiedModal').style.display = 'flex';
-            sessionStorage.setItem('signup_email', '<?php echo htmlspecialchars($notification['email'], ENT_QUOTES, 'UTF-8'); ?>');
-        <?php } ?>
+        }
     </script>
 </body>
+
 </html>

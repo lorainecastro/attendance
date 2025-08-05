@@ -4,7 +4,7 @@ session_start();
 
 $currentUser = validateSession();
 if (!$currentUser) {
-    header("Location: sign-in.php");
+    header("Location: index.php");
     exit;
 }
 

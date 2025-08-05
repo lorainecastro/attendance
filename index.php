@@ -317,7 +317,7 @@
         /* Hero Section */
         .hero-container {
             position: relative;
-            height: 100vh;
+            height: 70vh;
             overflow: hidden;
         }
 

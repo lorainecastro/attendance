@@ -13,7 +13,7 @@ use PHPMailer\PHPMailer\Exception;
 $user = validateSession();
 if (!$user) {
     destroySession();
-    header("Location: sign-in.php");
+    header("Location: index.php");
     exit();
 }
 

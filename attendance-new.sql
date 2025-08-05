@@ -25,18 +25,19 @@ CREATE TABLE teacher_sessions (
     created_at DATETIME NOT NULL,
     FOREIGN KEY (teacher_id) REFERENCES teachers (teacher_id)
 );
-
 CREATE TABLE classes (
     class_id INT AUTO_INCREMENT PRIMARY KEY,
     code VARCHAR(20) NOT NULL UNIQUE,
     section_name VARCHAR(50) NOT NULL,
     subject_id INT NOT NULL,
+    teacher_id INT NOT NULL,
     grade_level VARCHAR(20) NOT NULL,
     room VARCHAR(50),
     attendance_percentage DECIMAL(5,2) DEFAULT 0.00,
     status ENUM('active', 'inactive') NOT NULL,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (subject_id) REFERENCES subjects(subject_id)
+    FOREIGN KEY (subject_id) REFERENCES subjects(subject_id),
+    FOREIGN KEY (teacher_id) REFERENCES teachers(teacher_id)
 );
 
 CREATE TABLE students (

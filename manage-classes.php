@@ -27,43 +27,68 @@ function isDuplicateClass($pdo, $section_name, $subject_id, $teacher_id, $grade_
     return $stmt->fetchColumn() > 0;
 }
 
-// Function to add a new class
-function addClass($classData, $scheduleData)
+// Function to add a new class// Function to add or update a class
+function addClass($classData, $scheduleData, $class_id = null)
 {
     $pdo = getDBConnection();
 
     try {
         $pdo->beginTransaction();
 
-        // Insert subject if it doesn't exist
+        // Insert or update subject
         $stmt = $pdo->prepare("
             INSERT INTO subjects (subject_code, subject_name)
             VALUES (?, ?)
-            ON DUPLICATE KEY UPDATE subject_id = LAST_INSERT_ID(subject_id)
+            ON DUPLICATE KEY UPDATE 
+                subject_code = VALUES(subject_code),
+                subject_name = VALUES(subject_name),
+                subject_id = LAST_INSERT_ID(subject_id)
         ");
         $stmt->execute([$classData['code'], $classData['subject']]);
         $subject_id = $pdo->lastInsertId();
 
         // Check for duplicate class
-        if (isDuplicateClass($pdo, $classData['sectionName'], $subject_id, $_SESSION['teacher_id'], $classData['gradeLevel'])) {
+        if (isDuplicateClass($pdo, $classData['sectionName'], $subject_id, $_SESSION['teacher_id'], $classData['gradeLevel'], $class_id)) {
             $pdo->rollBack();
             return ['success' => false, 'error' => 'This class already exists for this teacher, section, and grade level.'];
         }
 
-        // Insert class
-        $stmt = $pdo->prepare("
-            INSERT INTO classes (section_name, subject_id, teacher_id, grade_level, room, status)
-            VALUES (?, ?, ?, ?, ?, ?)
-        ");
-        $stmt->execute([
-            $classData['sectionName'],
-            $subject_id,
-            $_SESSION['teacher_id'],
-            $classData['gradeLevel'],
-            $classData['room'],
-            $classData['status']
-        ]);
-        $class_id = $pdo->lastInsertId();
+        if ($class_id) {
+            // Update existing class
+            $stmt = $pdo->prepare("
+                UPDATE classes 
+                SET section_name = ?, subject_id = ?, grade_level = ?, room = ?, status = ?
+                WHERE class_id = ? AND teacher_id = ?
+            ");
+            $stmt->execute([
+                $classData['sectionName'],
+                $subject_id,
+                $classData['gradeLevel'],
+                $classData['room'],
+                $classData['status'],
+                $class_id,
+                $_SESSION['teacher_id']
+            ]);
+
+            // Delete existing schedules
+            $stmt = $pdo->prepare("DELETE FROM schedules WHERE class_id = ?");
+            $stmt->execute([$class_id]);
+        } else {
+            // Insert new class
+            $stmt = $pdo->prepare("
+                INSERT INTO classes (section_name, subject_id, teacher_id, grade_level, room, status)
+                VALUES (?, ?, ?, ?, ?, ?)
+            ");
+            $stmt->execute([
+                $classData['sectionName'],
+                $subject_id,
+                $_SESSION['teacher_id'],
+                $classData['gradeLevel'],
+                $classData['room'],
+                $classData['status']
+            ]);
+            $class_id = $pdo->lastInsertId();
+        }
 
         // Insert schedules
         foreach ($scheduleData as $day => $times) {
@@ -83,11 +108,10 @@ function addClass($classData, $scheduleData)
         return ['success' => true, 'class_id' => $class_id];
     } catch (PDOException $e) {
         $pdo->rollBack();
-        error_log("Add class error: " . $e->getMessage());
-        return ['success' => false, 'error' => 'Failed to add class: ' . $e->getMessage()];
+        error_log(($class_id ? "Update" : "Add") . " class error: " . $e->getMessage());
+        return ['success' => false, 'error' => 'Failed to ' . ($class_id ? 'update' : 'add') . ' class: ' . $e->getMessage()];
     }
 }
-
 // Function to delete a class
 function deleteClass($class_id)
 {
@@ -163,9 +187,10 @@ function fetchClassesForTeacher()
     }
 }
 // Handle AJAX requests
+// Handle AJAX requests
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     header('Content-Type: application/json');
-    ob_clean(); // Clear any output before JSON response
+    ob_clean();
 
     if ($_POST['action'] === 'addClass') {
         $classData = [
@@ -178,6 +203,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         ];
 
         $scheduleData = json_decode($_POST['schedule'] ?? '{}', true);
+        $classId = $_POST['classId'] ?? null; // Get classId for editing
 
         // Validate inputs
         if (
@@ -189,7 +215,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             exit;
         }
 
-        echo json_encode(addClass($classData, $scheduleData));
+        echo json_encode(addClass($classData, $scheduleData, $classId));
         exit;
     } elseif ($_POST['action'] === 'deleteClass') {
         $class_id = $_POST['classId'] ?? null;
@@ -493,6 +519,16 @@ ob_end_flush();
             transform: translateY(-2px);
         }
 
+        .btn-success {
+            background: linear-gradient(135deg, #22c55e, #4ade80);
+            color: var(--whitefont-color);
+        }
+
+        .btn-success:hover {
+            background: var(--success-green);
+            transform: translateY(-2px);
+        }
+
         .btn-danger {
             background: linear-gradient(135deg, #ef4444, #f87171);
             color: var(--whitefont-color);
@@ -554,12 +590,13 @@ ob_end_flush();
         .class-card {
             background: var(--card-bg);
             border-radius: var(--radius-lg);
-            padding: var(--spacing-lg);
+            padding: 20px;
             box-shadow: var(--shadow-md);
             transition: var(--transition-normal);
             border: 1px solid var(--border-color);
             position: relative;
             overflow: hidden;
+            /* width: 395px; */
         }
 
         .class-card:hover {
@@ -1410,6 +1447,9 @@ ob_end_flush();
                         <button class="btn btn-sm btn-warning" onclick="editClass(${classItem.class_id})">
                             <i class="fas fa-edit"></i> Edit
                         </button>
+                                                <button class="btn btn-sm btn-success" onclick="openStudentModal(${classItem.id})">
+                            <i class="fas fa-users"></i> Students
+                        </button>
                         <button class="btn btn-sm btn-danger" onclick="deleteClass(${classItem.class_id})">
                             <i class="fas fa-trash"></i> Delete
                         </button>
@@ -1694,47 +1734,47 @@ ob_end_flush();
         }
 
         function handleFormSubmit(event) {
-            event.preventDefault();
+    event.preventDefault();
 
-            const schedule = getScheduleFromForm();
+    const schedule = getScheduleFromForm();
 
-            const classData = {
-                classCode: document.getElementById('classCode')?.value || '',
-                sectionName: document.getElementById('sectionName')?.value || '',
-                subject: document.getElementById('subject')?.value || '',
-                gradeLevel: document.getElementById('gradeLevel')?.value || '',
-                room: document.getElementById('room')?.value || '',
-                status: document.getElementById('status')?.value || ''
-            };
+    const classData = {
+        classCode: document.getElementById('classCode')?.value || '',
+        sectionName: document.getElementById('sectionName')?.value || '',
+        subject: document.getElementById('subject')?.value || '',
+        gradeLevel: document.getElementById('gradeLevel')?.value || '',
+        room: document.getElementById('room')?.value || '',
+        status: document.getElementById('status')?.value || '',
+        classId: editingClassId || '' // Include classId for editing
+    };
 
-            fetch('manage-classes.php', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded'
-                    },
-                    body: `action=addClass&${new URLSearchParams(classData)}&schedule=${encodeURIComponent(JSON.stringify(schedule))}`
-                })
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error('Network response was not ok: ' + response.statusText);
-                    }
-                    return response.json();
-                })
-                .then(data => {
-                    if (data.success) {
-                        fetchClasses();
-                        closeModal();
-                        alert('Class added successfully!');
-                    } else {
-                        alert('Error: ' + (data.error || 'Failed to add class'));
-                    }
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    alert('Error adding class: ' + error.message);
-                });
-        }
-
+    fetch('manage-classes.php', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded'
+            },
+            body: `action=addClass&${new URLSearchParams(classData)}&schedule=${encodeURIComponent(JSON.stringify(schedule))}`
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Network response was not ok: ' + response.statusText);
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.success) {
+                fetchClasses();
+                closeModal();
+                alert(editingClassId ? 'Class updated successfully!' : 'Class added successfully!');
+            } else {
+                alert('Error: ' + (data.error || 'Failed to ' + (editingClassId ? 'update' : 'add') + ' class'));
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error ' + (editingClassId ? 'updating' : 'adding') + ' class: ' + error.message);
+        });
+}
         function getScheduleFromForm() {
             const schedule = {};
             const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];

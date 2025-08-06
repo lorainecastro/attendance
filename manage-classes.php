@@ -389,63 +389,6 @@ ob_end_flush();
             color: var(--blackfont-color);
         }
 
-        /* .controls {
-            background: var(--card-bg);
-            border-radius: var(--radius-lg);
-            padding: var(--spacing-xl);
-            box-shadow: var(--shadow-md);
-            margin-bottom: var(--spacing-2xl);
-            display: grid;
-            grid-template-columns: 2fr 1fr;
-            gap: var(--spacing-lg);
-            align-items: center;
-            border: 1px solid var(--border-color);
-        } */
-
-        /* .controls-left {
-            display: flex;
-            flex-wrap: wrap;
-            gap: var(--spacing-md);
-        }
-
-        .controls-right {
-            display: flex;
-            justify-content: flex-end;
-            gap: var(--spacing-md);
-            flex-wrap: wrap;
-        } */
-
-        .search-container {
-            position: relative;
-            min-width: 280px;
-        }
-
-        .search-input {
-            width: 100%;
-            padding: var(--spacing-sm) var(--spacing-md) var(--spacing-sm) 2.75rem;
-            border: 1px solid var(--border-color);
-            border-radius: var(--radius-md);
-            font-size: var(--font-size-sm);
-            background: var(--inputfield-color);
-            transition: var(--transition-normal);
-        }
-
-        .search-input:focus {
-            outline: none;
-            border-color: var(--primary-blue);
-            background: var(--white);
-            box-shadow: 0 0 0 4px var(--primary-blue-light);
-        }
-
-        .search-icon {
-            position: absolute;
-            left: var(--spacing-md);
-            top: 50%;
-            transform: translateY(-50%);
-            color: var(--grayfont-color);
-            font-size: 1rem;
-        }
-
         .form-input,
         .form-select {
             padding: var(--spacing-sm) var(--spacing-md);
@@ -553,15 +496,6 @@ ob_end_flush();
             padding: var(--spacing-xs) var(--spacing-sm);
             font-size: 0.75rem;
         }
-
-        .view-toggle {
-            display: flex;
-            border: 1px solid var(--border-color);
-            border-radius: var(--radius-md);
-            overflow: hidden;
-            background: var(--inputfield-color);
-        }
-
         .view-btn {
             padding: var(--spacing-sm) var(--spacing-md);
             background: transparent;

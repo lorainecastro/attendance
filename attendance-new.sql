@@ -1,30 +1,38 @@
 CREATE TABLE teachers (
     teacher_id INT AUTO_INCREMENT PRIMARY KEY,
-    firstname VARCHAR (50) NOT NULL,
-    lastname VARCHAR (50) NOT NULL,
-    institution VARCHAR (255),
-    email VARCHAR (100) NOT NULL UNIQUE,
-    username VARCHAR (30) NOT NULL UNIQUE,
-    password VARCHAR (255) NOT NULL,
-    picture VARCHAR (255) DEFAULT 'no-icon.png',
-    isActive TINYINT (1) DEFAULT 0,
-    isVerified TINYINT (1) DEFAULT 0,
-    otp_code VARCHAR (6),
-    otp_purpose VARCHAR (50),
+    firstname VARCHAR(50) NOT NULL,
+    lastname VARCHAR(50) NOT NULL,
+    institution VARCHAR(255),
+    email VARCHAR(100) NOT NULL UNIQUE,
+    username VARCHAR(30) NOT NULL UNIQUE,
+    password VARCHAR(255) NOT NULL,
+    picture VARCHAR(255) DEFAULT 'no-icon.png',
+    isActive TINYINT(1) DEFAULT 0,
+    isVerified TINYINT(1) DEFAULT 0,
+    otp_code VARCHAR(6),
+    otp_purpose VARCHAR(50),
     otp_created_at DATETIME,
     otp_expires_at DATETIME,
-    otp_is_used tinyint (1) DEFAULT 0,
-    created_at timestamp NOT NULL DEFAULT current_timestamp ()
+    otp_is_used TINYINT(1) DEFAULT 0,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE teacher_sessions (
     id INT AUTO_INCREMENT PRIMARY KEY,
     teacher_id INT NOT NULL,
-    session_token VARCHAR (64) NOT NULL,
+    session_token VARCHAR(64) NOT NULL,
     expires_at DATETIME NOT NULL,
     created_at DATETIME NOT NULL,
-    FOREIGN KEY (teacher_id) REFERENCES teachers (teacher_id)
+    FOREIGN KEY (teacher_id) REFERENCES teachers(teacher_id)
 );
+
+CREATE TABLE subjects (
+    subject_id INT AUTO_INCREMENT PRIMARY KEY,
+    subject_code VARCHAR(20) NOT NULL UNIQUE,
+    subject_name VARCHAR(100) NOT NULL UNIQUE,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
 CREATE TABLE classes (
     class_id INT AUTO_INCREMENT PRIMARY KEY,
     section_name VARCHAR(50) NOT NULL,
@@ -53,13 +61,6 @@ CREATE TABLE students (
     attendance_rate DECIMAL(5,2) DEFAULT 0.00,
     photo VARCHAR(255) DEFAULT 'no-icon.png',
     date_added DATE,
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE TABLE subjects (
-    subject_id INT AUTO_INCREMENT PRIMARY KEY,
-    subject_code VARCHAR(20) NOT NULL UNIQUE,
-    subject_name VARCHAR(100) NOT NULL UNIQUE,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 

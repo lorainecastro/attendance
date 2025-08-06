@@ -1734,47 +1734,48 @@ ob_end_flush();
         }
 
         function handleFormSubmit(event) {
-    event.preventDefault();
+            event.preventDefault();
 
-    const schedule = getScheduleFromForm();
+            const schedule = getScheduleFromForm();
 
-    const classData = {
-        classCode: document.getElementById('classCode')?.value || '',
-        sectionName: document.getElementById('sectionName')?.value || '',
-        subject: document.getElementById('subject')?.value || '',
-        gradeLevel: document.getElementById('gradeLevel')?.value || '',
-        room: document.getElementById('room')?.value || '',
-        status: document.getElementById('status')?.value || '',
-        classId: editingClassId || '' // Include classId for editing
-    };
+            const classData = {
+                classCode: document.getElementById('classCode')?.value || '',
+                sectionName: document.getElementById('sectionName')?.value || '',
+                subject: document.getElementById('subject')?.value || '',
+                gradeLevel: document.getElementById('gradeLevel')?.value || '',
+                room: document.getElementById('room')?.value || '',
+                status: document.getElementById('status')?.value || '',
+                classId: editingClassId || '' // Include classId for editing
+            };
 
-    fetch('manage-classes.php', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/x-www-form-urlencoded'
-            },
-            body: `action=addClass&${new URLSearchParams(classData)}&schedule=${encodeURIComponent(JSON.stringify(schedule))}`
-        })
-        .then(response => {
-            if (!response.ok) {
-                throw new Error('Network response was not ok: ' + response.statusText);
-            }
-            return response.json();
-        })
-        .then(data => {
-            if (data.success) {
-                fetchClasses();
-                closeModal();
-                alert(editingClassId ? 'Class updated successfully!' : 'Class added successfully!');
-            } else {
-                alert('Error: ' + (data.error || 'Failed to ' + (editingClassId ? 'update' : 'add') + ' class'));
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            alert('Error ' + (editingClassId ? 'updating' : 'adding') + ' class: ' + error.message);
-        });
-}
+            fetch('manage-classes.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded'
+                    },
+                    body: `action=addClass&${new URLSearchParams(classData)}&schedule=${encodeURIComponent(JSON.stringify(schedule))}`
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok: ' + response.statusText);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.success) {
+                        fetchClasses();
+                        closeModal();
+                        alert(editingClassId ? 'Class updated successfully!' : 'Class added successfully!');
+                    } else {
+                        alert('Error: ' + (data.error || 'Failed to ' + (editingClassId ? 'update' : 'add') + ' class'));
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Error ' + (editingClassId ? 'updating' : 'adding') + ' class: ' + error.message);
+                });
+        }
+
         function getScheduleFromForm() {
             const schedule = {};
             const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];

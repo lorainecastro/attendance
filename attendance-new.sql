@@ -27,7 +27,6 @@ CREATE TABLE teacher_sessions (
 );
 CREATE TABLE classes (
     class_id INT AUTO_INCREMENT PRIMARY KEY,
-    code VARCHAR(20) NOT NULL UNIQUE,
     section_name VARCHAR(50) NOT NULL,
     subject_id INT NOT NULL,
     teacher_id INT NOT NULL,
@@ -59,6 +58,7 @@ CREATE TABLE students (
 
 CREATE TABLE subjects (
     subject_id INT AUTO_INCREMENT PRIMARY KEY,
+    subject_code VARCHAR(20) NOT NULL UNIQUE,
     subject_name VARCHAR(100) NOT NULL UNIQUE,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );

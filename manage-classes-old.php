@@ -1,160 +1,3 @@
-<?php
-ob_start();
-require 'config.php';
-session_start();
-
-// Validate session
-$user = validateSession();
-if (!$user) {
-    destroySession();
-    header("Location: index.php");
-    exit();
-}
-
-// Function to check for duplicate class
-function isDuplicateClass($pdo, $section_name, $subject_id, $teacher_id, $grade_level, $class_id = null) {
-    $query = "SELECT COUNT(*) FROM classes WHERE section_name = ? AND subject_id = ? AND teacher_id = ? AND grade_level = ?";
-    $params = [$section_name, $subject_id, $teacher_id, $grade_level];
-    
-    if ($class_id) {
-        $query .= " AND class_id != ?";
-        $params[] = $class_id;
-    }
-    
-    $stmt = $pdo->prepare($query);
-    $stmt->execute($params);
-    return $stmt->fetchColumn() > 0;
-}
-
-// Function to add a new class
-function addClass($classData, $scheduleData) {
-    $pdo = getDBConnection();
-    
-    try {
-        $pdo->beginTransaction();
-        
-        // Insert subject if it doesn't exist
-        $stmt = $pdo->prepare("
-            INSERT INTO subjects (subject_code, subject_name)
-            VALUES (?, ?)
-            ON DUPLICATE KEY UPDATE subject_id = LAST_INSERT_ID(subject_id)
-        ");
-        $stmt->execute([$classData['code'], $classData['subject']]);
-        $subject_id = $pdo->lastInsertId();
-        
-        // Check for duplicate class
-        if (isDuplicateClass($pdo, $classData['sectionName'], $subject_id, $_SESSION['teacher_id'], $classData['gradeLevel'])) {
-            $pdo->rollBack();
-            return ['success' => false, 'error' => 'This class already exists for this teacher, section, and grade level.'];
-        }
-        
-        // Insert class
-        $stmt = $pdo->prepare("
-            INSERT INTO classes (section_name, subject_id, teacher_id, grade_level, room, status)
-            VALUES (?, ?, ?, ?, ?, ?)
-        ");
-        $stmt->execute([
-            $classData['sectionName'],
-            $subject_id,
-            $_SESSION['teacher_id'],
-            $classData['gradeLevel'],
-            $classData['room'],
-            $classData['status']
-        ]);
-        $class_id = $pdo->lastInsertId();
-        
-        // Insert schedules
-        foreach ($scheduleData as $day => $times) {
-            $stmt = $pdo->prepare("
-                INSERT INTO schedules (class_id, day, start_time, end_time)
-                VALUES (?, ?, ?, ?)
-            ");
-            $stmt->execute([
-                $class_id,
-                $day,
-                $times['start'],
-                $times['end']
-            ]);
-        }
-        
-        $pdo->commit();
-        return ['success' => true, 'class_id' => $class_id];
-    } catch (PDOException $e) {
-        $pdo->rollBack();
-        error_log("Add class error: " . $e->getMessage());
-        return ['success' => false, 'error' => 'Failed to add class: ' . $e->getMessage()];
-    }
-}
-
-// Function to fetch classes for display
-function fetchClassesForTeacher() {
-    $pdo = getDBConnection();
-    try {
-        $stmt = $pdo->prepare("
-            SELECT c.class_id, c.section_name, c.grade_level, c.room, c.attendance_percentage, c.status,
-                   s.subject_code, s.subject_name,
-                   JSON_OBJECTAGG(
-                       IFNULL(sc.day, ''), 
-                       JSON_OBJECT('start', sc.start_time, 'end', sc.end_time)
-                   ) as schedule
-            FROM classes c
-            JOIN subjects s ON c.subject_id = s.subject_id
-            LEFT JOIN schedules sc ON c.class_id = sc.class_id
-            WHERE c.teacher_id = ?
-            GROUP BY c.class_id
-        ");
-        $stmt->execute([$_SESSION['teacher_id']]);
-        $classes = $stmt->fetchAll();
-        
-        // Process schedule JSON
-        foreach ($classes as &$class) {
-            $class['schedule'] = json_decode($class['schedule'], true);
-        }
-        
-        return ['success' => true, 'data' => $classes];
-    } catch (PDOException $e) {
-        error_log("Fetch classes error: " . $e->getMessage());
-        return ['success' => false, 'error' => 'Failed to fetch classes'];
-    }
-}
-
-// Handle AJAX request to add class
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'addClass') {
-    header('Content-Type: application/json');
-    
-    $classData = [
-        'code' => $_POST['classCode'] ?? '',
-        'sectionName' => $_POST['sectionName'] ?? '',
-        'subject' => $_POST['subject'] ?? '',
-        'gradeLevel' => $_POST['gradeLevel'] ?? '',
-        'room' => $_POST['room'] ?? '',
-        'status' => $_POST['status'] ?? ''
-    ];
-    
-    $scheduleData = json_decode($_POST['schedule'] ?? '{}', true);
-    
-    // Validate inputs
-    if (empty($classData['code']) || empty($classData['sectionName']) || 
-        empty($classData['subject']) || empty($classData['gradeLevel']) || 
-        empty($classData['status'])) {
-        echo json_encode(['success' => false, 'error' => 'Missing required fields']);
-        exit;
-    }
-    
-    $result = addClass($classData, $scheduleData);
-    echo json_encode($result);
-    exit;
-}
-
-// Handle AJAX request to fetch classes
-if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['action']) && $_GET['action'] === 'fetchClasses') {
-    header('Content-Type: application/json');
-    $result = fetchClassesForTeacher();
-    echo json_encode($result);
-    exit;
-}
-?>
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -163,7 +6,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['action']) && $_GET['act
     <title>Class Management</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-        <style>
+    <style>
         :root {
             /* Primary Colors */
             --primary-blue: #3b82f6;
@@ -1371,488 +1214,665 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['action']) && $_GET['act
     </div>
 
     <script>
-let classes = [];
-let currentView = 'grid';
-let editingClassId = null;
-
-document.addEventListener('DOMContentLoaded', function() {
-    fetchClasses();
-    setupEventListeners();
-    clearScheduleInputs();
-});
-
-function fetchClasses() {
-    fetch('manage-classes.php?action=fetchClasses')
-        .then(response => response.json())
-        .then(result => {
-            if (result.success) {
-                classes = result.data;
-                updateStats();
-                renderClasses();
-                populateFilters();
-            } else {
-                console.error('Error fetching classes:', result.error);
-            }
-        })
-        .catch(error => console.error('Error fetching classes:', error));
-}
-
-function updateStats() {
-    const totalClasses = classes.length;
-    const activeClasses = classes.filter(c => c.status === 'active').length;
-    
-    document.getElementById('total-classes').textContent = totalClasses;
-    document.getElementById('active-classes').textContent = activeClasses;
-}
-
-function setupEventListeners() {
-    document.getElementById('searchInput').addEventListener('input', handleSearch);
-    document.getElementById('gradeFilter').addEventListener('change', handleFilter);
-    document.getElementById('statusFilter').addEventListener('change', handleFilter);
-    document.getElementById('subjectFilter').addEventListener('change', handleFilter);
-    document.getElementById('sectionFilter').addEventListener('change', handleFilter);
-    document.getElementById('classForm').addEventListener('submit', handleFormSubmit);
-    
-    const scheduleCheckboxes = document.querySelectorAll('input[name="scheduleDays"]');
-    scheduleCheckboxes.forEach(checkbox => {
-        checkbox.addEventListener('change', handleScheduleToggle);
-    });
-
-    window.addEventListener('click', function(event) {
-        const modals = document.querySelectorAll('.modal');
-        modals.forEach(modal => {
-            if (event.target === modal) {
-                modal.classList.remove('show');
-            }
-        });
-    });
-}
-
-function renderClasses() {
-    updateStats();
-    if (currentView === 'grid') {
-        renderGridView();
-    } else {
-        renderTableView();
-    }
-}
-
-function renderGridView() {
-    const container = document.getElementById('gridView');
-    const filteredClasses = getFilteredClasses();
-    
-    container.innerHTML = '';
-    
-    if (filteredClasses.length === 0) {
-        container.innerHTML = '<div class="no-classes">No classes found</div>';
-        return;
-    }
-
-    filteredClasses.forEach(classItem => {
-        const scheduleText = formatSchedule(classItem.schedule);
-        const attendancePercentage = parseFloat(classItem.attendance_percentage) || 0;
-        
-        const card = document.createElement('div');
-        card.className = 'class-card';
-        card.innerHTML = `
-            <div class="class-header">
-                <h3>${classItem.subject_code}</h3>
-                <span class="status-badge ${classItem.status}">${classItem.status}</span>
-            </div>
-            <div class="class-info">
-                <h4>${classItem.section_name}</h4>
-                <p><i class="fas fa-book"></i> ${classItem.subject_name}</p>
-                <p><i class="fas fa-graduation-cap"></i> ${classItem.grade_level}</p>
-                <p><i class="fas fa-map-marker-alt"></i> ${classItem.room || 'N/A'}</p>
-                <p><i class="fas fa-percentage"></i> ${attendancePercentage.toFixed(1)}% attendance</p>
-            </div>
-            <div class="class-schedule">
-                <h5>Schedule:</h5>
-                ${scheduleText}
-            </div>
-            <div class="class-actions">
-                <button class="btn btn-sm btn-info" onclick="viewClass(${classItem.class_id})">
-                    <i class="fas fa-eye"></i> View
-                </button>
-                <button class="btn btn-sm btn-warning" onclick="editClass(${classItem.class_id})">
-                    <i class="fas fa-edit"></i> Edit
-                </button>
-                <button class="btn btn-sm btn-danger" onclick="deleteClass(${classItem.class_id})">
-                    <i class="fas fa-trash"></i> Delete
-                </button>
-            </div>
-        `;
-        container.appendChild(card);
-    });
-}
-
-function renderTableView() {
-    const tbody = document.querySelector('#tableView tbody');
-    const filteredClasses = getFilteredClasses();
-    
-    tbody.innerHTML = '';
-    
-    if (filteredClasses.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="10" class="no-classes">No classes found</td></tr>';
-        return;
-    }
-
-    filteredClasses.forEach(classItem => {
-        const scheduleText = formatScheduleShort(classItem.schedule);
-        const attendancePercentage = parseFloat(classItem.attendance_percentage) || 0;
-        
-        const row = document.createElement('tr');
-        row.innerHTML = `
-            <td><input type="checkbox" class="row-checkbox" data-class-id="${classItem.class_id}"></td>
-            <td>
-                <strong>${classItem.subject_code}</strong><br>
-                <small>${classItem.section_name}</small>
-            </td>
-            <td>${classItem.grade_level}</td>
-            <td>${classItem.subject_name}</td>
-            <td>${scheduleText}</td>
-            <td>${classItem.room || 'N/A'}</td>
-            <td>${attendancePercentage.toFixed(1)}%</td>
-            <td><span class="status-badge ${classItem.status}">${classItem.status}</span></td>
-            <td class="actions">
-                <button class="btn btn-sm btn-info" onclick="viewClass(${classItem.class_id})">
-                    <i class="fas fa-eye"></i>
-                </button>
-                <button class="btn btn-sm btn-warning" onclick="editClass(${classItem.class_id})">
-                    <i class="fas fa-edit"></i>
-                </button>
-                <button class="btn btn-sm btn-danger" onclick="deleteClass(${classItem.class_id})">
-                    <i class="fas fa-trash"></i>
-                </button>
-            </td>
-        `;
-        tbody.appendChild(row);
-    });
-}
-
-function getFilteredClasses() {
-    const searchTerm = document.getElementById('searchInput').value.toLowerCase();
-    const gradeFilter = document.getElementById('gradeFilter').value;
-    const statusFilter = document.getElementById('statusFilter').value;
-    const subjectFilter = document.getElementById('subjectFilter').value;
-    const sectionFilter = document.getElementById('sectionFilter').value;
-    
-    return classes.filter(classItem => {
-        const matchesSearch = searchTerm === '' || 
-            classItem.subject_code.toLowerCase().includes(searchTerm) ||
-            classItem.section_name.toLowerCase().includes(searchTerm) ||
-            classItem.subject_name.toLowerCase().includes(searchTerm);
-        
-        const matchesGrade = gradeFilter === '' || classItem.grade_level === gradeFilter;
-        const matchesStatus = statusFilter === '' || classItem.status === statusFilter;
-        const matchesSubject = subjectFilter === '' || classItem.subject_name === subjectFilter;
-        const matchesSection = sectionFilter === '' || classItem.section_name === sectionFilter;
-        
-        return matchesSearch && matchesGrade && matchesStatus && matchesSubject && matchesSection;
-    });
-}
-
-function populateFilters() {
-    const subjects = [...new Set(classes.map(c => c.subject_name))];
-    const sections = [...new Set(classes.map(c => c.section_name))];
-    
-    const subjectFilter = document.getElementById('subjectFilter');
-    const sectionFilter = document.getElementById('sectionFilter');
-    
-    subjectFilter.innerHTML = '<option value="">All Subjects</option>';
-    sectionFilter.innerHTML = '<option value="">All Sections</option>';
-    
-    subjects.forEach(subject => {
-        const option = document.createElement('option');
-        option.value = subject;
-        option.textContent = subject;
-        subjectFilter.appendChild(option);
-    });
-    
-    sections.forEach(section => {
-        const option = document.createElement('option');
-        option.value = section;
-        option.textContent = section;
-        sectionFilter.appendChild(option);
-    });
-}
-
-function handleSearch() {
-    renderClasses();
-}
-
-function handleFilter() {
-    renderClasses();
-}
-
-function switchView(view) {
-    currentView = view;
-    
-    document.querySelectorAll('.view-btn').forEach(btn => btn.classList.remove('active'));
-    event.target.closest('.view-btn').classList.add('active');
-    
-    const gridView = document.getElementById('gridView');
-    const tableView = document.getElementById('tableView');
-    
-    if (view === 'grid') {
-        gridView.classList.remove('hidden');
-        tableView.classList.add('hidden');
-    } else {
-        gridView.classList.add('hidden');
-        tableView.classList.remove('hidden');
-    }
-    
-    renderClasses();
-}
-
-function openModal() {
-    editingClassId = null;
-    document.getElementById('modalTitle').textContent = 'Add New Class';
-    document.getElementById('classForm').reset();
-    clearScheduleInputs();
-    document.getElementById('classModal').classList.add('show');
-}
-
-function closeModal() {
-    document.getElementById('classModal').classList.remove('show');
-    editingClassId = null;
-}
-
-function editClass(classId) {
-    const classItem = classes.find(c => c.class_id === classId);
-    if (!classItem) return;
-    
-    editingClassId = classId;
-    document.getElementById('modalTitle').textContent = 'Edit Class';
-    
-    document.getElementById('classCode').value = classItem.subject_code;
-    document.getElementById('sectionName').value = classItem.section_name;
-    document.getElementById('subject').value = classItem.subject_name;
-    document.getElementById('gradeLevel').value = classItem.grade_level;
-    document.getElementById('room').value = classItem.room || '';
-    document.getElementById('status').value = classItem.status;
-    
-    clearScheduleInputs();
-    Object.keys(classItem.schedule).forEach(day => {
-        const checkbox = document.getElementById(day);
-        const startInput = document.getElementById(day + 'Start');
-        const endInput = document.getElementById(day + 'End');
-        
-        if (checkbox && startInput && endInput) {
-            checkbox.checked = true;
-            startInput.disabled = false;
-            endInput.disabled = false;
-            startInput.value = classItem.schedule[day].start;
-            endInput.value = classItem.schedule[day].end;
-        }
-    });
-    
-    document.getElementById('classModal').classList.add('show');
-}
-
-function viewClass(classId) {
-    const classItem = classes.find(c => c.class_id === classId);
-    if (!classItem) return;
-    
-    const scheduleText = formatSchedule(classItem.schedule);
-    const attendancePercentage = parseFloat(classItem.attendance_percentage) || 0;
-    
-    const content = document.getElementById('viewContent');
-    content.innerHTML = `
-        <div class="view-details">
-            <div class="detail-row">
-                <strong>Class Code:</strong> ${classItem.subject_code}
-            </div>
-            <div class="detail-row">
-                <strong>Section Name:</strong> ${classItem.section_name}
-            </div>
-            <div class="detail-row">
-                <strong>Subject:</strong> ${classItem.subject_name}
-            </div>
-            <div class="detail-row">
-                <strong>Grade Level:</strong> ${classItem.grade_level}
-            </div>
-            <div class="detail-row">
-                <strong>Room:</strong> ${classItem.room || 'N/A'}
-            </div>
-            <div class="detail-row">
-                <strong>Attendance Percentage:</strong> ${attendancePercentage.toFixed(1)}%
-            </div>
-            <div class="detail-row">
-                <strong>Schedule:</strong>
-                <div class="schedule-details">
-                    ${scheduleText}
-                </div>
-            </div>
-            <div class="detail-row">
-                <strong>Status:</strong> <span class="status-badge ${classItem.status}">${classItem.status}</span>
-            </div>
-        </div>
-    `;
-    
-    document.getElementById('viewModal').classList.add('show');
-}
-
-function closeViewModal() {
-    document.getElementById('viewModal').classList.remove('show');
-}
-
-function deleteClass(classId) {
-    if (confirm('Are you sure you want to delete this class?')) {
-        fetch('delete_class.php', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
+        // Enhanced class data structure with students
+        let classes = [
+            {
+                id: 1,
+                code: 'MATH-101-A',
+                sectionName: 'Diamond Section',
+                subject: 'Mathematics',
+                gradeLevel: 'Grade 7',
+                room: 'Room 201',
+                attendancePercentage: 10,
+                schedule: {
+                    monday: { start: '08:00', end: '09:30' },
+                    wednesday: { start: '08:00', end: '09:30' },
+                    friday: { start: '08:00', end: '09:30' }
+                },
+                status: 'active',
+                students: [
+                    { id: 1, firstName: 'John', lastName: 'Doe', email: 'john.doe@email.com' },
+                    { id: 2, firstName: 'Jane', lastName: 'Smith', email: 'jane.smith@email.com' },
+                    { id: 3, firstName: 'Mike', lastName: 'Johnson', email: 'mike.johnson@email.com' }
+                ]
             },
-            body: JSON.stringify({ classId: classId })
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                classes = classes.filter(c => c.class_id !== classId);
+            {
+                id: 2,
+                code: 'SCI-201-B',
+                sectionName: 'Einstein Section',
+                subject: 'Science',
+                gradeLevel: 'Grade 10',
+                room: 'Lab 1',
+                attendancePercentage: 15,
+                schedule: {
+                    tuesday: { start: '10:00', end: '11:30' },
+                    thursday: { start: '10:00', end: '11:30' }
+                },
+                status: 'active',
+                students: [
+                    { id: 4, firstName: 'Alice', lastName: 'Brown', email: 'alice.brown@email.com' },
+                    { id: 5, firstName: 'Bob', lastName: 'Wilson', email: 'bob.wilson@email.com' }
+                ]
+            },
+            {
+                id: 3,
+                code: 'ENG-301-C',
+                sectionName: 'Shakespeare Section',
+                subject: 'English Literature',
+                gradeLevel: 'Grade 12',
+                room: 'Room 305',
+                attendancePercentage: 20,
+                schedule: {
+                    monday: { start: '14:00', end: '15:30' },
+                    wednesday: { start: '14:00', end: '15:30' }
+                },
+                status: 'inactive',
+                students: [
+                    { id: 6, firstName: 'Carol', lastName: 'Davis', email: 'carol.davis@email.com' },
+                    { id: 7, firstName: 'David', lastName: 'Miller', email: 'david.miller@email.com' },
+                    { id: 8, firstName: 'Emma', lastName: 'Garcia', email: 'emma.garcia@email.com' },
+                    { id: 9, firstName: 'Frank', lastName: 'Rodriguez', email: 'frank.rodriguez@email.com' }
+                ]
+            }
+        ];
+
+        let currentView = 'grid';
+        let editingClassId = null;
+        let currentClassForStudents = null;
+        let importedStudentData = [];
+
+        // Initialize the application
+        document.addEventListener('DOMContentLoaded', function() {
+            updateStats();
+            renderClasses();
+            populateFilters();
+            setupEventListeners();
+            clearScheduleInputs();
+        });
+
+        // Update stats for cards
+        function updateStats() {
+            const totalClasses = classes.length;
+            const activeClasses = classes.filter(c => c.status === 'active').length;
+            const totalStudents = classes.reduce((sum, c) => sum + c.students.length, 0);
+            const averageAttendance = classes.length ? (classes.reduce((sum, c) => sum + calculateAttendancePercentage(c), 0) / classes.length).toFixed(1) : 0;
+
+            document.getElementById('total-classes').textContent = totalClasses;
+            document.getElementById('active-classes').textContent = activeClasses;
+            document.getElementById('total-students').textContent = totalStudents;
+            document.getElementById('average-attendance').textContent = `${averageAttendance}%`;
+        }
+
+        // Setup event listeners
+        function setupEventListeners() {
+            // Search functionality
+            document.getElementById('searchInput').addEventListener('input', handleSearch);
+            
+            // Filter functionality
+            document.getElementById('gradeFilter').addEventListener('change', handleFilter);
+            document.getElementById('statusFilter').addEventListener('change', handleFilter);
+            document.getElementById('subjectFilter').addEventListener('change', handleFilter);
+            document.getElementById('sectionFilter').addEventListener('change', handleFilter);
+            
+            // Form submission
+            document.getElementById('classForm').addEventListener('submit', handleFormSubmit);
+            
+            // Schedule checkboxes
+            const scheduleCheckboxes = document.querySelectorAll('input[name="scheduleDays"]');
+            scheduleCheckboxes.forEach(checkbox => {
+                checkbox.addEventListener('change', handleScheduleToggle);
+            });
+            
+            // Modal close on outside click
+            window.addEventListener('click', function(event) {
+                const modals = document.querySelectorAll('.modal');
+                modals.forEach(modal => {
+                    if (event.target === modal) {
+                        modal.classList.remove('show');
+                    }
+                });
+            });
+        }
+
+        // Render classes based on current view
+        function renderClasses() {
+            updateStats();
+            if (currentView === 'grid') {
+                renderGridView();
+            } else {
+                renderTableView();
+            }
+        }
+
+        // Render grid view
+        function renderGridView() {
+            const container = document.getElementById('gridView');
+            const filteredClasses = getFilteredClasses();
+            
+            container.innerHTML = '';
+            
+            if (filteredClasses.length === 0) {
+                container.innerHTML = '<div class="no-classes">No classes found</div>';
+                return;
+            }
+
+            filteredClasses.forEach(classItem => {
+                const scheduleText = formatSchedule(classItem.schedule);
+                const attendancePercentage = calculateAttendancePercentage(classItem);
+                
+                const card = document.createElement('div');
+                card.className = 'class-card';
+                card.innerHTML = `
+                    <div class="class-header">
+                        <h3>${classItem.code}</h3>
+                        <span class="status-badge ${classItem.status}">${classItem.status}</span>
+                    </div>
+                    <div class="class-info">
+                        <h4>${classItem.sectionName}</h4>
+                        <p><i class="fas fa-book"></i> ${classItem.subject}</p>
+                        <p><i class="fas fa-graduation-cap"></i> ${classItem.gradeLevel}</p>
+                        <p><i class="fas fa-map-marker-alt"></i> ${classItem.room}</p>
+                        <p><i class="fas fa-users"></i> ${classItem.students.length} students</p>
+                        <p><i class="fas fa-percentage"></i> ${attendancePercentage}% attendance</p>
+                    </div>
+                    <div class="class-schedule">
+                        <h5>Schedule:</h5>
+                        ${scheduleText}
+                    </div>
+                    <div class="class-actions">
+                        <button class="btn btn-sm btn-info" onclick="viewClass(${classItem.id})">
+                            <i class="fas fa-eye"></i> View
+                        </button>
+                        <button class="btn btn-sm btn-warning" onclick="editClass(${classItem.id})">
+                            <i class="fas fa-edit"></i> Edit
+                        </button>
+                        <button class="btn btn-sm btn-success" onclick="openStudentModal(${classItem.id})">
+                            <i class="fas fa-users"></i> Students
+                        </button>
+                        <button class="btn btn-sm btn-danger" onclick="deleteClass(${classItem.id})">
+                            <i class="fas fa-trash"></i> Delete
+                        </button>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        // Render table view
+        function renderTableView() {
+            const tbody = document.querySelector('#tableView tbody');
+            const filteredClasses = getFilteredClasses();
+            
+            tbody.innerHTML = '';
+            
+            if (filteredClasses.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="10" class="no-classes">No classes found</td></tr>';
+                return;
+            }
+
+            filteredClasses.forEach(classItem => {
+                const scheduleText = formatScheduleShort(classItem.schedule);
+                const attendancePercentage = calculateAttendancePercentage(classItem);
+                
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td><input type="checkbox" class="row-checkbox" data-class-id="${classItem.id}"></td>
+                    <td>
+                        <strong>${classItem.code}</strong><br>
+                        <small>${classItem.sectionName}</small>
+                    </td>
+                    <td>${classItem.gradeLevel}</td>
+                    <td>${classItem.subject}</td>
+                    <td>${scheduleText}</td>
+                    <td>${classItem.room}</td>
+                    <td>${classItem.students.length}</td>
+                    <td>${attendancePercentage}%</td>
+                    <td><span class="status-badge ${classItem.status}">${classItem.status}</span></td>
+                    <td class="actions">
+                        <button class="btn btn-sm btn-info" onclick="viewClass(${classItem.id})">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                        <button class="btn btn-sm btn-warning" onclick="editClass(${classItem.id})">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="btn btn-sm btn-success" onclick="openStudentModal(${classItem.id})">
+                            <i class="fas fa-users"></i>
+                        </button>
+                        <button class="btn btn-sm btn-danger" onclick="deleteClass(${classItem.id})">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        // Get filtered classes based on search and filters
+        function getFilteredClasses() {
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+            const gradeFilter = document.getElementById('gradeFilter').value;
+            const statusFilter = document.getElementById('statusFilter').value;
+            const subjectFilter = document.getElementById('subjectFilter').value;
+            const sectionFilter = document.getElementById('sectionFilter').value;
+            
+            return classes.filter(classItem => {
+                const matchesSearch = searchTerm === '' || 
+                    classItem.code.toLowerCase().includes(searchTerm) ||
+                    classItem.sectionName.toLowerCase().includes(searchTerm) ||
+                    classItem.subject.toLowerCase().includes(searchTerm);
+                
+                const matchesGrade = gradeFilter === '' || classItem.gradeLevel === gradeFilter;
+                const matchesStatus = statusFilter === '' || classItem.status === statusFilter;
+                const matchesSubject = subjectFilter === '' || classItem.subject === subjectFilter;
+                const matchesSection = sectionFilter === '' || classItem.sectionName === sectionFilter;
+                
+                return matchesSearch && matchesGrade && matchesStatus && matchesSubject && matchesSection;
+            });
+        }
+
+        // Populate filter options
+        function populateFilters() {
+            const subjects = [...new Set(classes.map(c => c.subject))];
+            const sections = [...new Set(classes.map(c => c.sectionName))];
+            
+            const subjectFilter = document.getElementById('subjectFilter');
+            const sectionFilter = document.getElementById('sectionFilter');
+            
+            subjectFilter.innerHTML = '<option value="">All Subjects</option>';
+            sectionFilter.innerHTML = '<option value="">All Sections</option>';
+            
+            subjects.forEach(subject => {
+                const option = document.createElement('option');
+                option.value = subject;
+                option.textContent = subject;
+                subjectFilter.appendChild(option);
+            });
+            
+            sections.forEach(section => {
+                const option = document.createElement('option');
+                option.value = section;
+                option.textContent = section;
+                sectionFilter.appendChild(option);
+            });
+        }
+
+        // Handle search
+        function handleSearch() {
+            renderClasses();
+        }
+
+        // Handle filter changes
+        function handleFilter() {
+            renderClasses();
+        }
+
+        // Switch between grid and table views
+        function switchView(view) {
+            currentView = view;
+            
+            document.querySelectorAll('.view-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.closest('.view-btn').classList.add('active');
+            
+            const gridView = document.getElementById('gridView');
+            const tableView = document.getElementById('tableView');
+            
+            if (view === 'grid') {
+                gridView.classList.remove('hidden');
+                tableView.classList.add('hidden');
+            } else {
+                gridView.classList.add('hidden');
+                tableView.classList.remove('hidden');
+            }
+            
+            renderClasses();
+        }
+
+        // Open modal for adding new class
+        function openModal() {
+            editingClassId = null;
+            document.getElementById('modalTitle').textContent = 'Add New Class';
+            document.getElementById('classForm').reset();
+            clearScheduleInputs();
+            document.getElementById('classModal').classList.add('show');
+        }
+
+        // Close modal
+        function closeModal() {
+            document.getElementById('classModal').classList.remove('show');
+            editingClassId = null;
+        }
+
+        // Edit class
+        function editClass(classId) {
+            const classItem = classes.find(c => c.id === classId);
+            if (!classItem) return;
+            
+            editingClassId = classId;
+            document.getElementById('modalTitle').textContent = 'Edit Class';
+            
+            document.getElementById('classCode').value = classItem.code;
+            document.getElementById('sectionName').value = classItem.sectionName;
+            document.getElementById('subject').value = classItem.subject;
+            document.getElementById('gradeLevel').value = classItem.gradeLevel;
+            document.getElementById('room').value = classItem.room;
+            document.getElementById('status').value = classItem.status;
+            
+            clearScheduleInputs();
+            Object.keys(classItem.schedule).forEach(day => {
+                const checkbox = document.getElementById(day);
+                const startInput = document.getElementById(day + 'Start');
+                const endInput = document.getElementById(day + 'End');
+                
+                if (checkbox && startInput && endInput) {
+                    checkbox.checked = true;
+                    startInput.disabled = false;
+                    endInput.disabled = false;
+                    startInput.value = classItem.schedule[day].start;
+                    endInput.value = classItem.schedule[day].end;
+                }
+            });
+            
+            document.getElementById('classModal').classList.add('show');
+        }
+
+        // View class details
+        function viewClass(classId) {
+            const classItem = classes.find(c => c.id === classId);
+            if (!classItem) return;
+            
+            const scheduleText = formatSchedule(classItem.schedule);
+            const attendancePercentage = calculateAttendancePercentage(classItem);
+            
+            const content = document.getElementById('viewContent');
+            content.innerHTML = `
+                <div class="view-details">
+                    <div class="detail-row">
+                        <strong>Class Code:</strong> ${classItem.code}
+                    </div>
+                    <div class="detail-row">
+                        <strong>Section Name:</strong> ${classItem.sectionName}
+                    </div>
+                    <div class="detail-row">
+                        <strong>Subject:</strong> ${classItem.subject}
+                    </div>
+                    <div class="detail-row">
+                        <strong>Grade Level:</strong> ${classItem.gradeLevel}
+                    </div>
+                    <div class="detail-row">
+                        <strong>Room:</strong> ${classItem.room}
+                    </div>
+                    <div class="detail-row">
+                        <strong>Students:</strong> ${classItem.students.length}
+                    </div>
+                    <div class="detail-row">
+                        <strong>Attendance Percentage:</strong> ${attendancePercentage}%
+                    </div>
+                    <div class="detail-row">
+                        <strong>Schedule:</strong>
+                        <div class="schedule-details">
+                            ${scheduleText}
+                        </div>
+                    </div>
+                    <div class="detail-row">
+                        <strong>Status:</strong> <span class="status-badge ${classItem.status}">${classItem.status}</span>
+                    </div>
+                    <div class="detail-row">
+                        <strong>Students List:</strong>
+                        <div class="schedule-details">
+                            ${classItem.students.map(student => `
+                                <div>${student.firstName} ${student.lastName} (${student.email || 'No email'})</div>
+                            `).join('') || 'No students enrolled'}
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            document.getElementById('viewModal').classList.add('show');
+        }
+
+        // Close view modal
+        function closeViewModal() {
+            document.getElementById('viewModal').classList.remove('show');
+        }
+
+        // Delete class
+        function deleteClass(classId) {
+            if (confirm('Are you sure you want to delete this class?')) {
+                classes = classes.filter(c => c.id !== classId);
                 renderClasses();
                 populateFilters();
-            } else {
-                alert('Failed to delete class: ' + (data.error || 'Unknown error'));
             }
-        })
-        .catch(error => console.error('Error deleting class:', error));
-    }
-}
-
-function handleFormSubmit(event) {
-    event.preventDefault();
-    
-    const schedule = getScheduleFromForm();
-    
-    const classData = {
-        classCode: document.getElementById('classCode').value,
-        sectionName: document.getElementById('sectionName').value,
-        subject: document.getElementById('subject').value,
-        gradeLevel: document.getElementById('gradeLevel').value,
-        room: document.getElementById('room').value,
-        status: document.getElementById('status').value
-    };
-    
-    fetch('manage-classes.php', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/x-www-form-urlencoded'
-        },
-        body: `action=addClass&${new URLSearchParams(classData)}&schedule=${encodeURIComponent(JSON.stringify(schedule))}`
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            fetchClasses();
-            closeModal();
-            alert('Class added successfully!');
-        } else {
-            alert('Error: ' + (data.error || 'Failed to add class'));
         }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        alert('Error adding class');
-    });
-}
 
-function getScheduleFromForm() {
-    const schedule = {};
-    const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
-    
-    days.forEach(day => {
-        const checkbox = document.getElementById(day);
-        const startInput = document.getElementById(day + 'Start');
-        const endInput = document.getElementById(day + 'End');
-        
-        if (checkbox && checkbox.checked && startInput.value && endInput.value) {
-            schedule[day] = {
-                start: startInput.value,
-                end: endInput.value
+        // Handle form submission
+        function handleFormSubmit(event) {
+            event.preventDefault();
+            
+            const formData = new FormData(event.target);
+            const schedule = getScheduleFromForm();
+            
+            const classData = {
+                id: editingClassId || Date.now(),
+                code: document.getElementById('classCode').value,
+                sectionName: document.getElementById('sectionName').value,
+                subject: document.getElementById('subject').value,
+                gradeLevel: document.getElementById('gradeLevel').value,
+                room: document.getElementById('room').value,
+                attendancePercentage: editingClassId ? classes.find(c => c.id === editingClassId).attendancePercentage : 10,
+                schedule: schedule,
+                status: document.getElementById('status').value,
+                students: editingClassId ? classes.find(c => c.id === editingClassId).students : []
             };
+            
+            if (editingClassId) {
+                const index = classes.findIndex(c => c.id === editingClassId);
+                classes[index] = classData;
+            } else {
+                classes.push(classData);
+            }
+            
+            renderClasses();
+            populateFilters();
+            closeModal();
         }
-    });
-    
-    return schedule;
-}
 
-function handleScheduleToggle(event) {
-    const day = event.target.id;
-    const startInput = document.getElementById(day + 'Start');
-    const endInput = document.getElementById(day + 'End');
-    
-    if (event.target.checked) {
-        startInput.disabled = false;
-        endInput.disabled = false;
-    } else {
-        startInput.disabled = true;
-        endInput.disabled = true;
-        startInput.value = '';
-        endInput.value = '';
-    }
-}
-
-function clearScheduleInputs() {
-    const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
-    days.forEach(day => {
-        const checkbox = document.getElementById(day);
-        const startInput = document.getElementById(day + 'Start');
-        const endInput = document.getElementById(day + 'End');
-        
-        if (checkbox) checkbox.checked = false;
-        if (startInput) {
-            startInput.value = '';
-            startInput.disabled = true;
+        // Get schedule from form
+        function getScheduleFromForm() {
+            const schedule = {};
+            const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+            
+            days.forEach(day => {
+                const checkbox = document.getElementById(day);
+                const startInput = document.getElementById(day + 'Start');
+                const endInput = document.getElementById(day + 'End');
+                
+                if (checkbox && checkbox.checked && startInput.value && endInput.value) {
+                    schedule[day] = {
+                        start: startInput.value,
+                        end: endInput.value
+                    };
+                }
+            });
+            
+            return schedule;
         }
-        if (endInput) {
-            endInput.value = '';
-            endInput.disabled = true;
+
+        // Handle schedule checkbox toggle
+        function handleScheduleToggle(event) {
+            const day = event.target.id;
+            const startInput = document.getElementById(day + 'Start');
+            const endInput = document.getElementById(day + 'End');
+            
+            if (event.target.checked) {
+                startInput.disabled = false;
+                endInput.disabled = false;
+            } else {
+                startInput.disabled = true;
+                endInput.disabled = true;
+                startInput.value = '';
+                endInput.value = '';
+            }
         }
-    });
-}
 
-function formatSchedule(schedule) {
-    if (!schedule || Object.keys(schedule).length === 0) {
-        return '<span class="no-schedule">No schedule set</span>';
-    }
-    
-    return Object.entries(schedule).map(([day, times]) => {
-        const dayName = capitalizeFirst(day);
-        return `<div class="schedule-item">${dayName}: ${formatTime(times.start)} - ${formatTime(times.end)}</div>`;
-    }).join('');
-}
+        // Clear schedule inputs
+        function clearScheduleInputs() {
+            const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+            days.forEach(day => {
+                const checkbox = document.getElementById(day);
+                const startInput = document.getElementById(day + 'Start');
+                const endInput = document.getElementById(day + 'End');
+                
+                if (checkbox) checkbox.checked = false;
+                if (startInput) {
+                    startInput.value = '';
+                    startInput.disabled = true;
+                }
+                if (endInput) {
+                    endInput.value = '';
+                    endInput.disabled = true;
+                }
+            });
+        }
 
-function formatScheduleShort(schedule) {
-    if (!schedule || Object.keys(schedule).length === 0) {
-        return 'No schedule';
-    }
-    
-    const days = Object.keys(schedule).map(day => capitalizeFirst(day).substring(0, 3));
-    return days.join(', ');
-}
+        // Format schedule for display
+        function formatSchedule(schedule) {
+            if (!schedule || Object.keys(schedule).length === 0) {
+                return '<span class="no-schedule">No schedule set</span>';
+            }
+            
+            return Object.entries(schedule).map(([day, times]) => {
+                const dayName = capitalizeFirst(day);
+                return `<div class="schedule-item">${dayName}: ${formatTime(times.start)} - ${formatTime(times.end)}</div>`;
+            }).join('');
+        }
 
-function formatTime(time) {
-    if (!time) return '';
-    const [hours, minutes] = time.split(':');
-    const hourNum = parseInt(hours);
-    const period = hourNum >= 12 ? 'PM' : 'AM';
-    const displayHour = hourNum % 12 || 12;
-    return `${displayHour}:${minutes} ${period}`;
-}
+        // Format schedule for table view (short format)
+        function formatScheduleShort(schedule) {
+            if (!schedule || Object.keys(schedule).length === 0) {
+                return 'No schedule';
+            }
+            
+            const days = Object.keys(schedule).map(day => capitalizeFirst(day).substring(0, 3));
+            return days.join(', ');
+        }
 
-function toggleSelectAll() {
-    const selectAll = document.getElementById('selectAll');
-    const checkboxes = document.querySelectorAll('.row-checkbox');
-    
-    checkboxes.forEach(checkbox => {
-        checkbox.checked = selectAll.checked;
-    });
-}
+        // Format time (convert 24-hour to 12-hour format)
+        function formatTime(time) {
+            if (!time) return '';
+            const [hours, minutes] = time.split(':');
+            const hourNum = parseInt(hours);
+            const period = hourNum >= 12 ? 'PM' : 'AM';
+            const displayHour = hourNum % 12 || 12;
+            return `${displayHour}:${minutes} ${period}`;
+        }
 
-function capitalizeFirst(str) {
-    return str.charAt(0).toUpperCase() + str.slice(1);
-}
-</script>
+        // Calculate attendance percentage (mock calculation)
+        function calculateAttendancePercentage(classItem) {
+            return Math.floor(Math.random() * 20) + 80;
+        }
+
+        // Toggle select all checkbox
+        function toggleSelectAll() {
+            const selectAll = document.getElementById('selectAll');
+            const checkboxes = document.querySelectorAll('.row-checkbox');
+            
+            checkboxes.forEach(checkbox => {
+                checkbox.checked = selectAll.checked;
+            });
+        }
+
+        // Open student modal
+        function openStudentModal(classId) {
+            currentClassForStudents = classId;
+            document.getElementById('studentModal').classList.add('show');
+        }
+
+        // Close student modal
+        function closeStudentModal() {
+            document.getElementById('studentModal').classList.remove('show');
+            document.getElementById('studentFile').value = '';
+            document.getElementById('studentPreview').classList.add('hidden');
+            document.getElementById('importStudentsBtn').disabled = true;
+            currentClassForStudents = null;
+        }
+
+        // Handle student file upload
+        function handleStudentFileUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    const firstSheetName = workbook.SheetNames[0];
+                    const worksheet = workbook.Sheets[firstSheetName];
+                    const jsonData = XLSX.utils.sheet_to_json(worksheet);
+                    
+                    if (jsonData.length > 0) {
+                        importedStudentData = jsonData;
+                        displayStudentPreview(jsonData);
+                        document.getElementById('importStudentsBtn').disabled = false;
+                    } else {
+                        alert('The Excel file appears to be empty or invalid.');
+                    }
+                } catch (error) {
+                    alert('Error reading the Excel file. Please make sure it\'s a valid Excel file.');
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        // Display student preview
+        function displayStudentPreview(data) {
+            const preview = document.getElementById('studentPreview');
+            const table = document.getElementById('studentPreviewTable');
+            
+            if (data.length === 0) {
+                preview.classList.add('hidden');
+                return;
+            }
+            
+            const headers = Object.keys(data[0]);
+            
+            table.innerHTML = `
+                <thead>
+                    <tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr>
+                </thead>
+                <tbody>
+                    ${data.slice(0, 5).map(row => `<tr>${headers.map(h => `<td>${row[h] || ''}</td>`).join('')}</tr>`).join('')}
+                    ${data.length > 5 ? `<tr><td colspan="${headers.length}" style="text-align: center; font-style: italic;">... and ${data.length - 5} more rows</td></tr>` : ''}
+                </tbody>
+            `;
+            
+            preview.classList.remove('hidden');
+        }
+
+        // Import students
+        function importStudents() {
+            if (!importedStudentData || importedStudentData.length === 0 || !currentClassForStudents) return;
+            
+            const classIndex = classes.findIndex(c => c.id === currentClassForStudents);
+            if (classIndex === -1) return;
+            
+            const newStudents = importedStudentData.map(row => ({
+                id: row['Student ID'] || Date.now() + Math.random(),
+                firstName: row['First Name'],
+                lastName: row['Last Name'],
+                email: row['Email'] || ''
+            }));
+            
+            classes[classIndex].students.push(...newStudents);
+            renderClasses();
+            closeStudentModal();
+            alert(`Successfully imported ${newStudents.length} students!`);
+        }
+
+        // Utility function to capitalize first letter
+        function capitalizeFirst(str) {
+            return str.charAt(0).toUpperCase() + str.slice(1);
+        }
+    </script>
 </body>
 </html>

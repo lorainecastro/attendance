@@ -496,6 +496,7 @@ ob_end_flush();
             padding: var(--spacing-xs) var(--spacing-sm);
             font-size: 0.75rem;
         }
+
         .view-btn {
             padding: var(--spacing-sm) var(--spacing-md);
             background: transparent;
@@ -1015,125 +1016,156 @@ ob_end_flush();
 
     <style>
         .controls {
-    background: var(--card-bg);
-    border-radius: var(--radius-md); /* Reduced from var(--radius-lg) for a tighter look */
-    padding: var(--spacing-md); /* Reduced from var(--spacing-xl) to decrease padding */
-    box-shadow: var(--shadow-md);
-    margin-bottom: var(--spacing-lg); /* Reduced from var(--spacing-2xl) */
-    display: flex; /* Changed to flex for better alignment */
-    flex-wrap: wrap; /* Allow wrapping for responsiveness */
-    gap: var(--spacing-sm); /* Reduced gap for tighter spacing */
-    align-items: center;
-    border: 1px solid var(--border-color);
-}
+            background: var(--card-bg);
+            border-radius: var(--radius-md);
+            /* Reduced from var(--radius-lg) for a tighter look */
+            padding: var(--spacing-md);
+            /* Reduced from var(--spacing-xl) to decrease padding */
+            box-shadow: var(--shadow-md);
+            margin-bottom: var(--spacing-lg);
+            /* Reduced from var(--spacing-2xl) */
+            display: flex;
+            /* Changed to flex for better alignment */
+            flex-wrap: wrap;
+            /* Allow wrapping for responsiveness */
+            gap: var(--spacing-sm);
+            /* Reduced gap for tighter spacing */
+            align-items: center;
+            border: 1px solid var(--border-color);
+        }
 
-.controls-left {
-    display: flex;
-    flex-wrap: wrap;
-    gap: var(--spacing-sm); /* Reduced from var(--spacing-md) */
-    flex: 1; /* Allow controls-left to take available space */
-    align-items: center; /* Vertically center items */
-}
+        .controls-left {
+            display: flex;
+            flex-wrap: wrap;
+            gap: var(--spacing-sm);
+            /* Reduced from var(--spacing-md) */
+            flex: 1;
+            /* Allow controls-left to take available space */
+            align-items: center;
+            /* Vertically center items */
+        }
 
-.controls-right {
-    display: flex;
-    flex-wrap: wrap;
-    gap: var(--spacing-sm); /* Reduced from var(--spacing-md) */
-    align-items: center; /* Vertically center items */
-}
+        .controls-right {
+            display: flex;
+            flex-wrap: wrap;
+            gap: var(--spacing-sm);
+            /* Reduced from var(--spacing-md) */
+            align-items: center;
+            /* Vertically center items */
+        }
 
-.search-container {
-    position: relative;
-    min-width: 200px; /* Reduced from 280px for compactness */
-    flex: 1; /* Allow search to take available space */
-}
+        .search-container {
+            position: relative;
+            min-width: 200px;
+            /* Reduced from 280px for compactness */
+            flex: 1;
+            /* Allow search to take available space */
+        }
 
-.search-input {
-    width: 100%;
-    padding: var(--spacing-xs) var(--spacing-md) var(--spacing-xs) 2.5rem; /* Adjusted padding for tighter input */
-    border: 1px solid var(--border-color);
-    border-radius: var(--radius-sm); /* Smaller radius for input */
-    font-size: var(--font-size-sm);
-    background: var(--inputfield-color);
-    transition: var(--transition-normal);
-}
+        .search-input {
+            width: 100%;
+            padding: var(--spacing-xs) var(--spacing-md) var(--spacing-xs) 2.5rem;
+            /* Adjusted padding for tighter input */
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-sm);
+            /* Smaller radius for input */
+            font-size: var(--font-size-sm);
+            background: var(--inputfield-color);
+            transition: var(--transition-normal);
+        }
 
-.search-icon {
-    position: absolute;
-    left: var(--spacing-sm); /* Adjusted for tighter alignment */
-    top: 50%;
-    transform: translateY(-50%);
-    color: var(--grayfont-color);
-    font-size: 0.875rem; /* Slightly smaller icon */
-}
+        .search-icon {
+            position: absolute;
+            left: var(--spacing-sm);
+            /* Adjusted for tighter alignment */
+            top: 55%;
+            transform: translateY(-50%);
+            color: var(--grayfont-color);
+            font-size: 0.875rem;
+            /* Slightly smaller icon */
+        }
 
-.filter-select {
-    min-width: 120px; /* Reduced from 140px for compactness */
-    padding: var(--spacing-xs) var(--spacing-sm); /* Reduced padding */
-}
+        .filter-select {
+            min-width: 140px;
+            /* Reduced from 140px for compactness */
+            padding: var(--spacing-xs) var(--spacing-sm);
+            /* Reduced padding */
+        }
 
-/* Ensure buttons in controls-right are compact */
-.btn {
-    padding: var(--spacing-xs) var(--spacing-md); /* Reduced padding */
-    font-size: var(--font-size-sm);
-}
+        /* Ensure buttons in controls-right are compact */
+        .btn {
+            padding: var(--spacing-xs) var(--spacing-md);
+            /* Reduced padding */
+            font-size: var(--font-size-sm);
+        }
 
-.view-toggle {
-    border: 1px solid var(--border-color);
-    border-radius: var(--radius-sm); /* Smaller radius */
-    overflow: hidden;
-    background: var(--inputfield-color);
-    display: flex;
-}
+        .view-toggle {
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-sm);
+            /* Smaller radius */
+            overflow: hidden;
+            background: var(--inputfield-color);
+            display: flex;
+        }
 
-.view-btn {
-    padding: var(--spacing-xs) var(--spacing-sm); /* Reduced padding */
-    font-size: 0.875rem; /* Slightly smaller font */
-}
+        .view-btn {
+            padding: var(--spacing-xs) var(--spacing-sm);
+            /* Reduced padding */
+            font-size: 0.875rem;
+            /* Slightly smaller font */
+        }
 
-/* Responsive adjustments */
-@media (max-width: 1024px) {
-    .controls {
-        flex-direction: column; /* Stack vertically on smaller screens */
-        align-items: stretch; /* Full width for children */
-    }
+        /* Responsive adjustments */
+        @media (max-width: 1024px) {
+            .controls {
+                flex-direction: column;
+                /* Stack vertically on smaller screens */
+                align-items: stretch;
+                /* Full width for children */
+            }
 
-    .controls-right {
-        justify-content: flex-start;
-        margin-top: var(--spacing-sm); /* Reduced margin */
-    }
-}
+            .controls-right {
+                justify-content: flex-start;
+                margin-top: var(--spacing-sm);
+                /* Reduced margin */
+            }
+        }
 
-@media (max-width: 768px) {
-    .controls-left {
-        flex-direction: column;
-        gap: var(--spacing-xs); /* Tighter gap */
-    }
+        @media (max-width: 768px) {
+            .controls-left {
+                flex-direction: column;
+                gap: var(--spacing-xs);
+                /* Tighter gap */
+            }
 
-    .controls-right {
-        flex-direction: column;
-        gap: var(--spacing-xs); /* Tighter gap */
-    }
+            .controls-right {
+                flex-direction: column;
+                gap: var(--spacing-xs);
+                /* Tighter gap */
+            }
 
-    .search-container {
-        min-width: auto;
-        width: 100%; /* Full width on small screens */
-    }
+            .search-container {
+                min-width: auto;
+                width: 100%;
+                /* Full width on small screens */
+            }
 
-    .filter-select {
-        width: 100%; /* Full width for selects */
-    }
+            .filter-select {
+                width: 100%;
+                /* Full width for selects */
+            }
 
-    .btn {
-        width: 100%; /* Full width buttons */
-        justify-content: center;
-    }
+            .btn {
+                width: 100%;
+                /* Full width buttons */
+                justify-content: center;
+            }
 
-    .view-toggle {
-        width: 100%;
-        justify-content: space-between;
-    }
-}
+            .view-toggle {
+                width: 100%;
+                justify-content: space-between;
+            }
+        }
     </style>
 </head>
 

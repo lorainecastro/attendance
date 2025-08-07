@@ -305,11 +305,9 @@ ob_end_flush();
             padding: 20px;
         }
 
-        html,
-        body {
+        html, body {
             height: 100%;
             margin: 0;
-            /* Ensure no default margins interfere */
         }
 
         h1 {
@@ -520,6 +518,7 @@ ob_end_flush();
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
             gap: var(--spacing-lg);
+            gap: 15px;
         }
 
         .class-card {
@@ -531,7 +530,7 @@ ob_end_flush();
             border: 1px solid var(--border-color);
             position: relative;
             overflow: hidden;
-            /* width: 395px; */
+            /* width: 395px;  */
         }
 
         .class-card:hover {
@@ -1583,6 +1582,9 @@ ob_end_flush();
                         </button>
                         <button class="btn btn-sm btn-warning" onclick="editClass(${classItem.class_id})">
                             <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="btn btn-sm btn-success" onclick="openStudentModal(${classItem.id})">
+                            <i class="fas fa-users"></i>
                         </button>
                         <button class="btn btn-sm btn-danger" onclick="deleteClass(${classItem.class_id})">
                             <i class="fas fa-trash"></i>

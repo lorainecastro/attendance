@@ -305,7 +305,8 @@ ob_end_flush();
             padding: 20px;
         }
 
-        html, body {
+        html,
+        body {
             height: 100%;
             margin: 0;
         }

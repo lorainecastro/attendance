@@ -519,6 +519,7 @@ ob_end_flush();
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
             gap: var(--spacing-lg);
+            gap: 15px;
         }
 
         .class-card {

@@ -519,7 +519,6 @@ ob_end_flush();
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
             gap: var(--spacing-lg);
-            gap: 15px;
         }
 
         .class-card {
@@ -531,7 +530,6 @@ ob_end_flush();
             border: 1px solid var(--border-color);
             position: relative;
             overflow: hidden;
-            /* width: 395px;  */
         }
 
         .class-card:hover {

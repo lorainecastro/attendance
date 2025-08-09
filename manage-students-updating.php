@@ -65,7 +65,6 @@ if (!$user) {
             --transition-fast: 0.2s ease-in-out;
             --transition-normal: 0.3s ease-in-out;
             --transition-slow: 0.5s ease-in-out;
-            --button-padding: var(--spacing-sm) var(--spacing-lg); /* Standardized button padding */
         }
 
         * {
@@ -165,32 +164,37 @@ if (!$user) {
             padding: var(--spacing-md);
             box-shadow: var(--shadow-md);
             margin-bottom: var(--spacing-lg);
-            border: 1px solid var(--border-color);
-            display: grid;
-            grid-template-columns: 1fr;
+            display: flex;
+            flex-wrap: wrap;
             gap: var(--spacing-sm);
+            align-items: center;
+            border: 1px solid var(--border-color);
         }
 
-        .controls-row {
+        .controls-left {
+            display: flex;
+            flex-wrap: wrap;
+            gap: var(--spacing-sm);
+            flex: 1;
+            align-items: center;
+        }
+
+        .controls-right {
             display: flex;
             flex-wrap: wrap;
             gap: var(--spacing-sm);
             align-items: center;
         }
 
-        .controls-row:first-child {
-            flex: 1;
-        }
-
         .search-container {
             position: relative;
-            min-width: 250px;
+            min-width: 200px;
             flex: 1;
         }
 
         .search-input {
             width: 100%;
-            padding: var(--spacing-sm) var(--spacing-md) var(--spacing-sm) 2.5rem;
+            padding: var(--spacing-xs) var(--spacing-md) var(--spacing-xs) 2.5rem;
             border: 1px solid var(--border-color);
             border-radius: var(--radius-sm);
             font-size: var(--font-size-sm);
@@ -208,20 +212,20 @@ if (!$user) {
         .search-icon {
             position: absolute;
             left: var(--spacing-sm);
-            top: 50%;
+            top: 55%;
             transform: translateY(-50%);
             color: var(--grayfont-color);
-            font-size: var(--font-size-sm);
+            font-size: 0.875rem;
         }
 
         .filter-select {
-            padding: var(--spacing-sm) var(--spacing-md);
+            min-width: 140px;
+            padding: var(--spacing-xs) var(--spacing-sm);
             border: 1px solid var(--border-color);
             border-radius: var(--radius-md);
             font-size: var(--font-size-sm);
             background: var(--inputfield-color);
             transition: var(--transition-normal);
-            min-width: 150px;
         }
 
         .filter-select:focus {
@@ -232,7 +236,7 @@ if (!$user) {
         }
 
         .btn {
-            padding: var(--button-padding);
+            padding: var(--spacing-xs) var(--spacing-md);
             border: none;
             border-radius: var(--radius-md);
             font-size: var(--font-size-sm);
@@ -242,8 +246,7 @@ if (!$user) {
             display: inline-flex;
             align-items: center;
             gap: var(--spacing-xs);
-            min-width: 100px; /* Ensure consistent button width */
-            justify-content: center;
+            text-decoration: none;
         }
 
         .btn-primary {
@@ -277,9 +280,8 @@ if (!$user) {
         }
 
         .btn-sm {
-            padding: calc(var(--spacing-sm) * 0.75) calc(var(--spacing-md) * 0.75);
-            font-size: calc(var(--font-size-sm) * 0.9);
-            min-width: 60px;
+            padding: var(--spacing-xs) var(--spacing-sm);
+            font-size: 0.75rem;
         }
 
         .view-toggle {
@@ -291,18 +293,13 @@ if (!$user) {
         }
 
         .view-btn {
-            padding: var(--button-padding);
+            padding: var(--spacing-xs) var(--spacing-sm);
             background: transparent;
             border: none;
             cursor: pointer;
             transition: var(--transition-normal);
             color: var(--grayfont-color);
-            font-size: var(--font-size-sm);
-            min-width: 100px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: var(--spacing-xs);
+            font-size: 0.875rem;
         }
 
         .view-btn:hover {
@@ -484,7 +481,7 @@ if (!$user) {
         }
 
         .close-btn {
-            padding: var(--button-padding);
+            padding: var(--spacing-sm);
             background: none;
             border: none;
             font-size: 1.75rem;
@@ -598,7 +595,7 @@ if (!$user) {
         }
 
         .pagination-btn {
-            padding: var(--button-padding);
+            padding: var(--spacing-xs) var(--spacing-md);
             border: none;
             background: var(--inputfield-color);
             border-radius: var(--radius-md);
@@ -650,18 +647,14 @@ if (!$user) {
         }
 
         @media (max-width: 1024px) {
-            .controls-row {
+            .controls {
                 flex-direction: column;
                 align-items: stretch;
             }
 
-            .search-container {
-                min-width: auto;
-                width: 100%;
-            }
-
-            .filter-select {
-                width: 100%;
+            .controls-right {
+                justify-content: flex-start;
+                margin-top: var(--spacing-sm);
             }
 
             .stats-grid {
@@ -674,7 +667,12 @@ if (!$user) {
                 padding: var(--spacing-sm);
             }
 
-            .controls-row {
+            .controls-left {
+                flex-direction: column;
+                gap: var(--spacing-xs);
+            }
+
+            .controls-right {
                 flex-direction: column;
                 gap: var(--spacing-xs);
             }
@@ -693,8 +691,9 @@ if (!$user) {
                 justify-content: center;
             }
 
-            .view-btn {
-                flex: 1;
+            .view-toggle {
+                width: 100%;
+                justify-content: space-between;
             }
 
             .student-grid {
@@ -779,255 +778,401 @@ if (!$user) {
             }
         }
     </style>
+    
+     <style>
+        .controls {
+            background: var(--card-bg);
+            border-radius: var(--radius-md);
+            padding: var(--spacing-md);
+            box-shadow: var(--shadow-md);
+            margin-bottom: var(--spacing-lg);
+            display: flex;
+            flex-wrap: wrap;
+            gap: var(--spacing-sm);
+            align-items: center;
+            border: 1px solid var(--border-color);
+        }
+
+        .controls-left {
+            display: flex;
+            flex-wrap: wrap;
+            gap: var(--spacing-sm);
+            flex: 1;
+            align-items: center;
+        }
+
+        .controls-right {
+            display: flex;
+            flex-wrap: wrap;
+            gap: var(--spacing-sm);
+            align-items: center;
+        }
+
+        .search-container {
+            position: relative;
+            min-width: 200px;
+            flex: 1;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: var(--spacing-xs) var(--spacing-md) var(--spacing-xs) 2.5rem;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-sm);
+            font-size: var(--font-size-sm);
+            background: var(--inputfield-color);
+            transition: var(--transition-normal);
+        }
+
+        .search-icon {
+            position: absolute;
+            left: var(--spacing-sm);
+            top: 55%;
+            transform: translateY(-50%);
+            color: var(--grayfont-color);
+            font-size: 0.875rem;
+        }
+
+        .filter-select {
+            min-width: 180px;
+            padding: var(--spacing-xs) var(--spacing-sm);
+            width: 180px; 
+  height: 38px; 
+  box-sizing: border-box;
+        }
+
+        .btn {
+            padding: var(--spacing-xs) var(--spacing-md);
+            font-size: var(--font-size-sm);
+        }
+
+        .view-toggle {
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-sm);
+            overflow: hidden;
+            background: var(--inputfield-color);
+            display: flex;
+        }
+
+        .view-btn {
+            padding: var(--spacing-xs) var(--spacing-sm);
+            font-size: 0.875rem;
+        }
+
+        @media (max-width: 1024px) {
+            .controls {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .controls-right {
+                justify-content: flex-start;
+                margin-top: var(--spacing-sm);
+            }
+        }
+
+        @media (max-width: 768px) {
+            .controls-left {
+                flex-direction: column;
+                gap: var(--spacing-xs);
+            }
+
+            .controls-right {
+                flex-direction: column;
+                gap: var(--spacing-xs);
+            }
+
+            .search-container {
+                min-width: auto;
+                width: 100%;
+            }
+
+            .filter-select {
+                width: 100%;
+            }
+
+            .btn {
+                width: 100%;
+                justify-content: center;
+            }
+
+            .view-toggle {
+                width: 100%;
+                justify-content: space-between;
+            }
+        }
+
+        .preview-table-container {
+            margin-top: var(--spacing-lg);
+            background: var(--card-bg);
+            border-radius: var(--radius-lg);
+            padding: var(--spacing-lg);
+            box-shadow: var(--shadow-md);
+            border: 1px solid var(--border-color);
+        }
+
+        .preview-table-container h3 {
+            font-size: var(--font-size-lg);
+            font-weight: 600;
+            color: var(--blackfont-color);
+            margin-bottom: var(--spacing-md);
+        }
+    </style>
+
 </head>
 <body>
-    <h1>Student Management</h1>
+    <div class="container">
+        <h1>Student Management</h1>
 
-    <!-- Stats Grid -->
-    <div class="stats-grid">
-        <div class="card">
-            <div class="card-header">
-                <div>
-                    <div class="card-title">Total Students</div>
-                    <div class="card-value" id="total-students">0</div>
+        <!-- Stats Grid -->
+        <div class="stats-grid">
+            <div class="card">
+                <div class="card-header">
+                    <div>
+                        <div class="card-title">Total Students</div>
+                        <div class="card-value" id="total-students">0</div>
+                    </div>
+                    <div class="card-icon bg-purple">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 16 16">
+                            <path d="M7 14s-1 0-1-1 1-4 5-4 5 3 5 4-1 1-1 1H7zm4-6a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"/>
+                            <path fill-rule="evenodd" d="M5.216 14A2.238 2.238 0 0 1 5 13c0-1.355.68-2.75 1.936-3.72A6.325 6.325 0 0 0 5 9c-4 0-5 3-5 4s1 1 1 1h4.216z"/>
+                            <path d="M4.5 8a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z"/>
+                        </svg>
+                    </div>
                 </div>
-                <div class="card-icon bg-purple">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 16 16">
-                        <path d="M7 14s-1 0-1-1 1-4 5-4 5 3 5 4-1 1-1 1H7zm4-6a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"/>
-                        <path fill-rule="evenodd" d="M5.216 14A2.238 2.238 0 0 1 5 13c0-1.355.68-2.75 1.936-3.72A6.325 6.325 0 0 0 5 9c-4 0-5 3-5 4s1 1 1 1h4.216z"/>
-                        <path d="M4.5 8a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z"/>
-                    </svg>
+            </div>
+            <div class="card">
+                <div class="card-header">
+                    <div>
+                        <div class="card-title">Active Students</div>
+                        <div class="card-value" id="active-students">0</div>
+                    </div>
+                    <div class="card-icon bg-green">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 16 16">
+                            <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
+                            <path d="M10.97 4.97a.235.235 0 0 0-.02.022L7.477 9.417 5.384 7.323a.75.75 0 0 0-1.06 1.06L6.97 11.03a.75.75 0 0 0 1.079-.02l3.992-4.99a.75.75 0 0 0-1.071-1.05z"/>
+                        </svg>
+                    </div>
+                </div>
+            </div>
+            <div class="card">
+                <div class="card-header">
+                    <div>
+                        <div class="card-title">Average Attendance</div>
+                        <div class="card-value" id="average-attendance">0%</div>
+                    </div>
+                    <div class="card-icon bg-blue">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 16 16">
+                            <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
+                            <path d="M4 8a.5.5 0 0 1 .5-.5h7a.5.5 0 0 1 0 1h-7A.5.5 0 0 1 4 8z"/>
+                        </svg>
+                    </div>
+                </div>
+            </div>
+            <div class="card">
+                <div class="card-header">
+                    <div>
+                        <div class="card-title">Classes Enrolled</div>
+                        <div class="card-value" id="classes-enrolled">0</div>
+                    </div>
+                    <div class="card-icon bg-pink">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 16 16">
+                            <path d="M7 14s-1 0-1-1 1-4 5-4 5 3 5 4-1 1-1 1H7zm4-6a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"/>
+                            <path fill-rule="evenodd" d="M5.216 14A2.238 2.238 0 0 1 5 13c0-1.355.68-2.75 1.936-3.72A6.325 6.325 0 0 0 5 9c-4 0-5 3-5 4s1 1 1 1h4.216z"/>
+                            <path d="M4.5 8a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z"/>
+                        </svg>
+                    </div>
                 </div>
             </div>
         </div>
-        <div class="card">
-            <div class="card-header">
-                <div>
-                    <div class="card-title">Active Students</div>
-                    <div class="card-value" id="active-students">0</div>
-                </div>
-                <div class="card-icon bg-green">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 16 16">
-                        <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
-                        <path d="M10.97 4.97a.235.235 0 0 0-.02.022L7.477 9.417 5.384 7.323a.75.75 0 0 0-1.06 1.06L6.97 11.03a.75.75 0 0 0 1.079-.02l3.992-4.99a.75.75 0 0 0-1.071-1.05z"/>
-                    </svg>
-                </div>
-            </div>
-        </div>
-        <div class="card">
-            <div class="card-header">
-                <div>
-                    <div class="card-title">Average Attendance</div>
-                    <div class="card-value" id="average-attendance">0%</div>
-                </div>
-                <div class="card-icon bg-blue">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 16 16">
-                        <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
-                        <path d="M4 8a.5.5 0 0 1 .5-.5h7a.5.5 0 0 1 0 1h-7A.5.5 0 0 1 4 8z"/>
-                    </svg>
-                </div>
-            </div>
-        </div>
-        <div class="card">
-            <div class="card-header">
-                <div>
-                    <div class="card-title">Classes Enrolled</div>
-                    <div class="card-value" id="classes-enrolled">0</div>
-                </div>
-                <div class="card-icon bg-pink">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 16 16">
-                        <path d="M7 14s-1 0-1-1 1-4 5-4 5 3 5 4-1 1-1 1H7zm4-6a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"/>
-                        <path fill-rule="evenodd" d="M5.216 14A2.238 2.238 0 0 1 5 13c0-1.355.68-2.75 1.936-3.72A6.325 6.325 0 0 0 5 9c-4 0-5 3-5 4s1 1 1 1h4.216z"/>
-                        <path d="M4.5 8a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z"/>
-                    </svg>
-                </div>
-            </div>
-        </div>
-    </div>
 
-    <!-- Controls -->
-    <div class="controls">
-        <div class="controls-row">
-            <div class="search-container">
-                <input type="text" class="form-input search-input" id="searchInput" placeholder="Search by LRN or Name">
-                <i class="fas fa-search search-icon"></i>
-            </div>
-            <select class="form-select filter-select" id="genderFilter">
-                <option value="">All Genders</option>
-                <option value="Male">Male</option>
-                <option value="Female">Female</option>
-            </select>
-            <select class="form-select filter-select" id="gradeLevelFilter">
-                <option value="">All Grade Levels</option>
-                <!-- Populated dynamically -->
-            </select>
-            <select class="form-select filter-select" id="classFilter">
-                <option value="">All Subjects</option>
-                <!-- Populated dynamically -->
-            </select>
-        </div>
-        <div class="controls-row">
-            <select class="form-select filter-select" id="sectionFilter">
-                <option value="">All Sections</option>
-                <!-- Populated dynamically -->
-            </select>
-            <select class="form-select filter-select" id="attendanceRateFilter">
-                <option value="">All Attendance Rates</option>
-                <option value="90-100">90%+</option>
-                <option value="80-90">80-90%</option>
-                <option value="0-80">Below 80%</option>
-            </select>
-            <select class="form-select filter-select" id="sortSelect">
-                <option value="name-asc">Name (A-Z)</option>
-                <option value="name-desc">Name (Z-A)</option>
-                <option value="id">LRN</option>
-                <option value="attendance">Attendance Rate</option>
-            </select>
-            <div class="view-toggle">
-                <button class="view-btn" onclick="switchView('grid')">
-                    <i class="fas fa-th-large"></i> Grid
-                </button>
-                <button class="view-btn active" onclick="switchView('table')">
-                    <i class="fas fa-list"></i> Table
+        <!-- Controls -->
+        <div class="controls">
+            <div class="controls-left">
+                <div class="search-container">
+                    <input type="text" class="form-input search-input" id="searchInput" placeholder="Search by LRN or Name">
+                    <i class="fas fa-search search-icon"></i>
+                </div>
+                <select class="form-select filter-select" id="genderFilter">
+                    <option value="">All Genders</option>
+                    <option value="Male">Male</option>
+                    <option value="Female">Female</option>
+                </select>
+                <select class="form-select filter-select" id="gradeLevelFilter">
+                    <option value="">All Grade Levels</option>
+                    <!-- Populated dynamically -->
+                </select>
+                <select class="form-select filter-select" id="classFilter">
+                    <option value="">All Subjects</option>
+                    <!-- Populated dynamically -->
+                </select>
+                <select class="form-select filter-select" id="sectionFilter">
+                    <option value="">All Sections</option>
+                    <!-- Populated dynamically -->
+                </select>
+                <select class="form-select filter-select" id="attendanceRateFilter">
+                    <option value="">All Attendance Rates</option>
+                    <option value="90-100">90%+</option>
+                    <option value="80-90">80-90%</option>
+                    <option value="0-80">Below 80%</option>
+                </select>
+                <select class="form-select filter-select" id="sortSelect">
+                    <option value="name-asc">Name (A-Z)</option>
+                    <option value="name-desc">Name (Z-A)</option>
+                    <option value="id">LRN</option>
+                    <option value="attendance">Attendance Rate</option>
+                </select>
+                <button class="btn btn-secondary" onclick="clearFilters()">
+                    <i class="fas fa-times"></i> Clear Filters
                 </button>
             </div>
-            <button class="btn btn-primary" onclick="openProfileModal('add')">
-                <i class="fas fa-plus"></i> Add Student
+            <div class="controls-right">
+                <div class="view-toggle">
+                    <button class="view-btn active" onclick="switchView('table')">
+                        <i class="fas fa-list"></i>
+                    </button>
+                    <button class="view-btn" onclick="switchView('grid')">
+                        <i class="fas fa-th-large"></i>
+                    </button>
+                </div>
+                <button class="btn btn-primary" onclick="openProfileModal('add')">
+                    <i class="fas fa-plus"></i> Add Student
+                </button>
+                <!-- <button class="btn btn-secondary" onclick="clearFilters()">
+                    <i class="fas fa-times"></i> Clear Filters
+                </button> -->
+            </div>
+        </div>
+
+        <!-- Bulk Actions -->
+        <div class="bulk-actions" id="bulkActions">
+            <input type="checkbox" id="selectAll" onchange="toggleSelectAll()">
+            <label for="selectAll">Select All</label>
+            <span class="selected-count" id="selectedCount">0 selected</span>
+            <button class="btn btn-primary" id="bulkExportBtn" disabled onclick="bulkExport()">
+                <i class="fas fa-file-export"></i> Export Selected
             </button>
-            <button class="btn btn-secondary" onclick="clearFilters()">
-                <i class="fas fa-times"></i> Clear Filters
+            <button class="btn btn-danger" id="bulkDeleteBtn" disabled onclick="bulkDelete()">
+                <i class="fas fa-trash"></i> Delete Selected
             </button>
         </div>
-    </div>
 
-    <!-- Bulk Actions -->
-    <div class="bulk-actions" id="bulkActions">
-        <input type="checkbox" id="selectAll" onchange="toggleSelectAll()">
-        <label for="selectAll">Select All</label>
-        <span class="selected-count" id="selectedCount">0 selected</span>
-        <button class="btn btn-primary" id="bulkExportBtn" disabled onclick="bulkExport()">
-            <i class="fas fa-file-export"></i> Export Selected
-        </button>
-        <button class="btn btn-danger" id="bulkDeleteBtn" disabled onclick="bulkDelete()">
-            <i class="fas fa-trash"></i> Delete Selected
-        </button>
-    </div>
+        <!-- Student List -->
+        <div id="gridView" class="student-grid hidden"></div>
+        <div id="tableView" class="table-container">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th><input type="checkbox" id="tableSelectAll" onchange="toggleSelectAll()"></th>
+                        <th>Photo</th>
+                        <th>LRN</th>
+                        <th>Full Name</th>
+                        <th>Contact</th>
+                        <th>Grade Level</th>
+                        <th>Subject</th>
+                        <th>Section</th>
+                        <th>Attendance Rate</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+        <div class="pagination" id="pagination"></div>
 
-    <!-- Student List -->
-    <div id="gridView" class="student-grid hidden"></div>
-    <div id="tableView" class="table-container">
-        <table class="table">
-            <thead>
-                <tr>
-                    <th><input type="checkbox" id="tableSelectAll" onchange="toggleSelectAll()"></th>
-                    <th>Photo</th>
-                    <th>LRN</th>
-                    <th>Full Name</th>
-                    <th>Contact</th>
-                    <th>Grade Level</th>
-                    <th>Subject</th>
-                    <th>Section</th>
-                    <th>Attendance Rate</th>
-                    <th>Actions</th>
-                </tr>
-            </thead>
-            <tbody></tbody>
-        </table>
-    </div>
-    <div class="pagination" id="pagination"></div>
-
-    <!-- Student Profile Modal -->
-    <div class="modal" id="profile-modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2 class="modal-title" id="profile-modal-title">Student Profile</h2>
-                <button class="close-btn" onclick="closeModal('profile')">×</button>
+        <!-- Student Profile Modal -->
+        <div class="modal" id="profile-modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 class="modal-title" id="profile-modal-title">Student Profile</h2>
+                    <button class="close-btn" onclick="closeModal('profile')">×</button>
+                </div>
+                <form id="studentForm" class="modal-form">
+                    <div class="form-column">
+                        <div class="form-group">
+                            <label class="form-label">LRN</label>
+                            <input type="text" class="form-input" id="student-id" readonly>
+                        </div>
+                        <div class="form-group photo-upload">
+                            <div>
+                                <label class="form-label">Photo</label>
+                                <img id="student-photo-preview" src="https://via.placeholder.com/100" alt="Student Photo" class="photo-preview">
+                            </div>
+                            <div id="qr-container" class="qr-container" style="display: none;">
+                                <label class="form-label">QR Code</label>
+                                <div id="qr-code" class="qr-code"></div>
+                                <button type="button" class="btn btn-primary" onclick="printQRCode()">
+                                    <i class="fas fa-print"></i> Print
+                                </button>
+                            </div>
+                            <input type="file" id="student-photo" accept="image/*" onchange="previewPhoto(event)">
+                            <button type="button" class="btn btn-primary" onclick="document.getElementById('student-photo').click()">Change Photo</button>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">First Name</label>
+                            <input type="text" class="form-input" id="first-name" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Last Name</label>
+                            <input type="text" class="form-input" id="last-name" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Email (Optional)</label>
+                            <input type="email" class="form-input" id="email">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Gender</label>
+                            <select class="form-select" id="gender">
+                                <option value="Male">Male</option>
+                                <option value="Female">Female</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-column">
+                        <div class="form-group">
+                            <label class="form-label">Date of Birth</label>
+                            <input type="date" class="form-input" id="dob">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Grade Level</label>
+                            <select class="form-select" id="grade-level">
+                                <option value="">Select Grade Level</option>
+                                <!-- Populated dynamically -->
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Subject</label>
+                            <select class="form-select" id="class">
+                                <option value="">Select Subject</option>
+                                <!-- Populated dynamically -->
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Section</label>
+                            <select class="form-select" id="section">
+                                <option value="">Select Section</option>
+                                <!-- Populated dynamically -->
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Address</label>
+                            <input type="text" class="form-input" id="address">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Parent/Guardian Name</label>
+                            <input type="text" class="form-input" id="parent-name">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Emergency Contact</label>
+                            <input type="text" class="form-input" id="emergency-contact">
+                        </div>
+                    </div>
+                    <div class="form-actions">
+                        <button type="button" class="btn btn-secondary" onclick="closeModal('profile')">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Save Student</button>
+                    </div>
+                </form>
             </div>
-            <form id="studentForm" class="modal-form">
-                <div class="form-column">
-                    <div class="form-group">
-                        <label class="form-label">LRN</label>
-                        <input type="text" class="form-input" id="student-id" readonly>
-                    </div>
-                    <div class="form-group photo-upload">
-                        <div>
-                            <label class="form-label">Photo</label>
-                            <img id="student-photo-preview" src="https://via.placeholder.com/100" alt="Student Photo" class="photo-preview">
-                        </div>
-                        <div id="qr-container" class="qr-container" style="display: none;">
-                            <label class="form-label">QR Code</label>
-                            <div id="qr-code" class="qr-code"></div>
-                            <button type="button" class="btn btn-primary" onclick="printQRCode()">
-                                <i class="fas fa-print"></i> Print
-                            </button>
-                        </div>
-                        <input type="file" id="student-photo" accept="image/*" onchange="previewPhoto(event)">
-                        <button type="button" class="btn btn-primary" onclick="document.getElementById('student-photo').click()">Change Photo</button>
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">First Name</label>
-                        <input type="text" class="form-input" id="first-name" required>
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Last Name</label>
-                        <input type="text" class="form-input" id="last-name" required>
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Email (Optional)</label>
-                        <input type="email" class="form-input" id="email">
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Gender</label>
-                        <select class="form-select" id="gender">
-                            <option value="Male">Male</option>
-                            <option value="Female">Female</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="form-column">
-                    <div class="form-group">
-                        <label class="form-label">Date of Birth</label>
-                        <input type="date" class="form-input" id="dob">
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Grade Level</label>
-                        <select class="form-select" id="grade-level">
-                            <option value="">Select Grade Level</option>
-                            <!-- Populated dynamically -->
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Subject</label>
-                        <select class="form-select" id="class">
-                            <option value="">Select Subject</option>
-                            <!-- Populated dynamically -->
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Section</label>
-                        <select class="form-select" id="section">
-                            <option value="">Select Section</option>
-                            <!-- Populated dynamically -->
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Address</label>
-                        <input type="text" class="form-input" id="address">
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Parent/Guardian Name</label>
-                        <input type="text" class="form-input" id="parent-name">
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Emergency Contact</label>
-                        <input type="text" class="form-input" id="emergency-contact">
-                    </div>
-                </div>
-                <div class="form-actions">
-                    <button type="button" class="btn btn-secondary" onclick="closeModal('profile')">Cancel</button>
-                    <button type="submit" class="btn btn-primary">Save Student</button>
-                </div>
-            </form>
         </div>
     </div>
 

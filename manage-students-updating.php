@@ -67,14 +67,7 @@ if (!$user) {
             --transition-slow: 0.5s ease-in-out;
         }
 
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: var(--font-family);
-        }
-
-        * {
+        /* * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
@@ -83,7 +76,6 @@ if (!$user) {
 
         html {
             height: 100%;
-            /* Ensure html takes full viewport height */
             margin: 0;
         }
 
@@ -91,15 +83,23 @@ if (!$user) {
             background-color: var(--card-bg);
             color: var(--blackfont-color);
             height: 100%;
-            /* margin: 0; */
             padding: 20px;
-            /* Padding applies within the height */
             display: flex;
-            /* Use flex to manage content height */
             flex-direction: column;
-            /* Stack content vertically */
+        } */
+
+            * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
         }
 
+        body {
+            background-color: var(--card-bg);
+            color: var(--blackfont-color);
+            padding: 20px;
+        }
 
 
 

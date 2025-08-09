@@ -1965,7 +1965,6 @@ ob_end_flush();
                         <th>Subject & Section</th>
                         <th>Grade Level</th>
                         <th>Schedule</th>
-                        <th>Room</th>
                         <th>Students</th>
                         <th>Attendance %</th>
                         <th>Status</th>
@@ -2369,7 +2368,6 @@ ob_end_flush();
                 </td>
                 <td>${sanitizeHTML(classItem.grade_level)}</td>
                 <td>${sanitizeHTML(scheduleText)}</td>
-                <td>${sanitizeHTML(classItem.room || 'No room specified')}</td>
                 <td>${studentCount}</td>
                 <td>${attendancePercentage.toFixed(1)}%</td>
                 <td><span class="status-badge ${sanitizeHTML(classItem.status)}">${sanitizeHTML(classItem.status)}</span></td>
@@ -2904,6 +2902,10 @@ ob_end_flush();
                             <td>${sanitizeHTML(row[6] || '')}</td>
                             <td>${sanitizeHTML(row[7] || '')}</td>
                             <td>${sanitizeHTML(row[8] || '')}</td>
+                            <td>${sanitizeHTML(row[9] || '')}</td>
+                            <td>${sanitizeHTML(row[10] || '')}</td>
+                            <td>${sanitizeHTML(row[11] || '')}</td>
+                            <td>${sanitizeHTML(row[12] || '')}</td>
                         `;
                         tbody.appendChild(tr);
                     }

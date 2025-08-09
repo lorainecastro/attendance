@@ -375,7 +375,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     ob_clean();
     echo json_encode(fetchClassesForTeacher());
     exit;
-
 } elseif ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['action']) && $_GET['action'] === 'fetchStudents') {
     header('Content-Type: application/json');
     ob_clean();
@@ -464,29 +463,33 @@ ob_end_flush();
         }
 
         * {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-    font-family: var(--font-family);
-}
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: var(--font-family);
+        }
 
-html {
-    height: 100%; /* Ensure html takes full viewport height */
-    margin: 0;
-}
+        html {
+            height: 100%;
+            /* Ensure html takes full viewport height */
+            margin: 0;
+        }
 
-body {
-    background-color: var(--card-bg);
-    color: var(--blackfont-color);
-    height: 100%; 
-    /* margin: 0; */
-    padding: 20px; /* Padding applies within the height */
-    display: flex; /* Use flex to manage content height */
-    flex-direction: column; /* Stack content vertically */
-}
-        
+        body {
+            background-color: var(--card-bg);
+            color: var(--blackfont-color);
+            height: 100%;
+            /* margin: 0; */
+            padding: 20px;
+            /* Padding applies within the height */
+            display: flex;
+            /* Use flex to manage content height */
+            flex-direction: column;
+            /* Stack content vertically */
+        }
 
-        
+
+
 
         h1 {
             font-size: 24px;
@@ -1362,481 +1365,491 @@ body {
         }
 
         .preview-table-container {
-    margin-top: var(--spacing-lg);
-    background: var(--card-bg);
-    border-radius: var(--radius-lg);
-    padding: var(--spacing-lg);
-    box-shadow: var(--shadow-md);
-    border: 1px solid var(--border-color);
-}
+            margin-top: var(--spacing-lg);
+            background: var(--card-bg);
+            border-radius: var(--radius-lg);
+            padding: var(--spacing-lg);
+            box-shadow: var(--shadow-md);
+            border: 1px solid var(--border-color);
+        }
 
-.preview-table-container h3 {
-    font-size: var(--font-size-lg);
-    font-weight: 600;
-    color: var(--blackfont-color);
-    margin-bottom: var(--spacing-md);
-}
+        .preview-table-container h3 {
+            font-size: var(--font-size-lg);
+            font-weight: 600;
+            color: var(--blackfont-color);
+            margin-bottom: var(--spacing-md);
+        }
     </style>
 
-    
-<!-- CSS for Add New Class Modal -->
-<style>
-    /* Class Modal Specific Styles */
-    .class-modal {
-        display: none;
-        position: fixed;
-        z-index: 1000;
-        left: 0;
-        top: 0;
-        width: 100%;
-        height: 100%;
-        background: rgba(0, 0, 0, 0.6);
-        animation: fadeIn 0.3s ease;
-    }
 
-    .class-modal.show {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-    }
-
-    .class-modal-content {
-        background: var(--card-bg);
-        margin: 0 auto;
-        padding: 0;
-        border-radius: var(--radius-xl);
-        max-width: 1000px; /* Landscape layout */
-        width: 95%;
-        max-height: 90vh;
-        overflow-y: auto;
-        box-shadow: var(--shadow-lg);
-        animation: slideIn 0.3s ease;
-        border: 1px solid var(--border-color);
-        position: relative;
-    }
-
-    .class-modal-header {
-        padding: var(--spacing-xl) var(--spacing-2xl);
-        border-bottom: 1px solid var(--border-color);
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        background: var(--primary-gradient);
-        color: var(--whitefont-color);
-        border-top-left-radius: var(--radius-xl);
-        border-top-right-radius: var(--radius-xl);
-        position: sticky;
-        top: 0;
-        z-index: 10;
-    }
-
-    .class-modal-title {
-        margin: 0;
-        font-size: var(--font-size-2xl);
-        font-weight: 700;
-        color: var(--whitefont-color);
-        letter-spacing: 0.02em;
-    }
-
-    .class-close-btn {
-        background: none;
-        border: none;
-        font-size: 1.75rem;
-        cursor: pointer;
-        color: var(--whitefont-color);
-        padding: var(--spacing-sm);
-        width: 48px;
-        height: 48px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        border-radius: var(--radius-md);
-        transition: var(--transition-normal);
-    }
-
-    .class-close-btn:hover {
-        background: rgba(255, 255, 255, 0.2);
-        transform: scale(1.1);
-    }
-
-    .class-modal-form {
-        padding: var(--spacing-2xl);
-        display: grid;
-        grid-template-columns: 1fr 1fr; /* Two-column layout */
-        gap: var(--spacing-xl);
-        background: linear-gradient(180deg, #f9fafb, #ffffff);
-    }
-
-    .class-form-group {
-        margin-bottom: var(--spacing-lg);
-    }
-
-    .class-form-label {
-        display: block;
-        margin-bottom: var(--spacing-sm);
-        font-weight: 600;
-        color: var(--blackfont-color);
-        font-size: var(--font-size-base);
-        letter-spacing: 0.01em;
-    }
-
-    .class-form-input,
-    .class-form-select {
-        padding: var(--spacing-md) var(--spacing-lg);
-        border: 1px solid var(--border-color);
-        border-radius: var(--radius-md);
-        font-size: var(--font-size-sm);
-        background: var(--inputfield-color);
-        transition: var(--transition-normal);
-        width: 100%;
-        box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.05);
-    }
-
-    .class-form-input:focus,
-    .class-form-select:focus {
-        outline: none;
-        border-color: var(--primary-blue);
-        background: var(--white);
-        box-shadow: 0 0 0 4px var(--primary-blue-light);
-    }
-
-    .class-form-input:disabled,
-    .class-form-select:disabled {
-        background: var(--light-gray);
-        opacity: 0.7;
-        cursor: not-allowed;
-    }
-
-    .class-schedule-inputs {
-        display: grid;
-        gap: var(--spacing-md);
-        background: var(--white);
-        padding: var(--spacing-md);
-        border-radius: var(--radius-md);
-        box-shadow: var(--shadow-sm);
-        border: 1px solid var(--border-color);
-    }
-
-    .class-schedule-day-input {
-        display: flex;
-        align-items: center;
-        gap: var(--spacing-sm);
-        padding: var(--spacing-sm);
-        border-radius: var(--radius-sm);
-        transition: var(--transition-normal);
-        background: var(--inputfield-color);
-    }
-
-    .class-schedule-day-input:hover {
-        background: var(--inputfieldhover-color);
-        box-shadow: var(--shadow-sm);
-    }
-
-    .class-schedule-day-input input[type="checkbox"] {
-        margin-right: var(--spacing-sm);
-        accent-color: var(--primary-blue);
-        width: 18px;
-        height: 18px;
-        cursor: pointer;
-    }
-
-    .class-schedule-day-input label {
-        min-width: 90px;
-        margin: 0;
-        font-weight: 500;
-        color: var(--blackfont-color);
-        font-size: var(--font-size-sm);
-    }
-
-    .class-schedule-day-input input[type="time"] {
-        padding: var(--spacing-xs) var(--spacing-sm);
-        border: 1px solid var(--border-color);
-        border-radius: var(--radius-md);
-        font-size: var(--font-size-sm);
-        background: var(--white);
-        transition: var(--transition-normal);
-        width: 100px;
-    }
-
-    .class-schedule-day-input input[type="time"]:focus {
-        outline: none;
-        border-color: var(--primary-blue);
-        box-shadow: 0 0 0 3px var(--primary-blue-light);
-    }
-
-    .class-schedule-day-input input[type="time"]:disabled {
-        background: var(--light-gray);
-        opacity: 0.7;
-        cursor: not-allowed;
-    }
-
-    .class-schedule-day-input span {
-        color: var(--grayfont-color);
-        font-size: var(--font-size-sm);
-        margin: 0 var(--spacing-xs);
-    }
-
-    .class-form-actions {
-        grid-column: 1 / -1; /* Span across both columns */
-        display: flex;
-        justify-content: flex-end;
-        gap: var(--spacing-md);
-        padding-top: var(--spacing-xl);
-        border-top: 1px solid var(--border-color);
-        background: var(--card-bg);
-    }
-
-    .class-modal .btn {
-        padding: var(--spacing-md) var(--spacing-xl);
-        font-size: var(--font-size-base);
-        font-weight: 600;
-        border-radius: var(--radius-md);
-        transition: var(--transition-normal);
-        cursor: pointer;
-        display: inline-flex;
-        align-items: center;
-        gap: var(--spacing-xs);
-    }
-
-    .class-modal .btn-primary {
-        background: var(--primary-gradient);
-        color: var(--whitefont-color);
-        box-shadow: var(--shadow-sm);
-    }
-
-    .class-modal .btn-primary:hover {
-        background: var(--primary-blue-hover);
-        transform: translateY(-2px);
-        box-shadow: var(--shadow-md);
-    }
-
-    .class-modal .btn-secondary {
-        background: var(--medium-gray);
-        color: var(--whitefont-color);
-        box-shadow: var(--shadow-sm);
-    }
-
-    .class-modal .btn-secondary:hover {
-        background: #4b5563;
-        transform: translateY(-2px);
-        box-shadow: var(--shadow-md);
-    }
-
-    @keyframes fadeIn {
-        from {
-            opacity: 0;
+    <!-- CSS for Add New Class Modal -->
+    <style>
+        /* Class Modal Specific Styles */
+        .class-modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            animation: fadeIn 0.3s ease;
         }
-        to {
-            opacity: 1;
-        }
-    }
 
-    @keyframes slideIn {
-        from {
-            transform: translateY(-20px);
-            opacity: 0;
+        .class-modal.show {
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
-        to {
-            transform: translateY(0);
-            opacity: 1;
-        }
-    }
 
-    @media (max-width: 768px) {
         .class-modal-content {
-            width: 98%;
-            max-height: 95vh;
+            background: var(--card-bg);
+            margin: 0 auto;
+            padding: 0;
+            border-radius: var(--radius-xl);
+            max-width: 1000px;
+            /* Landscape layout */
+            width: 95%;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: var(--shadow-lg);
+            animation: slideIn 0.3s ease;
+            border: 1px solid var(--border-color);
+            position: relative;
+        }
+
+        .class-modal-header {
+            padding: var(--spacing-xl) var(--spacing-2xl);
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: var(--primary-gradient);
+            color: var(--whitefont-color);
+            border-top-left-radius: var(--radius-xl);
+            border-top-right-radius: var(--radius-xl);
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        .class-modal-title {
+            margin: 0;
+            font-size: var(--font-size-2xl);
+            font-weight: 700;
+            color: var(--whitefont-color);
+            letter-spacing: 0.02em;
+        }
+
+        .class-close-btn {
+            background: none;
+            border: none;
+            font-size: 1.75rem;
+            cursor: pointer;
+            color: var(--whitefont-color);
+            padding: var(--spacing-sm);
+            width: 48px;
+            height: 48px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: var(--radius-md);
+            transition: var(--transition-normal);
+        }
+
+        .class-close-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: scale(1.1);
         }
 
         .class-modal-form {
-            grid-template-columns: 1fr; /* Stack columns on smaller screens */
-            padding: var(--spacing-lg);
+            padding: var(--spacing-2xl);
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            /* Two-column layout */
+            gap: var(--spacing-xl);
+            background: linear-gradient(180deg, #f9fafb, #ffffff);
+        }
+
+        .class-form-group {
+            margin-bottom: var(--spacing-lg);
+        }
+
+        .class-form-label {
+            display: block;
+            margin-bottom: var(--spacing-sm);
+            font-weight: 600;
+            color: var(--blackfont-color);
+            font-size: var(--font-size-base);
+            letter-spacing: 0.01em;
+        }
+
+        .class-form-input,
+        .class-form-select {
+            padding: var(--spacing-md) var(--spacing-lg);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            font-size: var(--font-size-sm);
+            background: var(--inputfield-color);
+            transition: var(--transition-normal);
+            width: 100%;
+            box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.05);
+        }
+
+        .class-form-input:focus,
+        .class-form-select:focus {
+            outline: none;
+            border-color: var(--primary-blue);
+            background: var(--white);
+            box-shadow: 0 0 0 4px var(--primary-blue-light);
+        }
+
+        .class-form-input:disabled,
+        .class-form-select:disabled {
+            background: var(--light-gray);
+            opacity: 0.7;
+            cursor: not-allowed;
         }
 
         .class-schedule-inputs {
-            padding: var(--spacing-sm);
+            display: grid;
+            gap: var(--spacing-md);
+            background: var(--white);
+            padding: var(--spacing-md);
+            border-radius: var(--radius-md);
+            box-shadow: var(--shadow-sm);
+            border: 1px solid var(--border-color);
         }
 
         .class-schedule-day-input {
-            flex-direction: column;
-            align-items: flex-start;
-            gap: var(--spacing-xs);
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+            padding: var(--spacing-sm);
+            border-radius: var(--radius-sm);
+            transition: var(--transition-normal);
+            background: var(--inputfield-color);
+        }
+
+        .class-schedule-day-input:hover {
+            background: var(--inputfieldhover-color);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .class-schedule-day-input input[type="checkbox"] {
+            margin-right: var(--spacing-sm);
+            accent-color: var(--primary-blue);
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+
+        .class-schedule-day-input label {
+            min-width: 90px;
+            margin: 0;
+            font-weight: 500;
+            color: var(--blackfont-color);
+            font-size: var(--font-size-sm);
         }
 
         .class-schedule-day-input input[type="time"] {
-            width: 100%;
+            padding: var(--spacing-xs) var(--spacing-sm);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            font-size: var(--font-size-sm);
+            background: var(--white);
+            transition: var(--transition-normal);
+            width: 100px;
+        }
+
+        .class-schedule-day-input input[type="time"]:focus {
+            outline: none;
+            border-color: var(--primary-blue);
+            box-shadow: 0 0 0 3px var(--primary-blue-light);
+        }
+
+        .class-schedule-day-input input[type="time"]:disabled {
+            background: var(--light-gray);
+            opacity: 0.7;
+            cursor: not-allowed;
+        }
+
+        .class-schedule-day-input span {
+            color: var(--grayfont-color);
+            font-size: var(--font-size-sm);
+            margin: 0 var(--spacing-xs);
         }
 
         .class-form-actions {
-            flex-direction: column;
-            gap: var(--spacing-sm);
+            grid-column: 1 / -1;
+            /* Span across both columns */
+            display: flex;
+            justify-content: flex-end;
+            gap: var(--spacing-md);
+            padding-top: var(--spacing-xl);
+            border-top: 1px solid var(--border-color);
+            background: var(--card-bg);
         }
 
-        .class-form-actions .btn {
+        .class-modal .btn {
+            padding: var(--spacing-md) var(--spacing-xl);
+            font-size: var(--font-size-base);
+            font-weight: 600;
+            border-radius: var(--radius-md);
+            transition: var(--transition-normal);
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: var(--spacing-xs);
+        }
+
+        .class-modal .btn-primary {
+            background: var(--primary-gradient);
+            color: var(--whitefont-color);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .class-modal .btn-primary:hover {
+            background: var(--primary-blue-hover);
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-md);
+        }
+
+        .class-modal .btn-secondary {
+            background: var(--medium-gray);
+            color: var(--whitefont-color);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .class-modal .btn-secondary:hover {
+            background: #4b5563;
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-md);
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+
+            to {
+                opacity: 1;
+            }
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateY(-20px);
+                opacity: 0;
+            }
+
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .class-modal-content {
+                width: 98%;
+                max-height: 95vh;
+            }
+
+            .class-modal-form {
+                grid-template-columns: 1fr;
+                /* Stack columns on smaller screens */
+                padding: var(--spacing-lg);
+            }
+
+            .class-schedule-inputs {
+                padding: var(--spacing-sm);
+            }
+
+            .class-schedule-day-input {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: var(--spacing-xs);
+            }
+
+            .class-schedule-day-input input[type="time"] {
+                width: 100%;
+            }
+
+            .class-form-actions {
+                flex-direction: column;
+                gap: var(--spacing-sm);
+            }
+
+            .class-form-actions .btn {
+                width: 100%;
+                justify-content: center;
+            }
+        }
+    </style>
+
+    <style>
+        /* Adjusted styles for Class Details (View Modal) and Student List */
+        .detail-row {
+            display: flex;
+            align-items: center;
+            margin-bottom: var(--spacing-md);
+            padding: var(--spacing-sm) var(--spacing-md);
+            background: var(--inputfield-color);
+            border-radius: var(--radius-sm);
+            transition: var(--transition-normal);
+        }
+
+        .detail-row:hover {
+            background: var(--inputfieldhover-color);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .detail-row strong {
+            flex: 0 0 150px;
+            font-weight: 600;
+            color: var(--blackfont-color);
+            font-size: var(--font-size-sm);
+        }
+
+        .detail-row span,
+        .detail-row div {
+            flex: 1;
+            color: var(--grayfont-color);
+            font-size: var(--font-size-sm);
+        }
+
+        .schedule-details {
+            padding-left: var(--spacing-md);
+            color: var(--grayfont-color);
+        }
+
+        .schedule-details .schedule-item {
+            margin-bottom: var(--spacing-xs);
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-xs);
+        }
+
+        .schedule-details .schedule-item::before {
+            content: "•";
+            color: var(--primary-blue);
+            margin-right: var(--spacing-xs);
+        }
+
+        /* Adjusted Student List (Student Modal) */
+        .student-table-container {
+            margin-top: var(--spacing-xl);
+            padding: var(--spacing-xl);
+            background: var(--card-bg);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-md);
+            border: 1px solid var(--border-color);
             width: 100%;
-            justify-content: center;
+            max-width: 1200px;
+            /* Increased width for better readability */
+            margin-left: auto;
+            margin-right: auto;
         }
-    }
-</style>
 
-<style>
-    /* Adjusted styles for Class Details (View Modal) and Student List */
-.detail-row {
-    display: flex;
-    align-items: center;
-    margin-bottom: var(--spacing-md);
-    padding: var(--spacing-sm) var(--spacing-md);
-    background: var(--inputfield-color);
-    border-radius: var(--radius-sm);
-    transition: var(--transition-normal);
-}
+        .student-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+        }
 
-.detail-row:hover {
-    background: var(--inputfieldhover-color);
-    box-shadow: var(--shadow-sm);
-}
+        .student-table th,
+        .student-table td {
+            padding: var(--spacing-lg) var(--spacing-md);
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+            font-size: var(--font-size-sm);
+        }
 
-.detail-row strong {
-    flex: 0 0 150px;
-    font-weight: 600;
-    color: var(--blackfont-color);
-    font-size: var(--font-size-sm);
-}
+        .student-table th {
+            font-weight: 600;
+            color: var(--grayfont-color);
+            background: var(--inputfield-color);
+            position: sticky;
+            top: 0;
+            z-index: 5;
+        }
 
-.detail-row span, .detail-row div {
-    flex: 1;
-    color: var(--grayfont-color);
-    font-size: var(--font-size-sm);
-}
+        .student-table td {
+            color: var(--blackfont-color);
+        }
 
-.schedule-details {
-    padding-left: var(--spacing-md);
-    color: var(--grayfont-color);
-}
+        .student-table tr:hover {
+            background: var(--inputfieldhover-color);
+            transition: var(--transition-fast);
+        }
 
-.schedule-details .schedule-item {
-    margin-bottom: var(--spacing-xs);
-    display: flex;
-    align-items: center;
-    gap: var(--spacing-xs);
-}
+        .student-table img {
+            border-radius: var(--radius-sm);
+            object-fit: cover;
+        }
 
-.schedule-details .schedule-item::before {
-    content: "•";
-    color: var(--primary-blue);
-    margin-right: var(--spacing-xs);
-}
+        /* Responsive adjustments for student table */
+        @media (max-width: 1024px) {
+            .student-table-container {
+                max-width: 100%;
+                padding: var(--spacing-md);
+            }
 
-/* Adjusted Student List (Student Modal) */
-.student-table-container {
-    margin-top: var(--spacing-xl);
-    padding: var(--spacing-xl);
-    background: var(--card-bg);
-    border-radius: var(--radius-lg);
-    box-shadow: var(--shadow-md);
-    border: 1px solid var(--border-color);
-    width: 100%;
-    max-width: 1200px; /* Increased width for better readability */
-    margin-left: auto;
-    margin-right: auto;
-}
+            .student-table th,
+            .student-table td {
+                padding: var(--spacing-md) var(--spacing-sm);
+            }
 
-.student-table {
-    width: 100%;
-    border-collapse: separate;
-    border-spacing: 0;
-}
+            .student-table th:nth-child(n+8),
+            .student-table td:nth-child(n+8) {
+                display: none;
+            }
+        }
 
-.student-table th,
-.student-table td {
-    padding: var(--spacing-lg) var(--spacing-md);
-    text-align: left;
-    border-bottom: 1px solid var(--border-color);
-    font-size: var(--font-size-sm);
-}
+        @media (max-width: 768px) {
 
-.student-table th {
-    font-weight: 600;
-    color: var(--grayfont-color);
-    background: var(--inputfield-color);
-    position: sticky;
-    top: 0;
-    z-index: 5;
-}
+            .student-table th:nth-child(n+6),
+            .student-table td:nth-child(n+6) {
+                display: none;
+            }
 
-.student-table td {
-    color: var(--blackfont-color);
-}
+            .detail-row {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: var(--spacing-xs);
+                padding: var(--spacing-sm);
+            }
 
-.student-table tr:hover {
-    background: var(--inputfieldhover-color);
-    transition: var(--transition-fast);
-}
+            .detail-row strong {
+                flex: none;
+                width: 100%;
+            }
+        }
 
-.student-table img {
-    border-radius: var(--radius-sm);
-    object-fit: cover;
-}
+        @media (max-width: 576px) {
 
-/* Responsive adjustments for student table */
-@media (max-width: 1024px) {
-    .student-table-container {
-        max-width: 100%;
-        padding: var(--spacing-md);
-    }
+            .student-table th:nth-child(n+4),
+            .student-table td:nth-child(n+4) {
+                display: none;
+            }
 
-    .student-table th,
-    .student-table td {
-        padding: var(--spacing-md) var(--spacing-sm);
-    }
+            .student-table-container {
+                padding: var(--spacing-sm);
+            }
 
-    .student-table th:nth-child(n+8),
-    .student-table td:nth-child(n+8) {
-        display: none;
-    }
-}
+            .student-table th,
+            .student-table td {
+                padding: var(--spacing-sm) var(--spacing-xs);
+                font-size: 0.75rem;
+            }
 
-@media (max-width: 768px) {
-    .student-table th:nth-child(n+6),
-    .student-table td:nth-child(n+6) {
-        display: none;
-    }
+            .detail-row {
+                padding: var(--spacing-xs);
+            }
+        }
+    </style>
 
-    .detail-row {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: var(--spacing-xs);
-        padding: var(--spacing-sm);
-    }
-
-    .detail-row strong {
-        flex: none;
-        width: 100%;
-    }
-}
-
-@media (max-width: 576px) {
-    .student-table th:nth-child(n+4),
-    .student-table td:nth-child(n+4) {
-        display: none;
-    }
-
-    .student-table-container {
-        padding: var(--spacing-sm);
-    }
-
-    .student-table th,
-    .student-table td {
-        padding: var(--spacing-sm) var(--spacing-xs);
-        font-size: 0.75rem;
-    }
-
-    .detail-row {
-        padding: var(--spacing-xs);
-    }
-}
-</style>
-    
 </head>
 
 <body>
@@ -1971,109 +1984,109 @@ body {
     </div>
 
     <!-- HTML for Add New Class Modal -->
-<div id="classModal" class="class-modal">
-    <div class="class-modal-content">
-        <div class="class-modal-header">
-            <h2 class="class-modal-title" id="modalTitle">Add New Class</h2>
-            <button class="class-close-btn" onclick="closeModal()">×</button>
-        </div>
-        <form id="classForm" class="class-modal-form">
-            <!-- First Column: Class Details -->
-            <div class="class-form-column">
-                <div class="class-form-group">
-                    <label class="class-form-label" for="classCode">Subject Code</label>
-                    <input type="text" class="class-form-input" id="classCode" required placeholder="e.g., MATH-101-A">
-                </div>
-                <div class="class-form-group">
-                    <label class="class-form-label" for="sectionName">Section Name</label>
-                    <input type="text" class="class-form-input" id="sectionName" required placeholder="e.g., Section A, Diamond, Einstein">
-                </div>
-                <div class="class-form-group">
-                    <label class="class-form-label" for="subject">Subject</label>
-                    <input type="text" class="class-form-input" id="subject" required placeholder="e.g., Mathematics, Science, English">
-                </div>
-                <div class="class-form-group">
-                    <label class="class-form-label" for="gradeLevel">Grade Level</label>
-                    <select class="class-form-select" id="gradeLevel" required>
-                        <option value="">Select Grade</option>
-                        <option value="Grade 7">Grade 7</option>
-                        <option value="Grade 8">Grade 8</option>
-                        <option value="Grade 9">Grade 9</option>
-                        <option value="Grade 10">Grade 10</option>
-                        <option value="Grade 11">Grade 11</option>
-                        <option value="Grade 12">Grade 12</option>
-                    </select>
-                </div>
-                <div class="class-form-group">
-                    <label class="class-form-label" for="room">Room</label>
-                    <input type="text" class="class-form-input" id="room" placeholder="e.g., Room 201, Lab 1">
-                </div>
-                <div class="class-form-group">
-                    <label class="class-form-label" for="status">Status</label>
-                    <select class="class-form-select" id="status" required>
-                        <option value="">Select Status</option>
-                        <option value="active">Active</option>
-                        <option value="inactive">Inactive</option>
-                    </select>
-                </div>
+    <div id="classModal" class="class-modal">
+        <div class="class-modal-content">
+            <div class="class-modal-header">
+                <h2 class="class-modal-title" id="modalTitle">Add New Class</h2>
+                <button class="class-close-btn" onclick="closeModal()">×</button>
             </div>
-            <!-- Second Column: Schedule -->
-            <div class="class-form-column">
-                <div class="class-form-group">
-                    <label class="class-form-label">Schedule</label>
-                    <div class="class-schedule-inputs">
-                        <div class="class-schedule-day-input">
-                            <input type="checkbox" id="monday" name="scheduleDays">
-                            <label for="monday">Monday</label>
-                            <input type="time" id="mondayStart" name="mondayStart" disabled>
-                            <span>to</span>
-                            <input type="time" id="mondayEnd" name="mondayEnd" disabled>
-                        </div>
-                        <div class="class-schedule-day-input">
-                            <input type="checkbox" id="tuesday" name="scheduleDays">
-                            <label for="tuesday">Tuesday</label>
-                            <input type="time" id="tuesdayStart" name="tuesdayStart" disabled>
-                            <span>to</span>
-                            <input type="time" id="tuesdayEnd" name="tuesdayEnd" disabled>
-                        </div>
-                        <div class="class-schedule-day-input">
-                            <input type="checkbox" id="wednesday" name="scheduleDays">
-                            <label for="wednesday">Wednesday</label>
-                            <input type="time" id="wednesdayStart" name="wednesdayStart" disabled>
-                            <span>to</span>
-                            <input type="time" id="wednesdayEnd" name="wednesdayEnd" disabled>
-                        </div>
-                        <div class="class-schedule-day-input">
-                            <input type="checkbox" id="thursday" name="scheduleDays">
-                            <label for="thursday">Thursday</label>
-                            <input type="time" id="thursdayStart" name="thursdayStart" disabled>
-                            <span>to</span>
-                            <input type="time" id="thursdayEnd" name="thursdayEnd" disabled>
-                        </div>
-                        <div class="class-schedule-day-input">
-                            <input type="checkbox" id="friday" name="scheduleDays">
-                            <label for="friday">Friday</label>
-                            <input type="time" id="fridayStart" name="fridayStart" disabled>
-                            <span>to</span>
-                            <input type="time" id="fridayEnd" name="fridayEnd" disabled>
-                        </div>
-                        <div class="class-schedule-day-input">
-                            <input type="checkbox" id="saturday" name="scheduleDays">
-                            <label for="saturday">Saturday</label>
-                            <input type="time" id="saturdayStart" name="saturdayStart" disabled>
-                            <span>to</span>
-                            <input type="time" id="saturdayEnd" name="saturdayEnd" disabled>
+            <form id="classForm" class="class-modal-form">
+                <!-- First Column: Class Details -->
+                <div class="class-form-column">
+                    <div class="class-form-group">
+                        <label class="class-form-label" for="classCode">Subject Code</label>
+                        <input type="text" class="class-form-input" id="classCode" required placeholder="e.g., MATH-101-A">
+                    </div>
+                    <div class="class-form-group">
+                        <label class="class-form-label" for="sectionName">Section Name</label>
+                        <input type="text" class="class-form-input" id="sectionName" required placeholder="e.g., Section A, Diamond, Einstein">
+                    </div>
+                    <div class="class-form-group">
+                        <label class="class-form-label" for="subject">Subject</label>
+                        <input type="text" class="class-form-input" id="subject" required placeholder="e.g., Mathematics, Science, English">
+                    </div>
+                    <div class="class-form-group">
+                        <label class="class-form-label" for="gradeLevel">Grade Level</label>
+                        <select class="class-form-select" id="gradeLevel" required>
+                            <option value="">Select Grade</option>
+                            <option value="Grade 7">Grade 7</option>
+                            <option value="Grade 8">Grade 8</option>
+                            <option value="Grade 9">Grade 9</option>
+                            <option value="Grade 10">Grade 10</option>
+                            <option value="Grade 11">Grade 11</option>
+                            <option value="Grade 12">Grade 12</option>
+                        </select>
+                    </div>
+                    <div class="class-form-group">
+                        <label class="class-form-label" for="room">Room</label>
+                        <input type="text" class="class-form-input" id="room" placeholder="e.g., Room 201, Lab 1">
+                    </div>
+                    <div class="class-form-group">
+                        <label class="class-form-label" for="status">Status</label>
+                        <select class="class-form-select" id="status" required>
+                            <option value="">Select Status</option>
+                            <option value="active">Active</option>
+                            <option value="inactive">Inactive</option>
+                        </select>
+                    </div>
+                </div>
+                <!-- Second Column: Schedule -->
+                <div class="class-form-column">
+                    <div class="class-form-group">
+                        <label class="class-form-label">Schedule</label>
+                        <div class="class-schedule-inputs">
+                            <div class="class-schedule-day-input">
+                                <input type="checkbox" id="monday" name="scheduleDays">
+                                <label for="monday">Monday</label>
+                                <input type="time" id="mondayStart" name="mondayStart" disabled>
+                                <span>to</span>
+                                <input type="time" id="mondayEnd" name="mondayEnd" disabled>
+                            </div>
+                            <div class="class-schedule-day-input">
+                                <input type="checkbox" id="tuesday" name="scheduleDays">
+                                <label for="tuesday">Tuesday</label>
+                                <input type="time" id="tuesdayStart" name="tuesdayStart" disabled>
+                                <span>to</span>
+                                <input type="time" id="tuesdayEnd" name="tuesdayEnd" disabled>
+                            </div>
+                            <div class="class-schedule-day-input">
+                                <input type="checkbox" id="wednesday" name="scheduleDays">
+                                <label for="wednesday">Wednesday</label>
+                                <input type="time" id="wednesdayStart" name="wednesdayStart" disabled>
+                                <span>to</span>
+                                <input type="time" id="wednesdayEnd" name="wednesdayEnd" disabled>
+                            </div>
+                            <div class="class-schedule-day-input">
+                                <input type="checkbox" id="thursday" name="scheduleDays">
+                                <label for="thursday">Thursday</label>
+                                <input type="time" id="thursdayStart" name="thursdayStart" disabled>
+                                <span>to</span>
+                                <input type="time" id="thursdayEnd" name="thursdayEnd" disabled>
+                            </div>
+                            <div class="class-schedule-day-input">
+                                <input type="checkbox" id="friday" name="scheduleDays">
+                                <label for="friday">Friday</label>
+                                <input type="time" id="fridayStart" name="fridayStart" disabled>
+                                <span>to</span>
+                                <input type="time" id="fridayEnd" name="fridayEnd" disabled>
+                            </div>
+                            <div class="class-schedule-day-input">
+                                <input type="checkbox" id="saturday" name="scheduleDays">
+                                <label for="saturday">Saturday</label>
+                                <input type="time" id="saturdayStart" name="saturdayStart" disabled>
+                                <span>to</span>
+                                <input type="time" id="saturdayEnd" name="saturdayEnd" disabled>
+                            </div>
                         </div>
                     </div>
                 </div>
-            </div>
-            <div class="class-form-actions">
-                <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
-                <button type="submit" class="btn btn-primary">Save Class</button>
-            </div>
-        </form>
+                <div class="class-form-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Class</button>
+                </div>
+            </form>
+        </div>
     </div>
-</div>
 
 
     <div id="viewModal" class="modal">
@@ -2103,63 +2116,63 @@ body {
                     <button class="btn btn-success" onclick="importStudents()">Import</button>
                 </div>
                 <div id="studentModal" class="modal">
-    <div class="modal-content">
-        <div class="modal-header">
-            <h2 class="modal-title">Student List</h2>
-            <button class="close-btn" onclick="closeStudentModal()">×</button>
-        </div>
-        <div class="p-6">
-            <div class="import-section">
-                <input type="file" id="importFile" accept=".xlsx, .xls">
-                <button class="btn btn-success" onclick="importStudents()">Import</button>
-            </div>
-            <div class="preview-table-container" id="previewTableContainer" style="display: none;">
-                <h3>Preview</h3>
-                <table class="student-table" id="previewTable">
-                    <thead>
-                        <tr>
-                            <th>First Name</th>
-                            <th>Last Name</th>
-                            <th>Email</th>
-                            <th>Gender</th>
-                            <th>DOB</th>
-                            <th>Grade Level</th>
-                            <th>Address</th>
-                            <th>Parent Name</th>
-                            <th>Emergency Contact</th>
-                        </tr>
-                    </thead>
-                    <tbody></tbody>
-                </table>
-            </div>
-            <div class="student-table-container">
-                <table class="student-table" id="studentTable">
-                    <thead>
-                        <tr>
-                            <th>LRN</th>
-                            <th>First Name</th>
-                            <th>Last Name</th>
-                            <th>Email</th>
-                            <th>Gender</th>
-                            <th>DOB</th>
-                            <th>Grade Level</th>
-                            <th>Address</th>
-                            <th>Parent Name</th>
-                            <th>Emergency Contact</th>
-                            <th>Photo</th>
-                            <th>Date Added</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody></tbody>
-                </table>
-            </div>
-        </div>
-        <div class="form-actions">
-            <button type="button" class="btn btn-secondary" onclick="closeStudentModal()">Close</button>
-        </div>
-    </div>
-</div>
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h2 class="modal-title">Student List</h2>
+                            <button class="close-btn" onclick="closeStudentModal()">×</button>
+                        </div>
+                        <div class="p-6">
+                            <div class="import-section">
+                                <input type="file" id="importFile" accept=".xlsx, .xls">
+                                <button class="btn btn-success" onclick="importStudents()">Import</button>
+                            </div>
+                            <div class="preview-table-container" id="previewTableContainer" style="display: none;">
+                                <h3>Preview</h3>
+                                <table class="student-table" id="previewTable">
+                                    <thead>
+                                        <tr>
+                                            <th>First Name</th>
+                                            <th>Last Name</th>
+                                            <th>Email</th>
+                                            <th>Gender</th>
+                                            <th>DOB</th>
+                                            <th>Grade Level</th>
+                                            <th>Address</th>
+                                            <th>Parent Name</th>
+                                            <th>Emergency Contact</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody></tbody>
+                                </table>
+                            </div>
+                            <div class="student-table-container">
+                                <table class="student-table" id="studentTable">
+                                    <thead>
+                                        <tr>
+                                            <th>LRN</th>
+                                            <th>First Name</th>
+                                            <th>Last Name</th>
+                                            <th>Email</th>
+                                            <th>Gender</th>
+                                            <th>DOB</th>
+                                            <th>Grade Level</th>
+                                            <th>Address</th>
+                                            <th>Parent Name</th>
+                                            <th>Emergency Contact</th>
+                                            <th>Photo</th>
+                                            <th>Date Added</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody></tbody>
+                                </table>
+                            </div>
+                        </div>
+                        <div class="form-actions">
+                            <button type="button" class="btn btn-secondary" onclick="closeStudentModal()">Close</button>
+                        </div>
+                    </div>
+                </div>
                 <div class="student-table-container">
                     <table class="student-table" id="studentTable">
                         <thead>
@@ -2694,7 +2707,7 @@ body {
             const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
             days.forEach(day => {
                 const checkbox = document.getElementById(day);
-                                const startInput = document.getElementById(day + 'Start');
+                const startInput = document.getElementById(day + 'Start');
                 const endInput = document.getElementById(day + 'End');
 
                 if (checkbox && startInput && endInput) {
@@ -2734,49 +2747,50 @@ body {
         }
 
         function openStudentModal(classId) {
-    const studentModal = document.getElementById('studentModal');
-    if (studentModal) {
-        studentModal.dataset.classId = classId; // Store classId in modal dataset
-        studentModal.classList.add('show');
-    }
-    fetchStudents(classId);
-}
+            const studentModal = document.getElementById('studentModal');
+            if (studentModal) {
+                studentModal.dataset.classId = classId; // Store classId in modal dataset
+                studentModal.classList.add('show');
+            }
+            fetchStudents(classId);
+        }
 
         function closeStudentModal() {
-    const studentModal = document.getElementById('studentModal');
-    const previewTableContainer = document.getElementById('previewTableContainer');
-    const importFile = document.getElementById('importFile');
-    if (studentModal) studentModal.classList.remove('show');
-    if (previewTableContainer) previewTableContainer.style.display = 'none';
-    if (importFile) importFile.value = ''; // Clear the file input
-    document.querySelector('#previewTable tbody').innerHTML = ''; // Clear the preview table
-}
+            const studentModal = document.getElementById('studentModal');
+            const previewTableContainer = document.getElementById('previewTableContainer');
+            const importFile = document.getElementById('importFile');
+            if (studentModal) studentModal.classList.remove('show');
+            if (previewTableContainer) previewTableContainer.style.display = 'none';
+            if (importFile) importFile.value = ''; // Clear the file input
+            document.querySelector('#previewTable tbody').innerHTML = ''; // Clear the preview table
+        }
 
         function fetchStudents(classId) {
-    fetch(`manage-classes.php?action=fetchStudents&classId=${classId}`, {
-        headers: {
-            'X-Requested-With': 'XMLHttpRequest' // Explicitly mark as AJAX
+            fetch(`manage-classes.php?action=fetchStudents&classId=${classId}`, {
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest' // Explicitly mark as AJAX
+                    }
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok: ' + response.statusText);
+                    }
+                    return response.json();
+                })
+                .then(result => {
+                    if (result.success) {
+                        renderStudentTable(result.data, classId);
+                    } else {
+                        console.error('Error fetching students:', result.error);
+                        alert('Failed to fetch students: ' + result.error);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error fetching students:', error);
+                    alert('Error fetching students: ' + error.message);
+                });
         }
-    })
-    .then(response => {
-        if (!response.ok) {
-            throw new Error('Network response was not ok: ' + response.statusText);
-        }
-        return response.json();
-    })
-    .then(result => {
-        if (result.success) {
-            renderStudentTable(result.data, classId);
-        } else {
-            console.error('Error fetching students:', result.error);
-            alert('Failed to fetch students: ' + result.error);
-        }
-    })
-    .catch(error => {
-        console.error('Error fetching students:', error);
-        alert('Error fetching students: ' + error.message);
-    });
-}
+
         function renderStudentTable(students, classId) {
             const tbody = document.querySelector('#studentTable tbody');
             if (!tbody) return;
@@ -2844,36 +2858,40 @@ body {
         }
 
         document.getElementById('importFile').addEventListener('change', function(event) {
-    const file = event.target.files[0];
-    if (!file) {
-        document.getElementById('previewTableContainer').style.display = 'none';
-        return;
-    }
-
-    const reader = new FileReader();
-    reader.onload = function(e) {
-        try {
-            const data = new Uint8Array(e.target.result);
-            const workbook = XLSX.read(data, { type: 'array' });
-            const firstSheet = workbook.SheetNames[0];
-            const worksheet = workbook.Sheets[firstSheet];
-            const rows = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
-
-            // Skip the header row and render the data
-            const tbody = document.querySelector('#previewTable tbody');
-            tbody.innerHTML = '';
-
-            if (rows.length <= 1) { // Only header or empty
+            const file = event.target.files[0];
+            if (!file) {
                 document.getElementById('previewTableContainer').style.display = 'none';
-                alert('The selected Excel file is empty or contains only headers.');
                 return;
             }
 
-            // Render rows (skip header)
-            rows.slice(1).forEach(row => {
-                if (row.length >= 9) { // Ensure row has enough columns
-                    const tr = document.createElement('tr');
-                    tr.innerHTML = `
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, {
+                        type: 'array'
+                    });
+                    const firstSheet = workbook.SheetNames[0];
+                    const worksheet = workbook.Sheets[firstSheet];
+                    const rows = XLSX.utils.sheet_to_json(worksheet, {
+                        header: 1
+                    });
+
+                    // Skip the header row and render the data
+                    const tbody = document.querySelector('#previewTable tbody');
+                    tbody.innerHTML = '';
+
+                    if (rows.length <= 1) { // Only header or empty
+                        document.getElementById('previewTableContainer').style.display = 'none';
+                        alert('The selected Excel file is empty or contains only headers.');
+                        return;
+                    }
+
+                    // Render rows (skip header)
+                    rows.slice(1).forEach(row => {
+                        if (row.length >= 9) { // Ensure row has enough columns
+                            const tr = document.createElement('tr');
+                            tr.innerHTML = `
                         <td>${sanitizeHTML(row[0] || '')}</td>
                         <td>${sanitizeHTML(row[1] || '')}</td>
                         <td>${sanitizeHTML(row[2] || '')}</td>
@@ -2884,59 +2902,59 @@ body {
                         <td>${sanitizeHTML(row[7] || '')}</td>
                         <td>${sanitizeHTML(row[8] || '')}</td>
                     `;
-                    tbody.appendChild(tr);
-                }
-            });
+                            tbody.appendChild(tr);
+                        }
+                    });
 
-            document.getElementById('previewTableContainer').style.display = 'block';
-        } catch (error) {
-            console.error('Error reading Excel file:', error);
-            alert('Error reading Excel file: ' + error.message);
-            document.getElementById('previewTableContainer').style.display = 'none';
-        }
-    };
-    reader.readAsArrayBuffer(file);
-});
+                    document.getElementById('previewTableContainer').style.display = 'block';
+                } catch (error) {
+                    console.error('Error reading Excel file:', error);
+                    alert('Error reading Excel file: ' + error.message);
+                    document.getElementById('previewTableContainer').style.display = 'none';
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        });
 
         function importStudents() {
-    const fileInput = document.getElementById('importFile');
-    const file = fileInput.files[0];
-    if (!file) {
-        alert('Please select a file to import.');
-        return;
-    }
-
-    const formData = new FormData();
-    formData.append('action', 'importStudents');
-    formData.append('classId', document.querySelector('#studentModal').dataset.classId || '0');
-    formData.append('file', file);
-
-    fetch('manage-classes.php', {
-            method: 'POST',
-            body: formData
-        })
-        .then(response => {
-            if (!response.ok) {
-                throw new Error('Network response was not ok: ' + response.statusText);
+            const fileInput = document.getElementById('importFile');
+            const file = fileInput.files[0];
+            if (!file) {
+                alert('Please select a file to import.');
+                return;
             }
-            return response.json();
-        })
-        .then(data => {
-            if (data.success) {
-                fetchStudents(document.querySelector('#studentModal').dataset.classId);
-                document.getElementById('previewTableContainer').style.display = 'none';
-                document.getElementById('importFile').value = ''; // Clear file input
-                document.querySelector('#previewTable tbody').innerHTML = ''; // Clear preview
-                alert('Students imported successfully!');
-            } else {
-                alert('Failed to import students: ' + (data.error || 'Unknown error'));
-            }
-        })
-        .catch(error => {
-            console.error('Error importing students:', error);
-            alert('Error importing students: ' + error.message);
-        });
-}
+
+            const formData = new FormData();
+            formData.append('action', 'importStudents');
+            formData.append('classId', document.querySelector('#studentModal').dataset.classId || '0');
+            formData.append('file', file);
+
+            fetch('manage-classes.php', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok: ' + response.statusText);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.success) {
+                        fetchStudents(document.querySelector('#studentModal').dataset.classId);
+                        document.getElementById('previewTableContainer').style.display = 'none';
+                        document.getElementById('importFile').value = ''; // Clear file input
+                        document.querySelector('#previewTable tbody').innerHTML = ''; // Clear preview
+                        alert('Students imported successfully!');
+                    } else {
+                        alert('Failed to import students: ' + (data.error || 'Unknown error'));
+                    }
+                })
+                .catch(error => {
+                    console.error('Error importing students:', error);
+                    alert('Error importing students: ' + error.message);
+                });
+        }
 
         function toggleSelectAll() {
             const selectAll = document.getElementById('selectAll');

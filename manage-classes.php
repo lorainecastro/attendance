@@ -1916,15 +1916,10 @@ ob_end_flush();
                     <input type="text" class="form-input search-input" placeholder="Search classes..." id="searchInput">
                     <i class="fas fa-search search-icon"></i>
                 </div>
-                <select class="form-select filter-select" id="gradeFilter">
-                    <option value="">All Grade Levels</option>
-                    <option value="Grade 7">Grade 7</option>
-                    <option value="Grade 8">Grade 8</option>
-                    <option value="Grade 9">Grade 9</option>
-                    <option value="Grade 10">Grade 10</option>
-                    <option value="Grade 11">Grade 11</option>
-                    <option value="Grade 12">Grade 12</option>
-                </select>
+<select class="form-select filter-select" id="gradeFilter">
+    <option value="">All Grade Levels</option>
+    <!-- Options will be dynamically populated by JavaScript -->
+</select>
                 <select class="form-select filter-select" id="statusFilter">
                     <option value="">All Status</option>
                     <option value="active">Active</option>
@@ -2419,30 +2414,43 @@ ob_end_flush();
     }
 
     function populateFilters() {
-        const subjectFilter = document.getElementById('subjectFilter');
-        const sectionFilter = document.getElementById('sectionFilter');
-        if (!subjectFilter || !sectionFilter) return;
+    const subjectFilter = document.getElementById('subjectFilter');
+    const sectionFilter = document.getElementById('sectionFilter');
+    const gradeFilter = document.getElementById('gradeFilter');
+    if (!subjectFilter || !sectionFilter || !gradeFilter) return;
 
-        const subjects = [...new Set(classes.map(c => c.subject_name).filter(s => s))];
-        const sections = [...new Set(classes.map(c => c.section_name).filter(s => s))];
+    // Get unique subjects, sections, and grade levels
+    const subjects = [...new Set(classes.map(c => c.subject_name).filter(s => s))];
+    const sections = [...new Set(classes.map(c => c.section_name).filter(s => s))];
+    const gradeLevels = [...new Set(classes.map(c => c.grade_level).filter(g => g))];
 
-        subjectFilter.innerHTML = '<option value="">All Subjects</option>';
-        sectionFilter.innerHTML = '<option value="">All Sections</option>';
+    // Populate subject filter
+    subjectFilter.innerHTML = '<option value="">All Subjects</option>';
+    subjects.forEach(subject => {
+        const option = document.createElement('option');
+        option.value = subject;
+        option.textContent = subject;
+        subjectFilter.appendChild(option);
+    });
 
-        subjects.forEach(subject => {
-            const option = document.createElement('option');
-            option.value = subject;
-            option.textContent = subject;
-            subjectFilter.appendChild(option);
-        });
+    // Populate section filter
+    sectionFilter.innerHTML = '<option value="">All Sections</option>';
+    sections.forEach(section => {
+        const option = document.createElement('option');
+        option.value = section;
+        option.textContent = section;
+        sectionFilter.appendChild(option);
+    });
 
-        sections.forEach(section => {
-            const option = document.createElement('option');
-            option.value = section;
-            option.textContent = section;
-            sectionFilter.appendChild(option);
-        });
-    }
+    // Populate grade level filter
+    gradeFilter.innerHTML = '<option value="">All Grade Levels</option>';
+    gradeLevels.forEach(grade => {
+        const option = document.createElement('option');
+        option.value = grade;
+        option.textContent = grade;
+        gradeFilter.appendChild(option);
+    });
+}
 
     function handleSearch() {
         renderClasses();

@@ -2012,7 +2012,7 @@ ob_end_flush();
                         </select>
                     </div>
                     <div class="class-form-group">
-                        <label class="class-form-label" for="room">Room</label>
+                        <label class="class-form-label" for="room">Room (Optional)</label>
                         <input type="text" class="class-form-input" id="room" placeholder="e.g., Room 201, Lab 1">
                     </div>
                     <div class="class-form-group">

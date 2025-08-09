@@ -74,21 +74,41 @@ if (!$user) {
             font-family: var(--font-family);
         }
 
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: var(--font-family);
+        }
+
+        html {
+            height: 100%;
+            /* Ensure html takes full viewport height */
+            margin: 0;
+        }
+
         body {
             background-color: var(--card-bg);
             color: var(--blackfont-color);
-            padding: var(--spacing-md);
+            height: 100%;
+            /* margin: 0; */
+            padding: 20px;
+            /* Padding applies within the height */
             display: flex;
+            /* Use flex to manage content height */
             flex-direction: column;
-            min-height: 100vh;
+            /* Stack content vertically */
         }
 
+
+
+
         h1 {
-            font-size: var(--font-size-2xl);
-            margin-bottom: var(--spacing-lg);
+            font-size: 24px;
+            margin-bottom: 20px;
             color: var(--blackfont-color);
             position: relative;
-            padding-bottom: var(--spacing-sm);
+            padding-bottom: 10px;
         }
 
         h1:after {
@@ -105,17 +125,16 @@ if (!$user) {
         .stats-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: var(--spacing-lg);
-            margin-bottom: var(--spacing-lg);
+            gap: 20px;
+            margin-bottom: 20px;
         }
 
         .card {
             background: var(--card-bg);
-            border-radius: var(--radius-lg);
-            padding: var(--spacing-lg);
+            border-radius: 12px;
+            padding: 20px;
             box-shadow: var(--shadow-md);
             transition: var(--transition-normal);
-            border: 1px solid var(--border-color);
         }
 
         .card:hover {
@@ -127,13 +146,13 @@ if (!$user) {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: var(--spacing-md);
+            margin-bottom: 15px;
         }
 
         .card-icon {
             width: 48px;
             height: 48px;
-            border-radius: var(--radius-md);
+            border-radius: 12px;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -141,19 +160,22 @@ if (!$user) {
             color: var(--whitefont-color);
         }
 
-        .bg-purple { background: var(--primary-gradient); }
-        .bg-green { background: linear-gradient(135deg, #10b981, #34d399); }
-        .bg-blue { background: linear-gradient(135deg, #3b82f6, #60a5fa); }
-        .bg-pink { background: var(--secondary-gradient); }
+        .bg-purple {
+            background: var(--primary-gradient);
+        }
+
+        .bg-green {
+            background: linear-gradient(135deg, #10b981, #34d399);
+        }
 
         .card-title {
-            font-size: var(--font-size-sm);
+            font-size: 14px;
             color: var(--grayfont-color);
-            margin-bottom: var(--spacing-xs);
+            margin-bottom: 5px;
         }
 
         .card-value {
-            font-size: var(--font-size-xl);
+            font-size: 24px;
             font-weight: 700;
             color: var(--blackfont-color);
         }
@@ -802,11 +824,47 @@ if (!$user) {
         }
 
         .controls-right {
-            display: flex;
-            flex-wrap: wrap;
-            gap: var(--spacing-sm);
-            align-items: center;
-        }
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--spacing-sm);
+    align-items: center;
+}
+
+.controls-right .btn.btn-primary {
+    order: 1; /* Places "Add Student" button first */
+}
+
+.controls-right .view-toggle {
+    order: 2; /* Places view-toggle after the button */
+}
+
+
+.controls-right .btn.btn-primary,
+.controls-right .view-btn {
+    height: 36px; /* Uniform height */
+    padding: 8px 12px; /* Consistent padding */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.controls-right .view-btn {
+    width: 38px; /* Square buttons for view toggle */
+    padding: 0; /* Remove padding for icon-only buttons */
+}
+
+.controls-right .view-btn.active {
+    background: #007bff;
+    color: white;
+    border-color: #007bff;
+}
+
+.controls-right {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start; /* Aligns items to the start */
+    gap: var(--spacing-sm);
+}
 
         .search-container {
             position: relative;
@@ -919,6 +977,31 @@ if (!$user) {
         }
     </style>
 
+    <style>
+        .student-actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: nowrap; /* Prevents wrapping to new lines */
+    align-items: center; /* Vertically centers the buttons */
+}
+
+.student-actions .btn {
+    white-space: nowrap; /* Prevents text wrapping within buttons */
+    min-width: auto; /* Allows buttons to size naturally */
+}
+
+.table td .actions {
+    display: flex;
+    gap: 10px; /* Consistent spacing between buttons */
+    align-items: center; /* Vertically centers the buttons */
+}
+
+.table td .actions .btn {
+    white-space: nowrap; /* Prevents text wrapping within buttons */
+    padding: var(--spacing-xs) var(--spacing-sm); /* Adjusted padding for consistency */
+}
+    </style>
+
 </head>
 <body>
     <div class="container">
@@ -1027,21 +1110,18 @@ if (!$user) {
                 </button>
             </div>
             <div class="controls-right">
-                <div class="view-toggle">
-                    <button class="view-btn active" onclick="switchView('table')">
-                        <i class="fas fa-list"></i>
-                    </button>
-                    <button class="view-btn" onclick="switchView('grid')">
-                        <i class="fas fa-th-large"></i>
-                    </button>
-                </div>
-                <button class="btn btn-primary" onclick="openProfileModal('add')">
-                    <i class="fas fa-plus"></i> Add Student
-                </button>
-                <!-- <button class="btn btn-secondary" onclick="clearFilters()">
-                    <i class="fas fa-times"></i> Clear Filters
-                </button> -->
-            </div>
+    <button class="btn btn-primary" onclick="openProfileModal('add')">
+        <i class="fas fa-plus"></i> Add Student
+    </button>
+    <div class="view-toggle">
+        <button class="view-btn active" onclick="switchView('table')">
+            <i class="fas fa-list"></i>
+        </button>
+        <button class="view-btn" onclick="switchView('grid')">
+            <i class="fas fa-th-large"></i>
+        </button>
+    </div>
+</div>
         </div>
 
         <!-- Bulk Actions -->
@@ -1067,7 +1147,6 @@ if (!$user) {
                         <th>Photo</th>
                         <th>LRN</th>
                         <th>Full Name</th>
-                        <th>Contact</th>
                         <th>Grade Level</th>
                         <th>Subject</th>
                         <th>Section</th>
@@ -1483,7 +1562,6 @@ if (!$user) {
                     <td><img src="${student.photo}" alt="${student.fullName}" style="width: 40px; height: 40px; border-radius: var(--radius-sm);"></td>
                     <td>${student.id}</td>
                     <td>${student.fullName}</td>
-                    <td>${student.emergencyContact}</td>
                     <td>${student.gradeLevel}</td>
                     <td>${student.class}</td>
                     <td>${student.section}</td>

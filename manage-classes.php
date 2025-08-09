@@ -150,10 +150,11 @@ function fetchClassesForTeacher()
 {
     $pdo = getDBConnection();
     try {
-        // Fetch class details without schedule
+        // Fetch class details with student count
         $stmt = $pdo->prepare("
             SELECT c.class_id, c.section_name, c.grade_level, c.room, c.attendance_percentage, c.status,
-                   s.subject_code, s.subject_name
+                   s.subject_code, s.subject_name,
+                   (SELECT COUNT(*) FROM class_students cs WHERE cs.class_id = c.class_id AND cs.is_enrolled = 1) as student_count
             FROM classes c
             JOIN subjects s ON c.subject_id = s.subject_id
             WHERE c.teacher_id = ?
@@ -249,8 +250,8 @@ function importStudents($class_id, $filePath)
         foreach ($rows as $row) {
             if (count($row) >= 9) { // Ensure row has 9 columns: lrn to emergency_contact
                 $stmt = $pdo->prepare("
-                    INSERT INTO students (lrn, first_name, last_name, email, gender, dob, grade_level, address, parent_name, emergency_contact, photo, date_added)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURDATE())
+                    INSERT INTO students (lrn, last_name, first_name, middle_name, email, gender, dob, grade_level, address, parent_name, emergency_contact, photo, qr_code, date_added)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURDATE())
                     ON DUPLICATE KEY UPDATE 
                         first_name = VALUES(first_name),
                         last_name = VALUES(last_name),
@@ -264,16 +265,18 @@ function importStudents($class_id, $filePath)
                 ");
                 $stmt->execute([
                     $row[0],  // lrn
-                    $row[1],  // first_name
-                    $row[2],  // last_name
-                    $row[3],  // email
-                    $row[4],  // gender
-                    $row[5],  // dob
-                    $row[6],  // grade_level
-                    $row[7],  // address
-                    $row[8],  // parent_name
-                    $row[9], // emergency_contact
-                    $row[10]   // photo
+                    $row[1],  // last_name
+                    $row[2],  // first_name
+                    $row[3],  // middle_name
+                    $row[4],  // email
+                    $row[5],  // gender
+                    $row[6],  // dob
+                    $row[7],  // grade_level
+                    $row[8],  // address
+                    $row[9],  // parent_name
+                    $row[10], // emergency_contact
+                    $row[11],   // photo
+                    $row[12]   // qr code
                 ]);
                 $lrn = $row[0]; // Use the lrn from the Excel row
 
@@ -385,18 +388,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     }
     echo json_encode(fetchStudentsForClass($class_id));
     exit;
-} elseif ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['action']) && $_GET['action'] === 'fetchClasses') {
-    header('Content-Type: application/json');
-    ob_clean();
-    echo json_encode(fetchClassesForTeacher());
-    exit;
 }
 
 // For non-AJAX requests, render the HTML page
 ob_end_flush();
-
-// For non-AJAX requests, render the HTML page
-// ob_end_flush();
 ?>
 
 <!DOCTYPE html>
@@ -427,7 +422,7 @@ ob_end_flush();
             --blackfont-color: #1e293b;
             --whitefont-color: #ffffff;
             --grayfont-color: #64748b;
-            --primary-gradient: linear-gradient(135deg, #3b82f6, #8b5cf6);
+            --primary-gradient: linear-gradient(135deg, #3b82f6, #3b82f6);
             --secondary-gradient: linear-gradient(135deg, #ec4899, #f472b6);
             --inputfield-color: #f8fafc;
             --inputfieldhover-color: #f1f5f9;
@@ -874,7 +869,7 @@ ob_end_flush();
             margin: 0 auto;
             padding: 0;
             border-radius: var(--radius-xl);
-            max-width: 1000px;
+            max-width: 1100px;
             width: 90%;
             max-height: 90vh;
             overflow-y: auto;
@@ -1967,7 +1962,7 @@ ob_end_flush();
                         <th>
                             <input type="checkbox" id="selectAll" onchange="toggleSelectAll()">
                         </th>
-                        <th>Subject Code & Section</th>
+                        <th>Subject & Section</th>
                         <th>Grade Level</th>
                         <th>Schedule</th>
                         <th>Room</th>
@@ -2160,6 +2155,7 @@ ob_end_flush();
                                             <th>Parent Name</th>
                                             <th>Emergency Contact</th>
                                             <th>Photo</th>
+                                            <th>QR Code</th>
                                             <th>Date Added</th>
                                             <th>Actions</th>
                                         </tr>
@@ -2188,6 +2184,7 @@ ob_end_flush();
                                 <th>Parent Name</th>
                                 <th>Emergency Contact</th>
                                 <th>Photo</th>
+                                <th>QR Code</th>
                                 <th>Date Added</th>
                                 <th>Actions</th>
                             </tr>
@@ -2204,765 +2201,770 @@ ob_end_flush();
     </div>
 
     <script>
-        let classes = [];
-        let currentView = 'grid';
-        let editingClassId = null;
+    let classes = [];
+    let currentView = 'grid';
+    let editingClassId = null;
 
-        document.addEventListener('DOMContentLoaded', function() {
-            fetchClasses();
-            setupEventListeners();
-            clearScheduleInputs();
+    document.addEventListener('DOMContentLoaded', function() {
+        fetchClasses();
+        setupEventListeners();
+        clearScheduleInputs();
+    });
+
+    function fetchClasses() {
+        fetch('manage-classes.php?action=fetchClasses')
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok: ' + response.statusText);
+                }
+                return response.json();
+            })
+            .then(result => {
+                if (result.success) {
+                    classes = result.data || [];
+                    updateStats();
+                    renderClasses();
+                    populateFilters();
+                } else {
+                    console.error('Error fetching classes:', result.error);
+                    alert('Failed to fetch classes: ' + result.error);
+                }
+            })
+            .catch(error => {
+                console.error('Error fetching classes:', error);
+                alert('Error fetching classes: ' + error.message);
+            });
+    }
+
+    function updateStats() {
+        const totalClasses = classes.length;
+        const activeClasses = classes.filter(c => c.status === 'active').length;
+        const totalStudents = classes.reduce((sum, c) => sum + (parseInt(c.student_count) || 0), 0);
+        const averageAttendance = classes.length > 0 ? 
+            (classes.reduce((sum, c) => sum + (parseFloat(c.attendance_percentage) || 0), 0) / classes.length).toFixed(1) : 0;
+
+        document.getElementById('total-classes').textContent = totalClasses;
+        document.getElementById('active-classes').textContent = activeClasses;
+        document.getElementById('total-students').textContent = totalStudents;
+        document.getElementById('average-attendance').textContent = averageAttendance + '%';
+    }
+
+    function setupEventListeners() {
+        const searchInput = document.getElementById('searchInput');
+        const gradeFilter = document.getElementById('gradeFilter');
+        const statusFilter = document.getElementById('statusFilter');
+        const subjectFilter = document.getElementById('subjectFilter');
+        const sectionFilter = document.getElementById('sectionFilter');
+        const classForm = document.getElementById('classForm');
+
+        if (searchInput) searchInput.addEventListener('input', handleSearch);
+        if (gradeFilter) gradeFilter.addEventListener('change', handleFilter);
+        if (statusFilter) statusFilter.addEventListener('change', handleFilter);
+        if (subjectFilter) subjectFilter.addEventListener('change', handleFilter);
+        if (sectionFilter) sectionFilter.addEventListener('change', handleFilter);
+        if (classForm) classForm.addEventListener('submit', handleFormSubmit);
+
+        const scheduleCheckboxes = document.querySelectorAll('input[name="scheduleDays"]');
+        scheduleCheckboxes.forEach(checkbox => {
+            checkbox.addEventListener('change', handleScheduleToggle);
         });
 
-        function fetchClasses() {
-            fetch('manage-classes.php?action=fetchClasses')
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error('Network response was not ok: ' + response.statusText);
-                    }
-                    return response.json();
-                })
-                .then(result => {
-                    if (result.success) {
-                        classes = result.data || [];
-                        updateStats();
-                        renderClasses();
-                        populateFilters();
-                    } else {
-                        console.error('Error fetching classes:', result.error);
-                        alert('Failed to fetch classes: ' + result.error);
-                    }
-                })
-                .catch(error => {
-                    console.error('Error fetching classes:', error);
-                    alert('Error fetching classes: ' + error.message);
-                });
-        }
-
-        function updateStats() {
-            const totalClasses = classes.length;
-            const activeClasses = classes.filter(c => c.status === 'active').length;
-
-            document.getElementById('total-classes').textContent = totalClasses;
-            document.getElementById('active-classes').textContent = activeClasses;
-        }
-
-        function setupEventListeners() {
-            const searchInput = document.getElementById('searchInput');
-            const gradeFilter = document.getElementById('gradeFilter');
-            const statusFilter = document.getElementById('statusFilter');
-            const subjectFilter = document.getElementById('subjectFilter');
-            const sectionFilter = document.getElementById('sectionFilter');
-            const classForm = document.getElementById('classForm');
-
-            if (searchInput) searchInput.addEventListener('input', handleSearch);
-            if (gradeFilter) gradeFilter.addEventListener('change', handleFilter);
-            if (statusFilter) statusFilter.addEventListener('change', handleFilter);
-            if (subjectFilter) subjectFilter.addEventListener('change', handleFilter);
-            if (sectionFilter) sectionFilter.addEventListener('change', handleFilter);
-            if (classForm) classForm.addEventListener('submit', handleFormSubmit);
-
-            const scheduleCheckboxes = document.querySelectorAll('input[name="scheduleDays"]');
-            scheduleCheckboxes.forEach(checkbox => {
-                checkbox.addEventListener('change', handleScheduleToggle);
-            });
-
-            window.addEventListener('click', function(event) {
-                const modals = document.querySelectorAll('.modal');
-                modals.forEach(modal => {
-                    if (event.target === modal) {
-                        modal.classList.remove('show');
-                    }
-                });
-            });
-        }
-
-        function renderClasses() {
-            updateStats();
-            if (currentView === 'grid') {
-                renderGridView();
-            } else {
-                renderTableView();
-            }
-        }
-
-        function renderGridView() {
-            const container = document.getElementById('gridView');
-            if (!container) return;
-
-            const filteredClasses = getFilteredClasses();
-            container.innerHTML = '';
-
-            if (filteredClasses.length === 0) {
-                container.innerHTML = '<div class="no-classes">No classes found</div>';
-                return;
-            }
-
-            filteredClasses.forEach(classItem => {
-                const scheduleText = formatSchedule(classItem.schedule);
-                const attendancePercentage = parseFloat(classItem.attendance_percentage) || 0;
-
-                const card = document.createElement('div');
-                card.className = 'class-card';
-                card.innerHTML = `
-                    <div class="class-header">
-                        <h3>${sanitizeHTML(classItem.subject_code)}</h3>
-                        <span class="status-badge ${sanitizeHTML(classItem.status)}">${sanitizeHTML(classItem.status)}</span>
-                    </div>
-                    <div class="class-info">
-                        <h4>${sanitizeHTML(classItem.section_name)}</h4>
-                        <p><i class="fas fa-book"></i> ${sanitizeHTML(classItem.subject_name)}</p>
-                        <p><i class="fas fa-graduation-cap"></i> ${sanitizeHTML(classItem.grade_level)}</p>
-                        <p><i class="fas fa-users"></i> 30 students</p>
-                        <p><i class="fas fa-percentage"></i> ${attendancePercentage.toFixed(1)}% attendance</p>
-                        <p><i class="fas fa-map-marker-alt"></i> ${sanitizeHTML(classItem.room || 'No room specified')}</p>
-                    </div>
-                    <div class="class-schedule">
-                        <h5>Schedule:</h5>
-                        ${scheduleText}
-                    </div>
-                    <div class="class-actions">
-                        <button class="btn btn-sm btn-info" onclick="viewClass(${classItem.class_id})">
-                            <i class="fas fa-eye"></i> View
-                        </button>
-                        <button class="btn btn-sm btn-warning" onclick="editClass(${classItem.class_id})">
-                            <i class="fas fa-edit"></i> Edit
-                        </button>
-                        <button class="btn btn-sm btn-success" onclick="openStudentModal(${classItem.class_id})">
-                            <i class="fas fa-users"></i> Students
-                        </button>
-                        <button class="btn btn-sm btn-danger" onclick="deleteClass(${classItem.class_id})">
-                            <i class="fas fa-trash"></i> Delete
-                        </button>
-                    </div>
-                `;
-                container.appendChild(card);
-            });
-        }
-
-        function renderTableView() {
-            const tbody = document.querySelector('#tableView tbody');
-            if (!tbody) return;
-
-            const filteredClasses = getFilteredClasses();
-            tbody.innerHTML = '';
-
-            if (filteredClasses.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="9" class="no-classes">No classes found</td></tr>';
-                return;
-            }
-
-            filteredClasses.forEach(classItem => {
-                const scheduleText = formatScheduleShort(classItem.schedule);
-                const attendancePercentage = parseFloat(classItem.attendance_percentage) || 0;
-
-                const row = document.createElement('tr');
-                row.innerHTML = `
-                    <td><input type="checkbox" class="row-checkbox" data-class-id="${classItem.class_id}"></td>
-                    <td>
-                        <strong>${sanitizeHTML(classItem.subject_code)}</strong><br>
-                        <small>${sanitizeHTML(classItem.section_name)}</small>
-                    </td>
-                    <td>${sanitizeHTML(classItem.grade_level)}</td>
-                    <td>${sanitizeHTML(scheduleText)}</td>
-                    <td>${sanitizeHTML(classItem.room || 'No room specified')}</td>
-                    <td>30</td>
-                    <td>${attendancePercentage.toFixed(1)}%</td>
-                    <td><span class="status-badge ${sanitizeHTML(classItem.status)}">${sanitizeHTML(classItem.status)}</span></td>
-                    <td class="actions">
-                        <button class="btn btn-sm btn-info" onclick="viewClass(${classItem.class_id})">
-                            <i class="fas fa-eye"></i>
-                        </button>
-                        <button class="btn btn-sm btn-warning" onclick="editClass(${classItem.class_id})">
-                            <i class="fas fa-edit"></i>
-                        </button>
-                        <button class="btn btn-sm btn-success" onclick="openStudentModal(${classItem.class_id})">
-                            <i class="fas fa-users"></i>
-                        </button>
-                        <button class="btn btn-sm btn-danger" onclick="deleteClass(${classItem.class_id})">
-                            <i class="fas fa-trash"></i>
-                        </button>
-                    </td>
-                `;
-                tbody.appendChild(row);
-            });
-        }
-
-        function getFilteredClasses() {
-            const searchInput = document.getElementById('searchInput');
-            const gradeFilter = document.getElementById('gradeFilter');
-            const statusFilter = document.getElementById('statusFilter');
-            const subjectFilter = document.getElementById('subjectFilter');
-            const sectionFilter = document.getElementById('sectionFilter');
-
-            const searchTerm = searchInput ? searchInput.value.toLowerCase() : '';
-            const gradeFilterValue = gradeFilter ? gradeFilter.value : '';
-            const statusFilterValue = statusFilter ? statusFilter.value : '';
-            const subjectFilterValue = subjectFilter ? subjectFilter.value : '';
-            const sectionFilterValue = sectionFilter ? sectionFilter.value : '';
-
-            return classes.filter(classItem => {
-                const matchesSearch = searchTerm === '' ||
-                    (classItem.subject_code && classItem.subject_code.toLowerCase().includes(searchTerm)) ||
-                    (classItem.section_name && classItem.section_name.toLowerCase().includes(searchTerm)) ||
-                    (classItem.subject_name && classItem.subject_name.toLowerCase().includes(searchTerm));
-
-                const matchesGrade = gradeFilterValue === '' || classItem.grade_level === gradeFilterValue;
-                const matchesStatus = statusFilterValue === '' || classItem.status === statusFilterValue;
-                const matchesSubject = subjectFilterValue === '' || classItem.subject_name === subjectFilterValue;
-                const matchesSection = sectionFilterValue === '' || classItem.section_name === sectionFilterValue;
-
-                return matchesSearch && matchesGrade && matchesStatus && matchesSubject && matchesSection;
-            });
-        }
-
-        function populateFilters() {
-            const subjectFilter = document.getElementById('subjectFilter');
-            const sectionFilter = document.getElementById('sectionFilter');
-            if (!subjectFilter || !sectionFilter) return;
-
-            const subjects = [...new Set(classes.map(c => c.subject_name).filter(s => s))];
-            const sections = [...new Set(classes.map(c => c.section_name).filter(s => s))];
-
-            subjectFilter.innerHTML = '<option value="">All Subjects</option>';
-            sectionFilter.innerHTML = '<option value="">All Sections</option>';
-
-            subjects.forEach(subject => {
-                const option = document.createElement('option');
-                option.value = subject;
-                option.textContent = subject;
-                subjectFilter.appendChild(option);
-            });
-
-            sections.forEach(section => {
-                const option = document.createElement('option');
-                option.value = section;
-                option.textContent = section;
-                sectionFilter.appendChild(option);
-            });
-        }
-
-        function handleSearch() {
-            renderClasses();
-        }
-
-        function handleFilter() {
-            renderClasses();
-        }
-
-        function switchView(view) {
-            currentView = view;
-
-            const viewButtons = document.querySelectorAll('.view-btn');
-            viewButtons.forEach(btn => btn.classList.remove('active'));
-            event.target.closest('.view-btn').classList.add('active');
-
-            const gridView = document.getElementById('gridView');
-            const tableView = document.getElementById('tableView');
-
-            if (gridView && tableView) {
-                if (view === 'grid') {
-                    gridView.classList.remove('hidden');
-                    tableView.classList.add('hidden');
-                } else {
-                    gridView.classList.add('hidden');
-                    tableView.classList.remove('hidden');
+        window.addEventListener('click', function(event) {
+            const modals = document.querySelectorAll('.modal');
+            modals.forEach(modal => {
+                if (event.target === modal) {
+                    modal.classList.remove('show');
                 }
-            }
-
-            renderClasses();
-        }
-
-        function openModal() {
-            editingClassId = null;
-            const modalTitle = document.getElementById('modalTitle');
-            const classForm = document.getElementById('classForm');
-            const classModal = document.getElementById('classModal');
-
-            if (modalTitle) modalTitle.textContent = 'Add New Class';
-            if (classForm) classForm.reset();
-            clearScheduleInputs();
-            if (classModal) classModal.classList.add('show');
-        }
-
-        function closeModal() {
-            const classModal = document.getElementById('classModal');
-            if (classModal) classModal.classList.remove('show');
-            editingClassId = null;
-        }
-
-        function editClass(classId) {
-            const classItem = classes.find(c => c.class_id === classId);
-            if (!classItem) return;
-
-            editingClassId = classId;
-            const modalTitle = document.getElementById('modalTitle');
-            if (modalTitle) modalTitle.textContent = 'Edit Class';
-
-            const fields = {
-                classCode: classItem.subject_code,
-                sectionName: classItem.section_name,
-                subject: classItem.subject_name,
-                gradeLevel: classItem.grade_level,
-                room: classItem.room || '',
-                status: classItem.status
-            };
-
-            Object.entries(fields).forEach(([id, value]) => {
-                const element = document.getElementById(id);
-                if (element) element.value = value;
             });
+        });
+    }
 
-            clearScheduleInputs();
-            if (classItem.schedule) {
-                Object.keys(classItem.schedule).forEach(day => {
-                    const checkbox = document.getElementById(day);
-                    const startInput = document.getElementById(day + 'Start');
-                    const endInput = document.getElementById(day + 'End');
+    function renderClasses() {
+        updateStats();
+        if (currentView === 'grid') {
+            renderGridView();
+        } else {
+            renderTableView();
+        }
+    }
 
-                    if (checkbox && startInput && endInput) {
-                        checkbox.checked = true;
-                        startInput.disabled = false;
-                        endInput.disabled = false;
-                        startInput.value = classItem.schedule[day].start || '';
-                        endInput.value = classItem.schedule[day].end || '';
-                    }
-                });
-            }
+    function renderGridView() {
+        const container = document.getElementById('gridView');
+        if (!container) return;
 
-            const classModal = document.getElementById('classModal');
-            if (classModal) classModal.classList.add('show');
+        const filteredClasses = getFilteredClasses();
+        container.innerHTML = '';
+
+        if (filteredClasses.length === 0) {
+            container.innerHTML = '<div class="no-classes">No classes found</div>';
+            return;
         }
 
-        function viewClass(classId) {
-            const classItem = classes.find(c => c.class_id === classId);
-            if (!classItem) return;
-
+        filteredClasses.forEach(classItem => {
             const scheduleText = formatSchedule(classItem.schedule);
             const attendancePercentage = parseFloat(classItem.attendance_percentage) || 0;
+            const studentCount = parseInt(classItem.student_count) || 0;
 
-            const content = document.getElementById('viewContent');
-            if (content) {
-                content.innerHTML = `
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div>
-                            <div class="detail-row">
-                                <strong>Subject Code:</strong> ${sanitizeHTML(classItem.subject_code)}
-                            </div>
-                            <div class="detail-row">
-                                <strong>Section Name:</strong> ${sanitizeHTML(classItem.section_name)}
-                            </div>
-                            <div class="detail-row">
-                                <strong>Subject:</strong> ${sanitizeHTML(classItem.subject_name)}
-                            </div>
-                            <div class="detail-row">
-                                <strong>Grade Level:</strong> ${sanitizeHTML(classItem.grade_level)}
-                            </div>
-                        </div>
-                        <div>
-                            <div class="detail-row">
-                                <strong>Room:</strong> ${sanitizeHTML(classItem.room || 'No room specified')}
-                            </div>
-                            <div class="detail-row">
-                                <strong>Attendance Percentage:</strong> ${attendancePercentage.toFixed(1)}%
-                            </div>
-                            <div class="detail-row">
-                                <strong>Status:</strong> <span class="status-badge ${sanitizeHTML(classItem.status)}">${sanitizeHTML(classItem.status)}</span>
-                            </div>
-                        </div>
-                        <div class="col-span-2">
-                            <div class="detail-row">
-                                <strong>Schedule:</strong>
-                                <div class="schedule-details">
-                                    ${scheduleText}
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                `;
+            const card = document.createElement('div');
+            card.className = 'class-card';
+            card.innerHTML = `
+                <div class="class-header">
+                    <h3>${sanitizeHTML(classItem.subject_code)}</h3>
+                    <span class="status-badge ${sanitizeHTML(classItem.status)}">${sanitizeHTML(classItem.status)}</span>
+                </div>
+                <div class="class-info">
+                    <h4>${sanitizeHTML(classItem.section_name)}</h4>
+                    <p><i class="fas fa-book"></i> ${sanitizeHTML(classItem.subject_name)}</p>
+                    <p><i class="fas fa-graduation-cap"></i> ${sanitizeHTML(classItem.grade_level)}</p>
+                    <p><i class="fas fa-map-marker-alt"></i> ${sanitizeHTML(classItem.room || 'No room specified')}</p>
+                    <p><i class="fas fa-users"></i> ${studentCount} students</p>
+                    <p><i class="fas fa-percentage"></i> ${attendancePercentage.toFixed(1)}% attendance</p>
+                </div>
+                <div class="class-schedule">
+                    <h5>Schedule:</h5>
+                    ${scheduleText}
+                </div>
+                <div class="class-actions">
+                    <button class="btn btn-sm btn-info" onclick="viewClass(${classItem.class_id})">
+                        <i class="fas fa-eye"></i> View
+                    </button>
+                    <button class="btn btn-sm btn-warning" onclick="editClass(${classItem.class_id})">
+                        <i class="fas fa-edit"></i> Edit
+                    </button>
+                    <button class="btn btn-sm btn-success" onclick="openStudentModal(${classItem.class_id})">
+                        <i class="fas fa-users"></i> Students
+                    </button>
+                    <button class="btn btn-sm btn-danger" onclick="deleteClass(${classItem.class_id})">
+                        <i class="fas fa-trash"></i> Delete
+                    </button>
+                </div>
+            `;
+            container.appendChild(card);
+        });
+    }
+
+    function renderTableView() {
+        const tbody = document.querySelector('#tableView tbody');
+        if (!tbody) return;
+
+        const filteredClasses = getFilteredClasses();
+        tbody.innerHTML = '';
+
+        if (filteredClasses.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="9" class="no-classes">No classes found</td></tr>';
+            return;
+        }
+
+        filteredClasses.forEach(classItem => {
+            const scheduleText = formatScheduleShort(classItem.schedule);
+            const attendancePercentage = parseFloat(classItem.attendance_percentage) || 0;
+            const studentCount = parseInt(classItem.student_count) || 0;
+
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td><input type="checkbox" class="row-checkbox" data-class-id="${classItem.class_id}"></td>
+                <td>
+                    <strong>${sanitizeHTML(classItem.subject_name)}</strong><br>
+                    <small>${sanitizeHTML(classItem.section_name)}</small>
+                </td>
+                <td>${sanitizeHTML(classItem.grade_level)}</td>
+                <td>${sanitizeHTML(scheduleText)}</td>
+                <td>${sanitizeHTML(classItem.room || 'No room specified')}</td>
+                <td>${studentCount}</td>
+                <td>${attendancePercentage.toFixed(1)}%</td>
+                <td><span class="status-badge ${sanitizeHTML(classItem.status)}">${sanitizeHTML(classItem.status)}</span></td>
+                <td class="actions">
+                    <button class="btn btn-sm btn-info" onclick="viewClass(${classItem.class_id})">
+                        <i class="fas fa-eye"></i>
+                    </button>
+                    <button class="btn btn-sm btn-warning" onclick="editClass(${classItem.class_id})">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button class="btn btn-sm btn-success" onclick="openStudentModal(${classItem.class_id})">
+                        <i class="fas fa-users"></i>
+                    </button>
+                    <button class="btn btn-sm btn-danger" onclick="deleteClass(${classItem.class_id})">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </td>
+            `;
+            tbody.appendChild(row);
+        });
+    }
+
+    function getFilteredClasses() {
+        const searchInput = document.getElementById('searchInput');
+        const gradeFilter = document.getElementById('gradeFilter');
+        const statusFilter = document.getElementById('statusFilter');
+        const subjectFilter = document.getElementById('subjectFilter');
+        const sectionFilter = document.getElementById('sectionFilter');
+
+        const searchTerm = searchInput ? searchInput.value.toLowerCase() : '';
+        const gradeFilterValue = gradeFilter ? gradeFilter.value : '';
+        const statusFilterValue = statusFilter ? statusFilter.value : '';
+        const subjectFilterValue = subjectFilter ? subjectFilter.value : '';
+        const sectionFilterValue = sectionFilter ? sectionFilter.value : '';
+
+        return classes.filter(classItem => {
+            const matchesSearch = searchTerm === '' ||
+                (classItem.subject_code && classItem.subject_code.toLowerCase().includes(searchTerm)) ||
+                (classItem.section_name && classItem.section_name.toLowerCase().includes(searchTerm)) ||
+                (classItem.subject_name && classItem.subject_name.toLowerCase().includes(searchTerm));
+
+            const matchesGrade = gradeFilterValue === '' || classItem.grade_level === gradeFilterValue;
+            const matchesStatus = statusFilterValue === '' || classItem.status === statusFilterValue;
+            const matchesSubject = subjectFilterValue === '' || classItem.subject_name === subjectFilterValue;
+            const matchesSection = sectionFilterValue === '' || classItem.section_name === sectionFilterValue;
+
+            return matchesSearch && matchesGrade && matchesStatus && matchesSubject && matchesSection;
+        });
+    }
+
+    function populateFilters() {
+        const subjectFilter = document.getElementById('subjectFilter');
+        const sectionFilter = document.getElementById('sectionFilter');
+        if (!subjectFilter || !sectionFilter) return;
+
+        const subjects = [...new Set(classes.map(c => c.subject_name).filter(s => s))];
+        const sections = [...new Set(classes.map(c => c.section_name).filter(s => s))];
+
+        subjectFilter.innerHTML = '<option value="">All Subjects</option>';
+        sectionFilter.innerHTML = '<option value="">All Sections</option>';
+
+        subjects.forEach(subject => {
+            const option = document.createElement('option');
+            option.value = subject;
+            option.textContent = subject;
+            subjectFilter.appendChild(option);
+        });
+
+        sections.forEach(section => {
+            const option = document.createElement('option');
+            option.value = section;
+            option.textContent = section;
+            sectionFilter.appendChild(option);
+        });
+    }
+
+    function handleSearch() {
+        renderClasses();
+    }
+
+    function handleFilter() {
+        renderClasses();
+    }
+
+    function switchView(view) {
+        currentView = view;
+
+        const viewButtons = document.querySelectorAll('.view-btn');
+        viewButtons.forEach(btn => btn.classList.remove('active'));
+        event.target.closest('.view-btn').classList.add('active');
+
+        const gridView = document.getElementById('gridView');
+        const tableView = document.getElementById('tableView');
+
+        if (gridView && tableView) {
+            if (view === 'grid') {
+                gridView.classList.remove('hidden');
+                tableView.classList.add('hidden');
+            } else {
+                gridView.classList.add('hidden');
+                tableView.classList.remove('hidden');
             }
-
-            const viewModal = document.getElementById('viewModal');
-            if (viewModal) viewModal.classList.add('show');
         }
 
-        function closeViewModal() {
-            const viewModal = document.getElementById('viewModal');
-            if (viewModal) viewModal.classList.remove('show');
-        }
+        renderClasses();
+    }
 
-        function deleteClass(classId) {
-            if (!confirm('Are you sure you want to delete this class?')) return;
+    function openModal() {
+        editingClassId = null;
+        const modalTitle = document.getElementById('modalTitle');
+        const classForm = document.getElementById('classForm');
+        const classModal = document.getElementById('classModal');
 
-            fetch('manage-classes.php', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded'
-                    },
-                    body: `action=deleteClass&classId=${classId}`
-                })
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error('Network response was not ok: ' + response.statusText);
-                    }
-                    return response.json();
-                })
-                .then(data => {
-                    if (data.success) {
-                        classes = classes.filter(c => c.class_id !== classId);
-                        renderClasses();
-                        populateFilters();
-                        alert('Class deleted successfully!');
-                    } else {
-                        alert('Failed to delete class: ' + (data.error || 'Unknown error'));
-                    }
-                })
-                .catch(error => {
-                    console.error('Error deleting class:', error);
-                    alert('Error deleting class: ' + error.message);
-                });
-        }
+        if (modalTitle) modalTitle.textContent = 'Add New Class';
+        if (classForm) classForm.reset();
+        clearScheduleInputs();
+        if (classModal) classModal.classList.add('show');
+    }
 
-        function handleFormSubmit(event) {
-            event.preventDefault();
+    function closeModal() {
+        const classModal = document.getElementById('classModal');
+        if (classModal) classModal.classList.remove('show');
+        editingClassId = null;
+    }
 
-            const schedule = getScheduleFromForm();
+    function editClass(classId) {
+        const classItem = classes.find(c => c.class_id === classId);
+        if (!classItem) return;
 
-            const classData = {
-                classCode: document.getElementById('classCode')?.value || '',
-                sectionName: document.getElementById('sectionName')?.value || '',
-                subject: document.getElementById('subject')?.value || '',
-                gradeLevel: document.getElementById('gradeLevel')?.value || '',
-                room: document.getElementById('room')?.value || '',
-                status: document.getElementById('status')?.value || '',
-                classId: editingClassId || '' // Include classId for editing
-            };
+        editingClassId = classId;
+        const modalTitle = document.getElementById('modalTitle');
+        if (modalTitle) modalTitle.textContent = 'Edit Class';
 
-            fetch('manage-classes.php', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded'
-                    },
-                    body: `action=addClass&${new URLSearchParams(classData)}&schedule=${encodeURIComponent(JSON.stringify(schedule))}`
-                })
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error('Network response was not ok: ' + response.statusText);
-                    }
-                    return response.json();
-                })
-                .then(data => {
-                    if (data.success) {
-                        fetchClasses();
-                        closeModal();
-                        alert(editingClassId ? 'Class updated successfully!' : 'Class added successfully!');
-                    } else {
-                        alert('Error: ' + (data.error || 'Failed to ' + (editingClassId ? 'update' : 'add') + ' class'));
-                    }
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    alert('Error ' + (editingClassId ? 'updating' : 'adding') + ' class: ' + error.message);
-                });
-        }
+        const fields = {
+            classCode: classItem.subject_code,
+            sectionName: classItem.section_name,
+            subject: classItem.subject_name,
+            gradeLevel: classItem.grade_level,
+            room: classItem.room || '',
+            status: classItem.status
+        };
 
-        function getScheduleFromForm() {
-            const schedule = {};
-            const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+        Object.entries(fields).forEach(([id, value]) => {
+            const element = document.getElementById(id);
+            if (element) element.value = value;
+        });
 
-            days.forEach(day => {
-                const checkbox = document.getElementById(day);
-                const startInput = document.getElementById(day + 'Start');
-                const endInput = document.getElementById(day + 'End');
-
-                if (checkbox && checkbox.checked && startInput && startInput.value && endInput && endInput.value) {
-                    schedule[day] = {
-                        start: startInput.value,
-                        end: endInput.value
-                    };
-                }
-            });
-
-            return schedule;
-        }
-
-        function handleScheduleToggle(event) {
-            const day = event.target.id;
-            const startInput = document.getElementById(day + 'Start');
-            const endInput = document.getElementById(day + 'End');
-
-            if (startInput && endInput) {
-                if (event.target.checked) {
-                    startInput.disabled = false;
-                    endInput.disabled = false;
-                } else {
-                    startInput.disabled = true;
-                    endInput.disabled = true;
-                    startInput.value = '';
-                    endInput.value = '';
-                }
-            }
-        }
-
-        function clearScheduleInputs() {
-            const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
-            days.forEach(day => {
+        clearScheduleInputs();
+        if (classItem.schedule) {
+            Object.keys(classItem.schedule).forEach(day => {
                 const checkbox = document.getElementById(day);
                 const startInput = document.getElementById(day + 'Start');
                 const endInput = document.getElementById(day + 'End');
 
                 if (checkbox && startInput && endInput) {
-                    checkbox.checked = false;
-                    startInput.disabled = true;
-                    endInput.disabled = true;
-                    startInput.value = '';
-                    endInput.value = '';
+                    checkbox.checked = true;
+                    startInput.disabled = false;
+                    endInput.disabled = false;
+                    startInput.value = classItem.schedule[day].start || '';
+                    endInput.value = classItem.schedule[day].end || '';
                 }
             });
         }
 
-        function formatSchedule(schedule) {
-            if (!schedule || Object.keys(schedule).length === 0) {
-                return '<div class="no-schedule">No schedule set</div>';
-            }
+        const classModal = document.getElementById('classModal');
+        if (classModal) classModal.classList.add('show');
+    }
 
-            return Object.entries(schedule).map(([day, times]) => {
-                return `<div class="schedule-item">${day.charAt(0).toUpperCase() + day.slice(1)}: ${times.start} - ${times.end}</div>`;
-            }).join('');
+    function viewClass(classId) {
+        const classItem = classes.find(c => c.class_id === classId);
+        if (!classItem) return;
+
+        const scheduleText = formatSchedule(classItem.schedule);
+        const attendancePercentage = parseFloat(classItem.attendance_percentage) || 0;
+        const studentCount = parseInt(classItem.student_count) || 0;
+
+        const content = document.getElementById('viewContent');
+        if (content) {
+            content.innerHTML = `
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <div class="detail-row">
+                            <strong>Subject Code:</strong> ${sanitizeHTML(classItem.subject_code)}
+                        </div>
+                        <div class="detail-row">
+                            <strong>Section Name:</strong> ${sanitizeHTML(classItem.section_name)}
+                        </div>
+                        <div class="detail-row">
+                            <strong>Subject:</strong> ${sanitizeHTML(classItem.subject_name)}
+                        </div>
+                        <div class="detail-row">
+                            <strong>Grade Level:</strong> ${sanitizeHTML(classItem.grade_level)}
+                        </div>
+                    </div>
+                    <div>
+                        <div class="detail-row">
+                            <strong>Room:</strong> ${sanitizeHTML(classItem.room || 'No room specified')}
+                        </div>
+                        <div class="detail-row">
+                            <strong>Students:</strong> ${studentCount}
+                        </div>
+                        <div class="detail-row">
+                            <strong>Attendance Percentage:</strong> ${attendancePercentage.toFixed(1)}%
+                        </div>
+                        <div class="detail-row">
+                            <strong>Status:</strong> <span class="status-badge ${sanitizeHTML(classItem.status)}">${sanitizeHTML(classItem.status)}</span>
+                        </div>
+                    </div>
+                    <div class="col-span-2">
+                        <div class="detail-row">
+                            <strong>Schedule:</strong>
+                            <div class="schedule-details">
+                                ${scheduleText}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
         }
 
-        function formatScheduleShort(schedule) {
-            if (!schedule || Object.keys(schedule).length === 0) {
-                return 'No schedule set';
-            }
+        const viewModal = document.getElementById('viewModal');
+        if (viewModal) viewModal.classList.add('show');
+    }
 
-            return Object.entries(schedule).map(([day, times]) => {
-                return `${day.charAt(0).toUpperCase() + day.slice(1)}: ${times.start} - ${times.end}`;
-            }).join(', ');
-        }
+    function closeViewModal() {
+        const viewModal = document.getElementById('viewModal');
+        if (viewModal) viewModal.classList.remove('show');
+    }
 
-        function sanitizeHTML(str) {
-            const temp = document.createElement('div');
-            temp.textContent = str;
-            return temp.innerHTML;
-        }
+    function deleteClass(classId) {
+        if (!confirm('Are you sure you want to delete this class?')) return;
 
-        function openStudentModal(classId) {
-            const studentModal = document.getElementById('studentModal');
-            if (studentModal) {
-                studentModal.dataset.classId = classId; // Store classId in modal dataset
-                studentModal.classList.add('show');
-            }
-            fetchStudents(classId);
-        }
-
-        function closeStudentModal() {
-            const studentModal = document.getElementById('studentModal');
-            const previewTableContainer = document.getElementById('previewTableContainer');
-            const importFile = document.getElementById('importFile');
-            if (studentModal) studentModal.classList.remove('show');
-            if (previewTableContainer) previewTableContainer.style.display = 'none';
-            if (importFile) importFile.value = ''; // Clear the file input
-            document.querySelector('#previewTable tbody').innerHTML = ''; // Clear the preview table
-        }
-
-        function fetchStudents(classId) {
-            fetch(`manage-classes.php?action=fetchStudents&classId=${classId}`, {
-                    headers: {
-                        'X-Requested-With': 'XMLHttpRequest' // Explicitly mark as AJAX
-                    }
-                })
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error('Network response was not ok: ' + response.statusText);
-                    }
-                    return response.json();
-                })
-                .then(result => {
-                    if (result.success) {
-                        renderStudentTable(result.data, classId);
-                    } else {
-                        console.error('Error fetching students:', result.error);
-                        alert('Failed to fetch students: ' + result.error);
-                    }
-                })
-                .catch(error => {
-                    console.error('Error fetching students:', error);
-                    alert('Error fetching students: ' + error.message);
-                });
-        }
-
-        function renderStudentTable(students, classId) {
-            const tbody = document.querySelector('#studentTable tbody');
-            if (!tbody) return;
-
-            tbody.innerHTML = '';
-
-            if (!students || students.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="14" class="no-classes">No students enrolled</td></tr>';
-                return;
-            }
-
-            students.forEach(student => {
-                const row = document.createElement('tr');
-                row.innerHTML = `
-                    <td>${sanitizeHTML(student.lrn || 'N/A')}</td>
-                    <td>${sanitizeHTML(student.first_name || 'N/A')}</td>
-                    <td>${sanitizeHTML(student.last_name || 'N/A')}</td>
-                    <td>${sanitizeHTML(student.email || 'N/A')}</td>
-                    <td>${sanitizeHTML(student.gender || 'N/A')}</td>
-                    <td>${sanitizeHTML(student.dob || 'N/A')}</td>
-                    <td>${sanitizeHTML(student.grade_level || 'N/A')}</td>
-                    <td>${sanitizeHTML(student.address || 'N/A')}</td>
-                    <td>${sanitizeHTML(student.parent_name || 'N/A')}</td>
-                    <td>${sanitizeHTML(student.emergency_contact || 'N/A')}</td>
-                    <td>${sanitizeHTML(student.photo ? '<img src="' + student.photo + '" alt="Student Photo" style="max-width: 50px; max-height: 50px;">' : 'N/A')}</td>
-                    <td>${sanitizeHTML(student.date_added || 'N/A')}</td>
-                    <td class="actions">
-                        <button class="btn btn-sm btn-danger" onclick="deleteStudent(${classId}, '${student.lrn}')">
-                            <i class="fas fa-trash"></i>
-                        </button>
-                    </td>
-                `;
-                tbody.appendChild(row);
-            });
-        }
-
-        function deleteStudent(classId, lrn) {
-            if (!confirm('Are you sure you want to delete this student from the class?')) return;
-
-            fetch('manage-classes.php', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded'
-                    },
-                    body: `action=deleteStudent&classId=${classId}&lrn=${lrn}`
-                })
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error('Network response was not ok: ' + response.statusText);
-                    }
-                    return response.json();
-                })
-                .then(data => {
-                    if (data.success) {
-                        fetchStudents(classId);
-                        alert('Student removed successfully!');
-                    } else {
-                        alert('Failed to delete student: ' + (data.error || 'Unknown error'));
-                    }
-                })
-                .catch(error => {
-                    console.error('Error deleting student:', error);
-                    alert('Error deleting student: ' + error.message);
-                });
-        }
-
-        document.getElementById('importFile').addEventListener('change', function(event) {
-            const file = event.target.files[0];
-            if (!file) {
-                document.getElementById('previewTableContainer').style.display = 'none';
-                return;
-            }
-
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                try {
-                    const data = new Uint8Array(e.target.result);
-                    const workbook = XLSX.read(data, {
-                        type: 'array'
-                    });
-                    const firstSheet = workbook.SheetNames[0];
-                    const worksheet = workbook.Sheets[firstSheet];
-                    const rows = XLSX.utils.sheet_to_json(worksheet, {
-                        header: 1
-                    });
-
-                    // Skip the header row and render the data
-                    const tbody = document.querySelector('#previewTable tbody');
-                    tbody.innerHTML = '';
-
-                    if (rows.length <= 1) { // Only header or empty
-                        document.getElementById('previewTableContainer').style.display = 'none';
-                        alert('The selected Excel file is empty or contains only headers.');
-                        return;
-                    }
-
-                    // Render rows (skip header)
-                    rows.slice(1).forEach(row => {
-                        if (row.length >= 9) { // Ensure row has enough columns
-                            const tr = document.createElement('tr');
-                            tr.innerHTML = `
-                        <td>${sanitizeHTML(row[0] || '')}</td>
-                        <td>${sanitizeHTML(row[1] || '')}</td>
-                        <td>${sanitizeHTML(row[2] || '')}</td>
-                        <td>${sanitizeHTML(row[3] || '')}</td>
-                        <td>${sanitizeHTML(row[4] || '')}</td>
-                        <td>${sanitizeHTML(row[5] || '')}</td>
-                        <td>${sanitizeHTML(row[6] || '')}</td>
-                        <td>${sanitizeHTML(row[7] || '')}</td>
-                        <td>${sanitizeHTML(row[8] || '')}</td>
-                    `;
-                            tbody.appendChild(tr);
-                        }
-                    });
-
-                    document.getElementById('previewTableContainer').style.display = 'block';
-                } catch (error) {
-                    console.error('Error reading Excel file:', error);
-                    alert('Error reading Excel file: ' + error.message);
-                    document.getElementById('previewTableContainer').style.display = 'none';
+        fetch('manage-classes.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                },
+                body: `action=deleteClass&classId=${classId}`
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok: ' + response.statusText);
                 }
-            };
-            reader.readAsArrayBuffer(file);
+                return response.json();
+            })
+            .then(data => {
+                if (data.success) {
+                    classes = classes.filter(c => c.class_id !== classId);
+                    renderClasses();
+                    populateFilters();
+                    alert('Class deleted successfully!');
+                } else {
+                    alert('Failed to delete class: ' + (data.error || 'Unknown error'));
+                }
+            })
+            .catch(error => {
+                console.error('Error deleting class:', error);
+                alert('Error deleting class: ' + error.message);
+            });
+    }
+
+    function handleFormSubmit(event) {
+        event.preventDefault();
+
+        const schedule = getScheduleFromForm();
+
+        const classData = {
+            classCode: document.getElementById('classCode')?.value || '',
+            sectionName: document.getElementById('sectionName')?.value || '',
+            subject: document.getElementById('subject')?.value || '',
+            gradeLevel: document.getElementById('gradeLevel')?.value || '',
+            room: document.getElementById('room')?.value || '',
+            status: document.getElementById('status')?.value || '',
+            classId: editingClassId || ''
+        };
+
+        fetch('manage-classes.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                },
+                body: `action=addClass&${new URLSearchParams(classData)}&schedule=${encodeURIComponent(JSON.stringify(schedule))}`
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok: ' + response.statusText);
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.success) {
+                    fetchClasses();
+                    closeModal();
+                    alert(editingClassId ? 'Class updated successfully!' : 'Class added successfully!');
+                } else {
+                    alert('Error: ' + (data.error || 'Failed to ' + (editingClassId ? 'update' : 'add') + ' class'));
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Error ' + (editingClassId ? 'updating' : 'adding') + ' class: ' + error.message);
+            });
+    }
+
+    function getScheduleFromForm() {
+        const schedule = {};
+        const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+
+        days.forEach(day => {
+            const checkbox = document.getElementById(day);
+            const startInput = document.getElementById(day + 'Start');
+            const endInput = document.getElementById(day + 'End');
+
+            if (checkbox && checkbox.checked && startInput && startInput.value && endInput && endInput.value) {
+                schedule[day] = {
+                    start: startInput.value,
+                    end: endInput.value
+                };
+            }
         });
 
-        function importStudents() {
-            const fileInput = document.getElementById('importFile');
-            const file = fileInput.files[0];
-            if (!file) {
-                alert('Please select a file to import.');
-                return;
+        return schedule;
+    }
+
+    function handleScheduleToggle(event) {
+        const day = event.target.id;
+        const startInput = document.getElementById(day + 'Start');
+        const endInput = document.getElementById(day + 'End');
+
+        if (startInput && endInput) {
+            if (event.target.checked) {
+                startInput.disabled = false;
+                endInput.disabled = false;
+            } else {
+                startInput.disabled = true;
+                endInput.disabled = true;
+                startInput.value = '';
+                endInput.value = '';
             }
+        }
+    }
 
-            const formData = new FormData();
-            formData.append('action', 'importStudents');
-            formData.append('classId', document.querySelector('#studentModal').dataset.classId || '0');
-            formData.append('file', file);
+    function clearScheduleInputs() {
+        const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+        days.forEach(day => {
+            const checkbox = document.getElementById(day);
+            const startInput = document.getElementById(day + 'Start');
+            const endInput = document.getElementById(day + 'End');
 
-            fetch('manage-classes.php', {
-                    method: 'POST',
-                    body: formData
-                })
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error('Network response was not ok: ' + response.statusText);
+            if (checkbox && startInput && endInput) {
+                checkbox.checked = false;
+                startInput.disabled = true;
+                endInput.disabled = true;
+                startInput.value = '';
+                endInput.value = '';
+            }
+        });
+    }
+
+    function formatSchedule(schedule) {
+        if (!schedule || Object.keys(schedule).length === 0) {
+            return '<div class="no-schedule">No schedule set</div>';
+        }
+
+        return Object.entries(schedule).map(([day, times]) => {
+            return `<div class="schedule-item">${day.charAt(0).toUpperCase() + day.slice(1)}: ${times.start} - ${times.end}</div>`;
+        }).join('');
+    }
+
+    function formatScheduleShort(schedule) {
+        if (!schedule || Object.keys(schedule).length === 0) {
+            return 'No schedule set';
+        }
+
+        return Object.entries(schedule).map(([day, times]) => {
+            return `${day.charAt(0).toUpperCase() + day.slice(1)}: ${times.start} - ${times.end}`;
+        }).join(', ');
+    }
+
+    function sanitizeHTML(str) {
+        const temp = document.createElement('div');
+        temp.textContent = str;
+        return temp.innerHTML;
+    }
+
+    function openStudentModal(classId) {
+        const studentModal = document.getElementById('studentModal');
+        if (studentModal) {
+            studentModal.dataset.classId = classId;
+            studentModal.classList.add('show');
+        }
+        fetchStudents(classId);
+    }
+
+    function closeStudentModal() {
+        const studentModal = document.getElementById('studentModal');
+        const previewTableContainer = document.getElementById('previewTableContainer');
+        const importFile = document.getElementById('importFile');
+        if (studentModal) studentModal.classList.remove('show');
+        if (previewTableContainer) previewTableContainer.style.display = 'none';
+        if (importFile) importFile.value = '';
+        document.querySelector('#previewTable tbody').innerHTML = '';
+    }
+
+    function fetchStudents(classId) {
+        fetch(`manage-classes.php?action=fetchStudents&classId=${classId}`, {
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Network response was not ok: ' + response.statusText);
+            }
+            return response.json();
+        })
+        .then(result => {
+            if (result.success) {
+                renderStudentTable(result.data, classId);
+            } else {
+                console.error('Error fetching students:', result.error);
+                alert('Failed to fetch students: ' + result.error);
+            }
+        })
+        .catch(error => {
+            console.error('Error fetching students:', error);
+            alert('Error fetching students: ' + error.message);
+        });
+    }
+
+    function renderStudentTable(students, classId) {
+        const tbody = document.querySelector('#studentTable tbody');
+        if (!tbody) return;
+
+        tbody.innerHTML = '';
+
+        if (!students || students.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="14" class="no-classes">No students enrolled</td></tr>';
+            return;
+        }
+
+        students.forEach(student => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${sanitizeHTML(student.lrn || 'N/A')}</td>
+                <td>${sanitizeHTML(student.first_name || 'N/A')}</td>
+                <td>${sanitizeHTML(student.last_name || 'N/A')}</td>
+                <td>${sanitizeHTML(student.email || 'N/A')}</td>
+                <td>${sanitizeHTML(student.gender || 'N/A')}</td>
+                <td>${sanitizeHTML(student.dob || 'N/A')}</td>
+                <td>${sanitizeHTML(student.grade_level || 'N/A')}</td>
+                <td>${sanitizeHTML(student.address || 'N/A')}</td>
+                <td>${sanitizeHTML(student.parent_name || 'N/A')}</td>
+                <td>${sanitizeHTML(student.emergency_contact || 'N/A')}</td>
+                <td>${sanitizeHTML(student.photo ? '<img src="' + student.photo + '" alt="Student Photo" style="max-width: 50px; max-height: 50px;">' : 'N/A')}</td>
+                <td>${sanitizeHTML(student.date_added || 'N/A')}</td>
+                <td class="actions">
+                    <button class="btn btn-sm btn-danger" onclick="deleteStudent(${classId}, '${student.lrn}')">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </td>
+            `;
+            tbody.appendChild(row);
+        });
+    }
+
+    function deleteStudent(classId, lrn) {
+        if (!confirm('Are you sure you want to delete this student from the class?')) return;
+
+        fetch('manage-classes.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                },
+                body: `action=deleteStudent&classId=${classId}&lrn=${lrn}`
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok: ' + response.statusText);
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.success) {
+                    fetchStudents(classId);
+                    alert('Student removed successfully!');
+                } else {
+                    alert('Failed to delete student: ' + (data.error || 'Unknown error'));
+                }
+            })
+            .catch(error => {
+                console.error('Error deleting student:', error);
+                alert('Error deleting student: ' + error.message);
+            });
+    }
+
+    document.getElementById('importFile').addEventListener('change', function(event) {
+        const file = event.target.files[0];
+        if (!file) {
+            document.getElementById('previewTableContainer').style.display = 'none';
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            try {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, { type: 'array' });
+                const firstSheet = workbook.SheetNames[0];
+                const worksheet = workbook.Sheets[firstSheet];
+                const rows = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+
+                const tbody = document.querySelector('#previewTable tbody');
+                tbody.innerHTML = '';
+
+                if (rows.length <= 1) {
+                    document.getElementById('previewTableContainer').style.display = 'none';
+                    alert('The selected Excel file is empty or contains only headers.');
+                    return;
+                }
+
+                rows.slice(1).forEach(row => {
+                    if (row.length >= 9) {
+                        const tr = document.createElement('tr');
+                        tr.innerHTML = `
+                            <td>${sanitizeHTML(row[0] || '')}</td>
+                            <td>${sanitizeHTML(row[1] || '')}</td>
+                            <td>${sanitizeHTML(row[2] || '')}</td>
+                            <td>${sanitizeHTML(row[3] || '')}</td>
+                            <td>${sanitizeHTML(row[4] || '')}</td>
+                            <td>${sanitizeHTML(row[5] || '')}</td>
+                            <td>${sanitizeHTML(row[6] || '')}</td>
+                            <td>${sanitizeHTML(row[7] || '')}</td>
+                            <td>${sanitizeHTML(row[8] || '')}</td>
+                        `;
+                        tbody.appendChild(tr);
                     }
-                    return response.json();
-                })
-                .then(data => {
-                    if (data.success) {
-                        fetchStudents(document.querySelector('#studentModal').dataset.classId);
-                        document.getElementById('previewTableContainer').style.display = 'none';
-                        document.getElementById('importFile').value = ''; // Clear file input
-                        document.querySelector('#previewTable tbody').innerHTML = ''; // Clear preview
-                        alert('Students imported successfully!');
-                    } else {
-                        alert('Failed to import students: ' + (data.error || 'Unknown error'));
-                    }
-                })
-                .catch(error => {
-                    console.error('Error importing students:', error);
-                    alert('Error importing students: ' + error.message);
                 });
+
+                document.getElementById('previewTableContainer').style.display = 'block';
+            } catch (error) {
+                console.error('Error reading Excel file:', error);
+                alert('Error reading Excel file: ' + error.message);
+                document.getElementById('previewTableContainer').style.display = 'none';
+            }
+        };
+        reader.readAsArrayBuffer(file);
+    });
+
+    function importStudents() {
+        const fileInput = document.getElementById('importFile');
+        const file = fileInput.files[0];
+        if (!file) {
+            alert('Please select a file to import.');
+            return;
         }
 
-        function toggleSelectAll() {
-            const selectAll = document.getElementById('selectAll');
-            const checkboxes = document.querySelectorAll('.row-checkbox');
-            checkboxes.forEach(checkbox => checkbox.checked = selectAll.checked);
-        }
-    </script>
+        const formData = new FormData();
+        formData.append('action', 'importStudents');
+        formData.append('classId', document.querySelector('#studentModal').dataset.classId || '0');
+        formData.append('file', file);
+
+        fetch('manage-classes.php', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok: ' + response.statusText);
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.success) {
+                    fetchStudents(document.querySelector('#studentModal').dataset.classId);
+                    document.getElementById('previewTableContainer').style.display = 'none';
+                    document.getElementById('importFile').value = '';
+                    document.querySelector('#previewTable tbody').innerHTML = '';
+                    alert('Students imported successfully!');
+                } else {
+                    alert('Failed to import students: ' + (data.error || 'Unknown error'));
+                }
+            })
+            .catch(error => {
+                console.error('Error importing students:', error);
+                alert('Error importing students: ' + error.message);
+            });
+    }
+
+    function toggleSelectAll() {
+        const selectAll = document.getElementById('selectAll');
+        const checkboxes = document.querySelectorAll('.row-checkbox');
+        checkboxes.forEach(checkbox => checkbox.checked = selectAll.checked);
+    }
+</script>
 </body>
 
 </html>

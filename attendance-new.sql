@@ -49,8 +49,9 @@ CREATE TABLE classes (
 
 CREATE TABLE students (
     lrn INT NOT NULL,
-    first_name VARCHAR(50) NOT NULL,
     last_name VARCHAR(50) NOT NULL,
+    first_name VARCHAR(50) NOT NULL,
+    middle_name VARCHAR(50) NOT NULL,
     email VARCHAR(100),
     gender VARCHAR(20),
     dob DATE,
@@ -59,6 +60,7 @@ CREATE TABLE students (
     parent_name VARCHAR(100),
     emergency_contact VARCHAR(20),
     photo VARCHAR(255) DEFAULT 'no-icon.png',
+    qr_code VARCHAR(255) DEFAULT 'qr-code.png',
     date_added DATE
 );
 

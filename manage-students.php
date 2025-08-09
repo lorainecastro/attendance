@@ -801,7 +801,7 @@ if (!$user) {
     <div class="controls">
         <div class="controls-left">
             <div class="search-container">
-                <input type="text" class="search-input" id="searchInput" placeholder="Search by Name or ID">
+                <input type="text" class="search-input" id="searchInput" placeholder="Search by LRN or Name">
                 <i class="fas fa-search search-icon"></i>
             </div>
             <div class="advanced-search" id="advancedSearch">

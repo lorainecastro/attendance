@@ -1,3 +1,17 @@
+<?php
+ob_start();
+require 'config.php';
+session_start(); // Start session at the top
+
+// Validate session
+$user = validateSession();
+if (!$user) {
+    destroySession();
+    header("Location: index.php");
+    exit();
+}
+?>
+
 <!DOCTYPE html>
 <html lang="en">
 <head>

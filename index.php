@@ -1149,11 +1149,11 @@
                 <a href="#contact" onclick="closeMobileMenu()">Contact</a>
             </div>
             <div class="mobile-auth-buttons">
-                <a href="#signin" class="btn btn-outline" onclick="closeMobileMenu()">
+                <a href="sign-in.php" class="btn btn-outline" onclick="closeMobileMenu()">
                     <i class="fas fa-sign-in-alt"></i>
                     Sign In
                 </a>
-                <a href="#signup" class="btn btn-primary" onclick="closeMobileMenu()">
+                <a href="sign-up.php" class="btn btn-primary" onclick="closeMobileMenu()">
                     <i class="fas fa-user-plus"></i>
                     Sign Up
                 </a>

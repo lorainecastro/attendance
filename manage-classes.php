@@ -871,7 +871,7 @@ body {
             margin: 0 auto;
             padding: 0;
             border-radius: var(--radius-xl);
-            max-width: 800px;
+            max-width: 1000px;
             width: 90%;
             max-height: 90vh;
             overflow-y: auto;
@@ -1677,6 +1677,164 @@ body {
             justify-content: center;
         }
     }
+</style>
+
+<style>
+    /* Adjusted styles for Class Details (View Modal) and Student List */
+.detail-row {
+    display: flex;
+    align-items: center;
+    margin-bottom: var(--spacing-md);
+    padding: var(--spacing-sm) var(--spacing-md);
+    background: var(--inputfield-color);
+    border-radius: var(--radius-sm);
+    transition: var(--transition-normal);
+}
+
+.detail-row:hover {
+    background: var(--inputfieldhover-color);
+    box-shadow: var(--shadow-sm);
+}
+
+.detail-row strong {
+    flex: 0 0 150px;
+    font-weight: 600;
+    color: var(--blackfont-color);
+    font-size: var(--font-size-sm);
+}
+
+.detail-row span, .detail-row div {
+    flex: 1;
+    color: var(--grayfont-color);
+    font-size: var(--font-size-sm);
+}
+
+.schedule-details {
+    padding-left: var(--spacing-md);
+    color: var(--grayfont-color);
+}
+
+.schedule-details .schedule-item {
+    margin-bottom: var(--spacing-xs);
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+}
+
+.schedule-details .schedule-item::before {
+    content: "•";
+    color: var(--primary-blue);
+    margin-right: var(--spacing-xs);
+}
+
+/* Adjusted Student List (Student Modal) */
+.student-table-container {
+    margin-top: var(--spacing-xl);
+    padding: var(--spacing-xl);
+    background: var(--card-bg);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-md);
+    border: 1px solid var(--border-color);
+    width: 100%;
+    max-width: 1200px; /* Increased width for better readability */
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.student-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+}
+
+.student-table th,
+.student-table td {
+    padding: var(--spacing-lg) var(--spacing-md);
+    text-align: left;
+    border-bottom: 1px solid var(--border-color);
+    font-size: var(--font-size-sm);
+}
+
+.student-table th {
+    font-weight: 600;
+    color: var(--grayfont-color);
+    background: var(--inputfield-color);
+    position: sticky;
+    top: 0;
+    z-index: 5;
+}
+
+.student-table td {
+    color: var(--blackfont-color);
+}
+
+.student-table tr:hover {
+    background: var(--inputfieldhover-color);
+    transition: var(--transition-fast);
+}
+
+.student-table img {
+    border-radius: var(--radius-sm);
+    object-fit: cover;
+}
+
+/* Responsive adjustments for student table */
+@media (max-width: 1024px) {
+    .student-table-container {
+        max-width: 100%;
+        padding: var(--spacing-md);
+    }
+
+    .student-table th,
+    .student-table td {
+        padding: var(--spacing-md) var(--spacing-sm);
+    }
+
+    .student-table th:nth-child(n+8),
+    .student-table td:nth-child(n+8) {
+        display: none;
+    }
+}
+
+@media (max-width: 768px) {
+    .student-table th:nth-child(n+6),
+    .student-table td:nth-child(n+6) {
+        display: none;
+    }
+
+    .detail-row {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: var(--spacing-xs);
+        padding: var(--spacing-sm);
+    }
+
+    .detail-row strong {
+        flex: none;
+        width: 100%;
+    }
+}
+
+@media (max-width: 576px) {
+    .student-table th:nth-child(n+4),
+    .student-table td:nth-child(n+4) {
+        display: none;
+    }
+
+    .student-table-container {
+        padding: var(--spacing-sm);
+    }
+
+    .student-table th,
+    .student-table td {
+        padding: var(--spacing-sm) var(--spacing-xs);
+        font-size: 0.75rem;
+    }
+
+    .detail-row {
+        padding: var(--spacing-xs);
+    }
+}
 </style>
     
 </head>

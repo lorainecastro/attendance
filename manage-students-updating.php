@@ -164,9 +164,10 @@ if (!$user) {
             background: var(--primary-gradient);
         }
 
-        .bg-green {
-            background: linear-gradient(135deg, #10b981, #34d399);
-        }
+        .bg-purple { background: var(--primary-gradient); }
+        .bg-pink { background: var(--secondary-gradient); }
+        .bg-blue { background: linear-gradient(135deg, #3b82f6, #60a5fa); }
+        .bg-green { background: linear-gradient(135deg, #10b981, #34d399); }
 
         .card-title {
             font-size: 14px;

@@ -1969,9 +1969,9 @@ ob_end_flush();
                         </th>
                         <th>Subject Code & Section</th>
                         <th>Grade Level</th>
-                        <th>Subject</th>
                         <th>Schedule</th>
                         <th>Room</th>
+                        <th>Students</th>
                         <th>Attendance %</th>
                         <th>Status</th>
                         <th>Actions</th>
@@ -2313,8 +2313,9 @@ ob_end_flush();
                         <h4>${sanitizeHTML(classItem.section_name)}</h4>
                         <p><i class="fas fa-book"></i> ${sanitizeHTML(classItem.subject_name)}</p>
                         <p><i class="fas fa-graduation-cap"></i> ${sanitizeHTML(classItem.grade_level)}</p>
-                        <p><i class="fas fa-map-marker-alt"></i> ${sanitizeHTML(classItem.room || 'No room specified')}</p>
+                        <p><i class="fas fa-users"></i> 30 students</p>
                         <p><i class="fas fa-percentage"></i> ${attendancePercentage.toFixed(1)}% attendance</p>
+                        <p><i class="fas fa-map-marker-alt"></i> ${sanitizeHTML(classItem.room || 'No room specified')}</p>
                     </div>
                     <div class="class-schedule">
                         <h5>Schedule:</h5>
@@ -2363,9 +2364,9 @@ ob_end_flush();
                         <small>${sanitizeHTML(classItem.section_name)}</small>
                     </td>
                     <td>${sanitizeHTML(classItem.grade_level)}</td>
-                    <td>${sanitizeHTML(classItem.subject_name)}</td>
                     <td>${sanitizeHTML(scheduleText)}</td>
                     <td>${sanitizeHTML(classItem.room || 'No room specified')}</td>
+                    <td>30</td>
                     <td>${attendancePercentage.toFixed(1)}%</td>
                     <td><span class="status-badge ${sanitizeHTML(classItem.status)}">${sanitizeHTML(classItem.status)}</span></td>
                     <td class="actions">
@@ -2732,7 +2733,7 @@ ob_end_flush();
 
         function formatScheduleShort(schedule) {
             if (!schedule || Object.keys(schedule).length === 0) {
-                return 'N/A';
+                return 'No schedule set';
             }
 
             return Object.entries(schedule).map(([day, times]) => {

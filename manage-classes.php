@@ -3,9 +3,12 @@ ob_start();
 require 'config.php';
 session_start();
 
-// Validate session
-$user = validateSession();
-if (!$user) {
+// Detect AJAX request
+$isAjax = !empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';
+
+// Validate session only for non-AJAX requests
+$user = $isAjax ? ['teacher_id' => $_SESSION['teacher_id'] ?? null] : validateSession();
+if (!$isAjax && !$user) {
     destroySession();
     header("Location: index.php");
     exit();
@@ -27,7 +30,7 @@ function isDuplicateClass($pdo, $section_name, $subject_id, $teacher_id, $grade_
     return $stmt->fetchColumn() > 0;
 }
 
-// Function to add a new class// Function to add or update a class
+// Function to add or update a class
 function addClass($classData, $scheduleData, $class_id = null)
 {
     $pdo = getDBConnection();
@@ -112,6 +115,7 @@ function addClass($classData, $scheduleData, $class_id = null)
         return ['success' => false, 'error' => 'Failed to ' . ($class_id ? 'update' : 'add') . ' class: ' . $e->getMessage()];
     }
 }
+
 // Function to delete a class
 function deleteClass($class_id)
 {
@@ -141,7 +145,6 @@ function deleteClass($class_id)
     }
 }
 
-// Function to fetch classes for display
 // Function to fetch classes for display
 function fetchClassesForTeacher()
 {
@@ -186,7 +189,115 @@ function fetchClassesForTeacher()
         return ['success' => false, 'error' => 'Failed to fetch classes: ' . $e->getMessage()];
     }
 }
-// Handle AJAX requests
+
+// Function to fetch students for a class
+function fetchStudentsForClass($class_id)
+{
+    $pdo = getDBConnection();
+    try {
+        $teacher_id = $_SESSION['teacher_id'] ?? null;
+        if (!$teacher_id) {
+            return ['success' => false, 'error' => 'Teacher session not found'];
+        }
+
+        $stmt = $pdo->prepare("
+            SELECT s.lrn, s.first_name, s.last_name, s.email, s.gender, s.dob, s.grade_level, 
+                   s.address, s.parent_name, s.emergency_contact, s.photo, s.date_added
+            FROM class_students cs
+            JOIN students s ON cs.lrn = s.lrn
+            WHERE cs.class_id = ? AND cs.is_enrolled = 1
+        ");
+        $stmt->execute([$class_id]);
+        return ['success' => true, 'data' => $stmt->fetchAll(PDO::FETCH_ASSOC)];
+    } catch (PDOException $e) {
+        error_log("Fetch students error: " . $e->getMessage());
+        return ['success' => false, 'error' => 'Failed to fetch students: ' . $e->getMessage()];
+    }
+}
+
+// Function to delete a student from a class
+function deleteStudentFromClass($class_id, $lrn)
+{
+    $pdo = getDBConnection();
+    try {
+        $pdo->beginTransaction();
+        $stmt = $pdo->prepare("DELETE FROM class_students WHERE class_id = ? AND lrn = ?");
+        $stmt->execute([$class_id, $lrn]);
+        $pdo->commit();
+        return ['success' => true];
+    } catch (PDOException $e) {
+        $pdo->rollBack();
+        error_log("Delete student error: " . $e->getMessage());
+        return ['success' => false, 'error' => 'Failed to delete student: ' . $e->getMessage()];
+    }
+}
+
+// Function to import students from Excel
+function importStudents($class_id, $filePath)
+{
+    require 'vendor/autoload.php';
+
+    $pdo = getDBConnection();
+    try {
+        $spreadsheet = \PhpOffice\PhpSpreadsheet\IOFactory::load($filePath);
+        $sheet = $spreadsheet->getActiveSheet();
+        $rows = $sheet->toArray();
+
+        $pdo->beginTransaction();
+        $header = array_shift($rows); // Remove header row
+
+        foreach ($rows as $row) {
+            if (count($row) >= 9) { // Ensure row has 9 columns: lrn to emergency_contact
+                $stmt = $pdo->prepare("
+                    INSERT INTO students (lrn, first_name, last_name, email, gender, dob, grade_level, address, parent_name, emergency_contact, photo, date_added)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURDATE())
+                    ON DUPLICATE KEY UPDATE 
+                        first_name = VALUES(first_name),
+                        last_name = VALUES(last_name),
+                        email = VALUES(email),
+                        gender = VALUES(gender),
+                        dob = VALUES(dob),
+                        grade_level = VALUES(grade_level),
+                        address = VALUES(address),
+                        parent_name = VALUES(parent_name),
+                        emergency_contact = VALUES(emergency_contact)
+                ");
+                $stmt->execute([
+                    $row[0],  // lrn
+                    $row[1],  // first_name
+                    $row[2],  // last_name
+                    $row[3],  // email
+                    $row[4],  // gender
+                    $row[5],  // dob
+                    $row[6],  // grade_level
+                    $row[7],  // address
+                    $row[8],  // parent_name
+                    $row[9], // emergency_contact
+                    $row[10]   // photo
+                ]);
+                $lrn = $row[0]; // Use the lrn from the Excel row
+
+                $stmt = $pdo->prepare("
+                    INSERT INTO class_students (class_id, lrn, is_enrolled)
+                    VALUES (?, ?, 1)
+                    ON DUPLICATE KEY UPDATE is_enrolled = 1
+                ");
+                $stmt->execute([$class_id, $lrn]);
+            }
+        }
+
+        $pdo->commit();
+        return ['success' => true];
+    } catch (PDOException $e) {
+        $pdo->rollBack();
+        error_log("Import students error: " . $e->getMessage());
+        return ['success' => false, 'error' => 'Failed to import students: ' . $e->getMessage()];
+    } catch (\PhpOffice\PhpSpreadsheet\Reader\Exception $e) {
+        error_log("Spreadsheet error: " . $e->getMessage());
+        return ['success' => false, 'error' => 'Invalid Excel file: ' . $e->getMessage()];
+    }
+}
+
 // Handle AJAX requests
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     header('Content-Type: application/json');
@@ -203,9 +314,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         ];
 
         $scheduleData = json_decode($_POST['schedule'] ?? '{}', true);
-        $classId = $_POST['classId'] ?? null; // Get classId for editing
+        $classId = $_POST['classId'] ?? null;
 
-        // Validate inputs
         if (
             empty($classData['code']) || empty($classData['sectionName']) ||
             empty($classData['subject']) || empty($classData['gradeLevel']) ||
@@ -225,16 +335,69 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         }
         echo json_encode(deleteClass($class_id));
         exit;
+    } elseif ($_POST['action'] === 'fetchStudents') {
+        $class_id = $_POST['classId'] ?? null;
+        if (!$class_id) {
+            echo json_encode(['success' => false, 'error' => 'Missing class ID']);
+            exit;
+        }
+        echo json_encode(fetchStudentsForClass($class_id));
+        exit;
+    } elseif ($_POST['action'] === 'deleteStudent') {
+        $class_id = $_POST['classId'] ?? null;
+        $lrn = $_POST['lrn'] ?? null;
+        if (!$class_id || !$lrn) {
+            echo json_encode(['success' => false, 'error' => 'Missing class ID or LRN']);
+            exit;
+        }
+        echo json_encode(deleteStudentFromClass($class_id, $lrn));
+        exit;
+    } elseif ($_POST['action'] === 'importStudents') {
+        $class_id = $_POST['classId'] ?? null;
+        if (!$class_id || !isset($_FILES['file'])) {
+            echo json_encode(['success' => false, 'error' => 'Missing class ID or file']);
+            exit;
+        }
+
+        $file = $_FILES['file'];
+        $filePath = 'uploads/' . uniqid() . '_' . $file['name'];
+        if (move_uploaded_file($file['tmp_name'], $filePath)) {
+            $result = importStudents($class_id, $filePath);
+            unlink($filePath); // Clean up
+            echo json_encode($result);
+        } else {
+            echo json_encode(['success' => false, 'error' => 'Failed to upload file']);
+        }
+        exit;
     }
 } elseif ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['action']) && $_GET['action'] === 'fetchClasses') {
     header('Content-Type: application/json');
-    ob_clean(); // Clear any output before JSON response
+    ob_clean();
+    echo json_encode(fetchClassesForTeacher());
+    exit;
+
+} elseif ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['action']) && $_GET['action'] === 'fetchStudents') {
+    header('Content-Type: application/json');
+    ob_clean();
+    $class_id = $_GET['classId'] ?? null;
+    if (!$class_id) {
+        echo json_encode(['success' => false, 'error' => 'Missing class ID']);
+        exit;
+    }
+    echo json_encode(fetchStudentsForClass($class_id));
+    exit;
+} elseif ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['action']) && $_GET['action'] === 'fetchClasses') {
+    header('Content-Type: application/json');
+    ob_clean();
     echo json_encode(fetchClassesForTeacher());
     exit;
 }
 
 // For non-AJAX requests, render the HTML page
 ob_end_flush();
+
+// For non-AJAX requests, render the HTML page
+// ob_end_flush();
 ?>
 
 <!DOCTYPE html>
@@ -245,6 +408,7 @@ ob_end_flush();
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Class Management</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
         :root {
             --primary-blue: #3b82f6;
@@ -299,17 +463,30 @@ ob_end_flush();
             font-family: var(--font-family);
         }
 
-        body {
-            background-color: var(--card-bg);
-            color: var(--blackfont-color);
-            padding: 20px;
-        }
+        * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: var(--font-family);
+}
 
-        html,
-        body {
-            height: 100%;
-            margin: 0;
-        }
+html {
+    height: 100%; /* Ensure html takes full viewport height */
+    margin: 0;
+}
+
+body {
+    background-color: var(--card-bg);
+    color: var(--blackfont-color);
+    height: 100%; 
+    /* margin: 0; */
+    padding: 20px; /* Padding applies within the height */
+    display: flex; /* Use flex to manage content height */
+    flex-direction: column; /* Stack content vertically */
+}
+        
+
+        
 
         h1 {
             font-size: 24px;
@@ -693,8 +870,8 @@ ob_end_flush();
             background: var(--card-bg);
             margin: 0 auto;
             padding: 0;
-            border-radius: var(--radius-lg);
-            max-width: 640px;
+            border-radius: var(--radius-xl);
+            max-width: 800px;
             width: 90%;
             max-height: 90vh;
             overflow-y: auto;
@@ -704,30 +881,33 @@ ob_end_flush();
         }
 
         .modal-header {
-            padding: var(--spacing-lg);
+            padding: var(--spacing-xl);
             border-bottom: 1px solid var(--border-color);
             display: flex;
             justify-content: space-between;
             align-items: center;
-            background: var(--inputfield-color);
+            background: var(--primary-gradient);
+            color: var(--whitefont-color);
+            border-top-left-radius: var(--radius-xl);
+            border-top-right-radius: var(--radius-xl);
         }
 
         .modal-title {
             margin: 0;
-            font-size: var(--font-size-xl);
-            font-weight: 600;
-            color: var(--blackfont-color);
+            font-size: var(--font-size-2xl);
+            font-weight: 700;
+            color: var(--whitefont-color);
         }
 
         .close-btn {
             background: none;
             border: none;
-            font-size: 1.25rem;
+            font-size: 1.5rem;
             cursor: pointer;
-            color: var(--grayfont-color);
-            padding: var(--spacing-xs);
-            width: 36px;
-            height: 36px;
+            color: var(--whitefont-color);
+            padding: var(--spacing-sm);
+            width: 40px;
+            height: 40px;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -736,29 +916,29 @@ ob_end_flush();
         }
 
         .close-btn:hover {
-            background: var(--inputfieldhover-color);
-            color: var(--blackfont-color);
+            background: rgba(255, 255, 255, 0.2);
+            color: var(--whitefont-color);
         }
 
         .modal form {
-            padding: var(--spacing-lg);
+            padding: var(--spacing-xl);
         }
 
         .form-group {
-            margin-bottom: var(--spacing-md);
+            margin-bottom: var(--spacing-lg);
         }
 
         .form-label {
             display: block;
             margin-bottom: var(--spacing-xs);
-            font-weight: 500;
+            font-weight: 600;
             color: var(--blackfont-color);
-            font-size: var(--font-size-sm);
+            font-size: var(--font-size-base);
         }
 
         .schedule-inputs {
             display: grid;
-            gap: var(--spacing-sm);
+            gap: var(--spacing-md);
         }
 
         .schedule-day-input {
@@ -817,7 +997,7 @@ ob_end_flush();
             display: flex;
             justify-content: flex-end;
             gap: var(--spacing-md);
-            padding-top: var(--spacing-lg);
+            padding-top: var(--spacing-xl);
             border-top: 1px solid var(--border-color);
         }
 
@@ -831,6 +1011,52 @@ ob_end_flush();
             color: var(--grayfont-color);
             font-style: italic;
             font-size: var(--font-size-base);
+        }
+
+        .student-table-container {
+            margin-top: var(--spacing-lg);
+            background: var(--card-bg);
+            border-radius: var(--radius-lg);
+            padding: var(--spacing-lg);
+            box-shadow: var(--shadow-md);
+            border: 1px solid var(--border-color);
+        }
+
+        .student-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+        }
+
+        .student-table th,
+        .student-table td {
+            padding: var(--spacing-md);
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .student-table th {
+            font-weight: 600;
+            color: var(--grayfont-color);
+            font-size: var(--font-size-sm);
+            background: var(--inputfield-color);
+        }
+
+        .student-table tr:hover {
+            background: var(--inputfieldhover-color);
+        }
+
+        .import-section {
+            margin-top: var(--spacing-lg);
+            padding: var(--spacing-lg);
+            background: var(--card-bg);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-md);
+            border: 1px solid var(--border-color);
+        }
+
+        .import-section .btn {
+            margin-right: var(--spacing-sm);
         }
 
         @keyframes fadeIn {
@@ -997,7 +1223,9 @@ ob_end_flush();
             .controls,
             .class-actions,
             .actions,
-            .modal {
+            .modal,
+            .student-table-container,
+            .import-section {
                 display: none !important;
             }
 
@@ -1017,18 +1245,12 @@ ob_end_flush();
         .controls {
             background: var(--card-bg);
             border-radius: var(--radius-md);
-            /* Reduced from var(--radius-lg) for a tighter look */
             padding: var(--spacing-md);
-            /* Reduced from var(--spacing-xl) to decrease padding */
             box-shadow: var(--shadow-md);
             margin-bottom: var(--spacing-lg);
-            /* Reduced from var(--spacing-2xl) */
             display: flex;
-            /* Changed to flex for better alignment */
             flex-wrap: wrap;
-            /* Allow wrapping for responsiveness */
             gap: var(--spacing-sm);
-            /* Reduced gap for tighter spacing */
             align-items: center;
             border: 1px solid var(--border-color);
         }
@@ -1037,37 +1259,28 @@ ob_end_flush();
             display: flex;
             flex-wrap: wrap;
             gap: var(--spacing-sm);
-            /* Reduced from var(--spacing-md) */
             flex: 1;
-            /* Allow controls-left to take available space */
             align-items: center;
-            /* Vertically center items */
         }
 
         .controls-right {
             display: flex;
             flex-wrap: wrap;
             gap: var(--spacing-sm);
-            /* Reduced from var(--spacing-md) */
             align-items: center;
-            /* Vertically center items */
         }
 
         .search-container {
             position: relative;
             min-width: 200px;
-            /* Reduced from 280px for compactness */
             flex: 1;
-            /* Allow search to take available space */
         }
 
         .search-input {
             width: 100%;
             padding: var(--spacing-xs) var(--spacing-md) var(--spacing-xs) 2.5rem;
-            /* Adjusted padding for tighter input */
             border: 1px solid var(--border-color);
             border-radius: var(--radius-sm);
-            /* Smaller radius for input */
             font-size: var(--font-size-sm);
             background: var(--inputfield-color);
             transition: var(--transition-normal);
@@ -1076,32 +1289,25 @@ ob_end_flush();
         .search-icon {
             position: absolute;
             left: var(--spacing-sm);
-            /* Adjusted for tighter alignment */
             top: 55%;
             transform: translateY(-50%);
             color: var(--grayfont-color);
             font-size: 0.875rem;
-            /* Slightly smaller icon */
         }
 
         .filter-select {
             min-width: 140px;
-            /* Reduced from 140px for compactness */
             padding: var(--spacing-xs) var(--spacing-sm);
-            /* Reduced padding */
         }
 
-        /* Ensure buttons in controls-right are compact */
         .btn {
             padding: var(--spacing-xs) var(--spacing-md);
-            /* Reduced padding */
             font-size: var(--font-size-sm);
         }
 
         .view-toggle {
             border: 1px solid var(--border-color);
             border-radius: var(--radius-sm);
-            /* Smaller radius */
             overflow: hidden;
             background: var(--inputfield-color);
             display: flex;
@@ -1109,24 +1315,18 @@ ob_end_flush();
 
         .view-btn {
             padding: var(--spacing-xs) var(--spacing-sm);
-            /* Reduced padding */
             font-size: 0.875rem;
-            /* Slightly smaller font */
         }
 
-        /* Responsive adjustments */
         @media (max-width: 1024px) {
             .controls {
                 flex-direction: column;
-                /* Stack vertically on smaller screens */
                 align-items: stretch;
-                /* Full width for children */
             }
 
             .controls-right {
                 justify-content: flex-start;
                 margin-top: var(--spacing-sm);
-                /* Reduced margin */
             }
         }
 
@@ -1134,29 +1334,24 @@ ob_end_flush();
             .controls-left {
                 flex-direction: column;
                 gap: var(--spacing-xs);
-                /* Tighter gap */
             }
 
             .controls-right {
                 flex-direction: column;
                 gap: var(--spacing-xs);
-                /* Tighter gap */
             }
 
             .search-container {
                 min-width: auto;
                 width: 100%;
-                /* Full width on small screens */
             }
 
             .filter-select {
                 width: 100%;
-                /* Full width for selects */
             }
 
             .btn {
                 width: 100%;
-                /* Full width buttons */
                 justify-content: center;
             }
 
@@ -1165,7 +1360,325 @@ ob_end_flush();
                 justify-content: space-between;
             }
         }
+
+        .preview-table-container {
+    margin-top: var(--spacing-lg);
+    background: var(--card-bg);
+    border-radius: var(--radius-lg);
+    padding: var(--spacing-lg);
+    box-shadow: var(--shadow-md);
+    border: 1px solid var(--border-color);
+}
+
+.preview-table-container h3 {
+    font-size: var(--font-size-lg);
+    font-weight: 600;
+    color: var(--blackfont-color);
+    margin-bottom: var(--spacing-md);
+}
     </style>
+
+    
+<!-- CSS for Add New Class Modal -->
+<style>
+    /* Class Modal Specific Styles */
+    .class-modal {
+        display: none;
+        position: fixed;
+        z-index: 1000;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.6);
+        animation: fadeIn 0.3s ease;
+    }
+
+    .class-modal.show {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .class-modal-content {
+        background: var(--card-bg);
+        margin: 0 auto;
+        padding: 0;
+        border-radius: var(--radius-xl);
+        max-width: 1000px; /* Landscape layout */
+        width: 95%;
+        max-height: 90vh;
+        overflow-y: auto;
+        box-shadow: var(--shadow-lg);
+        animation: slideIn 0.3s ease;
+        border: 1px solid var(--border-color);
+        position: relative;
+    }
+
+    .class-modal-header {
+        padding: var(--spacing-xl) var(--spacing-2xl);
+        border-bottom: 1px solid var(--border-color);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background: var(--primary-gradient);
+        color: var(--whitefont-color);
+        border-top-left-radius: var(--radius-xl);
+        border-top-right-radius: var(--radius-xl);
+        position: sticky;
+        top: 0;
+        z-index: 10;
+    }
+
+    .class-modal-title {
+        margin: 0;
+        font-size: var(--font-size-2xl);
+        font-weight: 700;
+        color: var(--whitefont-color);
+        letter-spacing: 0.02em;
+    }
+
+    .class-close-btn {
+        background: none;
+        border: none;
+        font-size: 1.75rem;
+        cursor: pointer;
+        color: var(--whitefont-color);
+        padding: var(--spacing-sm);
+        width: 48px;
+        height: 48px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: var(--radius-md);
+        transition: var(--transition-normal);
+    }
+
+    .class-close-btn:hover {
+        background: rgba(255, 255, 255, 0.2);
+        transform: scale(1.1);
+    }
+
+    .class-modal-form {
+        padding: var(--spacing-2xl);
+        display: grid;
+        grid-template-columns: 1fr 1fr; /* Two-column layout */
+        gap: var(--spacing-xl);
+        background: linear-gradient(180deg, #f9fafb, #ffffff);
+    }
+
+    .class-form-group {
+        margin-bottom: var(--spacing-lg);
+    }
+
+    .class-form-label {
+        display: block;
+        margin-bottom: var(--spacing-sm);
+        font-weight: 600;
+        color: var(--blackfont-color);
+        font-size: var(--font-size-base);
+        letter-spacing: 0.01em;
+    }
+
+    .class-form-input,
+    .class-form-select {
+        padding: var(--spacing-md) var(--spacing-lg);
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius-md);
+        font-size: var(--font-size-sm);
+        background: var(--inputfield-color);
+        transition: var(--transition-normal);
+        width: 100%;
+        box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.05);
+    }
+
+    .class-form-input:focus,
+    .class-form-select:focus {
+        outline: none;
+        border-color: var(--primary-blue);
+        background: var(--white);
+        box-shadow: 0 0 0 4px var(--primary-blue-light);
+    }
+
+    .class-form-input:disabled,
+    .class-form-select:disabled {
+        background: var(--light-gray);
+        opacity: 0.7;
+        cursor: not-allowed;
+    }
+
+    .class-schedule-inputs {
+        display: grid;
+        gap: var(--spacing-md);
+        background: var(--white);
+        padding: var(--spacing-md);
+        border-radius: var(--radius-md);
+        box-shadow: var(--shadow-sm);
+        border: 1px solid var(--border-color);
+    }
+
+    .class-schedule-day-input {
+        display: flex;
+        align-items: center;
+        gap: var(--spacing-sm);
+        padding: var(--spacing-sm);
+        border-radius: var(--radius-sm);
+        transition: var(--transition-normal);
+        background: var(--inputfield-color);
+    }
+
+    .class-schedule-day-input:hover {
+        background: var(--inputfieldhover-color);
+        box-shadow: var(--shadow-sm);
+    }
+
+    .class-schedule-day-input input[type="checkbox"] {
+        margin-right: var(--spacing-sm);
+        accent-color: var(--primary-blue);
+        width: 18px;
+        height: 18px;
+        cursor: pointer;
+    }
+
+    .class-schedule-day-input label {
+        min-width: 90px;
+        margin: 0;
+        font-weight: 500;
+        color: var(--blackfont-color);
+        font-size: var(--font-size-sm);
+    }
+
+    .class-schedule-day-input input[type="time"] {
+        padding: var(--spacing-xs) var(--spacing-sm);
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius-md);
+        font-size: var(--font-size-sm);
+        background: var(--white);
+        transition: var(--transition-normal);
+        width: 100px;
+    }
+
+    .class-schedule-day-input input[type="time"]:focus {
+        outline: none;
+        border-color: var(--primary-blue);
+        box-shadow: 0 0 0 3px var(--primary-blue-light);
+    }
+
+    .class-schedule-day-input input[type="time"]:disabled {
+        background: var(--light-gray);
+        opacity: 0.7;
+        cursor: not-allowed;
+    }
+
+    .class-schedule-day-input span {
+        color: var(--grayfont-color);
+        font-size: var(--font-size-sm);
+        margin: 0 var(--spacing-xs);
+    }
+
+    .class-form-actions {
+        grid-column: 1 / -1; /* Span across both columns */
+        display: flex;
+        justify-content: flex-end;
+        gap: var(--spacing-md);
+        padding-top: var(--spacing-xl);
+        border-top: 1px solid var(--border-color);
+        background: var(--card-bg);
+    }
+
+    .class-modal .btn {
+        padding: var(--spacing-md) var(--spacing-xl);
+        font-size: var(--font-size-base);
+        font-weight: 600;
+        border-radius: var(--radius-md);
+        transition: var(--transition-normal);
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: var(--spacing-xs);
+    }
+
+    .class-modal .btn-primary {
+        background: var(--primary-gradient);
+        color: var(--whitefont-color);
+        box-shadow: var(--shadow-sm);
+    }
+
+    .class-modal .btn-primary:hover {
+        background: var(--primary-blue-hover);
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-md);
+    }
+
+    .class-modal .btn-secondary {
+        background: var(--medium-gray);
+        color: var(--whitefont-color);
+        box-shadow: var(--shadow-sm);
+    }
+
+    .class-modal .btn-secondary:hover {
+        background: #4b5563;
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-md);
+    }
+
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+        }
+        to {
+            opacity: 1;
+        }
+    }
+
+    @keyframes slideIn {
+        from {
+            transform: translateY(-20px);
+            opacity: 0;
+        }
+        to {
+            transform: translateY(0);
+            opacity: 1;
+        }
+    }
+
+    @media (max-width: 768px) {
+        .class-modal-content {
+            width: 98%;
+            max-height: 95vh;
+        }
+
+        .class-modal-form {
+            grid-template-columns: 1fr; /* Stack columns on smaller screens */
+            padding: var(--spacing-lg);
+        }
+
+        .class-schedule-inputs {
+            padding: var(--spacing-sm);
+        }
+
+        .class-schedule-day-input {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: var(--spacing-xs);
+        }
+
+        .class-schedule-day-input input[type="time"] {
+            width: 100%;
+        }
+
+        .class-form-actions {
+            flex-direction: column;
+            gap: var(--spacing-sm);
+        }
+
+        .class-form-actions .btn {
+            width: 100%;
+            justify-content: center;
+        }
+    }
+</style>
+    
 </head>
 
 <body>
@@ -1299,28 +1812,31 @@ ob_end_flush();
         </div>
     </div>
 
-    <div id="classModal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2 class="modal-title" id="modalTitle">Add New Class</h2>
-                <button class="close-btn" onclick="closeModal()">×</button>
-            </div>
-            <form id="classForm">
-                <div class="form-group">
-                    <label class="form-label" for="classCode">Subject Code</label>
-                    <input type="text" class="form-input" id="classCode" required placeholder="e.g., MATH-101-A">
+    <!-- HTML for Add New Class Modal -->
+<div id="classModal" class="class-modal">
+    <div class="class-modal-content">
+        <div class="class-modal-header">
+            <h2 class="class-modal-title" id="modalTitle">Add New Class</h2>
+            <button class="class-close-btn" onclick="closeModal()">×</button>
+        </div>
+        <form id="classForm" class="class-modal-form">
+            <!-- First Column: Class Details -->
+            <div class="class-form-column">
+                <div class="class-form-group">
+                    <label class="class-form-label" for="classCode">Subject Code</label>
+                    <input type="text" class="class-form-input" id="classCode" required placeholder="e.g., MATH-101-A">
                 </div>
-                <div class="form-group">
-                    <label class="form-label" for="sectionName">Section Name</label>
-                    <input type="text" class="form-input" id="sectionName" required placeholder="e.g., Section A, Diamond, Einstein">
+                <div class="class-form-group">
+                    <label class="class-form-label" for="sectionName">Section Name</label>
+                    <input type="text" class="class-form-input" id="sectionName" required placeholder="e.g., Section A, Diamond, Einstein">
                 </div>
-                <div class="form-group">
-                    <label class="form-label" for="subject">Subject</label>
-                    <input type="text" class="form-input" id="subject" required placeholder="e.g., Mathematics, Science, English">
+                <div class="class-form-group">
+                    <label class="class-form-label" for="subject">Subject</label>
+                    <input type="text" class="class-form-input" id="subject" required placeholder="e.g., Mathematics, Science, English">
                 </div>
-                <div class="form-group">
-                    <label class="form-label" for="gradeLevel">Grade Level</label>
-                    <select class="form-select" id="gradeLevel" required>
+                <div class="class-form-group">
+                    <label class="class-form-label" for="gradeLevel">Grade Level</label>
+                    <select class="class-form-select" id="gradeLevel" required>
                         <option value="">Select Grade</option>
                         <option value="Grade 7">Grade 7</option>
                         <option value="Grade 8">Grade 8</option>
@@ -1330,49 +1846,60 @@ ob_end_flush();
                         <option value="Grade 12">Grade 12</option>
                     </select>
                 </div>
-                <div class="form-group">
-                    <label class="form-label" for="room">Room</label>
-                    <input type="text" class="form-input" id="room" placeholder="e.g., Room 201, Lab 1">
+                <div class="class-form-group">
+                    <label class="class-form-label" for="room">Room</label>
+                    <input type="text" class="class-form-input" id="room" placeholder="e.g., Room 201, Lab 1">
                 </div>
-                <div class="form-group">
-                    <label class="form-label">Schedule</label>
-                    <div class="schedule-inputs">
-                        <div class="schedule-day-input">
+                <div class="class-form-group">
+                    <label class="class-form-label" for="status">Status</label>
+                    <select class="class-form-select" id="status" required>
+                        <option value="">Select Status</option>
+                        <option value="active">Active</option>
+                        <option value="inactive">Inactive</option>
+                    </select>
+                </div>
+            </div>
+            <!-- Second Column: Schedule -->
+            <div class="class-form-column">
+                <div class="class-form-group">
+                    <label class="class-form-label">Schedule</label>
+                    <div class="class-schedule-inputs">
+                        <div class="class-schedule-day-input">
                             <input type="checkbox" id="monday" name="scheduleDays">
                             <label for="monday">Monday</label>
                             <input type="time" id="mondayStart" name="mondayStart" disabled>
                             <span>to</span>
                             <input type="time" id="mondayEnd" name="mondayEnd" disabled>
                         </div>
-                        <div class="schedule-day-input">
+                        <div class="class-schedule-day-input">
                             <input type="checkbox" id="tuesday" name="scheduleDays">
                             <label for="tuesday">Tuesday</label>
                             <input type="time" id="tuesdayStart" name="tuesdayStart" disabled>
                             <span>to</span>
                             <input type="time" id="tuesdayEnd" name="tuesdayEnd" disabled>
                         </div>
-                        <div class="schedule-day-input">
+                        <div class="class-schedule-day-input">
                             <input type="checkbox" id="wednesday" name="scheduleDays">
                             <label for="wednesday">Wednesday</label>
                             <input type="time" id="wednesdayStart" name="wednesdayStart" disabled>
                             <span>to</span>
                             <input type="time" id="wednesdayEnd" name="wednesdayEnd" disabled>
                         </div>
-                        <div class="schedule-day-input">
+                        <div class="class-schedule-day-input">
                             <input type="checkbox" id="thursday" name="scheduleDays">
                             <label for="thursday">Thursday</label>
                             <input type="time" id="thursdayStart" name="thursdayStart" disabled>
                             <span>to</span>
                             <input type="time" id="thursdayEnd" name="thursdayEnd" disabled>
                         </div>
-                        <div class="schedule-day-input">
+                        <div class="class-schedule-day-input">
                             <input type="checkbox" id="friday" name="scheduleDays">
                             <label for="friday">Friday</label>
                             <input type="time" id="fridayStart" name="fridayStart" disabled>
                             <span>to</span>
                             <input type="time" id="fridayEnd" name="fridayEnd" disabled>
                         </div>
-                        <div class="schedule-day-input">
+                        <div class="class-schedule-day-input">
                             <input type="checkbox" id="saturday" name="scheduleDays">
                             <label for="saturday">Saturday</label>
                             <input type="time" id="saturdayStart" name="saturdayStart" disabled>
@@ -1381,21 +1908,15 @@ ob_end_flush();
                         </div>
                     </div>
                 </div>
-                <div class="form-group">
-                    <label class="form-label" for="status">Status</label>
-                    <select class="form-select" id="status" required>
-                        <option value="">Select Status</option>
-                        <option value="active">Active</option>
-                        <option value="inactive">Inactive</option>
-                    </select>
-                </div>
-                <div class="form-actions">
-                    <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
-                    <button type="submit" class="btn btn-primary">Save Class</button>
-                </div>
-            </form>
-        </div>
+            </div>
+            <div class="class-form-actions">
+                <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+                <button type="submit" class="btn btn-primary">Save Class</button>
+            </div>
+        </form>
     </div>
+</div>
+
 
     <div id="viewModal" class="modal">
         <div class="modal-content">
@@ -1403,10 +1924,110 @@ ob_end_flush();
                 <h2 class="modal-title">Class Details</h2>
                 <button class="close-btn" onclick="closeViewModal()">×</button>
             </div>
-            <div id="viewContent">
+            <div id="viewContent" class="p-6">
+                <!-- Dynamic content will be inserted here -->
             </div>
             <div class="form-actions">
                 <button type="button" class="btn btn-secondary" onclick="closeViewModal()">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="studentModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">Student List</h2>
+                <button class="close-btn" onclick="closeStudentModal()">×</button>
+            </div>
+            <div class="p-6">
+                <div class="import-section">
+                    <input type="file" id="importFile" accept=".xlsx, .xls">
+                    <button class="btn btn-success" onclick="importStudents()">Import</button>
+                </div>
+                <div id="studentModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 class="modal-title">Student List</h2>
+            <button class="close-btn" onclick="closeStudentModal()">×</button>
+        </div>
+        <div class="p-6">
+            <div class="import-section">
+                <input type="file" id="importFile" accept=".xlsx, .xls">
+                <button class="btn btn-success" onclick="importStudents()">Import</button>
+            </div>
+            <div class="preview-table-container" id="previewTableContainer" style="display: none;">
+                <h3>Preview</h3>
+                <table class="student-table" id="previewTable">
+                    <thead>
+                        <tr>
+                            <th>First Name</th>
+                            <th>Last Name</th>
+                            <th>Email</th>
+                            <th>Gender</th>
+                            <th>DOB</th>
+                            <th>Grade Level</th>
+                            <th>Address</th>
+                            <th>Parent Name</th>
+                            <th>Emergency Contact</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+            <div class="student-table-container">
+                <table class="student-table" id="studentTable">
+                    <thead>
+                        <tr>
+                            <th>LRN</th>
+                            <th>First Name</th>
+                            <th>Last Name</th>
+                            <th>Email</th>
+                            <th>Gender</th>
+                            <th>DOB</th>
+                            <th>Grade Level</th>
+                            <th>Address</th>
+                            <th>Parent Name</th>
+                            <th>Emergency Contact</th>
+                            <th>Photo</th>
+                            <th>Date Added</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+        <div class="form-actions">
+            <button type="button" class="btn btn-secondary" onclick="closeStudentModal()">Close</button>
+        </div>
+    </div>
+</div>
+                <div class="student-table-container">
+                    <table class="student-table" id="studentTable">
+                        <thead>
+                            <tr>
+                                <th>LRN</th>
+                                <th>First Name</th>
+                                <th>Last Name</th>
+                                <th>Email</th>
+                                <th>Gender</th>
+                                <th>DOB</th>
+                                <th>Grade Level</th>
+                                <th>Address</th>
+                                <th>Parent Name</th>
+                                <th>Emergency Contact</th>
+                                <th>Photo</th>
+                                <th>Date Added</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="form-actions">
+                <button type="button" class="btn btn-secondary" onclick="closeStudentModal()">Close</button>
             </div>
         </div>
     </div>
@@ -1521,7 +2142,7 @@ ob_end_flush();
                         <h4>${sanitizeHTML(classItem.section_name)}</h4>
                         <p><i class="fas fa-book"></i> ${sanitizeHTML(classItem.subject_name)}</p>
                         <p><i class="fas fa-graduation-cap"></i> ${sanitizeHTML(classItem.grade_level)}</p>
-                        <p><i class="fas fa-map-marker-alt"></i> ${sanitizeHTML(classItem.room || 'N/A')}</p>
+                        <p><i class="fas fa-map-marker-alt"></i> ${sanitizeHTML(classItem.room || 'No room specified')}</p>
                         <p><i class="fas fa-percentage"></i> ${attendancePercentage.toFixed(1)}% attendance</p>
                     </div>
                     <div class="class-schedule">
@@ -1535,7 +2156,7 @@ ob_end_flush();
                         <button class="btn btn-sm btn-warning" onclick="editClass(${classItem.class_id})">
                             <i class="fas fa-edit"></i> Edit
                         </button>
-                                                <button class="btn btn-sm btn-success" onclick="openStudentModal(${classItem.id})">
+                        <button class="btn btn-sm btn-success" onclick="openStudentModal(${classItem.class_id})">
                             <i class="fas fa-users"></i> Students
                         </button>
                         <button class="btn btn-sm btn-danger" onclick="deleteClass(${classItem.class_id})">
@@ -1573,7 +2194,7 @@ ob_end_flush();
                     <td>${sanitizeHTML(classItem.grade_level)}</td>
                     <td>${sanitizeHTML(classItem.subject_name)}</td>
                     <td>${sanitizeHTML(scheduleText)}</td>
-                    <td>${sanitizeHTML(classItem.room || 'N/A')}</td>
+                    <td>${sanitizeHTML(classItem.room || 'No room specified')}</td>
                     <td>${attendancePercentage.toFixed(1)}%</td>
                     <td><span class="status-badge ${sanitizeHTML(classItem.status)}">${sanitizeHTML(classItem.status)}</span></td>
                     <td class="actions">
@@ -1583,7 +2204,7 @@ ob_end_flush();
                         <button class="btn btn-sm btn-warning" onclick="editClass(${classItem.class_id})">
                             <i class="fas fa-edit"></i>
                         </button>
-                        <button class="btn btn-sm btn-success" onclick="openStudentModal(${classItem.id})">
+                        <button class="btn btn-sm btn-success" onclick="openStudentModal(${classItem.class_id})">
                             <i class="fas fa-users"></i>
                         </button>
                         <button class="btn btn-sm btn-danger" onclick="deleteClass(${classItem.class_id})">
@@ -1751,33 +2372,39 @@ ob_end_flush();
             const content = document.getElementById('viewContent');
             if (content) {
                 content.innerHTML = `
-                    <div class="view-details">
-                        <div class="detail-row">
-                            <strong>Subject Code:</strong> ${sanitizeHTML(classItem.subject_code)}
-                        </div>
-                        <div class="detail-row">
-                            <strong>Section Name:</strong> ${sanitizeHTML(classItem.section_name)}
-                        </div>
-                        <div class="detail-row">
-                            <strong>Subject:</strong> ${sanitizeHTML(classItem.subject_name)}
-                        </div>
-                        <div class="detail-row">
-                            <strong>Grade Level:</strong> ${sanitizeHTML(classItem.grade_level)}
-                        </div>
-                        <div class="detail-row">
-                            <strong>Room:</strong> ${sanitizeHTML(classItem.room || 'N/A')}
-                        </div>
-                        <div class="detail-row">
-                            <strong>Attendance Percentage:</strong> ${attendancePercentage.toFixed(1)}%
-                        </div>
-                        <div class="detail-row">
-                            <strong>Schedule:</strong>
-                            <div class="schedule-details">
-                                ${scheduleText}
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <div class="detail-row">
+                                <strong>Subject Code:</strong> ${sanitizeHTML(classItem.subject_code)}
+                            </div>
+                            <div class="detail-row">
+                                <strong>Section Name:</strong> ${sanitizeHTML(classItem.section_name)}
+                            </div>
+                            <div class="detail-row">
+                                <strong>Subject:</strong> ${sanitizeHTML(classItem.subject_name)}
+                            </div>
+                            <div class="detail-row">
+                                <strong>Grade Level:</strong> ${sanitizeHTML(classItem.grade_level)}
                             </div>
                         </div>
-                        <div class="detail-row">
-                            <strong>Status:</strong> <span class="status-badge ${sanitizeHTML(classItem.status)}">${sanitizeHTML(classItem.status)}</span>
+                        <div>
+                            <div class="detail-row">
+                                <strong>Room:</strong> ${sanitizeHTML(classItem.room || 'No room specified')}
+                            </div>
+                            <div class="detail-row">
+                                <strong>Attendance Percentage:</strong> ${attendancePercentage.toFixed(1)}%
+                            </div>
+                            <div class="detail-row">
+                                <strong>Status:</strong> <span class="status-badge ${sanitizeHTML(classItem.status)}">${sanitizeHTML(classItem.status)}</span>
+                            </div>
+                        </div>
+                        <div class="col-span-2">
+                            <div class="detail-row">
+                                <strong>Schedule:</strong>
+                                <div class="schedule-details">
+                                    ${scheduleText}
+                                </div>
+                            </div>
                         </div>
                     </div>
                 `;
@@ -1909,71 +2536,254 @@ ob_end_flush();
             const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
             days.forEach(day => {
                 const checkbox = document.getElementById(day);
-                const startInput = document.getElementById(day + 'Start');
+                                const startInput = document.getElementById(day + 'Start');
                 const endInput = document.getElementById(day + 'End');
 
-                if (checkbox) checkbox.checked = false;
-                if (startInput) {
-                    startInput.value = '';
+                if (checkbox && startInput && endInput) {
+                    checkbox.checked = false;
                     startInput.disabled = true;
-                }
-                if (endInput) {
-                    endInput.value = '';
                     endInput.disabled = true;
+                    startInput.value = '';
+                    endInput.value = '';
                 }
             });
         }
 
         function formatSchedule(schedule) {
             if (!schedule || Object.keys(schedule).length === 0) {
-                return '<span class="no-schedule">No schedule set</span>';
+                return '<div class="no-schedule">No schedule set</div>';
             }
 
             return Object.entries(schedule).map(([day, times]) => {
-                const dayName = capitalizeFirst(day);
-                return `<div class="schedule-item">${sanitizeHTML(dayName)}: ${formatTime(times.start)} - ${formatTime(times.end)}</div>`;
+                return `<div class="schedule-item">${day.charAt(0).toUpperCase() + day.slice(1)}: ${times.start} - ${times.end}</div>`;
             }).join('');
         }
 
         function formatScheduleShort(schedule) {
             if (!schedule || Object.keys(schedule).length === 0) {
-                return 'No schedule';
+                return 'N/A';
             }
 
-            const days = Object.keys(schedule).map(day => capitalizeFirst(day).substring(0, 3));
-            return sanitizeHTML(days.join(', '));
+            return Object.entries(schedule).map(([day, times]) => {
+                return `${day.charAt(0).toUpperCase() + day.slice(1)}: ${times.start} - ${times.end}`;
+            }).join(', ');
         }
 
-        function formatTime(time) {
-            if (!time) return '';
-            const [hours, minutes] = time.split(':');
-            const hourNum = parseInt(hours);
-            const period = hourNum >= 12 ? 'PM' : 'AM';
-            const displayHour = hourNum % 12 || 12;
-            return `${displayHour}:${minutes} ${period}`;
+        function sanitizeHTML(str) {
+            const temp = document.createElement('div');
+            temp.textContent = str;
+            return temp.innerHTML;
         }
+
+        function openStudentModal(classId) {
+    const studentModal = document.getElementById('studentModal');
+    if (studentModal) {
+        studentModal.dataset.classId = classId; // Store classId in modal dataset
+        studentModal.classList.add('show');
+    }
+    fetchStudents(classId);
+}
+
+        function closeStudentModal() {
+    const studentModal = document.getElementById('studentModal');
+    const previewTableContainer = document.getElementById('previewTableContainer');
+    const importFile = document.getElementById('importFile');
+    if (studentModal) studentModal.classList.remove('show');
+    if (previewTableContainer) previewTableContainer.style.display = 'none';
+    if (importFile) importFile.value = ''; // Clear the file input
+    document.querySelector('#previewTable tbody').innerHTML = ''; // Clear the preview table
+}
+
+        function fetchStudents(classId) {
+    fetch(`manage-classes.php?action=fetchStudents&classId=${classId}`, {
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest' // Explicitly mark as AJAX
+        }
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Network response was not ok: ' + response.statusText);
+        }
+        return response.json();
+    })
+    .then(result => {
+        if (result.success) {
+            renderStudentTable(result.data, classId);
+        } else {
+            console.error('Error fetching students:', result.error);
+            alert('Failed to fetch students: ' + result.error);
+        }
+    })
+    .catch(error => {
+        console.error('Error fetching students:', error);
+        alert('Error fetching students: ' + error.message);
+    });
+}
+        function renderStudentTable(students, classId) {
+            const tbody = document.querySelector('#studentTable tbody');
+            if (!tbody) return;
+
+            tbody.innerHTML = '';
+
+            if (!students || students.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="14" class="no-classes">No students enrolled</td></tr>';
+                return;
+            }
+
+            students.forEach(student => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${sanitizeHTML(student.lrn || 'N/A')}</td>
+                    <td>${sanitizeHTML(student.first_name || 'N/A')}</td>
+                    <td>${sanitizeHTML(student.last_name || 'N/A')}</td>
+                    <td>${sanitizeHTML(student.email || 'N/A')}</td>
+                    <td>${sanitizeHTML(student.gender || 'N/A')}</td>
+                    <td>${sanitizeHTML(student.dob || 'N/A')}</td>
+                    <td>${sanitizeHTML(student.grade_level || 'N/A')}</td>
+                    <td>${sanitizeHTML(student.address || 'N/A')}</td>
+                    <td>${sanitizeHTML(student.parent_name || 'N/A')}</td>
+                    <td>${sanitizeHTML(student.emergency_contact || 'N/A')}</td>
+                    <td>${sanitizeHTML(student.photo ? '<img src="' + student.photo + '" alt="Student Photo" style="max-width: 50px; max-height: 50px;">' : 'N/A')}</td>
+                    <td>${sanitizeHTML(student.date_added || 'N/A')}</td>
+                    <td class="actions">
+                        <button class="btn btn-sm btn-danger" onclick="deleteStudent(${classId}, '${student.lrn}')">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        function deleteStudent(classId, lrn) {
+            if (!confirm('Are you sure you want to delete this student from the class?')) return;
+
+            fetch('manage-classes.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded'
+                    },
+                    body: `action=deleteStudent&classId=${classId}&lrn=${lrn}`
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok: ' + response.statusText);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.success) {
+                        fetchStudents(classId);
+                        alert('Student removed successfully!');
+                    } else {
+                        alert('Failed to delete student: ' + (data.error || 'Unknown error'));
+                    }
+                })
+                .catch(error => {
+                    console.error('Error deleting student:', error);
+                    alert('Error deleting student: ' + error.message);
+                });
+        }
+
+        document.getElementById('importFile').addEventListener('change', function(event) {
+    const file = event.target.files[0];
+    if (!file) {
+        document.getElementById('previewTableContainer').style.display = 'none';
+        return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        try {
+            const data = new Uint8Array(e.target.result);
+            const workbook = XLSX.read(data, { type: 'array' });
+            const firstSheet = workbook.SheetNames[0];
+            const worksheet = workbook.Sheets[firstSheet];
+            const rows = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+
+            // Skip the header row and render the data
+            const tbody = document.querySelector('#previewTable tbody');
+            tbody.innerHTML = '';
+
+            if (rows.length <= 1) { // Only header or empty
+                document.getElementById('previewTableContainer').style.display = 'none';
+                alert('The selected Excel file is empty or contains only headers.');
+                return;
+            }
+
+            // Render rows (skip header)
+            rows.slice(1).forEach(row => {
+                if (row.length >= 9) { // Ensure row has enough columns
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td>${sanitizeHTML(row[0] || '')}</td>
+                        <td>${sanitizeHTML(row[1] || '')}</td>
+                        <td>${sanitizeHTML(row[2] || '')}</td>
+                        <td>${sanitizeHTML(row[3] || '')}</td>
+                        <td>${sanitizeHTML(row[4] || '')}</td>
+                        <td>${sanitizeHTML(row[5] || '')}</td>
+                        <td>${sanitizeHTML(row[6] || '')}</td>
+                        <td>${sanitizeHTML(row[7] || '')}</td>
+                        <td>${sanitizeHTML(row[8] || '')}</td>
+                    `;
+                    tbody.appendChild(tr);
+                }
+            });
+
+            document.getElementById('previewTableContainer').style.display = 'block';
+        } catch (error) {
+            console.error('Error reading Excel file:', error);
+            alert('Error reading Excel file: ' + error.message);
+            document.getElementById('previewTableContainer').style.display = 'none';
+        }
+    };
+    reader.readAsArrayBuffer(file);
+});
+
+        function importStudents() {
+    const fileInput = document.getElementById('importFile');
+    const file = fileInput.files[0];
+    if (!file) {
+        alert('Please select a file to import.');
+        return;
+    }
+
+    const formData = new FormData();
+    formData.append('action', 'importStudents');
+    formData.append('classId', document.querySelector('#studentModal').dataset.classId || '0');
+    formData.append('file', file);
+
+    fetch('manage-classes.php', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Network response was not ok: ' + response.statusText);
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.success) {
+                fetchStudents(document.querySelector('#studentModal').dataset.classId);
+                document.getElementById('previewTableContainer').style.display = 'none';
+                document.getElementById('importFile').value = ''; // Clear file input
+                document.querySelector('#previewTable tbody').innerHTML = ''; // Clear preview
+                alert('Students imported successfully!');
+            } else {
+                alert('Failed to import students: ' + (data.error || 'Unknown error'));
+            }
+        })
+        .catch(error => {
+            console.error('Error importing students:', error);
+            alert('Error importing students: ' + error.message);
+        });
+}
 
         function toggleSelectAll() {
             const selectAll = document.getElementById('selectAll');
             const checkboxes = document.querySelectorAll('.row-checkbox');
-
-            if (selectAll) {
-                checkboxes.forEach(checkbox => {
-                    checkbox.checked = selectAll.checked;
-                });
-            }
-        }
-
-        function capitalizeFirst(str) {
-            if (!str) return '';
-            return str.charAt(0).toUpperCase() + str.slice(1);
-        }
-
-        function sanitizeHTML(str) {
-            if (!str) return '';
-            const div = document.createElement('div');
-            div.textContent = str;
-            return div.innerHTML;
+            checkboxes.forEach(checkbox => checkbox.checked = selectAll.checked);
         }
     </script>
 </body>

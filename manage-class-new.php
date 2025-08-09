@@ -11,38 +11,85 @@ if (!$user) {
     exit();
 }
 
-// Function to add a new class
-function addClass($classData, $scheduleData) {
+// Function to check for duplicate class
+function isDuplicateClass($pdo, $section_name, $subject_id, $teacher_id, $grade_level, $class_id = null)
+{
+    $query = "SELECT COUNT(*) FROM classes WHERE section_name = ? AND subject_id = ? AND teacher_id = ? AND grade_level = ?";
+    $params = [$section_name, $subject_id, $teacher_id, $grade_level];
+
+    if ($class_id) {
+        $query .= " AND class_id != ?";
+        $params[] = $class_id;
+    }
+
+    $stmt = $pdo->prepare($query);
+    $stmt->execute($params);
+    return $stmt->fetchColumn() > 0;
+}
+
+// Function to add a new class// Function to add or update a class
+function addClass($classData, $scheduleData, $class_id = null)
+{
     $pdo = getDBConnection();
-    
+
     try {
-        // Start transaction
         $pdo->beginTransaction();
-        
-        // Insert subject if it doesn't exist
+
+        // Insert or update subject
         $stmt = $pdo->prepare("
             INSERT INTO subjects (subject_code, subject_name)
             VALUES (?, ?)
-            ON DUPLICATE KEY UPDATE subject_id = LAST_INSERT_ID(subject_id)
+            ON DUPLICATE KEY UPDATE 
+                subject_code = VALUES(subject_code),
+                subject_name = VALUES(subject_name),
+                subject_id = LAST_INSERT_ID(subject_id)
         ");
         $stmt->execute([$classData['code'], $classData['subject']]);
         $subject_id = $pdo->lastInsertId();
-        
-        // Insert class
-        $stmt = $pdo->prepare("
-            INSERT INTO classes (section_name, subject_id, teacher_id, grade_level, room, status)
-            VALUES (?, ?, ?, ?, ?, ?)
-        ");
-        $stmt->execute([
-            $classData['sectionName'],
-            $subject_id,
-            $_SESSION['teacher_id'],
-            $classData['gradeLevel'],
-            $classData['room'],
-            $classData['status']
-        ]);
-        $class_id = $pdo->lastInsertId();
-        
+
+        // Check for duplicate class
+        if (isDuplicateClass($pdo, $classData['sectionName'], $subject_id, $_SESSION['teacher_id'], $classData['gradeLevel'], $class_id)) {
+            $pdo->rollBack();
+            return ['success' => false, 'error' => 'This class already exists for this teacher, section, and grade level.'];
+        }
+
+        if ($class_id) {
+            // Update existing class
+            $stmt = $pdo->prepare("
+                UPDATE classes 
+                SET section_name = ?, subject_id = ?, grade_level = ?, room = ?, status = ?
+                WHERE class_id = ? AND teacher_id = ?
+            ");
+            $stmt->execute([
+                $classData['sectionName'],
+                $subject_id,
+                $classData['gradeLevel'],
+                $classData['room'],
+                $classData['status'],
+                $class_id,
+                $_SESSION['teacher_id']
+            ]);
+
+            // Delete existing schedules
+            $stmt = $pdo->prepare("DELETE FROM schedules WHERE class_id = ?");
+            $stmt->execute([$class_id]);
+        } else {
+            // Insert new class
+            $stmt = $pdo->prepare("
+                INSERT INTO classes (section_name, subject_id, teacher_id, grade_level, room, status)
+                VALUES (?, ?, ?, ?, ?, ?)
+            ");
+            $stmt->execute([
+                $classData['sectionName'],
+                $subject_id,
+                $_SESSION['teacher_id'],
+                $classData['gradeLevel'],
+                $classData['room'],
+                $classData['status']
+            ]);
+            $class_id = $pdo->lastInsertId();
+        }
+
         // Insert schedules
         foreach ($scheduleData as $day => $times) {
             $stmt = $pdo->prepare("
@@ -56,77 +103,163 @@ function addClass($classData, $scheduleData) {
                 $times['end']
             ]);
         }
-        
-        // Commit transaction
+
         $pdo->commit();
         return ['success' => true, 'class_id' => $class_id];
     } catch (PDOException $e) {
-        // Rollback on error
         $pdo->rollBack();
-        error_log("Add class error: " . $e->getMessage());
-        return ['success' => false, 'error' => 'Failed to add class.'];
+        error_log(($class_id ? "Update" : "Add") . " class error: " . $e->getMessage());
+        return ['success' => false, 'error' => 'Failed to ' . ($class_id ? 'update' : 'add') . ' class: ' . $e->getMessage()];
+    }
+}
+// Function to delete a class
+function deleteClass($class_id)
+{
+    $pdo = getDBConnection();
+
+    try {
+        $pdo->beginTransaction();
+
+        // Delete related schedules
+        $stmt = $pdo->prepare("DELETE FROM schedules WHERE class_id = ?");
+        $stmt->execute([$class_id]);
+
+        // Delete related class_students entries
+        $stmt = $pdo->prepare("DELETE FROM class_students WHERE class_id = ?");
+        $stmt->execute([$class_id]);
+
+        // Delete the class
+        $stmt = $pdo->prepare("DELETE FROM classes WHERE class_id = ? AND teacher_id = ?");
+        $stmt->execute([$class_id, $_SESSION['teacher_id']]);
+
+        $pdo->commit();
+        return ['success' => true];
+    } catch (PDOException $e) {
+        $pdo->rollBack();
+        error_log("Delete class error: " . $e->getMessage());
+        return ['success' => false, 'error' => 'Failed to delete class: ' . $e->getMessage()];
     }
 }
 
-// Handle AJAX request to add class
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'addClass') {
+// Function to fetch classes for display
+// Function to fetch classes for display
+function fetchClassesForTeacher()
+{
+    $pdo = getDBConnection();
+    try {
+        // Fetch class details without schedule
+        $stmt = $pdo->prepare("
+            SELECT c.class_id, c.section_name, c.grade_level, c.room, c.attendance_percentage, c.status,
+                   s.subject_code, s.subject_name
+            FROM classes c
+            JOIN subjects s ON c.subject_id = s.subject_id
+            WHERE c.teacher_id = ?
+        ");
+        $stmt->execute([$_SESSION['teacher_id']]);
+        $classes = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        // Fetch schedules separately
+        foreach ($classes as &$class) {
+            $stmt = $pdo->prepare("
+                SELECT day, start_time, end_time
+                FROM schedules
+                WHERE class_id = ?
+            ");
+            $stmt->execute([$class['class_id']]);
+            $schedules = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            // Build schedule array
+            $class['schedule'] = [];
+            foreach ($schedules as $schedule) {
+                if (!empty($schedule['day'])) {
+                    $class['schedule'][$schedule['day']] = [
+                        'start' => $schedule['start_time'],
+                        'end' => $schedule['end_time']
+                    ];
+                }
+            }
+        }
+
+        return ['success' => true, 'data' => $classes];
+    } catch (PDOException $e) {
+        error_log("Fetch classes error: " . $e->getMessage());
+        return ['success' => false, 'error' => 'Failed to fetch classes: ' . $e->getMessage()];
+    }
+}
+// Handle AJAX requests
+// Handle AJAX requests
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     header('Content-Type: application/json');
-    
-    $classData = [
-        'code' => $_POST['classCode'] ?? '',
-        'sectionName' => $_POST['sectionName'] ?? '',
-        'subject' => $_POST['subject'] ?? '',
-        'gradeLevel' => $_POST['gradeLevel'] ?? '',
-        'room' => $_POST['room'] ?? '',
-        'status' => $_POST['status'] ?? ''
-    ];
-    
-    $scheduleData = json_decode($_POST['schedule'] ?? '{}', true);
-    
-    // Validate inputs
-    if (empty($classData['code']) || empty($classData['sectionName']) || 
-        empty($classData['subject']) || empty($classData['gradeLevel']) || 
-        empty($classData['status'])) {
-        echo json_encode(['success' => false, 'error' => 'Missing required fields']);
+    ob_clean();
+
+    if ($_POST['action'] === 'addClass') {
+        $classData = [
+            'code' => $_POST['classCode'] ?? '',
+            'sectionName' => $_POST['sectionName'] ?? '',
+            'subject' => $_POST['subject'] ?? '',
+            'gradeLevel' => $_POST['gradeLevel'] ?? '',
+            'room' => $_POST['room'] ?? '',
+            'status' => $_POST['status'] ?? ''
+        ];
+
+        $scheduleData = json_decode($_POST['schedule'] ?? '{}', true);
+        $classId = $_POST['classId'] ?? null; // Get classId for editing
+
+        // Validate inputs
+        if (
+            empty($classData['code']) || empty($classData['sectionName']) ||
+            empty($classData['subject']) || empty($classData['gradeLevel']) ||
+            empty($classData['status'])
+        ) {
+            echo json_encode(['success' => false, 'error' => 'Missing required fields']);
+            exit;
+        }
+
+        echo json_encode(addClass($classData, $scheduleData, $classId));
+        exit;
+    } elseif ($_POST['action'] === 'deleteClass') {
+        $class_id = $_POST['classId'] ?? null;
+        if (!$class_id) {
+            echo json_encode(['success' => false, 'error' => 'Missing class ID']);
+            exit;
+        }
+        echo json_encode(deleteClass($class_id));
         exit;
     }
-    
-    $result = addClass($classData, $scheduleData);
-    echo json_encode($result);
+} elseif ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['action']) && $_GET['action'] === 'fetchClasses') {
+    header('Content-Type: application/json');
+    ob_clean(); // Clear any output before JSON response
+    echo json_encode(fetchClassesForTeacher());
     exit;
 }
+
+// For non-AJAX requests, render the HTML page
+ob_end_flush();
 ?>
 
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Class Management</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-        <style>
+    <style>
         :root {
-            /* Primary Colors */
             --primary-blue: #3b82f6;
             --primary-blue-hover: #2563eb;
             --primary-blue-light: #dbeafe;
-            
-            /* Status Colors */
             --success-green: #22c55e;
             --warning-yellow: #f59e0b;
             --danger-red: #ef4444;
             --info-cyan: #06b6d4;
-            
-            /* Neutral Colors */
             --dark-gray: #1f2937;
             --medium-gray: #6b7280;
             --light-gray: #e5e7eb;
             --background: #f9fafb;
             --white: #ffffff;
             --border-color: #e2e8f0;
-    
-            /* Additional Colors */
             --card-bg: #ffffff;
             --blackfont-color: #1e293b;
             --whitefont-color: #ffffff;
@@ -135,35 +268,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             --secondary-gradient: linear-gradient(135deg, #ec4899, #f472b6);
             --inputfield-color: #f8fafc;
             --inputfieldhover-color: #f1f5f9;
-            
-            /* Typography */
             --font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
             --font-size-sm: 0.875rem;
             --font-size-base: 1rem;
             --font-size-lg: 1.125rem;
             --font-size-xl: 1.25rem;
             --font-size-2xl: 1.875rem;
-    
-            /* Spacing */
             --spacing-xs: 0.5rem;
             --spacing-sm: 0.75rem;
             --spacing-md: 1rem;
             --spacing-lg: 1.5rem;
             --spacing-xl: 2rem;
             --spacing-2xl: 3rem;
-            
-            /* Shadows */
             --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.05);
             --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08);
             --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.1);
-            
-            /* Border Radius */
             --radius-sm: 0.375rem;
             --radius-md: 0.5rem;
             --radius-lg: 0.75rem;
             --radius-xl: 1rem;
-    
-            /* Transitions */
             --transition-fast: 0.2s ease-in-out;
             --transition-normal: 0.3s ease-in-out;
             --transition-slow: 0.5s ease-in-out;
@@ -180,6 +303,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             background-color: var(--card-bg);
             color: var(--blackfont-color);
             padding: 20px;
+        }
+
+        html,
+        body {
+            height: 100%;
+            margin: 0;
         }
 
         h1 {
@@ -201,7 +330,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             border-radius: var(--radius-sm);
         }
 
-        /* Stats Grid */
         .stats-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -240,10 +368,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             color: var(--whitefont-color);
         }
 
-        .bg-purple { background: var(--primary-gradient); }
-        .bg-pink { background: var(--secondary-gradient); }
-        .bg-blue { background: linear-gradient(135deg, #3b82f6, #60a5fa); }
-        .bg-green { background: linear-gradient(135deg, #10b981, #34d399); }
+        .bg-purple {
+            background: var(--primary-gradient);
+        }
+
+        .bg-green {
+            background: linear-gradient(135deg, #10b981, #34d399);
+        }
 
         .card-title {
             font-size: 14px;
@@ -257,65 +388,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             color: var(--blackfont-color);
         }
 
-        /* Controls */
-        .controls {
-            background: var(--card-bg);
-            border-radius: var(--radius-lg);
-            padding: var(--spacing-xl);
-            box-shadow: var(--shadow-md);
-            margin-bottom: var(--spacing-2xl);
-            display: grid;
-            grid-template-columns: 2fr 1fr;
-            gap: var(--spacing-lg);
-            align-items: center;
-            border: 1px solid var(--border-color);
-        }
-
-        .controls-left {
-            display: flex;
-            flex-wrap: wrap;
-            gap: var(--spacing-md);
-        }
-
-        .controls-right {
-            display: flex;
-            justify-content: flex-end;
-            gap: var(--spacing-md);
-            flex-wrap: wrap;
-        }
-
-        .search-container {
-            position: relative;
-            min-width: 280px;
-        }
-
-        .search-input {
-            width: 100%;
-            padding: var(--spacing-sm) var(--spacing-md) var(--spacing-sm) 2.75rem;
-            border: 1px solid var(--border-color);
-            border-radius: var(--radius-md);
-            font-size: var(--font-size-sm);
-            background: var(--inputfield-color);
-            transition: var(--transition-normal);
-        }
-
-        .search-input:focus {
-            outline: none;
-            border-color: var(--primary-blue);
-            background: var(--white);
-            box-shadow: 0 0 0 4px var(--primary-blue-light);
-        }
-
-        .search-icon {
-            position: absolute;
-            left: var(--spacing-md);
-            top: 50%;
-            transform: translateY(-50%);
-            color: var(--grayfont-color);
-            font-size: 1rem;
-        }
-
-        .form-input, .form-select {
+        .form-input,
+        .form-select {
             padding: var(--spacing-sm) var(--spacing-md);
             border: 1px solid var(--border-color);
             border-radius: var(--radius-md);
@@ -324,14 +398,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             transition: var(--transition-normal);
         }
 
-        .form-input:focus, .form-select:focus {
+        .form-input:focus,
+        .form-select:focus {
             outline: none;
             border-color: var(--primary-blue);
             background: var(--white);
             box-shadow: 0 0 0 4px var(--primary-blue-light);
         }
 
-        .form-input:disabled, .form-select:disabled {
+        .form-input:disabled,
+        .form-select:disabled {
             background: var(--light-gray);
             opacity: 0.7;
             cursor: not-allowed;
@@ -341,7 +417,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             min-width: 140px;
         }
 
-        /* Buttons */
         .btn {
             padding: var(--spacing-sm) var(--spacing-lg);
             border: none;
@@ -376,16 +451,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             transform: translateY(-2px);
         }
 
-        .btn-success {
-            background: linear-gradient(135deg, #22c55e, #4ade80);
-            color: var(--whitefont-color);
-        }
-
-        .btn-success:hover {
-            background: var(--success-green);
-            transform: translateY(-2px);
-        }
-
         .btn-warning {
             background: linear-gradient(135deg, #f59e0b, #fbbf24);
             color: var(--whitefont-color);
@@ -393,6 +458,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 
         .btn-warning:hover {
             background: var(--warning-yellow);
+            transform: translateY(-2px);
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #22c55e, #4ade80);
+            color: var(--whitefont-color);
+        }
+
+        .btn-success:hover {
+            background: var(--success-green);
             transform: translateY(-2px);
         }
 
@@ -421,15 +496,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             font-size: 0.75rem;
         }
 
-        /* View Toggle */
-        .view-toggle {
-            display: flex;
-            border: 1px solid var(--border-color);
-            border-radius: var(--radius-md);
-            overflow: hidden;
-            background: var(--inputfield-color);
-        }
-
         .view-btn {
             padding: var(--spacing-sm) var(--spacing-md);
             background: transparent;
@@ -449,17 +515,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             color: var(--whitefont-color);
         }
 
-        /* Grid View */
         .class-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
             gap: var(--spacing-lg);
+            gap: 15px;
         }
 
         .class-card {
             background: var(--card-bg);
             border-radius: var(--radius-lg);
-            padding: var(--spacing-lg);
+            padding: 20px;
             box-shadow: var(--shadow-md);
             transition: var(--transition-normal);
             border: 1px solid var(--border-color);
@@ -567,7 +633,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             flex-wrap: wrap;
         }
 
-        /* Table View */
         .table-container {
             background: var(--card-bg);
             border-radius: var(--radius-lg);
@@ -606,7 +671,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             gap: var(--spacing-xs);
         }
 
-        /* Modal */
         .modal {
             display: none;
             position: fixed;
@@ -757,82 +821,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             border-top: 1px solid var(--border-color);
         }
 
-        /* File Upload */
-        .file-upload {
-            display: flex;
-            align-items: center;
-            gap: var(--spacing-md);
-        }
-
-        .file-upload input[type="file"] {
-            display: none;
-        }
-
-        .file-upload-btn {
-            cursor: pointer;
-        }
-
-        /* Import Preview */
-        .import-preview {
-            margin-top: var(--spacing-lg);
-            padding: var(--spacing-md);
-            background: var(--inputfield-color);
-            border-radius: var(--radius-md);
-            border: 1px solid var(--border-color);
-        }
-
-        .import-preview h3 {
-            margin-bottom: var(--spacing-md);
-            color: var(--blackfont-color);
-            font-size: var(--font-size-base);
-            font-weight: 500;
-        }
-
-        #previewTable, #studentPreviewTable {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: var(--font-size-sm);
-        }
-
-        #previewTable th,
-        #previewTable td,
-        #studentPreviewTable th,
-        #studentPreviewTable td {
-            padding: var(--spacing-sm);
-            border: 1px solid var(--border-color);
-            text-align: left;
-        }
-
-        #previewTable th,
-        #studentPreviewTable th {
-            background: var(--inputfield-color);
-            font-weight: 600;
-            color: var(--grayfont-color);
-        }
-
-        /* View Details */
-        .view-details {
-            padding: var(--spacing-lg);
-        }
-
-        .detail-row {
-            display: flex;
-            margin-bottom: var(--spacing-md);
-            align-items: flex-start;
-            gap: var(--spacing-sm);
-        }
-
-        .detail-row strong {
-            min-width: 160px;
-            color: var(--blackfont-color);
-            font-weight: 500;
-        }
-
-        .schedule-details {
-            margin-left: 160px;
-        }
-
-        /* Utility Classes */
         .hidden {
             display: none !important;
         }
@@ -845,18 +833,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             font-size: var(--font-size-base);
         }
 
-        /* Animations */
         @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
+            from {
+                opacity: 0;
+            }
+
+            to {
+                opacity: 1;
+            }
         }
 
         @keyframes slideIn {
-            from { transform: translateY(-20px); opacity: 0; }
-            to { transform: translateY(0); opacity: 1; }
+            from {
+                transform: translateY(-20px);
+                opacity: 0;
+            }
+
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
         }
 
-        /* Responsive Design */
         @media (max-width: 1024px) {
             .controls {
                 grid-template-columns: 1fr;
@@ -865,6 +863,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             .controls-right {
                 justify-content: flex-start;
             }
+
             .stats-grid {
                 grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
             }
@@ -938,19 +937,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                 width: 100%;
                 justify-content: center;
             }
-
-            .detail-row {
-                flex-direction: column;
-                gap: var(--spacing-xs);
-            }
-
-            .detail-row strong {
-                min-width: auto;
-            }
-
-            .schedule-details {
-                margin-left: 0;
-            }
         }
 
         @media (max-width: 576px) {
@@ -990,8 +976,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             }
         }
 
-        /* Table Responsive Improvements */
         @media (max-width: 768px) {
+
             .table th:nth-child(n+6),
             .table td:nth-child(n+6) {
                 display: none;
@@ -999,14 +985,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         }
 
         @media (max-width: 600px) {
+
             .table th:nth-child(n+4),
             .table td:nth-child(n+4) {
                 display: none;
             }
         }
 
-        /* Print Styles */
         @media print {
+
             .controls,
             .class-actions,
             .actions,
@@ -1025,7 +1012,162 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             }
         }
     </style>
+
+    <style>
+        .controls {
+            background: var(--card-bg);
+            border-radius: var(--radius-md);
+            /* Reduced from var(--radius-lg) for a tighter look */
+            padding: var(--spacing-md);
+            /* Reduced from var(--spacing-xl) to decrease padding */
+            box-shadow: var(--shadow-md);
+            margin-bottom: var(--spacing-lg);
+            /* Reduced from var(--spacing-2xl) */
+            display: flex;
+            /* Changed to flex for better alignment */
+            flex-wrap: wrap;
+            /* Allow wrapping for responsiveness */
+            gap: var(--spacing-sm);
+            /* Reduced gap for tighter spacing */
+            align-items: center;
+            border: 1px solid var(--border-color);
+        }
+
+        .controls-left {
+            display: flex;
+            flex-wrap: wrap;
+            gap: var(--spacing-sm);
+            /* Reduced from var(--spacing-md) */
+            flex: 1;
+            /* Allow controls-left to take available space */
+            align-items: center;
+            /* Vertically center items */
+        }
+
+        .controls-right {
+            display: flex;
+            flex-wrap: wrap;
+            gap: var(--spacing-sm);
+            /* Reduced from var(--spacing-md) */
+            align-items: center;
+            /* Vertically center items */
+        }
+
+        .search-container {
+            position: relative;
+            min-width: 200px;
+            /* Reduced from 280px for compactness */
+            flex: 1;
+            /* Allow search to take available space */
+        }
+
+        .search-input {
+            width: 100%;
+            padding: var(--spacing-xs) var(--spacing-md) var(--spacing-xs) 2.5rem;
+            /* Adjusted padding for tighter input */
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-sm);
+            /* Smaller radius for input */
+            font-size: var(--font-size-sm);
+            background: var(--inputfield-color);
+            transition: var(--transition-normal);
+        }
+
+        .search-icon {
+            position: absolute;
+            left: var(--spacing-sm);
+            /* Adjusted for tighter alignment */
+            top: 55%;
+            transform: translateY(-50%);
+            color: var(--grayfont-color);
+            font-size: 0.875rem;
+            /* Slightly smaller icon */
+        }
+
+        .filter-select {
+            min-width: 140px;
+            /* Reduced from 140px for compactness */
+            padding: var(--spacing-xs) var(--spacing-sm);
+            /* Reduced padding */
+        }
+
+        /* Ensure buttons in controls-right are compact */
+        .btn {
+            padding: var(--spacing-xs) var(--spacing-md);
+            /* Reduced padding */
+            font-size: var(--font-size-sm);
+        }
+
+        .view-toggle {
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-sm);
+            /* Smaller radius */
+            overflow: hidden;
+            background: var(--inputfield-color);
+            display: flex;
+        }
+
+        .view-btn {
+            padding: var(--spacing-xs) var(--spacing-sm);
+            /* Reduced padding */
+            font-size: 0.875rem;
+            /* Slightly smaller font */
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 1024px) {
+            .controls {
+                flex-direction: column;
+                /* Stack vertically on smaller screens */
+                align-items: stretch;
+                /* Full width for children */
+            }
+
+            .controls-right {
+                justify-content: flex-start;
+                margin-top: var(--spacing-sm);
+                /* Reduced margin */
+            }
+        }
+
+        @media (max-width: 768px) {
+            .controls-left {
+                flex-direction: column;
+                gap: var(--spacing-xs);
+                /* Tighter gap */
+            }
+
+            .controls-right {
+                flex-direction: column;
+                gap: var(--spacing-xs);
+                /* Tighter gap */
+            }
+
+            .search-container {
+                min-width: auto;
+                width: 100%;
+                /* Full width on small screens */
+            }
+
+            .filter-select {
+                width: 100%;
+                /* Full width for selects */
+            }
+
+            .btn {
+                width: 100%;
+                /* Full width buttons */
+                justify-content: center;
+            }
+
+            .view-toggle {
+                width: 100%;
+                justify-content: space-between;
+            }
+        }
+    </style>
 </head>
+
 <body>
     <h1>Class Management</h1>
     <div class="stats-grid">
@@ -1037,9 +1179,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                 </div>
                 <div class="card-icon bg-purple">
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 16 16">
-                        <path d="M7 14s-1 0-1-1 1-4 5-4 5 3 5 4-1 1-1 1H7zm4-6a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"/>
-                        <path fill-rule="evenodd" d="M5.216 14A2.238 2.238 0 0 1 5 13c0-1.355.68-2.75 1.936-3.72A6.325 6.325 0 0 0 5 9c-4 0-5 3-5 4s1 1 1 1h4.216z"/>
-                        <path d="M4.5 8a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z"/>
+                        <path d="M7 14s-1 0-1-1 1-4 5-4 5 3 5 4-1 1-1 1H7zm4-6a3 3 0 1 0 0-6 3 3 0 0 0 0 6z" />
+                        <path fill-rule="evenodd" d="M5.216 14A2.238 2.238 0 0 1 5 13c0-1.355.68-2.75 1.936-3.72A6.325 6.325 0 0 0 5 9c-4 0-5 3-5 4s1 1 1 1h4.216z" />
+                        <path d="M4.5 8a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z" />
                     </svg>
                 </div>
             </div>
@@ -1052,8 +1194,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                 </div>
                 <div class="card-icon bg-green">
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 16 16">
-                        <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
-                        <path d="M10.97 4.97a.235.235 0 0 0-.02.022L7.477 9.417 5.384 7.323a.75.75 0 0 0-1.06 1.06L6.97 11.03a.75.75 0 0 0 1.079-.02l3.992-4.99a.75.75 0 0 0-1.071-1.05z"/>
+                        <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z" />
+                        <path d="M10.97 4.97a.235.235 0 0 0-.02.022L7.477 9.417 5.384 7.323a.75.75 0 0 0-1.06 1.06L6.97 11.03a.75.75 0 0 0 1.079-.02l3.992-4.99a.75.75 0 0 0-1.071-1.05z" />
                     </svg>
                 </div>
             </div>
@@ -1066,9 +1208,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                 </div>
                 <div class="card-icon bg-pink">
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 16 16">
-                        <path d="M7 14s-1 0-1-1 1-4 5-4 5 3 5 4-1 1-1 1H7zm4-6a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"/>
-                        <path fill-rule="evenodd" d="M5.216 14A2.238 2.238 0 0 1 5 13c0-1.355.68-2.75 1.936-3.72A6.325 6.325 0 0 0 5 9c-4 0-5 3-5 4s1 1 1 1h4.216z"/>
-                        <path d="M4.5 8a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z"/>
+                        <path d="M7 14s-1 0-1-1 1-4 5-4 5 3 5 4-1 1-1 1H7zm4-6a3 3 0 1 0 0-6 3 3 0 0 0 0 6z" />
+                        <path fill-rule="evenodd" d="M5.216 14A2.238 2.238 0 0 1 5 13c0-1.355.68-2.75 1.936-3.72A6.325 6.325 0 0 0 5 9c-4 0-5 3-5 4s1 1 1 1h4.216z" />
+                        <path d="M4.5 8a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z" />
                     </svg>
                 </div>
             </div>
@@ -1081,8 +1223,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                 </div>
                 <div class="card-icon bg-blue">
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 16 16">
-                        <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
-                        <path d="M4 8a.5.5 0 0 1 .5-.5h7a.5.5 0 0 1 0 1h-7A.5.5 0 0 1 4 8z"/>
+                        <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z" />
+                        <path d="M4 8a.5.5 0 0 1 .5-.5h7a.5.5 0 0 1 0 1h-7A.5.5 0 0 1 4 8z" />
                     </svg>
                 </div>
             </div>
@@ -1131,12 +1273,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             </div>
         </div>
 
-        <!-- Grid View -->
         <div id="gridView" class="class-grid">
-            <!-- Classes will be rendered here -->
         </div>
 
-        <!-- Table View -->
         <div id="tableView" class="table-container hidden">
             <table class="table">
                 <thead>
@@ -1144,25 +1283,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                         <th>
                             <input type="checkbox" id="selectAll" onchange="toggleSelectAll()">
                         </th>
-                        <th>Class Code & Section</th>
+                        <th>Subject Code & Section</th>
                         <th>Grade Level</th>
                         <th>Subject</th>
                         <th>Schedule</th>
                         <th>Room</th>
-                        <th>Students</th>
                         <th>Attendance %</th>
                         <th>Status</th>
                         <th>Actions</th>
                     </tr>
                 </thead>
                 <tbody>
-                    <!-- Table rows will be rendered here -->
                 </tbody>
             </table>
         </div>
     </div>
 
-    <!-- Add/Edit Class Modal -->
     <div id="classModal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
@@ -1171,7 +1307,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             </div>
             <form id="classForm">
                 <div class="form-group">
-                    <label class="form-label" for="classCode">Class Code</label>
+                    <label class="form-label" for="classCode">Subject Code</label>
                     <input type="text" class="form-input" id="classCode" required placeholder="e.g., MATH-101-A">
                 </div>
                 <div class="form-group">
@@ -1261,42 +1397,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         </div>
     </div>
 
-    <!-- Student List Modal -->
-    <div id="studentModal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2 class="modal-title">Import Student List</h2>
-                <button class="close-btn" onclick="closeStudentModal()">×</button>
-            </div>
-            <div class="form-group">
-                <label class="form-label">Choose Excel File with Student List</label>
-                <div class="file-upload">
-                    <input type="file" id="studentFile" accept=".xlsx,.xls" onchange="handleStudentFileUpload(event)">
-                    <button type="button" class="btn btn-primary file-upload-btn" onclick="document.getElementById('studentFile').click()">
-                        <i class="fas fa-upload"></i> Choose File
-                    </button>
-                </div>
-                <small style="color: var(--grayfont-color); margin-top: var(--spacing-sm); display: block;">
-                    Upload an Excel file with columns: Student ID, First Name, Last Name, Email (optional)
-                </small>
-            </div>
-            <div id="studentPreview" class="import-preview hidden">
-                <h3>Preview Students:</h3>
-                <table id="studentPreviewTable">
-                    <thead></thead>
-                    <tbody></tbody>
-                </table>
-            </div>
-            <div class="form-actions">
-                <button type="button" class="btn btn-secondary" onclick="closeStudentModal()">Cancel</button>
-                <button type="button" class="btn btn-primary" id="importStudentsBtn" onclick="importStudents()" disabled>
-                    <i class="fas fa-user-plus"></i> Import Students
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <!-- View Class Modal -->
     <div id="viewModal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
@@ -1304,7 +1404,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                 <button class="close-btn" onclick="closeViewModal()">×</button>
             </div>
             <div id="viewContent">
-                <!-- Content will be populated by JavaScript -->
             </div>
             <div class="form-actions">
                 <button type="button" class="btn btn-secondary" onclick="closeViewModal()">Close</button>
@@ -1316,54 +1415,61 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         let classes = [];
         let currentView = 'grid';
         let editingClassId = null;
-        let currentClassForStudents = null;
-        let importedStudentData = [];
 
-        // Initialize the application
         document.addEventListener('DOMContentLoaded', function() {
             fetchClasses();
-            updateStats();
-            renderClasses();
-            populateFilters();
             setupEventListeners();
             clearScheduleInputs();
         });
 
-        // Fetch classes from database
         function fetchClasses() {
-            fetch('fetch_classes.php')
-                .then(response => response.json())
-                .then(data => {
-                    classes = data;
-                    updateStats();
-                    renderClasses();
-                    populateFilters();
+            fetch('manage-classes.php?action=fetchClasses')
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok: ' + response.statusText);
+                    }
+                    return response.json();
                 })
-                .catch(error => console.error('Error fetching classes:', error));
+                .then(result => {
+                    if (result.success) {
+                        classes = result.data || [];
+                        updateStats();
+                        renderClasses();
+                        populateFilters();
+                    } else {
+                        console.error('Error fetching classes:', result.error);
+                        alert('Failed to fetch classes: ' + result.error);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error fetching classes:', error);
+                    alert('Error fetching classes: ' + error.message);
+                });
         }
 
-        // Update stats for cards
         function updateStats() {
             const totalClasses = classes.length;
             const activeClasses = classes.filter(c => c.status === 'active').length;
-            const totalStudents = classes.reduce((sum, c) => sum + (c.students ? c.students.length : 0), 0);
-            const averageAttendance = classes.length ? (classes.reduce((sum, c) => sum + (parseFloat(c.attendance_percentage) || 0), 0) / classes.length).toFixed(1) : 0;
 
             document.getElementById('total-classes').textContent = totalClasses;
             document.getElementById('active-classes').textContent = activeClasses;
-            document.getElementById('total-students').textContent = totalStudents;
-            document.getElementById('average-attendance').textContent = `${averageAttendance}%`;
         }
 
-        // Setup event listeners
         function setupEventListeners() {
-            document.getElementById('searchInput').addEventListener('input', handleSearch);
-            document.getElementById('gradeFilter').addEventListener('change', handleFilter);
-            document.getElementById('statusFilter').addEventListener('change', handleFilter);
-            document.getElementById('subjectFilter').addEventListener('change', handleFilter);
-            document.getElementById('sectionFilter').addEventListener('change', handleFilter);
-            document.getElementById('classForm').addEventListener('submit', handleFormSubmit);
-            
+            const searchInput = document.getElementById('searchInput');
+            const gradeFilter = document.getElementById('gradeFilter');
+            const statusFilter = document.getElementById('statusFilter');
+            const subjectFilter = document.getElementById('subjectFilter');
+            const sectionFilter = document.getElementById('sectionFilter');
+            const classForm = document.getElementById('classForm');
+
+            if (searchInput) searchInput.addEventListener('input', handleSearch);
+            if (gradeFilter) gradeFilter.addEventListener('change', handleFilter);
+            if (statusFilter) statusFilter.addEventListener('change', handleFilter);
+            if (subjectFilter) subjectFilter.addEventListener('change', handleFilter);
+            if (sectionFilter) sectionFilter.addEventListener('change', handleFilter);
+            if (classForm) classForm.addEventListener('submit', handleFormSubmit);
+
             const scheduleCheckboxes = document.querySelectorAll('input[name="scheduleDays"]');
             scheduleCheckboxes.forEach(checkbox => {
                 checkbox.addEventListener('change', handleScheduleToggle);
@@ -1379,7 +1485,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             });
         }
 
-        // Render classes based on current view
         function renderClasses() {
             updateStats();
             if (currentView === 'grid') {
@@ -1389,13 +1494,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             }
         }
 
-        // Render grid view
         function renderGridView() {
             const container = document.getElementById('gridView');
+            if (!container) return;
+
             const filteredClasses = getFilteredClasses();
-            
             container.innerHTML = '';
-            
+
             if (filteredClasses.length === 0) {
                 container.innerHTML = '<div class="no-classes">No classes found</div>';
                 return;
@@ -1404,20 +1509,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             filteredClasses.forEach(classItem => {
                 const scheduleText = formatSchedule(classItem.schedule);
                 const attendancePercentage = parseFloat(classItem.attendance_percentage) || 0;
-                
+
                 const card = document.createElement('div');
                 card.className = 'class-card';
                 card.innerHTML = `
                     <div class="class-header">
-                        <h3>${classItem.subject_code}</h3>
-                        <span class="status-badge ${classItem.status}">${classItem.status}</span>
+                        <h3>${sanitizeHTML(classItem.subject_code)}</h3>
+                        <span class="status-badge ${sanitizeHTML(classItem.status)}">${sanitizeHTML(classItem.status)}</span>
                     </div>
                     <div class="class-info">
-                        <h4>${classItem.section_name}</h4>
-                        <p><i class="fas fa-book"></i> ${classItem.subject_name}</p>
-                        <p><i class="fas fa-graduation-cap"></i> ${classItem.grade_level}</p>
-                        <p><i class="fas fa-map-marker-alt"></i> ${classItem.room || 'N/A'}</p>
-                        <p><i class="fas fa-users"></i> ${classItem.students ? classItem.students.length : 0} students</p>
+                        <h4>${sanitizeHTML(classItem.section_name)}</h4>
+                        <p><i class="fas fa-book"></i> ${sanitizeHTML(classItem.subject_name)}</p>
+                        <p><i class="fas fa-graduation-cap"></i> ${sanitizeHTML(classItem.grade_level)}</p>
+                        <p><i class="fas fa-map-marker-alt"></i> ${sanitizeHTML(classItem.room || 'N/A')}</p>
                         <p><i class="fas fa-percentage"></i> ${attendancePercentage.toFixed(1)}% attendance</p>
                     </div>
                     <div class="class-schedule">
@@ -1431,7 +1535,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                         <button class="btn btn-sm btn-warning" onclick="editClass(${classItem.class_id})">
                             <i class="fas fa-edit"></i> Edit
                         </button>
-                        <button class="btn btn-sm btn-success" onclick="openStudentModal(${classItem.class_id})">
+                                                <button class="btn btn-sm btn-success" onclick="openStudentModal(${classItem.id})">
                             <i class="fas fa-users"></i> Students
                         </button>
                         <button class="btn btn-sm btn-danger" onclick="deleteClass(${classItem.class_id})">
@@ -1443,36 +1547,35 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             });
         }
 
-        // Render table view
         function renderTableView() {
             const tbody = document.querySelector('#tableView tbody');
+            if (!tbody) return;
+
             const filteredClasses = getFilteredClasses();
-            
             tbody.innerHTML = '';
-            
+
             if (filteredClasses.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="10" class="no-classes">No classes found</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="9" class="no-classes">No classes found</td></tr>';
                 return;
             }
 
             filteredClasses.forEach(classItem => {
                 const scheduleText = formatScheduleShort(classItem.schedule);
                 const attendancePercentage = parseFloat(classItem.attendance_percentage) || 0;
-                
+
                 const row = document.createElement('tr');
                 row.innerHTML = `
                     <td><input type="checkbox" class="row-checkbox" data-class-id="${classItem.class_id}"></td>
                     <td>
-                        <strong>${classItem.subject_code}</strong><br>
-                        <small>${classItem.section_name}</small>
+                        <strong>${sanitizeHTML(classItem.subject_code)}</strong><br>
+                        <small>${sanitizeHTML(classItem.section_name)}</small>
                     </td>
-                    <td>${classItem.grade_level}</td>
-                    <td>${classItem.subject_name}</td>
-                    <td>${scheduleText}</td>
-                    <td>${classItem.room || 'N/A'}</td>
-                    <td>${classItem.students ? classItem.students.length : 0}</td>
+                    <td>${sanitizeHTML(classItem.grade_level)}</td>
+                    <td>${sanitizeHTML(classItem.subject_name)}</td>
+                    <td>${sanitizeHTML(scheduleText)}</td>
+                    <td>${sanitizeHTML(classItem.room || 'N/A')}</td>
                     <td>${attendancePercentage.toFixed(1)}%</td>
-                    <td><span class="status-badge ${classItem.status}">${classItem.status}</span></td>
+                    <td><span class="status-badge ${sanitizeHTML(classItem.status)}">${sanitizeHTML(classItem.status)}</span></td>
                     <td class="actions">
                         <button class="btn btn-sm btn-info" onclick="viewClass(${classItem.class_id})">
                             <i class="fas fa-eye"></i>
@@ -1480,7 +1583,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                         <button class="btn btn-sm btn-warning" onclick="editClass(${classItem.class_id})">
                             <i class="fas fa-edit"></i>
                         </button>
-                        <button class="btn btn-sm btn-success" onclick="openStudentModal(${classItem.class_id})">
+                        <button class="btn btn-sm btn-success" onclick="openStudentModal(${classItem.id})">
                             <i class="fas fa-users"></i>
                         </button>
                         <button class="btn btn-sm btn-danger" onclick="deleteClass(${classItem.class_id})">
@@ -1492,47 +1595,52 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             });
         }
 
-        // Get filtered classes based on search and filters
         function getFilteredClasses() {
-            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
-            const gradeFilter = document.getElementById('gradeFilter').value;
-            const statusFilter = document.getElementById('statusFilter').value;
-            const subjectFilter = document.getElementById('subjectFilter').value;
-            const sectionFilter = document.getElementById('sectionFilter').value;
-            
+            const searchInput = document.getElementById('searchInput');
+            const gradeFilter = document.getElementById('gradeFilter');
+            const statusFilter = document.getElementById('statusFilter');
+            const subjectFilter = document.getElementById('subjectFilter');
+            const sectionFilter = document.getElementById('sectionFilter');
+
+            const searchTerm = searchInput ? searchInput.value.toLowerCase() : '';
+            const gradeFilterValue = gradeFilter ? gradeFilter.value : '';
+            const statusFilterValue = statusFilter ? statusFilter.value : '';
+            const subjectFilterValue = subjectFilter ? subjectFilter.value : '';
+            const sectionFilterValue = sectionFilter ? sectionFilter.value : '';
+
             return classes.filter(classItem => {
-                const matchesSearch = searchTerm === '' || 
-                    classItem.subject_code.toLowerCase().includes(searchTerm) ||
-                    classItem.section_name.toLowerCase().includes(searchTerm) ||
-                    classItem.subject_name.toLowerCase().includes(searchTerm);
-                
-                const matchesGrade = gradeFilter === '' || classItem.grade_level === gradeFilter;
-                const matchesStatus = statusFilter === '' || classItem.status === statusFilter;
-                const matchesSubject = subjectFilter === '' || classItem.subject_name === subjectFilter;
-                const matchesSection = sectionFilter === '' || classItem.section_name === sectionFilter;
-                
+                const matchesSearch = searchTerm === '' ||
+                    (classItem.subject_code && classItem.subject_code.toLowerCase().includes(searchTerm)) ||
+                    (classItem.section_name && classItem.section_name.toLowerCase().includes(searchTerm)) ||
+                    (classItem.subject_name && classItem.subject_name.toLowerCase().includes(searchTerm));
+
+                const matchesGrade = gradeFilterValue === '' || classItem.grade_level === gradeFilterValue;
+                const matchesStatus = statusFilterValue === '' || classItem.status === statusFilterValue;
+                const matchesSubject = subjectFilterValue === '' || classItem.subject_name === subjectFilterValue;
+                const matchesSection = sectionFilterValue === '' || classItem.section_name === sectionFilterValue;
+
                 return matchesSearch && matchesGrade && matchesStatus && matchesSubject && matchesSection;
             });
         }
 
-        // Populate filter options
         function populateFilters() {
-            const subjects = [...new Set(classes.map(c => c.subject_name))];
-            const sections = [...new Set(classes.map(c => c.section_name))];
-            
             const subjectFilter = document.getElementById('subjectFilter');
             const sectionFilter = document.getElementById('sectionFilter');
-            
+            if (!subjectFilter || !sectionFilter) return;
+
+            const subjects = [...new Set(classes.map(c => c.subject_name).filter(s => s))];
+            const sections = [...new Set(classes.map(c => c.section_name).filter(s => s))];
+
             subjectFilter.innerHTML = '<option value="">All Subjects</option>';
             sectionFilter.innerHTML = '<option value="">All Sections</option>';
-            
+
             subjects.forEach(subject => {
                 const option = document.createElement('option');
                 option.value = subject;
                 option.textContent = subject;
                 subjectFilter.appendChild(option);
             });
-            
+
             sections.forEach(section => {
                 const option = document.createElement('option');
                 option.value = section;
@@ -1541,256 +1649,269 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             });
         }
 
-        // Handle search
         function handleSearch() {
             renderClasses();
         }
 
-        // Handle filter changes
         function handleFilter() {
             renderClasses();
         }
 
-        // Switch between grid and table views
         function switchView(view) {
             currentView = view;
-            
-            document.querySelectorAll('.view-btn').forEach(btn => btn.classList.remove('active'));
+
+            const viewButtons = document.querySelectorAll('.view-btn');
+            viewButtons.forEach(btn => btn.classList.remove('active'));
             event.target.closest('.view-btn').classList.add('active');
-            
+
             const gridView = document.getElementById('gridView');
             const tableView = document.getElementById('tableView');
-            
-            if (view === 'grid') {
-                gridView.classList.remove('hidden');
-                tableView.classList.add('hidden');
-            } else {
-                gridView.classList.add('hidden');
-                tableView.classList.remove('hidden');
+
+            if (gridView && tableView) {
+                if (view === 'grid') {
+                    gridView.classList.remove('hidden');
+                    tableView.classList.add('hidden');
+                } else {
+                    gridView.classList.add('hidden');
+                    tableView.classList.remove('hidden');
+                }
             }
-            
+
             renderClasses();
         }
 
-        // Open modal for adding new class
         function openModal() {
             editingClassId = null;
-            document.getElementById('modalTitle').textContent = 'Add New Class';
-            document.getElementById('classForm').reset();
+            const modalTitle = document.getElementById('modalTitle');
+            const classForm = document.getElementById('classForm');
+            const classModal = document.getElementById('classModal');
+
+            if (modalTitle) modalTitle.textContent = 'Add New Class';
+            if (classForm) classForm.reset();
             clearScheduleInputs();
-            document.getElementById('classModal').classList.add('show');
+            if (classModal) classModal.classList.add('show');
         }
 
-        // Close modal
         function closeModal() {
-            document.getElementById('classModal').classList.remove('show');
+            const classModal = document.getElementById('classModal');
+            if (classModal) classModal.classList.remove('show');
             editingClassId = null;
         }
 
-        // Edit class
         function editClass(classId) {
             const classItem = classes.find(c => c.class_id === classId);
             if (!classItem) return;
-            
+
             editingClassId = classId;
-            document.getElementById('modalTitle').textContent = 'Edit Class';
-            
-            document.getElementById('classCode').value = classItem.subject_code;
-            document.getElementById('sectionName').value = classItem.section_name;
-            document.getElementById('subject').value = classItem.subject_name;
-            document.getElementById('gradeLevel').value = classItem.grade_level;
-            document.getElementById('room').value = classItem.room || '';
-            document.getElementById('status').value = classItem.status;
-            
-            clearScheduleInputs();
-            Object.keys(classItem.schedule).forEach(day => {
-                const checkbox = document.getElementById(day);
-                const startInput = document.getElementById(day + 'Start');
-                const endInput = document.getElementById(day + 'End');
-                
-                if (checkbox && startInput && endInput) {
-                    checkbox.checked = true;
-                    startInput.disabled = false;
-                    endInput.disabled = false;
-                    startInput.value = classItem.schedule[day].start;
-                    endInput.value = classItem.schedule[day].end;
-                }
+            const modalTitle = document.getElementById('modalTitle');
+            if (modalTitle) modalTitle.textContent = 'Edit Class';
+
+            const fields = {
+                classCode: classItem.subject_code,
+                sectionName: classItem.section_name,
+                subject: classItem.subject_name,
+                gradeLevel: classItem.grade_level,
+                room: classItem.room || '',
+                status: classItem.status
+            };
+
+            Object.entries(fields).forEach(([id, value]) => {
+                const element = document.getElementById(id);
+                if (element) element.value = value;
             });
-            
-            document.getElementById('classModal').classList.add('show');
+
+            clearScheduleInputs();
+            if (classItem.schedule) {
+                Object.keys(classItem.schedule).forEach(day => {
+                    const checkbox = document.getElementById(day);
+                    const startInput = document.getElementById(day + 'Start');
+                    const endInput = document.getElementById(day + 'End');
+
+                    if (checkbox && startInput && endInput) {
+                        checkbox.checked = true;
+                        startInput.disabled = false;
+                        endInput.disabled = false;
+                        startInput.value = classItem.schedule[day].start || '';
+                        endInput.value = classItem.schedule[day].end || '';
+                    }
+                });
+            }
+
+            const classModal = document.getElementById('classModal');
+            if (classModal) classModal.classList.add('show');
         }
 
-        // View class details
         function viewClass(classId) {
             const classItem = classes.find(c => c.class_id === classId);
             if (!classItem) return;
-            
+
             const scheduleText = formatSchedule(classItem.schedule);
             const attendancePercentage = parseFloat(classItem.attendance_percentage) || 0;
-            
+
             const content = document.getElementById('viewContent');
-            content.innerHTML = `
-                <div class="view-details">
-                    <div class="detail-row">
-                        <strong>Class Code:</strong> ${classItem.subject_code}
-                    </div>
-                    <div class="detail-row">
-                        <strong>Section Name:</strong> ${classItem.section_name}
-                    </div>
-                    <div class="detail-row">
-                        <strong>Subject:</strong> ${classItem.subject_name}
-                    </div>
-                    <div class="detail-row">
-                        <strong>Grade Level:</strong> ${classItem.grade_level}
-                    </div>
-                    <div class="detail-row">
-                        <strong>Room:</strong> ${classItem.room || 'N/A'}
-                    </div>
-                    <div class="detail-row">
-                        <strong>Students:</strong> ${classItem.students ? classItem.students.length : 0}
-                    </div>
-                    <div class="detail-row">
-                        <strong>Attendance Percentage:</strong> ${attendancePercentage.toFixed(1)}%
-                    </div>
-                    <div class="detail-row">
-                        <strong>Schedule:</strong>
-                        <div class="schedule-details">
-                            ${scheduleText}
+            if (content) {
+                content.innerHTML = `
+                    <div class="view-details">
+                        <div class="detail-row">
+                            <strong>Subject Code:</strong> ${sanitizeHTML(classItem.subject_code)}
+                        </div>
+                        <div class="detail-row">
+                            <strong>Section Name:</strong> ${sanitizeHTML(classItem.section_name)}
+                        </div>
+                        <div class="detail-row">
+                            <strong>Subject:</strong> ${sanitizeHTML(classItem.subject_name)}
+                        </div>
+                        <div class="detail-row">
+                            <strong>Grade Level:</strong> ${sanitizeHTML(classItem.grade_level)}
+                        </div>
+                        <div class="detail-row">
+                            <strong>Room:</strong> ${sanitizeHTML(classItem.room || 'N/A')}
+                        </div>
+                        <div class="detail-row">
+                            <strong>Attendance Percentage:</strong> ${attendancePercentage.toFixed(1)}%
+                        </div>
+                        <div class="detail-row">
+                            <strong>Schedule:</strong>
+                            <div class="schedule-details">
+                                ${scheduleText}
+                            </div>
+                        </div>
+                        <div class="detail-row">
+                            <strong>Status:</strong> <span class="status-badge ${sanitizeHTML(classItem.status)}">${sanitizeHTML(classItem.status)}</span>
                         </div>
                     </div>
-                    <div class="detail-row">
-                        <strong>Status:</strong> <span class="status-badge ${classItem.status}">${classItem.status}</span>
-                    </div>
-                    <div class="detail-row">
-                        <strong>Students List:</strong>
-                        <div class="schedule-details">
-                            ${classItem.students && classItem.students.length > 0 ? 
-                                classItem.students.map(student => `
-                                    <div>${student.first_name} ${student.last_name} (${student.email || 'No email'})</div>
-                                `).join('') : 
-                                'No students enrolled'}
-                        </div>
-                    </div>
-                </div>
-            `;
-            
-            document.getElementById('viewModal').classList.add('show');
+                `;
+            }
+
+            const viewModal = document.getElementById('viewModal');
+            if (viewModal) viewModal.classList.add('show');
         }
 
-        // Close view modal
         function closeViewModal() {
-            document.getElementById('viewModal').classList.remove('show');
+            const viewModal = document.getElementById('viewModal');
+            if (viewModal) viewModal.classList.remove('show');
         }
 
-        // Delete class
         function deleteClass(classId) {
-            if (confirm('Are you sure you want to delete this class?')) {
-                // Implement delete functionality with AJAX
-                fetch('delete_class.php', {
+            if (!confirm('Are you sure you want to delete this class?')) return;
+
+            fetch('manage-classes.php', {
                     method: 'POST',
                     headers: {
-                        'Content-Type': 'application/json'
+                        'Content-Type': 'application/x-www-form-urlencoded'
                     },
-                    body: JSON.stringify({ classId: classId })
+                    body: `action=deleteClass&classId=${classId}`
                 })
-                .then(response => response.json())
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok: ' + response.statusText);
+                    }
+                    return response.json();
+                })
                 .then(data => {
                     if (data.success) {
                         classes = classes.filter(c => c.class_id !== classId);
                         renderClasses();
                         populateFilters();
+                        alert('Class deleted successfully!');
                     } else {
                         alert('Failed to delete class: ' + (data.error || 'Unknown error'));
                     }
                 })
-                .catch(error => console.error('Error deleting class:', error));
-            }
+                .catch(error => {
+                    console.error('Error deleting class:', error);
+                    alert('Error deleting class: ' + error.message);
+                });
         }
 
-        // Handle form submission
         function handleFormSubmit(event) {
             event.preventDefault();
-            
+
             const schedule = getScheduleFromForm();
-            
+
             const classData = {
-                classCode: document.getElementById('classCode').value,
-                sectionName: document.getElementById('sectionName').value,
-                subject: document.getElementById('subject').value,
-                gradeLevel: document.getElementById('gradeLevel').value,
-                room: document.getElementById('room').value,
-                status: document.getElementById('status').value
+                classCode: document.getElementById('classCode')?.value || '',
+                sectionName: document.getElementById('sectionName')?.value || '',
+                subject: document.getElementById('subject')?.value || '',
+                gradeLevel: document.getElementById('gradeLevel')?.value || '',
+                room: document.getElementById('room')?.value || '',
+                status: document.getElementById('status')?.value || '',
+                classId: editingClassId || '' // Include classId for editing
             };
-            
+
             fetch('manage-classes.php', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded'
-                },
-                body: `action=addClass&${new URLSearchParams(classData)}&schedule=${encodeURIComponent(JSON.stringify(schedule))}`
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    fetchClasses();
-                    closeModal();
-                    alert('Class added successfully!');
-                } else {
-                    alert('Error: ' + (data.error || 'Failed to add class'));
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                alert('Error adding class');
-            });
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded'
+                    },
+                    body: `action=addClass&${new URLSearchParams(classData)}&schedule=${encodeURIComponent(JSON.stringify(schedule))}`
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok: ' + response.statusText);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.success) {
+                        fetchClasses();
+                        closeModal();
+                        alert(editingClassId ? 'Class updated successfully!' : 'Class added successfully!');
+                    } else {
+                        alert('Error: ' + (data.error || 'Failed to ' + (editingClassId ? 'update' : 'add') + ' class'));
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Error ' + (editingClassId ? 'updating' : 'adding') + ' class: ' + error.message);
+                });
         }
 
-        // Get schedule from form
         function getScheduleFromForm() {
             const schedule = {};
             const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
-            
+
             days.forEach(day => {
                 const checkbox = document.getElementById(day);
                 const startInput = document.getElementById(day + 'Start');
                 const endInput = document.getElementById(day + 'End');
-                
-                if (checkbox && checkbox.checked && startInput.value && endInput.value) {
+
+                if (checkbox && checkbox.checked && startInput && startInput.value && endInput && endInput.value) {
                     schedule[day] = {
                         start: startInput.value,
                         end: endInput.value
                     };
                 }
             });
-            
+
             return schedule;
         }
 
-        // Handle schedule checkbox toggle
         function handleScheduleToggle(event) {
             const day = event.target.id;
             const startInput = document.getElementById(day + 'Start');
             const endInput = document.getElementById(day + 'End');
-            
-            if (event.target.checked) {
-                startInput.disabled = false;
-                endInput.disabled = false;
-            } else {
-                startInput.disabled = true;
-                endInput.disabled = true;
-                startInput.value = '';
-                endInput.value = '';
+
+            if (startInput && endInput) {
+                if (event.target.checked) {
+                    startInput.disabled = false;
+                    endInput.disabled = false;
+                } else {
+                    startInput.disabled = true;
+                    endInput.disabled = true;
+                    startInput.value = '';
+                    endInput.value = '';
+                }
             }
         }
 
-        // Clear schedule inputs
         function clearScheduleInputs() {
             const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
             days.forEach(day => {
                 const checkbox = document.getElementById(day);
                 const startInput = document.getElementById(day + 'Start');
                 const endInput = document.getElementById(day + 'End');
-                
+
                 if (checkbox) checkbox.checked = false;
                 if (startInput) {
                     startInput.value = '';
@@ -1803,29 +1924,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             });
         }
 
-        // Format schedule for display
         function formatSchedule(schedule) {
             if (!schedule || Object.keys(schedule).length === 0) {
                 return '<span class="no-schedule">No schedule set</span>';
             }
-            
+
             return Object.entries(schedule).map(([day, times]) => {
                 const dayName = capitalizeFirst(day);
-                return `<div class="schedule-item">${dayName}: ${formatTime(times.start)} - ${formatTime(times.end)}</div>`;
+                return `<div class="schedule-item">${sanitizeHTML(dayName)}: ${formatTime(times.start)} - ${formatTime(times.end)}</div>`;
             }).join('');
         }
 
-        // Format schedule for table view (short format)
         function formatScheduleShort(schedule) {
             if (!schedule || Object.keys(schedule).length === 0) {
                 return 'No schedule';
             }
-            
+
             const days = Object.keys(schedule).map(day => capitalizeFirst(day).substring(0, 3));
-            return days.join(', ');
+            return sanitizeHTML(days.join(', '));
         }
 
-        // Format time (convert 24-hour to 12-hour format)
         function formatTime(time) {
             if (!time) return '';
             const [hours, minutes] = time.split(':');
@@ -1835,115 +1953,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             return `${displayHour}:${minutes} ${period}`;
         }
 
-        // Toggle select all checkbox
         function toggleSelectAll() {
             const selectAll = document.getElementById('selectAll');
             const checkboxes = document.querySelectorAll('.row-checkbox');
-            
-            checkboxes.forEach(checkbox => {
-                checkbox.checked = selectAll.checked;
-            });
-        }
 
-        // Open student modal
-        function openStudentModal(classId) {
-            currentClassForStudents = classId;
-            document.getElementById('studentModal').classList.add('show');
-        }
-
-        // Close student modal
-        function closeStudentModal() {
-            document.getElementById('studentModal').classList.remove('show');
-            document.getElementById('studentFile').value = '';
-            document.getElementById('studentPreview').classList.add('hidden');
-            document.getElementById('importStudentsBtn').disabled = true;
-            currentClassForStudents = null;
-        }
-
-        // Handle student file upload
-        function handleStudentFileUpload(event) {
-            const file = event.target.files[0];
-            if (!file) return;
-            
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                try {
-                    const data = new Uint8Array(e.target.result);
-                    const workbook = XLSX.read(data, { type: 'array' });
-                    const firstSheetName = workbook.SheetNames[0];
-                    const worksheet = workbook.Sheets[firstSheetName];
-                    const jsonData = XLSX.utils.sheet_to_json(worksheet);
-                    
-                    if (jsonData.length > 0) {
-                        importedStudentData = jsonData;
-                        displayStudentPreview(jsonData);
-                        document.getElementById('importStudentsBtn').disabled = false;
-                    } else {
-                        alert('The Excel file appears to be empty or invalid.');
-                    }
-                } catch (error) {
-                    alert('Error reading the Excel file. Please make sure it\'s a valid Excel file.');
-                }
-            };
-            reader.readAsArrayBuffer(file);
-        }
-
-        // Display student preview
-        function displayStudentPreview(data) {
-            const preview = document.getElementById('studentPreview');
-            const table = document.getElementById('studentPreviewTable');
-            
-            if (data.length === 0) {
-                preview.classList.add('hidden');
-                return;
+            if (selectAll) {
+                checkboxes.forEach(checkbox => {
+                    checkbox.checked = selectAll.checked;
+                });
             }
-            
-            const headers = Object.keys(data[0]);
-            
-            table.innerHTML = `
-                <thead>
-                    <tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr>
-                </thead>
-                <tbody>
-                    ${data.slice(0, 5).map(row => `<tr>${headers.map(h => `<td>${row[h] || ''}</td>`).join('')}</tr>`).join('')}
-                    ${data.length > 5 ? `<tr><td colspan="${headers.length}" style="text-align: center; font-style: italic;">... and ${data.length - 5} more rows</td></tr>` : ''}
-                </tbody>
-            `;
-            
-            preview.classList.remove('hidden');
         }
 
-        // Import students
-        function importStudents() {
-            if (!importedStudentData || importedStudentData.length === 0 || !currentClassForStudents) return;
-            
-            fetch('import_students.php', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    classId: currentClassForStudents,
-                    students: importedStudentData
-                })
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    fetchClasses();
-                    closeStudentModal();
-                    alert(`Successfully imported ${importedStudentData.length} students!`);
-                } else {
-                    alert('Failed to import students: ' + (data.error || 'Unknown error'));
-                }
-            })
-            .catch(error => console.error('Error importing students:', error));
-        }
-
-        // Utility function to capitalize first letter
         function capitalizeFirst(str) {
+            if (!str) return '';
             return str.charAt(0).toUpperCase() + str.slice(1);
+        }
+
+        function sanitizeHTML(str) {
+            if (!str) return '';
+            const div = document.createElement('div');
+            div.textContent = str;
+            return div.innerHTML;
         }
     </script>
 </body>
+
 </html>

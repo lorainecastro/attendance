@@ -48,7 +48,7 @@ CREATE TABLE classes (
 );
 
 CREATE TABLE students (
-    lrn INT AUTO_INCREMENT PRIMARY KEY,
+    lrn INT NOT NULL,
     first_name VARCHAR(50) NOT NULL,
     last_name VARCHAR(50) NOT NULL,
     email VARCHAR(100),
@@ -58,10 +58,8 @@ CREATE TABLE students (
     address VARCHAR(255),
     parent_name VARCHAR(100),
     emergency_contact VARCHAR(20),
-    attendance_rate DECIMAL(5,2) DEFAULT 0.00,
     photo VARCHAR(255) DEFAULT 'no-icon.png',
-    date_added DATE,
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+    date_added DATE
 );
 
 CREATE TABLE schedules (

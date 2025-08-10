@@ -48,7 +48,7 @@ CREATE TABLE classes (
 );
 
 CREATE TABLE students (
-    lrn INT NOT NULL,
+    lrn INT NOT NULL PRIMARY KEY,
     last_name VARCHAR(50) NOT NULL,
     first_name VARCHAR(50) NOT NULL,
     middle_name VARCHAR(50) NOT NULL,

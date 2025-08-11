@@ -1,6 +1,6 @@
 <?php
 ob_start();
-require 'config.php';
+require '../config.php';
 session_start();
 
 // Validate session

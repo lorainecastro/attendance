@@ -1389,7 +1389,6 @@ ob_end_flush();
         }
     </style>
 
-
     <!-- CSS for Add New Class Modal -->
     <style>
         /* Class Modal Specific Styles */

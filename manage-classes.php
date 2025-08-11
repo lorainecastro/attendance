@@ -3215,8 +3215,13 @@ ob_end_flush();
             const newWb = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(newWb, newWs, 'Sheet1');
 
-            const excelBuffer = XLSX.write(newWb, { bookType: 'xlsx', type: 'array' });
-            const blob = new Blob([excelBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+            const excelBuffer = XLSX.write(newWb, {
+                bookType: 'xlsx',
+                type: 'array'
+            });
+            const blob = new Blob([excelBuffer], {
+                type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+            });
 
             const formData = new FormData();
             formData.append('action', 'importStudents');

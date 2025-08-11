@@ -202,8 +202,8 @@ function fetchStudentsForClass($class_id)
         }
 
         $stmt = $pdo->prepare("
-            SELECT s.lrn, s.first_name, s.last_name, s.email, s.gender, s.dob, s.grade_level, 
-                   s.address, s.parent_name, s.emergency_contact, s.photo, s.date_added
+            SELECT s.lrn, s.first_name, s.middle_name, s.last_name, s.email, s.gender, s.dob, s.grade_level, 
+                   s.address, s.parent_name, s.emergency_contact, s.photo, s.qr_code, s.date_added
             FROM class_students cs
             JOIN students s ON cs.lrn = s.lrn
             WHERE cs.class_id = ? AND cs.is_enrolled = 1
@@ -248,13 +248,14 @@ function importStudents($class_id, $filePath)
         $header = array_shift($rows); // Remove header row
 
         foreach ($rows as $row) {
-            if (count($row) >= 9) { // Ensure row has 9 columns: lrn to emergency_contact
+            if (count($row) >= 11) { // Ensure row has at least 11 columns (up to Emergency Contact), Photo and QR optional
                 $stmt = $pdo->prepare("
                     INSERT INTO students (lrn, last_name, first_name, middle_name, email, gender, dob, grade_level, address, parent_name, emergency_contact, photo, qr_code, date_added)
                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURDATE())
                     ON DUPLICATE KEY UPDATE 
                         first_name = VALUES(first_name),
                         last_name = VALUES(last_name),
+                        middle_name = VALUES(middle_name),
                         email = VALUES(email),
                         gender = VALUES(gender),
                         dob = VALUES(dob),
@@ -264,19 +265,19 @@ function importStudents($class_id, $filePath)
                         emergency_contact = VALUES(emergency_contact)
                 ");
                 $stmt->execute([
-                    $row[0],  // lrn
-                    $row[1],  // last_name
-                    $row[2],  // first_name
-                    $row[3],  // middle_name
-                    $row[4],  // email
-                    $row[5],  // gender
-                    $row[6],  // dob
-                    $row[7],  // grade_level
-                    $row[8],  // address
-                    $row[9],  // parent_name
-                    $row[10], // emergency_contact
-                    $row[11],   // photo
-                    $row[12]   // qr code
+                    $row[0] ?? null,  // lrn
+                    $row[1] ?? null,  // last_name
+                    $row[2] ?? null,  // first_name
+                    $row[3] ?? null,  // middle_name
+                    $row[4] ?? null,  // email
+                    $row[5] ?? null,  // gender
+                    $row[6] ?? null,  // dob
+                    $row[7] ?? null,  // grade_level
+                    $row[8] ?? null,  // address
+                    $row[9] ?? null,  // parent_name
+                    $row[10] ?? null, // emergency_contact
+                    $row[11] ?? null, // photo
+                    $row[12] ?? null  // qr_code
                 ]);
                 $lrn = $row[0]; // Use the lrn from the Excel row
 
@@ -2103,66 +2104,29 @@ ob_end_flush();
             <div class="p-6">
                 <div class="import-section">
                     <input type="file" id="importFile" accept=".xlsx, .xls">
-                    <button class="btn btn-success" onclick="importStudents()">Import</button>
+                    <button class="btn btn-success" onclick="importStudents()">Import Excel</button>
+                    <small>Expected columns: LRN, Last Name, First Name, Middle Name, Email, Gender, DOB, Grade Level, Address, Parent Name, Emergency Contact, Photo, QR Code</small>
                 </div>
-                <div id="studentModal" class="modal">
-                    <div class="modal-content">
-                        <div class="modal-header">
-                            <h2 class="modal-title">Student List</h2>
-                            <button class="close-btn" onclick="closeStudentModal()">×</button>
-                        </div>
-                        <div class="p-6">
-                            <div class="import-section">
-                                <input type="file" id="importFile" accept=".xlsx, .xls">
-                                <button class="btn btn-success" onclick="importStudents()">Import</button>
-                            </div>
-                            <div class="preview-table-container" id="previewTableContainer" style="display: none;">
-                                <h3>Preview</h3>
-                                <table class="student-table" id="previewTable">
-                                    <thead>
-                                        <tr>
-                                            <th>First Name</th>
-                                            <th>Last Name</th>
-                                            <th>Email</th>
-                                            <th>Gender</th>
-                                            <th>DOB</th>
-                                            <th>Grade Level</th>
-                                            <th>Address</th>
-                                            <th>Parent Name</th>
-                                            <th>Emergency Contact</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody></tbody>
-                                </table>
-                            </div>
-                            <div class="student-table-container">
-                                <table class="student-table" id="studentTable">
-                                    <thead>
-                                        <tr>
-                                            <th>LRN</th>
-                                            <th>First Name</th>
-                                            <th>Last Name</th>
-                                            <th>Email</th>
-                                            <th>Gender</th>
-                                            <th>DOB</th>
-                                            <th>Grade Level</th>
-                                            <th>Address</th>
-                                            <th>Parent Name</th>
-                                            <th>Emergency Contact</th>
-                                            <th>Photo</th>
-                                            <th>QR Code</th>
-                                            <th>Date Added</th>
-                                            <th>Actions</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody></tbody>
-                                </table>
-                            </div>
-                        </div>
-                        <div class="form-actions">
-                            <button type="button" class="btn btn-secondary" onclick="closeStudentModal()">Close</button>
-                        </div>
-                    </div>
+                <div class="preview-table-container" id="previewTableContainer" style="display: none;">
+                    <h3>Preview</h3>
+                    <table class="student-table" id="previewTable">
+                        <thead>
+                            <tr>
+                                <th>LRN</th>
+                                <th>Last Name</th>
+                                <th>First Name</th>
+                                <th>Middle Name</th>
+                                <th>Email</th>
+                                <th>Gender</th>
+                                <th>DOB</th>
+                                <th>Grade Level</th>
+                                <th>Address</th>
+                                <th>Parent Name</th>
+                                <th>Emergency Contact</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
                 </div>
                 <div class="student-table-container">
                     <table class="student-table" id="studentTable">
@@ -2170,6 +2134,7 @@ ob_end_flush();
                             <tr>
                                 <th>LRN</th>
                                 <th>First Name</th>
+                                <th>Middle Name</th>
                                 <th>Last Name</th>
                                 <th>Email</th>
                                 <th>Gender</th>
@@ -2184,8 +2149,7 @@ ob_end_flush();
                                 <th>Actions</th>
                             </tr>
                         </thead>
-                        <tbody>
-                        </tbody>
+                        <tbody></tbody>
                     </table>
                 </div>
             </div>
@@ -2814,7 +2778,7 @@ ob_end_flush();
         tbody.innerHTML = '';
 
         if (!students || students.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="14" class="no-classes">No students enrolled</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="15" class="no-classes">No students enrolled</td></tr>';
             return;
         }
 
@@ -2823,6 +2787,7 @@ ob_end_flush();
             row.innerHTML = `
                 <td>${sanitizeHTML(student.lrn || 'N/A')}</td>
                 <td>${sanitizeHTML(student.first_name || 'N/A')}</td>
+                <td>${sanitizeHTML(student.middle_name || 'N/A')}</td>
                 <td>${sanitizeHTML(student.last_name || 'N/A')}</td>
                 <td>${sanitizeHTML(student.email || 'N/A')}</td>
                 <td>${sanitizeHTML(student.gender || 'N/A')}</td>
@@ -2832,6 +2797,7 @@ ob_end_flush();
                 <td>${sanitizeHTML(student.parent_name || 'N/A')}</td>
                 <td>${sanitizeHTML(student.emergency_contact || 'N/A')}</td>
                 <td>${sanitizeHTML(student.photo ? '<img src="' + student.photo + '" alt="Student Photo" style="max-width: 50px; max-height: 50px;">' : 'N/A')}</td>
+                <td>${sanitizeHTML(student.qr_code || 'N/A')}</td>
                 <td>${sanitizeHTML(student.date_added || 'N/A')}</td>
                 <td class="actions">
                     <button class="btn btn-sm btn-danger" onclick="deleteStudent(${classId}, '${student.lrn}')">
@@ -2899,7 +2865,7 @@ ob_end_flush();
                 }
 
                 rows.slice(1).forEach(row => {
-                    if (row.length >= 9) {
+                    if (row.length >= 11) { // Ensure row has at least 11 columns for preview
                         const tr = document.createElement('tr');
                         tr.innerHTML = `
                             <td>${sanitizeHTML(row[0] || '')}</td>
@@ -2913,8 +2879,6 @@ ob_end_flush();
                             <td>${sanitizeHTML(row[8] || '')}</td>
                             <td>${sanitizeHTML(row[9] || '')}</td>
                             <td>${sanitizeHTML(row[10] || '')}</td>
-                            <td>${sanitizeHTML(row[11] || '')}</td>
-                            <td>${sanitizeHTML(row[12] || '')}</td>
                         `;
                         tbody.appendChild(tr);
                     }

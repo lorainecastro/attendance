@@ -1213,10 +1213,6 @@ if (!$user) {
                         </div>
                     </div>
                     <div class="form-column">
-                        <!-- <div class="form-group">
-                            <label class="form-label">Date of Birth</label>
-                            <input type="date" class="form-input" id="dob">
-                        </div> -->
                         <div class="form-group">
                             <label class="form-label">Grade Level</label>
                             <select class="form-select" id="grade-level">

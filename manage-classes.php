@@ -1879,6 +1879,7 @@ ob_end_flush();
         gap: 1rem;
         margin-bottom: 0.5rem;
         flex-wrap: wrap;
+        align-items: center;
     }
 
     .file-input {
@@ -1889,13 +1890,15 @@ ob_end_flush();
         background: var(--inputfield-color);
         transition: var(--transition-normal);
         max-width: 250px;
+        flex: 1;
     }
 
     .import-note {
         display: block;
         color: var(--grayfont-color);
-        font-size: 0.75rem;
+        font-size: 0.85rem;
         line-height: 1.2;
+        margin-top: 0.5rem;
     }
 
     .preview-table-container {
@@ -1924,17 +1927,21 @@ ob_end_flush();
         width: 100%;
         border-collapse: separate;
         border-spacing: 0;
-        min-width: 800px;
+        min-width: 1200px; /* Increased to maximize column widths and force scroll if needed */
+        table-layout: auto; /* Allow columns to adjust based on content */
     }
 
     .preview-table th,
     .student-table th,
     .preview-table td,
     .student-table td {
-        padding: 1rem 0.75rem;
+        padding: 1rem 1.5rem; /* Increased padding for better readability */
         text-align: left;
         border-bottom: 1px solid var(--border-color);
         white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 150px; /* Maximize column width while preventing overflow */
     }
 
     .preview-table th,
@@ -1979,6 +1986,7 @@ ob_end_flush();
 
         .import-controls {
             flex-direction: column;
+            align-items: stretch;
         }
 
         .file-input {
@@ -1990,6 +1998,14 @@ ob_end_flush();
         .student-table th:nth-child(n+8),
         .student-table td:nth-child(n+8) {
             display: none;
+        }
+
+        .preview-table th,
+        .preview-table td,
+        .student-table th,
+        .student-table td {
+            padding: 0.75rem 1rem;
+            max-width: 120px;
         }
     }
 
@@ -2008,6 +2024,21 @@ ob_end_flush();
 
         .import-section {
             padding: 0.75rem;
+        }
+
+        .preview-table th,
+        .preview-table td,
+        .student-table th,
+        .student-table td {
+            padding: 0.5rem 0.75rem;
+            max-width: 100px;
+            font-size: 0.875rem;
+        }
+
+        .form-actions {
+            padding: 1rem;
+            flex-direction: column;
+            gap: 0.75rem;
         }
     }
 
@@ -2034,6 +2065,7 @@ ob_end_flush();
         .student-table td {
             padding: 0.5rem 0.25rem;
             font-size: 0.75rem;
+            max-width: 80px;
         }
 
         .form-actions {
@@ -2045,6 +2077,14 @@ ob_end_flush();
         .form-actions .btn {
             width: 100%;
             justify-content: center;
+        }
+
+        .import-controls {
+            gap: 0.5rem;
+        }
+
+        .import-note {
+            font-size: 0.65rem;
         }
     }
 </style>
@@ -2303,56 +2343,62 @@ ob_end_flush();
                 <h2 class="modal-title">Student List</h2>
                 <button class="close-btn" onclick="closeStudentModal()">×</button>
             </div>
-            <div class="p-6">
+            <div class="modal-body">
                 <div class="import-section">
-                    <input type="file" id="importFile" accept=".xlsx, .xls">
-                    <button class="btn btn-success" onclick="importStudents()">Import Excel</button>
-                    <small>Expected columns: LRN, Last Name, First Name, Middle Name, Email, Gender, DOB, Grade Level, Address, Parent Name, Emergency Contact, Photo, QR Code</small>
+                    <div class="import-controls">
+                        <input type="file" id="importFile" accept=".xlsx, .xls" class="file-input">
+                        <button class="btn btn-success" onclick="importStudents()">Import Excel</button>
+                    </div>
+                    <small class="import-note">Expected columns: LRN, Last Name, First Name, Middle Name, Email, Gender, DOB, Grade Level, Address, Parent Name, Emergency Contact, Photo, QR Code</small>
                 </div>
                 <div class="preview-table-container" id="previewTableContainer" style="display: none;">
-                    <h3>Preview</h3>
-                    <table class="student-table" id="previewTable">
-                        <thead>
-                            <tr>
-                                <th>LRN</th>
-                                <th>Last Name</th>
-                                <th>First Name</th>
-                                <th>Middle Name</th>
-                                <th>Email</th>
-                                <th>Gender</th>
-                                <th>DOB</th>
-                                <th>Grade Level</th>
-                                <th>Address</th>
-                                <th>Parent Name</th>
-                                <th>Emergency Contact</th>
-                            </tr>
-                        </thead>
-                        <tbody></tbody>
-                    </table>
+                    <h3 class="preview-title">Preview</h3>
+                    <div class="table-wrapper">
+                        <table class="preview-table" id="previewTable">
+                            <thead>
+                                <tr>
+                                    <th>LRN</th>
+                                    <th>Last Name</th>
+                                    <th>First Name</th>
+                                    <th>Middle Name</th>
+                                    <th>Email</th>
+                                    <th>Gender</th>
+                                    <th>DOB</th>
+                                    <th>Grade Level</th>
+                                    <th>Address</th>
+                                    <th>Parent Name</th>
+                                    <th>Emergency Contact</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
                 </div>
                 <div class="student-table-container">
-                    <table class="student-table" id="studentTable">
-                        <thead>
-                            <tr>
-                                <th>LRN</th>
-                                <th>First Name</th>
-                                <th>Middle Name</th>
-                                <th>Last Name</th>
-                                <th>Email</th>
-                                <th>Gender</th>
-                                <th>DOB</th>
-                                <th>Grade Level</th>
-                                <th>Address</th>
-                                <th>Parent Name</th>
-                                <th>Emergency Contact</th>
-                                <th>Photo</th>
-                                <th>QR Code</th>
-                                <th>Date Added</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody></tbody>
-                    </table>
+                    <div class="table-wrapper">
+                        <table class="student-table" id="studentTable">
+                            <thead>
+                                <tr>
+                                    <th>LRN</th>
+                                    <th>First Name</th>
+                                    <th>Middle Name</th>
+                                    <th>Last Name</th>
+                                    <th>Email</th>
+                                    <th>Gender</th>
+                                    <th>DOB</th>
+                                    <th>Grade Level</th>
+                                    <th>Address</th>
+                                    <th>Parent Name</th>
+                                    <th>Emergency Contact</th>
+                                    <th>Photo</th>
+                                    <th>QR Code</th>
+                                    <th>Date Added</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
             <div class="form-actions">

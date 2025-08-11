@@ -1171,7 +1171,7 @@ if (!$user) {
                     <div class="form-column">
                         <div class="form-group">
                             <label class="form-label">LRN</label>
-                            <input type="text" class="form-input" id="student-id" readonly>
+                            <input type="text" class="form-input" id="student-id" maxlength="12" onkeypress="return (event.charCode !=8 && event.charCode ==0 || (event.charCode >= 48 && event.charCode <= 57))" pattern="[0-9]{12}" title="Please enter exactly 12 digits">
                         </div>
                         <div class="form-group photo-upload">
                             <div>
@@ -1207,12 +1207,16 @@ if (!$user) {
                                 <option value="Female">Female</option>
                             </select>
                         </div>
-                    </div>
-                    <div class="form-column">
                         <div class="form-group">
                             <label class="form-label">Date of Birth</label>
                             <input type="date" class="form-input" id="dob">
                         </div>
+                    </div>
+                    <div class="form-column">
+                        <!-- <div class="form-group">
+                            <label class="form-label">Date of Birth</label>
+                            <input type="date" class="form-input" id="dob">
+                        </div> -->
                         <div class="form-group">
                             <label class="form-label">Grade Level</label>
                             <select class="form-select" id="grade-level">

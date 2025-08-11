@@ -3066,8 +3066,8 @@ ob_end_flush();
             <td>${sanitizeHTML(student.address || 'N/A')}</td>
             <td>${sanitizeHTML(student.parent_name || 'N/A')}</td>
             <td>${sanitizeHTML(student.emergency_contact || 'N/A')}</td>
-            <td>${photoSrc ? `<img src="${photoSrc}" alt="Student Photo" style="max-width: 50px; max-height: 50px;">` : 'N/A'}</td>
-            <td>${qrSrc ? `<img src="${qrSrc}" alt="QR Code" style="max-width: 50px; max-height: 50px;">` : 'N/A'}</td>
+            <td>${photoSrc ? `<img src="${photoSrc}" alt="Student Photo" style="max-width: 45px; max-height: 45px; border-radius:50%;">` : 'Photo To Be Provided'}</td>
+            <td>${qrSrc ? `<img src="${qrSrc}" alt="QR Code" style="max-width: 50px; max-height: 50px;">` : 'QR Code To Be Provided'}</td>
             <td>${sanitizeHTML(student.date_added || 'N/A')}</td>
             <td class="actions">
                 <button class="btn btn-sm btn-danger" onclick="deleteStudent(${classId}, '${student.lrn}')">

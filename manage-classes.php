@@ -548,10 +548,21 @@ ob_end_flush();
             background: var(--primary-gradient);
         }
 
-        .bg-purple { background: var(--primary-gradient); }
-        .bg-pink { background: var(--secondary-gradient); }
-        .bg-blue { background: linear-gradient(135deg, #3b82f6, #60a5fa); }
-        .bg-green { background: linear-gradient(135deg, #10b981, #34d399); }
+        .bg-purple {
+            background: var(--primary-gradient);
+        }
+
+        .bg-pink {
+            background: var(--secondary-gradient);
+        }
+
+        .bg-blue {
+            background: linear-gradient(135deg, #3b82f6, #60a5fa);
+        }
+
+        .bg-green {
+            background: linear-gradient(135deg, #10b981, #34d399);
+        }
 
         .card-title {
             font-size: 14px;
@@ -1918,10 +1929,10 @@ ob_end_flush();
                     <input type="text" class="form-input search-input" placeholder="Search classes..." id="searchInput">
                     <i class="fas fa-search search-icon"></i>
                 </div>
-<select class="form-select filter-select" id="gradeFilter">
-    <option value="">All Grade Levels</option>
-    <!-- Options will be dynamically populated by JavaScript -->
-</select>
+                <select class="form-select filter-select" id="gradeFilter">
+                    <option value="">All Grade Levels</option>
+                    <!-- Options will be dynamically populated by JavaScript -->
+                </select>
                 <select class="form-select filter-select" id="statusFilter">
                     <option value="">All Status</option>
                     <option value="active">Active</option>
@@ -2160,113 +2171,113 @@ ob_end_flush();
     </div>
 
     <script>
-    let classes = [];
-    let currentView = 'grid';
-    let editingClassId = null;
+        let classes = [];
+        let currentView = 'grid';
+        let editingClassId = null;
 
-    document.addEventListener('DOMContentLoaded', function() {
-        fetchClasses();
-        setupEventListeners();
-        clearScheduleInputs();
-    });
-
-    function fetchClasses() {
-        fetch('manage-classes.php?action=fetchClasses')
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error('Network response was not ok: ' + response.statusText);
-                }
-                return response.json();
-            })
-            .then(result => {
-                if (result.success) {
-                    classes = result.data || [];
-                    updateStats();
-                    renderClasses();
-                    populateFilters();
-                } else {
-                    console.error('Error fetching classes:', result.error);
-                    alert('Failed to fetch classes: ' + result.error);
-                }
-            })
-            .catch(error => {
-                console.error('Error fetching classes:', error);
-                alert('Error fetching classes: ' + error.message);
-            });
-    }
-
-    function updateStats() {
-        const totalClasses = classes.length;
-        const activeClasses = classes.filter(c => c.status === 'active').length;
-        const totalStudents = classes.reduce((sum, c) => sum + (parseInt(c.student_count) || 0), 0);
-        const averageAttendance = classes.length > 0 ? 
-            (classes.reduce((sum, c) => sum + (parseFloat(c.attendance_percentage) || 0), 0) / classes.length).toFixed(1) : 0;
-
-        document.getElementById('total-classes').textContent = totalClasses;
-        document.getElementById('active-classes').textContent = activeClasses;
-        document.getElementById('total-students').textContent = totalStudents;
-        document.getElementById('average-attendance').textContent = averageAttendance + '%';
-    }
-
-    function setupEventListeners() {
-        const searchInput = document.getElementById('searchInput');
-        const gradeFilter = document.getElementById('gradeFilter');
-        const statusFilter = document.getElementById('statusFilter');
-        const subjectFilter = document.getElementById('subjectFilter');
-        const sectionFilter = document.getElementById('sectionFilter');
-        const classForm = document.getElementById('classForm');
-
-        if (searchInput) searchInput.addEventListener('input', handleSearch);
-        if (gradeFilter) gradeFilter.addEventListener('change', handleFilter);
-        if (statusFilter) statusFilter.addEventListener('change', handleFilter);
-        if (subjectFilter) subjectFilter.addEventListener('change', handleFilter);
-        if (sectionFilter) sectionFilter.addEventListener('change', handleFilter);
-        if (classForm) classForm.addEventListener('submit', handleFormSubmit);
-
-        const scheduleCheckboxes = document.querySelectorAll('input[name="scheduleDays"]');
-        scheduleCheckboxes.forEach(checkbox => {
-            checkbox.addEventListener('change', handleScheduleToggle);
+        document.addEventListener('DOMContentLoaded', function() {
+            fetchClasses();
+            setupEventListeners();
+            clearScheduleInputs();
         });
 
-        window.addEventListener('click', function(event) {
-            const modals = document.querySelectorAll('.modal');
-            modals.forEach(modal => {
-                if (event.target === modal) {
-                    modal.classList.remove('show');
-                }
+        function fetchClasses() {
+            fetch('manage-classes.php?action=fetchClasses')
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok: ' + response.statusText);
+                    }
+                    return response.json();
+                })
+                .then(result => {
+                    if (result.success) {
+                        classes = result.data || [];
+                        updateStats();
+                        renderClasses();
+                        populateFilters();
+                    } else {
+                        console.error('Error fetching classes:', result.error);
+                        alert('Failed to fetch classes: ' + result.error);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error fetching classes:', error);
+                    alert('Error fetching classes: ' + error.message);
+                });
+        }
+
+        function updateStats() {
+            const totalClasses = classes.length;
+            const activeClasses = classes.filter(c => c.status === 'active').length;
+            const totalStudents = classes.reduce((sum, c) => sum + (parseInt(c.student_count) || 0), 0);
+            const averageAttendance = classes.length > 0 ?
+                (classes.reduce((sum, c) => sum + (parseFloat(c.attendance_percentage) || 0), 0) / classes.length).toFixed(1) : 0;
+
+            document.getElementById('total-classes').textContent = totalClasses;
+            document.getElementById('active-classes').textContent = activeClasses;
+            document.getElementById('total-students').textContent = totalStudents;
+            document.getElementById('average-attendance').textContent = averageAttendance + '%';
+        }
+
+        function setupEventListeners() {
+            const searchInput = document.getElementById('searchInput');
+            const gradeFilter = document.getElementById('gradeFilter');
+            const statusFilter = document.getElementById('statusFilter');
+            const subjectFilter = document.getElementById('subjectFilter');
+            const sectionFilter = document.getElementById('sectionFilter');
+            const classForm = document.getElementById('classForm');
+
+            if (searchInput) searchInput.addEventListener('input', handleSearch);
+            if (gradeFilter) gradeFilter.addEventListener('change', handleFilter);
+            if (statusFilter) statusFilter.addEventListener('change', handleFilter);
+            if (subjectFilter) subjectFilter.addEventListener('change', handleFilter);
+            if (sectionFilter) sectionFilter.addEventListener('change', handleFilter);
+            if (classForm) classForm.addEventListener('submit', handleFormSubmit);
+
+            const scheduleCheckboxes = document.querySelectorAll('input[name="scheduleDays"]');
+            scheduleCheckboxes.forEach(checkbox => {
+                checkbox.addEventListener('change', handleScheduleToggle);
             });
-        });
-    }
 
-    function renderClasses() {
-        updateStats();
-        if (currentView === 'grid') {
-            renderGridView();
-        } else {
-            renderTableView();
-        }
-    }
-
-    function renderGridView() {
-        const container = document.getElementById('gridView');
-        if (!container) return;
-
-        const filteredClasses = getFilteredClasses();
-        container.innerHTML = '';
-
-        if (filteredClasses.length === 0) {
-            container.innerHTML = '<div class="no-classes">No classes found</div>';
-            return;
+            window.addEventListener('click', function(event) {
+                const modals = document.querySelectorAll('.modal');
+                modals.forEach(modal => {
+                    if (event.target === modal) {
+                        modal.classList.remove('show');
+                    }
+                });
+            });
         }
 
-        filteredClasses.forEach(classItem => {
-            const scheduleText = formatSchedule(classItem.schedule);
-            const attendancePercentage = parseFloat(classItem.attendance_percentage) || 0;
-            const studentCount = parseInt(classItem.student_count) || 0;
+        function renderClasses() {
+            updateStats();
+            if (currentView === 'grid') {
+                renderGridView();
+            } else {
+                renderTableView();
+            }
+        }
 
-            const card = document.createElement('div');
-            card.className = 'class-card';
-            card.innerHTML = `
+        function renderGridView() {
+            const container = document.getElementById('gridView');
+            if (!container) return;
+
+            const filteredClasses = getFilteredClasses();
+            container.innerHTML = '';
+
+            if (filteredClasses.length === 0) {
+                container.innerHTML = '<div class="no-classes">No classes found</div>';
+                return;
+            }
+
+            filteredClasses.forEach(classItem => {
+                const scheduleText = formatSchedule(classItem.schedule);
+                const attendancePercentage = parseFloat(classItem.attendance_percentage) || 0;
+                const studentCount = parseInt(classItem.student_count) || 0;
+
+                const card = document.createElement('div');
+                card.className = 'class-card';
+                card.innerHTML = `
                 <div class="class-header">
                     <h3>${sanitizeHTML(classItem.subject_code)}</h3>
                     <span class="status-badge ${sanitizeHTML(classItem.status)}">${sanitizeHTML(classItem.status)}</span>
@@ -2298,29 +2309,29 @@ ob_end_flush();
                     </button>
                 </div>
             `;
-            container.appendChild(card);
-        });
-    }
-
-    function renderTableView() {
-        const tbody = document.querySelector('#tableView tbody');
-        if (!tbody) return;
-
-        const filteredClasses = getFilteredClasses();
-        tbody.innerHTML = '';
-
-        if (filteredClasses.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="9" class="no-classes">No classes found</td></tr>';
-            return;
+                container.appendChild(card);
+            });
         }
 
-        filteredClasses.forEach(classItem => {
-            const scheduleText = formatScheduleShort(classItem.schedule);
-            const attendancePercentage = parseFloat(classItem.attendance_percentage) || 0;
-            const studentCount = parseInt(classItem.student_count) || 0;
+        function renderTableView() {
+            const tbody = document.querySelector('#tableView tbody');
+            if (!tbody) return;
 
-            const row = document.createElement('tr');
-            row.innerHTML = `
+            const filteredClasses = getFilteredClasses();
+            tbody.innerHTML = '';
+
+            if (filteredClasses.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="9" class="no-classes">No classes found</td></tr>';
+                return;
+            }
+
+            filteredClasses.forEach(classItem => {
+                const scheduleText = formatScheduleShort(classItem.schedule);
+                const attendancePercentage = parseFloat(classItem.attendance_percentage) || 0;
+                const studentCount = parseInt(classItem.student_count) || 0;
+
+                const row = document.createElement('tr');
+                row.innerHTML = `
                 <td><input type="checkbox" class="row-checkbox" data-class-id="${classItem.class_id}"></td>
                 <td>
                     <strong>${sanitizeHTML(classItem.subject_name)}</strong><br>
@@ -2346,180 +2357,180 @@ ob_end_flush();
                     </button>
                 </td>
             `;
-            tbody.appendChild(row);
-        });
-    }
-
-    function getFilteredClasses() {
-        const searchInput = document.getElementById('searchInput');
-        const gradeFilter = document.getElementById('gradeFilter');
-        const statusFilter = document.getElementById('statusFilter');
-        const subjectFilter = document.getElementById('subjectFilter');
-        const sectionFilter = document.getElementById('sectionFilter');
-
-        const searchTerm = searchInput ? searchInput.value.toLowerCase() : '';
-        const gradeFilterValue = gradeFilter ? gradeFilter.value : '';
-        const statusFilterValue = statusFilter ? statusFilter.value : '';
-        const subjectFilterValue = subjectFilter ? subjectFilter.value : '';
-        const sectionFilterValue = sectionFilter ? sectionFilter.value : '';
-
-        return classes.filter(classItem => {
-            const matchesSearch = searchTerm === '' ||
-                (classItem.subject_code && classItem.subject_code.toLowerCase().includes(searchTerm)) ||
-                (classItem.section_name && classItem.section_name.toLowerCase().includes(searchTerm)) ||
-                (classItem.subject_name && classItem.subject_name.toLowerCase().includes(searchTerm));
-
-            const matchesGrade = gradeFilterValue === '' || classItem.grade_level === gradeFilterValue;
-            const matchesStatus = statusFilterValue === '' || classItem.status === statusFilterValue;
-            const matchesSubject = subjectFilterValue === '' || classItem.subject_name === subjectFilterValue;
-            const matchesSection = sectionFilterValue === '' || classItem.section_name === sectionFilterValue;
-
-            return matchesSearch && matchesGrade && matchesStatus && matchesSubject && matchesSection;
-        });
-    }
-
-    function populateFilters() {
-    const subjectFilter = document.getElementById('subjectFilter');
-    const sectionFilter = document.getElementById('sectionFilter');
-    const gradeFilter = document.getElementById('gradeFilter');
-    if (!subjectFilter || !sectionFilter || !gradeFilter) return;
-
-    // Get unique subjects, sections, and grade levels
-    const subjects = [...new Set(classes.map(c => c.subject_name).filter(s => s))];
-    const sections = [...new Set(classes.map(c => c.section_name).filter(s => s))];
-    const gradeLevels = [...new Set(classes.map(c => c.grade_level).filter(g => g))];
-
-    // Populate subject filter
-    subjectFilter.innerHTML = '<option value="">All Subjects</option>';
-    subjects.forEach(subject => {
-        const option = document.createElement('option');
-        option.value = subject;
-        option.textContent = subject;
-        subjectFilter.appendChild(option);
-    });
-
-    // Populate section filter
-    sectionFilter.innerHTML = '<option value="">All Sections</option>';
-    sections.forEach(section => {
-        const option = document.createElement('option');
-        option.value = section;
-        option.textContent = section;
-        sectionFilter.appendChild(option);
-    });
-
-    // Populate grade level filter
-    gradeFilter.innerHTML = '<option value="">All Grade Levels</option>';
-    gradeLevels.forEach(grade => {
-        const option = document.createElement('option');
-        option.value = grade;
-        option.textContent = grade;
-        gradeFilter.appendChild(option);
-    });
-}
-
-    function handleSearch() {
-        renderClasses();
-    }
-
-    function handleFilter() {
-        renderClasses();
-    }
-
-    function switchView(view) {
-        currentView = view;
-
-        const viewButtons = document.querySelectorAll('.view-btn');
-        viewButtons.forEach(btn => btn.classList.remove('active'));
-        event.target.closest('.view-btn').classList.add('active');
-
-        const gridView = document.getElementById('gridView');
-        const tableView = document.getElementById('tableView');
-
-        if (gridView && tableView) {
-            if (view === 'grid') {
-                gridView.classList.remove('hidden');
-                tableView.classList.add('hidden');
-            } else {
-                gridView.classList.add('hidden');
-                tableView.classList.remove('hidden');
-            }
-        }
-
-        renderClasses();
-    }
-
-    function openModal() {
-        editingClassId = null;
-        const modalTitle = document.getElementById('modalTitle');
-        const classForm = document.getElementById('classForm');
-        const classModal = document.getElementById('classModal');
-
-        if (modalTitle) modalTitle.textContent = 'Add New Class';
-        if (classForm) classForm.reset();
-        clearScheduleInputs();
-        if (classModal) classModal.classList.add('show');
-    }
-
-    function closeModal() {
-        const classModal = document.getElementById('classModal');
-        if (classModal) classModal.classList.remove('show');
-        editingClassId = null;
-    }
-
-    function editClass(classId) {
-        const classItem = classes.find(c => c.class_id === classId);
-        if (!classItem) return;
-
-        editingClassId = classId;
-        const modalTitle = document.getElementById('modalTitle');
-        if (modalTitle) modalTitle.textContent = 'Edit Class';
-
-        const fields = {
-            classCode: classItem.subject_code,
-            sectionName: classItem.section_name,
-            subject: classItem.subject_name,
-            gradeLevel: classItem.grade_level,
-            room: classItem.room || '',
-            status: classItem.status
-        };
-
-        Object.entries(fields).forEach(([id, value]) => {
-            const element = document.getElementById(id);
-            if (element) element.value = value;
-        });
-
-        clearScheduleInputs();
-        if (classItem.schedule) {
-            Object.keys(classItem.schedule).forEach(day => {
-                const checkbox = document.getElementById(day);
-                const startInput = document.getElementById(day + 'Start');
-                const endInput = document.getElementById(day + 'End');
-
-                if (checkbox && startInput && endInput) {
-                    checkbox.checked = true;
-                    startInput.disabled = false;
-                    endInput.disabled = false;
-                    startInput.value = classItem.schedule[day].start || '';
-                    endInput.value = classItem.schedule[day].end || '';
-                }
+                tbody.appendChild(row);
             });
         }
 
-        const classModal = document.getElementById('classModal');
-        if (classModal) classModal.classList.add('show');
-    }
+        function getFilteredClasses() {
+            const searchInput = document.getElementById('searchInput');
+            const gradeFilter = document.getElementById('gradeFilter');
+            const statusFilter = document.getElementById('statusFilter');
+            const subjectFilter = document.getElementById('subjectFilter');
+            const sectionFilter = document.getElementById('sectionFilter');
 
-    function viewClass(classId) {
-        const classItem = classes.find(c => c.class_id === classId);
-        if (!classItem) return;
+            const searchTerm = searchInput ? searchInput.value.toLowerCase() : '';
+            const gradeFilterValue = gradeFilter ? gradeFilter.value : '';
+            const statusFilterValue = statusFilter ? statusFilter.value : '';
+            const subjectFilterValue = subjectFilter ? subjectFilter.value : '';
+            const sectionFilterValue = sectionFilter ? sectionFilter.value : '';
 
-        const scheduleText = formatSchedule(classItem.schedule);
-        const attendancePercentage = parseFloat(classItem.attendance_percentage) || 0;
-        const studentCount = parseInt(classItem.student_count) || 0;
+            return classes.filter(classItem => {
+                const matchesSearch = searchTerm === '' ||
+                    (classItem.subject_code && classItem.subject_code.toLowerCase().includes(searchTerm)) ||
+                    (classItem.section_name && classItem.section_name.toLowerCase().includes(searchTerm)) ||
+                    (classItem.subject_name && classItem.subject_name.toLowerCase().includes(searchTerm));
 
-        const content = document.getElementById('viewContent');
-        if (content) {
-            content.innerHTML = `
+                const matchesGrade = gradeFilterValue === '' || classItem.grade_level === gradeFilterValue;
+                const matchesStatus = statusFilterValue === '' || classItem.status === statusFilterValue;
+                const matchesSubject = subjectFilterValue === '' || classItem.subject_name === subjectFilterValue;
+                const matchesSection = sectionFilterValue === '' || classItem.section_name === sectionFilterValue;
+
+                return matchesSearch && matchesGrade && matchesStatus && matchesSubject && matchesSection;
+            });
+        }
+
+        function populateFilters() {
+            const subjectFilter = document.getElementById('subjectFilter');
+            const sectionFilter = document.getElementById('sectionFilter');
+            const gradeFilter = document.getElementById('gradeFilter');
+            if (!subjectFilter || !sectionFilter || !gradeFilter) return;
+
+            // Get unique subjects, sections, and grade levels
+            const subjects = [...new Set(classes.map(c => c.subject_name).filter(s => s))];
+            const sections = [...new Set(classes.map(c => c.section_name).filter(s => s))];
+            const gradeLevels = [...new Set(classes.map(c => c.grade_level).filter(g => g))];
+
+            // Populate subject filter
+            subjectFilter.innerHTML = '<option value="">All Subjects</option>';
+            subjects.forEach(subject => {
+                const option = document.createElement('option');
+                option.value = subject;
+                option.textContent = subject;
+                subjectFilter.appendChild(option);
+            });
+
+            // Populate section filter
+            sectionFilter.innerHTML = '<option value="">All Sections</option>';
+            sections.forEach(section => {
+                const option = document.createElement('option');
+                option.value = section;
+                option.textContent = section;
+                sectionFilter.appendChild(option);
+            });
+
+            // Populate grade level filter
+            gradeFilter.innerHTML = '<option value="">All Grade Levels</option>';
+            gradeLevels.forEach(grade => {
+                const option = document.createElement('option');
+                option.value = grade;
+                option.textContent = grade;
+                gradeFilter.appendChild(option);
+            });
+        }
+
+        function handleSearch() {
+            renderClasses();
+        }
+
+        function handleFilter() {
+            renderClasses();
+        }
+
+        function switchView(view) {
+            currentView = view;
+
+            const viewButtons = document.querySelectorAll('.view-btn');
+            viewButtons.forEach(btn => btn.classList.remove('active'));
+            event.target.closest('.view-btn').classList.add('active');
+
+            const gridView = document.getElementById('gridView');
+            const tableView = document.getElementById('tableView');
+
+            if (gridView && tableView) {
+                if (view === 'grid') {
+                    gridView.classList.remove('hidden');
+                    tableView.classList.add('hidden');
+                } else {
+                    gridView.classList.add('hidden');
+                    tableView.classList.remove('hidden');
+                }
+            }
+
+            renderClasses();
+        }
+
+        function openModal() {
+            editingClassId = null;
+            const modalTitle = document.getElementById('modalTitle');
+            const classForm = document.getElementById('classForm');
+            const classModal = document.getElementById('classModal');
+
+            if (modalTitle) modalTitle.textContent = 'Add New Class';
+            if (classForm) classForm.reset();
+            clearScheduleInputs();
+            if (classModal) classModal.classList.add('show');
+        }
+
+        function closeModal() {
+            const classModal = document.getElementById('classModal');
+            if (classModal) classModal.classList.remove('show');
+            editingClassId = null;
+        }
+
+        function editClass(classId) {
+            const classItem = classes.find(c => c.class_id === classId);
+            if (!classItem) return;
+
+            editingClassId = classId;
+            const modalTitle = document.getElementById('modalTitle');
+            if (modalTitle) modalTitle.textContent = 'Edit Class';
+
+            const fields = {
+                classCode: classItem.subject_code,
+                sectionName: classItem.section_name,
+                subject: classItem.subject_name,
+                gradeLevel: classItem.grade_level,
+                room: classItem.room || '',
+                status: classItem.status
+            };
+
+            Object.entries(fields).forEach(([id, value]) => {
+                const element = document.getElementById(id);
+                if (element) element.value = value;
+            });
+
+            clearScheduleInputs();
+            if (classItem.schedule) {
+                Object.keys(classItem.schedule).forEach(day => {
+                    const checkbox = document.getElementById(day);
+                    const startInput = document.getElementById(day + 'Start');
+                    const endInput = document.getElementById(day + 'End');
+
+                    if (checkbox && startInput && endInput) {
+                        checkbox.checked = true;
+                        startInput.disabled = false;
+                        endInput.disabled = false;
+                        startInput.value = classItem.schedule[day].start || '';
+                        endInput.value = classItem.schedule[day].end || '';
+                    }
+                });
+            }
+
+            const classModal = document.getElementById('classModal');
+            if (classModal) classModal.classList.add('show');
+        }
+
+        function viewClass(classId) {
+            const classItem = classes.find(c => c.class_id === classId);
+            if (!classItem) return;
+
+            const scheduleText = formatSchedule(classItem.schedule);
+            const attendancePercentage = parseFloat(classItem.attendance_percentage) || 0;
+            const studentCount = parseInt(classItem.student_count) || 0;
+
+            const content = document.getElementById('viewContent');
+            if (content) {
+                content.innerHTML = `
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
                         <div class="detail-row">
@@ -2559,236 +2570,236 @@ ob_end_flush();
                     </div>
                 </div>
             `;
+            }
+
+            const viewModal = document.getElementById('viewModal');
+            if (viewModal) viewModal.classList.add('show');
         }
 
-        const viewModal = document.getElementById('viewModal');
-        if (viewModal) viewModal.classList.add('show');
-    }
+        function closeViewModal() {
+            const viewModal = document.getElementById('viewModal');
+            if (viewModal) viewModal.classList.remove('show');
+        }
 
-    function closeViewModal() {
-        const viewModal = document.getElementById('viewModal');
-        if (viewModal) viewModal.classList.remove('show');
-    }
+        function deleteClass(classId) {
+            if (!confirm('Are you sure you want to delete this class?')) return;
 
-    function deleteClass(classId) {
-        if (!confirm('Are you sure you want to delete this class?')) return;
+            fetch('manage-classes.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded'
+                    },
+                    body: `action=deleteClass&classId=${classId}`
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok: ' + response.statusText);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.success) {
+                        classes = classes.filter(c => c.class_id !== classId);
+                        renderClasses();
+                        populateFilters();
+                        alert('Class deleted successfully!');
+                    } else {
+                        alert('Failed to delete class: ' + (data.error || 'Unknown error'));
+                    }
+                })
+                .catch(error => {
+                    console.error('Error deleting class:', error);
+                    alert('Error deleting class: ' + error.message);
+                });
+        }
 
-        fetch('manage-classes.php', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded'
-                },
-                body: `action=deleteClass&classId=${classId}`
-            })
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error('Network response was not ok: ' + response.statusText);
+        function handleFormSubmit(event) {
+            event.preventDefault();
+
+            const schedule = getScheduleFromForm();
+
+            const classData = {
+                classCode: document.getElementById('classCode')?.value || '',
+                sectionName: document.getElementById('sectionName')?.value || '',
+                subject: document.getElementById('subject')?.value || '',
+                gradeLevel: document.getElementById('gradeLevel')?.value || '',
+                room: document.getElementById('room')?.value || '',
+                status: document.getElementById('status')?.value || '',
+                classId: editingClassId || ''
+            };
+
+            fetch('manage-classes.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded'
+                    },
+                    body: `action=addClass&${new URLSearchParams(classData)}&schedule=${encodeURIComponent(JSON.stringify(schedule))}`
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok: ' + response.statusText);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.success) {
+                        fetchClasses();
+                        closeModal();
+                        alert(editingClassId ? 'Class updated successfully!' : 'Class added successfully!');
+                    } else {
+                        alert('Error: ' + (data.error || 'Failed to ' + (editingClassId ? 'update' : 'add') + ' class'));
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Error ' + (editingClassId ? 'updating' : 'adding') + ' class: ' + error.message);
+                });
+        }
+
+        function getScheduleFromForm() {
+            const schedule = {};
+            const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+
+            days.forEach(day => {
+                const checkbox = document.getElementById(day);
+                const startInput = document.getElementById(day + 'Start');
+                const endInput = document.getElementById(day + 'End');
+
+                if (checkbox && checkbox.checked && startInput && startInput.value && endInput && endInput.value) {
+                    schedule[day] = {
+                        start: startInput.value,
+                        end: endInput.value
+                    };
                 }
-                return response.json();
-            })
-            .then(data => {
-                if (data.success) {
-                    classes = classes.filter(c => c.class_id !== classId);
-                    renderClasses();
-                    populateFilters();
-                    alert('Class deleted successfully!');
-                } else {
-                    alert('Failed to delete class: ' + (data.error || 'Unknown error'));
-                }
-            })
-            .catch(error => {
-                console.error('Error deleting class:', error);
-                alert('Error deleting class: ' + error.message);
             });
-    }
 
-    function handleFormSubmit(event) {
-        event.preventDefault();
+            return schedule;
+        }
 
-        const schedule = getScheduleFromForm();
-
-        const classData = {
-            classCode: document.getElementById('classCode')?.value || '',
-            sectionName: document.getElementById('sectionName')?.value || '',
-            subject: document.getElementById('subject')?.value || '',
-            gradeLevel: document.getElementById('gradeLevel')?.value || '',
-            room: document.getElementById('room')?.value || '',
-            status: document.getElementById('status')?.value || '',
-            classId: editingClassId || ''
-        };
-
-        fetch('manage-classes.php', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded'
-                },
-                body: `action=addClass&${new URLSearchParams(classData)}&schedule=${encodeURIComponent(JSON.stringify(schedule))}`
-            })
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error('Network response was not ok: ' + response.statusText);
-                }
-                return response.json();
-            })
-            .then(data => {
-                if (data.success) {
-                    fetchClasses();
-                    closeModal();
-                    alert(editingClassId ? 'Class updated successfully!' : 'Class added successfully!');
-                } else {
-                    alert('Error: ' + (data.error || 'Failed to ' + (editingClassId ? 'update' : 'add') + ' class'));
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                alert('Error ' + (editingClassId ? 'updating' : 'adding') + ' class: ' + error.message);
-            });
-    }
-
-    function getScheduleFromForm() {
-        const schedule = {};
-        const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
-
-        days.forEach(day => {
-            const checkbox = document.getElementById(day);
+        function handleScheduleToggle(event) {
+            const day = event.target.id;
             const startInput = document.getElementById(day + 'Start');
             const endInput = document.getElementById(day + 'End');
 
-            if (checkbox && checkbox.checked && startInput && startInput.value && endInput && endInput.value) {
-                schedule[day] = {
-                    start: startInput.value,
-                    end: endInput.value
-                };
-            }
-        });
-
-        return schedule;
-    }
-
-    function handleScheduleToggle(event) {
-        const day = event.target.id;
-        const startInput = document.getElementById(day + 'Start');
-        const endInput = document.getElementById(day + 'End');
-
-        if (startInput && endInput) {
-            if (event.target.checked) {
-                startInput.disabled = false;
-                endInput.disabled = false;
-            } else {
-                startInput.disabled = true;
-                endInput.disabled = true;
-                startInput.value = '';
-                endInput.value = '';
+            if (startInput && endInput) {
+                if (event.target.checked) {
+                    startInput.disabled = false;
+                    endInput.disabled = false;
+                } else {
+                    startInput.disabled = true;
+                    endInput.disabled = true;
+                    startInput.value = '';
+                    endInput.value = '';
+                }
             }
         }
-    }
 
-    function clearScheduleInputs() {
-        const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
-        days.forEach(day => {
-            const checkbox = document.getElementById(day);
-            const startInput = document.getElementById(day + 'Start');
-            const endInput = document.getElementById(day + 'End');
+        function clearScheduleInputs() {
+            const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+            days.forEach(day => {
+                const checkbox = document.getElementById(day);
+                const startInput = document.getElementById(day + 'Start');
+                const endInput = document.getElementById(day + 'End');
 
-            if (checkbox && startInput && endInput) {
-                checkbox.checked = false;
-                startInput.disabled = true;
-                endInput.disabled = true;
-                startInput.value = '';
-                endInput.value = '';
-            }
-        });
-    }
-
-    function formatSchedule(schedule) {
-        if (!schedule || Object.keys(schedule).length === 0) {
-            return '<div class="no-schedule">No schedule set</div>';
+                if (checkbox && startInput && endInput) {
+                    checkbox.checked = false;
+                    startInput.disabled = true;
+                    endInput.disabled = true;
+                    startInput.value = '';
+                    endInput.value = '';
+                }
+            });
         }
 
-        return Object.entries(schedule).map(([day, times]) => {
-            return `<div class="schedule-item">${day.charAt(0).toUpperCase() + day.slice(1)}: ${times.start} - ${times.end}</div>`;
-        }).join('');
-    }
+        function formatSchedule(schedule) {
+            if (!schedule || Object.keys(schedule).length === 0) {
+                return '<div class="no-schedule">No schedule set</div>';
+            }
 
-    function formatScheduleShort(schedule) {
-        if (!schedule || Object.keys(schedule).length === 0) {
-            return 'No schedule set';
+            return Object.entries(schedule).map(([day, times]) => {
+                return `<div class="schedule-item">${day.charAt(0).toUpperCase() + day.slice(1)}: ${times.start} - ${times.end}</div>`;
+            }).join('');
         }
 
-        return Object.entries(schedule).map(([day, times]) => {
-            return `${day.charAt(0).toUpperCase() + day.slice(1)}: ${times.start} - ${times.end}`;
-        }).join(', ');
-    }
+        function formatScheduleShort(schedule) {
+            if (!schedule || Object.keys(schedule).length === 0) {
+                return 'No schedule set';
+            }
 
-    function sanitizeHTML(str) {
-        const temp = document.createElement('div');
-        temp.textContent = str;
-        return temp.innerHTML;
-    }
-
-    function openStudentModal(classId) {
-        const studentModal = document.getElementById('studentModal');
-        if (studentModal) {
-            studentModal.dataset.classId = classId;
-            studentModal.classList.add('show');
+            return Object.entries(schedule).map(([day, times]) => {
+                return `${day.charAt(0).toUpperCase() + day.slice(1)}: ${times.start} - ${times.end}`;
+            }).join(', ');
         }
-        fetchStudents(classId);
-    }
 
-    function closeStudentModal() {
-        const studentModal = document.getElementById('studentModal');
-        const previewTableContainer = document.getElementById('previewTableContainer');
-        const importFile = document.getElementById('importFile');
-        if (studentModal) studentModal.classList.remove('show');
-        if (previewTableContainer) previewTableContainer.style.display = 'none';
-        if (importFile) importFile.value = '';
-        document.querySelector('#previewTable tbody').innerHTML = '';
-    }
+        function sanitizeHTML(str) {
+            const temp = document.createElement('div');
+            temp.textContent = str;
+            return temp.innerHTML;
+        }
 
-    function fetchStudents(classId) {
-        fetch(`manage-classes.php?action=fetchStudents&classId=${classId}`, {
-            headers: {
-                'X-Requested-With': 'XMLHttpRequest'
+        function openStudentModal(classId) {
+            const studentModal = document.getElementById('studentModal');
+            if (studentModal) {
+                studentModal.dataset.classId = classId;
+                studentModal.classList.add('show');
             }
-        })
-        .then(response => {
-            if (!response.ok) {
-                throw new Error('Network response was not ok: ' + response.statusText);
+            fetchStudents(classId);
+        }
+
+        function closeStudentModal() {
+            const studentModal = document.getElementById('studentModal');
+            const previewTableContainer = document.getElementById('previewTableContainer');
+            const importFile = document.getElementById('importFile');
+            if (studentModal) studentModal.classList.remove('show');
+            if (previewTableContainer) previewTableContainer.style.display = 'none';
+            if (importFile) importFile.value = '';
+            document.querySelector('#previewTable tbody').innerHTML = '';
+        }
+
+        function fetchStudents(classId) {
+            fetch(`manage-classes.php?action=fetchStudents&classId=${classId}`, {
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok: ' + response.statusText);
+                    }
+                    return response.json();
+                })
+                .then(result => {
+                    if (result.success) {
+                        renderStudentTable(result.data, classId);
+                    } else {
+                        console.error('Error fetching students:', result.error);
+                        alert('Failed to fetch students: ' + result.error);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error fetching students:', error);
+                    alert('Error fetching students: ' + error.message);
+                });
+        }
+
+        function renderStudentTable(students, classId) {
+            const tbody = document.querySelector('#studentTable tbody');
+            if (!tbody) return;
+
+            tbody.innerHTML = '';
+
+            if (!students || students.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="15" class="no-classes">No students enrolled</td></tr>';
+                return;
             }
-            return response.json();
-        })
-        .then(result => {
-            if (result.success) {
-                renderStudentTable(result.data, classId);
-            } else {
-                console.error('Error fetching students:', result.error);
-                alert('Failed to fetch students: ' + result.error);
-            }
-        })
-        .catch(error => {
-            console.error('Error fetching students:', error);
-            alert('Error fetching students: ' + error.message);
-        });
-    }
 
-    function renderStudentTable(students, classId) {
-    const tbody = document.querySelector('#studentTable tbody');
-    if (!tbody) return;
+            students.forEach(student => {
+                const photoSrc = student.photo ? `uploads/${student.photo}` : '';
+                const qrSrc = student.qr_code ? `uploads/${student.qr_code}` : '';
+                console.log('Photo:', photoSrc, 'QR:', qrSrc); // Debug log
 
-    tbody.innerHTML = '';
-
-    if (!students || students.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="15" class="no-classes">No students enrolled</td></tr>';
-        return;
-    }
-
-    students.forEach(student => {
-        const photoSrc = student.photo ? `uploads/${student.photo}` : '';
-        const qrSrc = student.qr_code ? `uploads/${student.qr_code}` : '';
-        console.log('Photo:', photoSrc, 'QR:', qrSrc); // Debug log
-
-        const row = document.createElement('tr');
-        row.innerHTML = `
+                const row = document.createElement('tr');
+                row.innerHTML = `
             <td>${sanitizeHTML(student.lrn || 'N/A')}</td>
             <td>${sanitizeHTML(student.first_name || 'N/A')}</td>
             <td>${sanitizeHTML(student.middle_name || 'N/A')}</td>
@@ -2809,69 +2820,73 @@ ob_end_flush();
                 </button>
             </td>
         `;
-        tbody.appendChild(row);
-    });
-}
-
-    function deleteStudent(classId, lrn) {
-        if (!confirm('Are you sure you want to delete this student from the class?')) return;
-
-        fetch('manage-classes.php', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded'
-                },
-                body: `action=deleteStudent&classId=${classId}&lrn=${lrn}`
-            })
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error('Network response was not ok: ' + response.statusText);
-                }
-                return response.json();
-            })
-            .then(data => {
-                if (data.success) {
-                    fetchStudents(classId);
-                    alert('Student removed successfully!');
-                } else {
-                    alert('Failed to delete student: ' + (data.error || 'Unknown error'));
-                }
-            })
-            .catch(error => {
-                console.error('Error deleting student:', error);
-                alert('Error deleting student: ' + error.message);
+                tbody.appendChild(row);
             });
-    }
-
-    document.getElementById('importFile').addEventListener('change', function(event) {
-        const file = event.target.files[0];
-        if (!file) {
-            document.getElementById('previewTableContainer').style.display = 'none';
-            return;
         }
 
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            try {
-                const data = new Uint8Array(e.target.result);
-                const workbook = XLSX.read(data, { type: 'array' });
-                const firstSheet = workbook.SheetNames[0];
-                const worksheet = workbook.Sheets[firstSheet];
-                const rows = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+        function deleteStudent(classId, lrn) {
+            if (!confirm('Are you sure you want to delete this student from the class?')) return;
 
-                const tbody = document.querySelector('#previewTable tbody');
-                tbody.innerHTML = '';
+            fetch('manage-classes.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded'
+                    },
+                    body: `action=deleteStudent&classId=${classId}&lrn=${lrn}`
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok: ' + response.statusText);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.success) {
+                        fetchStudents(classId);
+                        alert('Student removed successfully!');
+                    } else {
+                        alert('Failed to delete student: ' + (data.error || 'Unknown error'));
+                    }
+                })
+                .catch(error => {
+                    console.error('Error deleting student:', error);
+                    alert('Error deleting student: ' + error.message);
+                });
+        }
 
-                if (rows.length <= 1) {
-                    document.getElementById('previewTableContainer').style.display = 'none';
-                    alert('The selected Excel file is empty or contains only headers.');
-                    return;
-                }
+        document.getElementById('importFile').addEventListener('change', function(event) {
+            const file = event.target.files[0];
+            if (!file) {
+                document.getElementById('previewTableContainer').style.display = 'none';
+                return;
+            }
 
-                rows.slice(1).forEach(row => {
-                    if (row.length >= 11) { // Ensure row has at least 11 columns for preview
-                        const tr = document.createElement('tr');
-                        tr.innerHTML = `
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, {
+                        type: 'array'
+                    });
+                    const firstSheet = workbook.SheetNames[0];
+                    const worksheet = workbook.Sheets[firstSheet];
+                    const rows = XLSX.utils.sheet_to_json(worksheet, {
+                        header: 1
+                    });
+
+                    const tbody = document.querySelector('#previewTable tbody');
+                    tbody.innerHTML = '';
+
+                    if (rows.length <= 1) {
+                        document.getElementById('previewTableContainer').style.display = 'none';
+                        alert('The selected Excel file is empty or contains only headers.');
+                        return;
+                    }
+
+                    rows.slice(1).forEach(row => {
+                        if (row.length >= 11) { // Ensure row has at least 11 columns for preview
+                            const tr = document.createElement('tr');
+                            tr.innerHTML = `
                             <td>${sanitizeHTML(row[0] || '')}</td>
                             <td>${sanitizeHTML(row[1] || '')}</td>
                             <td>${sanitizeHTML(row[2] || '')}</td>
@@ -2884,66 +2899,66 @@ ob_end_flush();
                             <td>${sanitizeHTML(row[9] || '')}</td>
                             <td>${sanitizeHTML(row[10] || '')}</td>
                         `;
-                        tbody.appendChild(tr);
-                    }
-                });
+                            tbody.appendChild(tr);
+                        }
+                    });
 
-                document.getElementById('previewTableContainer').style.display = 'block';
-            } catch (error) {
-                console.error('Error reading Excel file:', error);
-                alert('Error reading Excel file: ' + error.message);
-                document.getElementById('previewTableContainer').style.display = 'none';
+                    document.getElementById('previewTableContainer').style.display = 'block';
+                } catch (error) {
+                    console.error('Error reading Excel file:', error);
+                    alert('Error reading Excel file: ' + error.message);
+                    document.getElementById('previewTableContainer').style.display = 'none';
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        });
+
+        function importStudents() {
+            const fileInput = document.getElementById('importFile');
+            const file = fileInput.files[0];
+            if (!file) {
+                alert('Please select a file to import.');
+                return;
             }
-        };
-        reader.readAsArrayBuffer(file);
-    });
 
-    function importStudents() {
-        const fileInput = document.getElementById('importFile');
-        const file = fileInput.files[0];
-        if (!file) {
-            alert('Please select a file to import.');
-            return;
+            const formData = new FormData();
+            formData.append('action', 'importStudents');
+            formData.append('classId', document.querySelector('#studentModal').dataset.classId || '0');
+            formData.append('file', file);
+
+            fetch('manage-classes.php', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok: ' + response.statusText);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.success) {
+                        fetchStudents(document.querySelector('#studentModal').dataset.classId);
+                        document.getElementById('previewTableContainer').style.display = 'none';
+                        document.getElementById('importFile').value = '';
+                        document.querySelector('#previewTable tbody').innerHTML = '';
+                        alert('Students imported successfully!');
+                    } else {
+                        alert('Failed to import students: ' + (data.error || 'Unknown error'));
+                    }
+                })
+                .catch(error => {
+                    console.error('Error importing students:', error);
+                    alert('Error importing students: ' + error.message);
+                });
         }
 
-        const formData = new FormData();
-        formData.append('action', 'importStudents');
-        formData.append('classId', document.querySelector('#studentModal').dataset.classId || '0');
-        formData.append('file', file);
-
-        fetch('manage-classes.php', {
-                method: 'POST',
-                body: formData
-            })
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error('Network response was not ok: ' + response.statusText);
-                }
-                return response.json();
-            })
-            .then(data => {
-                if (data.success) {
-                    fetchStudents(document.querySelector('#studentModal').dataset.classId);
-                    document.getElementById('previewTableContainer').style.display = 'none';
-                    document.getElementById('importFile').value = '';
-                    document.querySelector('#previewTable tbody').innerHTML = '';
-                    alert('Students imported successfully!');
-                } else {
-                    alert('Failed to import students: ' + (data.error || 'Unknown error'));
-                }
-            })
-            .catch(error => {
-                console.error('Error importing students:', error);
-                alert('Error importing students: ' + error.message);
-            });
-    }
-
-    function toggleSelectAll() {
-        const selectAll = document.getElementById('selectAll');
-        const checkboxes = document.querySelectorAll('.row-checkbox');
-        checkboxes.forEach(checkbox => checkbox.checked = selectAll.checked);
-    }
-</script>
+        function toggleSelectAll() {
+            const selectAll = document.getElementById('selectAll');
+            const checkboxes = document.querySelectorAll('.row-checkbox');
+            checkboxes.forEach(checkbox => checkbox.checked = selectAll.checked);
+        }
+    </script>
 </body>
 
 </html>

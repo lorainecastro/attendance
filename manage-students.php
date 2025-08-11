@@ -12,6 +12,7 @@ if (!$user) {
 ?>
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -85,18 +86,20 @@ if (!$user) {
             display: flex;
             flex-direction: column;
         } */
-            
+
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
             font-family: var(--font-family);
         }
+
         body {
             background-color: var(--card-bg);
             color: var(--blackfont-color);
             padding: 20px;
         }
+
         h1 {
             font-size: 24px;
             margin-bottom: 20px;
@@ -104,6 +107,7 @@ if (!$user) {
             position: relative;
             padding-bottom: 10px;
         }
+
         h1:after {
             content: '';
             position: absolute;
@@ -114,12 +118,14 @@ if (!$user) {
             background: var(--primary-gradient);
             border-radius: var(--radius-sm);
         }
+
         .stats-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
             gap: 20px;
             margin-bottom: 20px;
         }
+
         .card {
             background: var(--card-bg);
             border-radius: 12px;
@@ -127,16 +133,19 @@ if (!$user) {
             box-shadow: var(--shadow-md);
             transition: var(--transition-normal);
         }
+
         .card:hover {
             transform: translateY(-5px);
             box-shadow: var(--shadow-lg);
         }
+
         .card-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
             margin-bottom: 15px;
         }
+
         .card-icon {
             width: 48px;
             height: 48px;
@@ -147,20 +156,35 @@ if (!$user) {
             font-size: 24px;
             color: var(--whitefont-color);
         }
-        .bg-purple { background: var(--primary-gradient); }
-        .bg-pink { background: var(--secondary-gradient); }
-        .bg-blue { background: linear-gradient(135deg, #3b82f6, #60a5fa); }
-        .bg-green { background: linear-gradient(135deg, #10b981, #34d399); }
+
+        .bg-purple {
+            background: var(--primary-gradient);
+        }
+
+        .bg-pink {
+            background: var(--secondary-gradient);
+        }
+
+        .bg-blue {
+            background: linear-gradient(135deg, #3b82f6, #60a5fa);
+        }
+
+        .bg-green {
+            background: linear-gradient(135deg, #10b981, #34d399);
+        }
+
         .card-title {
             font-size: 14px;
             color: var(--grayfont-color);
             margin-bottom: 5px;
         }
+
         .card-value {
             font-size: 24px;
             font-weight: 700;
             color: var(--blackfont-color);
         }
+
         .controls {
             background: var(--card-bg);
             border-radius: var(--radius-md);
@@ -173,6 +197,7 @@ if (!$user) {
             align-items: center;
             border: 1px solid var(--border-color);
         }
+
         .controls-left {
             display: flex;
             flex-wrap: wrap;
@@ -180,18 +205,22 @@ if (!$user) {
             flex: 1;
             align-items: center;
         }
+
         .controls-right {
             display: flex;
             flex-wrap: wrap;
             gap: var(--spacing-sm);
             align-items: center;
         }
+
         .controls-right .btn.btn-primary {
             order: 1;
         }
+
         .controls-right .view-toggle {
             order: 2;
         }
+
         .controls-right .btn.btn-primary,
         .controls-right .view-btn {
             height: 36px;
@@ -200,20 +229,24 @@ if (!$user) {
             align-items: center;
             justify-content: center;
         }
+
         .controls-right .view-btn {
             width: 38px;
             padding: 0;
         }
+
         .controls-right .view-btn.active {
             background: #007bff;
             color: white;
             border-color: #007bff;
         }
+
         .search-container {
             position: relative;
             min-width: 200px;
             flex: 1;
         }
+
         .search-input {
             width: 100%;
             padding: var(--spacing-xs) var(--spacing-md) var(--spacing-xs) 2.5rem;
@@ -223,12 +256,14 @@ if (!$user) {
             background: var(--inputfield-color);
             transition: var(--transition-normal);
         }
+
         .search-input:focus {
             outline: none;
             border-color: var(--primary-blue);
             background: var(--white);
             box-shadow: 0 0 0 4px var(--primary-blue-light);
         }
+
         .search-icon {
             position: absolute;
             left: var(--spacing-sm);
@@ -237,6 +272,7 @@ if (!$user) {
             color: var(--grayfont-color);
             font-size: 0.875rem;
         }
+
         .filter-select {
             min-width: 180px;
             padding: var(--spacing-xs) var(--spacing-sm);
@@ -249,12 +285,14 @@ if (!$user) {
             background: var(--inputfield-color);
             transition: var(--transition-normal);
         }
+
         .filter-select:focus {
             outline: none;
             border-color: var(--primary-blue);
             background: var(--white);
             box-shadow: 0 0 0 4px var(--primary-blue-light);
         }
+
         .btn {
             padding: var(--spacing-xs) var(--spacing-md);
             border: none;
@@ -268,34 +306,42 @@ if (!$user) {
             gap: var(--spacing-xs);
             text-decoration: none;
         }
+
         .btn-primary {
             background: var(--primary-gradient);
             color: var(--whitefont-color);
         }
+
         .btn-primary:hover {
             background: var(--primary-blue-hover);
             transform: translateY(-2px);
         }
+
         .btn-secondary {
             background: var(--medium-gray);
             color: var(--whitefont-color);
         }
+
         .btn-secondary:hover {
             background: #4b5563;
             transform: translateY(-2px);
         }
+
         .btn-danger {
             background: linear-gradient(135deg, #ef4444, #f87171);
             color: var(--whitefont-color);
         }
+
         .btn-danger:hover {
             background: var(--danger-red);
             transform: translateY(-2px);
         }
+
         .btn-sm {
             padding: var(--spacing-xs) var(--spacing-sm);
             font-size: 0.75rem;
         }
+
         .view-toggle {
             border: 1px solid var(--border-color);
             border-radius: var(--radius-sm);
@@ -303,6 +349,7 @@ if (!$user) {
             background: var(--inputfield-color);
             display: flex;
         }
+
         .view-btn {
             padding: var(--spacing-xs) var(--spacing-sm);
             background: transparent;
@@ -312,18 +359,22 @@ if (!$user) {
             color: var(--grayfont-color);
             font-size: 0.875rem;
         }
+
         .view-btn:hover {
             background: var(--inputfieldhover-color);
         }
+
         .view-btn.active {
             background: var(--primary-gradient);
             color: var(--whitefont-color);
         }
+
         .student-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
             gap: var(--spacing-lg);
         }
+
         .student-card {
             background: var(--card-bg);
             border-radius: var(--radius-lg);
@@ -334,10 +385,12 @@ if (!$user) {
             position: relative;
             overflow: hidden;
         }
+
         .student-card:hover {
             transform: translateY(-5px);
             box-shadow: var(--shadow-lg);
         }
+
         .student-card::before {
             content: '';
             position: absolute;
@@ -347,20 +400,24 @@ if (!$user) {
             height: 100%;
             background: var(--primary-gradient);
         }
+
         .student-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
             margin-bottom: var(--spacing-md);
         }
+
         .student-header h3 {
             font-size: var(--font-size-lg);
             font-weight: 600;
             color: var(--blackfont-color);
         }
+
         .student-info {
             margin-bottom: var(--spacing-md);
         }
+
         .student-info p {
             color: var(--grayfont-color);
             margin-bottom: var(--spacing-xs);
@@ -369,20 +426,24 @@ if (!$user) {
             align-items: center;
             gap: var(--spacing-xs);
         }
+
         .student-info i {
             width: 16px;
             color: var(--primary-blue);
         }
+
         .student-actions {
             display: flex;
             gap: 10px;
             flex-wrap: nowrap;
             align-items: center;
         }
+
         .student-actions .btn {
             white-space: nowrap;
             min-width: auto;
         }
+
         .table-container {
             background: var(--card-bg);
             border-radius: var(--radius-lg);
@@ -391,35 +452,42 @@ if (!$user) {
             overflow-x: auto;
             border: 1px solid var(--border-color);
         }
+
         .table {
             width: 100%;
             border-collapse: separate;
             border-spacing: 0;
         }
+
         .table th,
         .table td {
             padding: var(--spacing-md);
             text-align: left;
             border-bottom: 1px solid var(--border-color);
         }
+
         .table th {
             font-weight: 600;
             color: var(--grayfont-color);
             font-size: var(--font-size-sm);
             background: var(--inputfield-color);
         }
+
         .table tr:hover {
             background: var(--inputfieldhover-color);
         }
+
         .table td .actions {
             display: flex;
             gap: 10px;
             align-items: center;
         }
+
         .table td .actions .btn {
             white-space: nowrap;
             padding: var(--spacing-xs) var(--spacing-sm);
         }
+
         .modal {
             display: none;
             position: fixed;
@@ -431,11 +499,13 @@ if (!$user) {
             background: rgba(0, 0, 0, 0.6);
             animation: fadeIn 0.3s ease;
         }
+
         .modal.show {
             display: flex;
             align-items: center;
             justify-content: center;
         }
+
         .modal-content {
             background: var(--card-bg);
             margin: 0 auto;
@@ -449,6 +519,7 @@ if (!$user) {
             animation: slideIn 0.3s ease;
             border: 1px solid var(--border-color);
         }
+
         .modal-header {
             padding: var(--spacing-xl) var(--spacing-2xl);
             border-bottom: 1px solid var(--border-color);
@@ -460,12 +531,14 @@ if (!$user) {
             border-top-left-radius: var(--radius-xl);
             border-top-right-radius: var(--radius-xl);
         }
+
         .modal-title {
             margin: 0;
             font-size: var(--font-size-2xl);
             font-weight: 700;
             color: var(--whitefont-color);
         }
+
         .close-btn {
             padding: var(--spacing-sm);
             background: none;
@@ -481,9 +554,11 @@ if (!$user) {
             border-radius: var(--radius-md);
             transition: var(--transition-normal);
         }
+
         .close-btn:hover {
             background: rgba(255, 255, 255, 0.2);
         }
+
         .modal-form {
             padding: var(--spacing-2xl);
             display: grid;
@@ -491,9 +566,11 @@ if (!$user) {
             gap: var(--spacing-xl);
             background: linear-gradient(180deg, #f9fafb, #ffffff);
         }
+
         .form-group {
             margin-bottom: var(--spacing-lg);
         }
+
         .form-label {
             display: block;
             margin-bottom: var(--spacing-sm);
@@ -501,6 +578,7 @@ if (!$user) {
             color: var(--blackfont-color);
             font-size: var(--font-size-base);
         }
+
         .form-input,
         .form-select {
             padding: var(--spacing-md) var(--spacing-lg);
@@ -512,6 +590,7 @@ if (!$user) {
             width: 100%;
             box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.05);
         }
+
         .form-input:focus,
         .form-select:focus {
             outline: none;
@@ -519,21 +598,25 @@ if (!$user) {
             background: var(--white);
             box-shadow: 0 0 0 4px var(--primary-blue-light);
         }
+
         .form-input:disabled,
         .form-select:disabled {
             background: var(--light-gray);
             opacity: 0.7;
             cursor: not-allowed;
         }
+
         .photo-upload {
             display: flex;
             align-items: center;
             gap: var(--spacing-md);
             flex-wrap: wrap;
         }
+
         .photo-upload input[type="file"] {
             display: none;
         }
+
         .photo-preview {
             width: 100px;
             height: 100px;
@@ -541,16 +624,19 @@ if (!$user) {
             object-fit: cover;
             border: 1px solid var(--border-color);
         }
+
         .qr-container {
             display: flex;
             flex-direction: column;
             align-items: flex-start;
             gap: var(--spacing-sm);
         }
+
         .qr-code {
             width: 100px;
             height: 100px;
         }
+
         .form-actions {
             grid-column: 1 / -1;
             display: flex;
@@ -559,12 +645,14 @@ if (!$user) {
             padding-top: var(--spacing-xl);
             border-top: 1px solid var(--border-color);
         }
+
         .pagination {
             display: flex;
             justify-content: center;
             gap: var(--spacing-sm);
             margin-top: var(--spacing-lg);
         }
+
         .pagination-btn {
             padding: var(--spacing-xs) var(--spacing-md);
             border: none;
@@ -575,13 +663,16 @@ if (!$user) {
             font-size: var(--font-size-sm);
             min-width: 60px;
         }
+
         .pagination-btn.active {
             background: var(--primary-gradient);
             color: var(--whitefont-color);
         }
+
         .pagination-btn:hover:not(.active) {
             background: var(--inputfieldhover-color);
         }
+
         .bulk-actions {
             background: var(--card-bg);
             border-radius: var(--radius-md);
@@ -594,121 +685,164 @@ if (!$user) {
             flex-wrap: wrap;
             border: 1px solid var(--border-color);
         }
+
         .selected-count {
             font-size: var(--font-size-sm);
             color: var(--grayfont-color);
         }
+
         .hidden {
             display: none;
         }
+
         @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
+            from {
+                opacity: 0;
+            }
+
+            to {
+                opacity: 1;
+            }
         }
+
         @keyframes slideIn {
-            from { transform: translateY(-20px); opacity: 0; }
-            to { transform: translateY(0); opacity: 1; }
+            from {
+                transform: translateY(-20px);
+                opacity: 0;
+            }
+
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
         }
+
         @media (max-width: 1024px) {
             .controls {
                 flex-direction: column;
                 align-items: stretch;
             }
+
             .controls-right {
                 justify-content: flex-start;
                 margin-top: var(--spacing-sm);
             }
+
             .stats-grid {
                 grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
             }
         }
+
         @media (max-width: 768px) {
             body {
                 padding: var(--spacing-sm);
             }
+
             .controls-left {
                 flex-direction: column;
                 gap: var(--spacing-xs);
             }
+
             .controls-right {
                 flex-direction: column;
                 gap: var(--spacing-xs);
             }
+
             .search-container {
                 min-width: auto;
                 width: 100%;
             }
+
             .filter-select {
                 width: 100%;
             }
+
             .btn {
                 width: 100%;
                 justify-content: center;
             }
+
             .view-toggle {
                 width: 100%;
                 justify-content: space-between;
             }
+
             .student-grid {
                 grid-template-columns: 1fr;
             }
+
             .modal-content {
                 width: 98%;
                 max-height: 95vh;
             }
+
             .modal-form {
                 grid-template-columns: 1fr;
                 padding: var(--spacing-lg);
             }
+
             .form-actions {
                 flex-direction: column;
                 gap: var(--spacing-sm);
             }
+
             .form-actions .btn {
                 width: 100%;
                 justify-content: center;
             }
+
             .table th:nth-child(n+6),
             .table td:nth-child(n+6) {
                 display: none;
             }
         }
+
         @media (max-width: 576px) {
             h1 {
                 font-size: var(--font-size-xl);
             }
+
             .table th:nth-child(n+4),
             .table td:nth-child(n+4) {
                 display: none;
             }
+
             .student-card {
                 padding: var(--spacing-sm);
             }
+
             .student-actions {
                 flex-direction: column;
             }
+
             .student-actions .btn {
                 width: 100%;
                 justify-content: center;
             }
+
             .view-toggle {
                 width: 100%;
             }
+
             .view-btn {
                 flex: 1;
                 justify-content: center;
             }
         }
+
         @media print {
+
             .controls,
             .bulk-actions,
             .student-actions,
             .modal {
                 display: none !important;
             }
+
             body {
                 padding: 0;
             }
+
             .student-card {
                 box-shadow: none;
                 border: 1px solid var(--border-color);
@@ -717,7 +851,7 @@ if (!$user) {
         }
     </style>
 
-         <style>
+    <style>
         .controls {
             background: var(--card-bg);
             border-radius: var(--radius-md);
@@ -740,47 +874,54 @@ if (!$user) {
         }
 
         .controls-right {
-    display: flex;
-    flex-wrap: wrap;
-    gap: var(--spacing-sm);
-    align-items: center;
-}
+            display: flex;
+            flex-wrap: wrap;
+            gap: var(--spacing-sm);
+            align-items: center;
+        }
 
-.controls-right .btn.btn-primary {
-    order: 1; /* Places "Add Student" button first */
-}
+        .controls-right .btn.btn-primary {
+            order: 1;
+            /* Places "Add Student" button first */
+        }
 
-.controls-right .view-toggle {
-    order: 2; /* Places view-toggle after the button */
-}
+        .controls-right .view-toggle {
+            order: 2;
+            /* Places view-toggle after the button */
+        }
 
 
-.controls-right .btn.btn-primary,
-.controls-right .view-btn {
-    height: 36px; /* Uniform height */
-    padding: 8px 12px; /* Consistent padding */
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
+        .controls-right .btn.btn-primary,
+        .controls-right .view-btn {
+            height: 36px;
+            /* Uniform height */
+            padding: 8px 12px;
+            /* Consistent padding */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
 
-.controls-right .view-btn {
-    width: 38px; /* Square buttons for view toggle */
-    padding: 0; /* Remove padding for icon-only buttons */
-}
+        .controls-right .view-btn {
+            width: 38px;
+            /* Square buttons for view toggle */
+            padding: 0;
+            /* Remove padding for icon-only buttons */
+        }
 
-.controls-right .view-btn.active {
-    background: #007bff;
-    color: white;
-    border-color: #007bff;
-}
+        .controls-right .view-btn.active {
+            background: #007bff;
+            color: white;
+            border-color: #007bff;
+        }
 
-.controls-right {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start; /* Aligns items to the start */
-    gap: var(--spacing-sm);
-}
+        .controls-right {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            /* Aligns items to the start */
+            gap: var(--spacing-sm);
+        }
 
         .search-container {
             position: relative;
@@ -810,9 +951,9 @@ if (!$user) {
         .filter-select {
             min-width: 180px;
             padding: var(--spacing-xs) var(--spacing-sm);
-            width: 180px; 
-  height: 38px; 
-  box-sizing: border-box;
+            width: 180px;
+            height: 38px;
+            box-sizing: border-box;
         }
 
         .btn {
@@ -895,30 +1036,39 @@ if (!$user) {
 
     <style>
         .student-actions {
-    display: flex;
-    gap: 10px;
-    flex-wrap: nowrap; /* Prevents wrapping to new lines */
-    align-items: center; /* Vertically centers the buttons */
-}
+            display: flex;
+            gap: 10px;
+            flex-wrap: nowrap;
+            /* Prevents wrapping to new lines */
+            align-items: center;
+            /* Vertically centers the buttons */
+        }
 
-.student-actions .btn {
-    white-space: nowrap; /* Prevents text wrapping within buttons */
-    min-width: auto; /* Allows buttons to size naturally */
-}
+        .student-actions .btn {
+            white-space: nowrap;
+            /* Prevents text wrapping within buttons */
+            min-width: auto;
+            /* Allows buttons to size naturally */
+        }
 
-.table td .actions {
-    display: flex;
-    gap: 10px; /* Consistent spacing between buttons */
-    align-items: center; /* Vertically centers the buttons */
-}
+        .table td .actions {
+            display: flex;
+            gap: 10px;
+            /* Consistent spacing between buttons */
+            align-items: center;
+            /* Vertically centers the buttons */
+        }
 
-.table td .actions .btn {
-    white-space: nowrap; /* Prevents text wrapping within buttons */
-    padding: var(--spacing-xs) var(--spacing-sm); /* Adjusted padding for consistency */
-}
+        .table td .actions .btn {
+            white-space: nowrap;
+            /* Prevents text wrapping within buttons */
+            padding: var(--spacing-xs) var(--spacing-sm);
+            /* Adjusted padding for consistency */
+        }
     </style>
 
 </head>
+
 <body>
     <div class="container">
         <h1>Student Management</h1>
@@ -932,9 +1082,9 @@ if (!$user) {
                     </div>
                     <div class="card-icon bg-purple">
                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 16 16">
-                            <path d="M7 14s-1 0-1-1 1-4 5-4 5 3 5 4-1 1-1 1H7zm4-6a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"/>
-                            <path fill-rule="evenodd" d="M5.216 14A2.238 2.238 0 0 1 5 13c0-1.355.68-2.75 1.936-3.72A6.325 6.325 0 0 0 5 9c-4 0-5 3-5 4s1 1 1 1h4.216z"/>
-                            <path d="M4.5 8a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z"/>
+                            <path d="M7 14s-1 0-1-1 1-4 5-4 5 3 5 4-1 1-1 1H7zm4-6a3 3 0 1 0 0-6 3 3 0 0 0 0 6z" />
+                            <path fill-rule="evenodd" d="M5.216 14A2.238 2.238 0 0 1 5 13c0-1.355.68-2.75 1.936-3.72A6.325 6.325 0 0 0 5 9c-4 0-5 3-5 4s1 1 1 1h4.216z" />
+                            <path d="M4.5 8a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z" />
                         </svg>
                     </div>
                 </div>
@@ -947,8 +1097,8 @@ if (!$user) {
                     </div>
                     <div class="card-icon bg-green">
                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 16 16">
-                            <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
-                            <path d="M10.97 4.97a.235.235 0 0 0-.02.022L7.477 9.417 5.384 7.323a.75.75 0 0 0-1.06 1.06L6.97 11.03a.75.75 0 0 0 1.079-.02l3.992-4.99a.75.75 0 0 0-1.071-1.05z"/>
+                            <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z" />
+                            <path d="M10.97 4.97a.235.235 0 0 0-.02.022L7.477 9.417 5.384 7.323a.75.75 0 0 0-1.06 1.06L6.97 11.03a.75.75 0 0 0 1.079-.02l3.992-4.99a.75.75 0 0 0-1.071-1.05z" />
                         </svg>
                     </div>
                 </div>
@@ -961,9 +1111,9 @@ if (!$user) {
                     </div>
                     <div class="card-icon bg-pink">
                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 16 16">
-                            <path d="M7 14s-1 0-1-1 1-4 5-4 5 3 5 4-1 1-1 1H7zm4-6a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"/>
-                            <path fill-rule="evenodd" d="M5.216 14A2.238 2.238 0 0 1 5 13c0-1.355.68-2.75 1.936-3.72A6.325 6.325 0 0 0 5 9c-4 0-5 3-5 4s1 1 1 1h4.216z"/>
-                            <path d="M4.5 8a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z"/>
+                            <path d="M7 14s-1 0-1-1 1-4 5-4 5 3 5 4-1 1-1 1H7zm4-6a3 3 0 1 0 0-6 3 3 0 0 0 0 6z" />
+                            <path fill-rule="evenodd" d="M5.216 14A2.238 2.238 0 0 1 5 13c0-1.355.68-2.75 1.936-3.72A6.325 6.325 0 0 0 5 9c-4 0-5 3-5 4s1 1 1 1h4.216z" />
+                            <path d="M4.5 8a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z" />
                         </svg>
                     </div>
                 </div>
@@ -1139,8 +1289,7 @@ if (!$user) {
     </div>
     <script>
         // Simulated class data (replace with AJAX call in production)
-        let classes = [
-            {
+        let classes = [{
                 id: 1,
                 code: 'MATH-101-A',
                 sectionName: 'Diamond Section',
@@ -1148,15 +1297,38 @@ if (!$user) {
                 gradeLevel: 'Grade 7',
                 room: 'Room 201',
                 schedule: {
-                    monday: { start: '08:00', end: '09:30' },
-                    wednesday: { start: '08:00', end: '09:30' },
-                    friday: { start: '08:00', end: '09:30' }
+                    monday: {
+                        start: '08:00',
+                        end: '09:30'
+                    },
+                    wednesday: {
+                        start: '08:00',
+                        end: '09:30'
+                    },
+                    friday: {
+                        start: '08:00',
+                        end: '09:30'
+                    }
                 },
                 status: 'active',
-                students: [
-                    { id: 1, firstName: 'John', lastName: 'Doe', email: 'john.doe@email.com' },
-                    { id: 2, firstName: 'Jane', lastName: 'Smith', email: 'jane.smith@email.com' },
-                    { id: 3, firstName: 'Mike', lastName: 'Johnson', email: 'mike.johnson@email.com' }
+                students: [{
+                        id: 1,
+                        firstName: 'John',
+                        lastName: 'Doe',
+                        email: 'john.doe@email.com'
+                    },
+                    {
+                        id: 2,
+                        firstName: 'Jane',
+                        lastName: 'Smith',
+                        email: 'jane.smith@email.com'
+                    },
+                    {
+                        id: 3,
+                        firstName: 'Mike',
+                        lastName: 'Johnson',
+                        email: 'mike.johnson@email.com'
+                    }
                 ]
             },
             {
@@ -1167,13 +1339,28 @@ if (!$user) {
                 gradeLevel: 'Grade 10',
                 room: 'Lab 1',
                 schedule: {
-                    tuesday: { start: '10:00', end: '11:30' },
-                    thursday: { start: '10:00', end: '11:30' }
+                    tuesday: {
+                        start: '10:00',
+                        end: '11:30'
+                    },
+                    thursday: {
+                        start: '10:00',
+                        end: '11:30'
+                    }
                 },
                 status: 'active',
-                students: [
-                    { id: 4, firstName: 'Alice', lastName: 'Brown', email: 'alice.brown@email.com' },
-                    { id: 5, firstName: 'Bob', lastName: 'Wilson', email: 'bob.wilson@email.com' }
+                students: [{
+                        id: 4,
+                        firstName: 'Alice',
+                        lastName: 'Brown',
+                        email: 'alice.brown@email.com'
+                    },
+                    {
+                        id: 5,
+                        firstName: 'Bob',
+                        lastName: 'Wilson',
+                        email: 'bob.wilson@email.com'
+                    }
                 ]
             },
             {
@@ -1184,15 +1371,40 @@ if (!$user) {
                 gradeLevel: 'Grade 12',
                 room: 'Room 305',
                 schedule: {
-                    monday: { start: '14:00', end: '15:30' },
-                    wednesday: { start: '14:00', end: '15:30' }
+                    monday: {
+                        start: '14:00',
+                        end: '15:30'
+                    },
+                    wednesday: {
+                        start: '14:00',
+                        end: '15:30'
+                    }
                 },
                 status: 'inactive',
-                students: [
-                    { id: 6, firstName: 'Carol', lastName: 'Davis', email: 'carol.davis@email.com' },
-                    { id: 7, firstName: 'David', lastName: 'Miller', email: 'david.miller@email.com' },
-                    { id: 8, firstName: 'Emma', lastName: 'Garcia', email: 'emma.garcia@email.com' },
-                    { id: 9, firstName: 'Frank', lastName: 'Rodriguez', email: 'frank.rodriguez@email.com' }
+                students: [{
+                        id: 6,
+                        firstName: 'Carol',
+                        lastName: 'Davis',
+                        email: 'carol.davis@email.com'
+                    },
+                    {
+                        id: 7,
+                        firstName: 'David',
+                        lastName: 'Miller',
+                        email: 'david.miller@email.com'
+                    },
+                    {
+                        id: 8,
+                        firstName: 'Emma',
+                        lastName: 'Garcia',
+                        email: 'emma.garcia@email.com'
+                    },
+                    {
+                        id: 9,
+                        firstName: 'Frank',
+                        lastName: 'Rodriguez',
+                        email: 'frank.rodriguez@email.com'
+                    }
                 ]
             }
         ];
@@ -1423,9 +1635,12 @@ if (!$user) {
             const pageCount = Math.ceil(totalRows / rowsPerPage);
             pagination.innerHTML = `
                 <button class="pagination-btn" onclick="changePage(${currentPage - 1})" ${currentPage === 1 ? 'disabled' : ''}>Previous</button>
-                ${Array.from({ length: pageCount }, (_, i) => `
-                    <button class="pagination-btn ${currentPage === i + 1 ? 'active' : ''}" onclick="changePage(${i + 1})">${i + 1}</button>
-                `).join('')}
+                ${Array.from({ length: pageCount }, (_, i) => ` <
+                button class = "pagination-btn ${currentPage === i + 1 ? 'active' : ''}"
+            onclick = "changePage(${i + 1})" > $ {
+                i + 1
+            } < /button>
+            `).join('')}
                 <button class="pagination-btn" onclick="changePage(${currentPage + 1})" ${currentPage === pageCount ? 'disabled' : ''}>Next</button>
             `;
         }
@@ -1468,7 +1683,9 @@ if (!$user) {
                     `${s.id},${s.firstName},${s.lastName},${s.email},${s.gender},${s.gradeLevel},${s.class},${s.section},${s.address},${s.emergencyContact}`
                 )
             ].join('\n');
-            const blob = new Blob([csv], { type: 'text/csv' });
+            const blob = new Blob([csv], {
+                type: 'text/csv'
+            });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
@@ -1476,6 +1693,7 @@ if (!$user) {
             a.click();
             URL.revokeObjectURL(url);
         }
+
         function bulkDelete() {
             if (!confirm('Are you sure you want to delete selected students?')) return;
             const checkboxes = document.querySelectorAll('.row-checkbox:checked');
@@ -1687,4 +1905,5 @@ if (!$user) {
         }
     </script>
 </body>
+
 </html>

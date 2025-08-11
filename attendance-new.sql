@@ -60,7 +60,7 @@ CREATE TABLE students (
     parent_name VARCHAR(100),
     emergency_contact VARCHAR(20),
     photo VARCHAR(255) DEFAULT 'no-icon.png',
-    qr_code VARCHAR(255) DEFAULT 'no-qr-code.png',
+    qr_code VARCHAR(255) DEFAULT NULL,
     date_added DATE
 );
 

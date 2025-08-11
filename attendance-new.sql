@@ -48,7 +48,7 @@ CREATE TABLE classes (
 );
 
 CREATE TABLE students (
-    lrn INT NOT NULL PRIMARY KEY,
+    lrn BIGINT NOT NULL PRIMARY KEY,
     last_name VARCHAR(50) NOT NULL,
     first_name VARCHAR(50) NOT NULL,
     middle_name VARCHAR(50) NOT NULL,
@@ -76,7 +76,7 @@ CREATE TABLE schedules (
 
 CREATE TABLE class_students (
     class_id INT NOT NULL,
-    lrn INT NOT NULL,
+    lrn BIGINT NOT NULL,
     is_enrolled TINYINT(1) DEFAULT 1,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (class_id, lrn),

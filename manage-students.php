@@ -1354,7 +1354,10 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
                         document.getElementById('address').value = student.address || '';
                         document.getElementById('parent-name').value = student.parent_name || '';
                         document.getElementById('emergency-contact').value = student.emergency_contact || '';
-                        document.getElementById('student-photo-preview').src = student.photo || 'https://via.placeholder.com/100';
+                        document.getElementById('student-photo-preview').src = student.photo 
+    ? 'uploads/' + student.photo 
+    : 'https://via.placeholder.com/100';
+
                     } else {
                         document.getElementById('first-name').value = '';
                         document.getElementById('middle-name').value = '';
@@ -1365,7 +1368,10 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
                         document.getElementById('address').value = '';
                         document.getElementById('parent-name').value = '';
                         document.getElementById('emergency-contact').value = '';
-                        document.getElementById('student-photo-preview').src = 'https://via.placeholder.com/100';
+                        document.getElementById('student-photo-preview').src = student.photo 
+    ? 'uploads/' + student.photo 
+    : 'https://via.placeholder.com/100';
+
                     }
                 });
             }
@@ -1529,7 +1535,7 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
                 const row = document.createElement('tr');
                 row.innerHTML = `
                     <td><input type="checkbox" class="row-checkbox" data-id="${student.lrn}" data-class-id="${student.class_id}"></td>
-                    <td><img src="${student.photo}" alt="${student.fullName}" style="width: 40px; height: 40px; border-radius: var(--radius-sm);"></td>
+                    <td><img src="uploads/${student.photo}" alt="${student.fullName}" style="width: 45px; height: 45px; border-radius: 50%;"></td>
                     <td>${student.lrn}</td>
                     <td>${student.fullName}</td>
                     <td>${student.gradeLevel}</td>
@@ -1721,7 +1727,10 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
                 form.address.value = student.address || '';
                 form.parentName.value = student.parent_name || '';
                 form.emergencyContact.value = student.emergency_contact || '';
-                form.photoPreview.src = student.photo || 'https://via.placeholder.com/100';
+                form.photoPreview.src = student.photo 
+    ? 'uploads/' + student.photo 
+    : 'https://via.placeholder.com/100';
+
                 if (mode === 'view') {
                     qrContainer.style.display = 'flex';
                     const qrData = JSON.stringify({

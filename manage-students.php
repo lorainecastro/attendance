@@ -26,28 +26,45 @@ if (isset($_GET['lrn'])) {
     exit();
 }
 
-// Handle delete
-if (isset($_GET['delete_lrn'])) {
+// Handle single student removal from class
+if (isset($_GET['delete_lrn']) && isset($_GET['class_id'])) {
     $pdo = getDBConnection();
     $lrn = $_GET['delete_lrn'];
+    $class_id = $_GET['class_id'];
+    try {
+        $stmt = $pdo->prepare("DELETE FROM class_students WHERE lrn = ? AND class_id = ?");
+        $stmt->execute([$lrn, $class_id]);
+        echo json_encode(['success' => true]);
+    } catch (PDOException $e) {
+        error_log("Remove from class error: " . $e->getMessage());
+        echo json_encode(['success' => false]);
+    }
+    exit();
+}
+
+// Handle bulk removal from class
+if (isset($_POST['bulk_delete']) && isset($_POST['lrns']) && isset($_POST['class_id'])) {
+    $pdo = getDBConnection();
+    $lrns = json_decode($_POST['lrns'], true);
+    $class_id = $_POST['class_id'];
     try {
         $pdo->beginTransaction();
-        $stmt = $pdo->prepare("DELETE FROM class_students WHERE lrn = ?");
-        $stmt->execute([$lrn]);
-        $stmt = $pdo->prepare("DELETE FROM students WHERE lrn = ?");
-        $stmt->execute([$lrn]);
+        $stmt = $pdo->prepare("DELETE FROM class_students WHERE lrn = ? AND class_id = ?");
+        foreach ($lrns as $lrn) {
+            $stmt->execute([$lrn, $class_id]);
+        }
         $pdo->commit();
         echo json_encode(['success' => true]);
     } catch (PDOException $e) {
         $pdo->rollBack();
-        error_log("Delete error: " . $e->getMessage());
+        error_log("Bulk remove from class error: " . $e->getMessage());
         echo json_encode(['success' => false]);
     }
     exit();
 }
 
 // Handle save POST
-if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['lrn'])) {
+if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['lrn']) && !isset($_POST['bulk_delete'])) {
     $pdo = getDBConnection();
     $lrn = $_POST['lrn'];
     $last_name = $_POST['last_name'];
@@ -67,19 +84,17 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['lrn'])) {
     if (isset($_FILES['photo']) && $_FILES['photo']['error'] == 0) {
         $ext = pathinfo($_FILES['photo']['name'], PATHINFO_EXTENSION);
         $photo = $lrn . '_photo.' . $ext;
-        $path = 'Uploads/students/' . $photo; // Assume folder exists
+        $path = 'Uploads/students/' . $photo;
         move_uploaded_file($_FILES['photo']['tmp_name'], $path);
     }
 
     try {
         $pdo->beginTransaction();
-        // Check if student exists
         $stmt = $pdo->prepare("SELECT * FROM students WHERE lrn = ?");
         $stmt->execute([$lrn]);
         $existing = $stmt->fetch();
 
         if ($existing) {
-            // Update student
             if ($photo === 'no-icon.png') {
                 $photo = $existing['photo'];
             }
@@ -96,7 +111,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['lrn'])) {
                 $parent_name, $emergency_contact, $photo, $lrn
             ]);
         } else {
-            // Insert new student
             $stmt = $pdo->prepare("
                 INSERT INTO students (
                     lrn, last_name, first_name, middle_name, email, gender, 
@@ -111,7 +125,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['lrn'])) {
             ]);
         }
 
-        // Find class_id
         $teacher_id = $user['teacher_id'];
         $stmt = $pdo->prepare("
             SELECT c.class_id 
@@ -125,7 +138,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['lrn'])) {
 
         if ($class) {
             $class_id = $class['class_id'];
-            // Enroll if not already
             $stmt = $pdo->prepare("
                 INSERT IGNORE INTO class_students (class_id, lrn) 
                 VALUES (?, ?)
@@ -150,7 +162,7 @@ $pdo = getDBConnection();
 // Fetch students
 $stmt = $pdo->prepare("
     SELECT DISTINCT s.*, c.grade_level AS gradeLevel, sub.subject_name AS `class`, 
-        c.section_name AS section
+        c.section_name AS section, c.class_id
     FROM class_students cs
     JOIN classes c ON cs.class_id = c.class_id
     JOIN subjects sub ON c.subject_id = sub.subject_id
@@ -236,27 +248,6 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
             --transition-slow: 0.5s ease-in-out;
         }
 
-        /* * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: var(--font-family);
-        }
-
-        html {
-            height: 100%;
-            margin: 0;
-        }
-
-        body {
-            background-color: var(--card-bg);
-            color: var(--blackfont-color);
-            height: 100%;
-            padding: 20px;
-            display: flex;
-            flex-direction: column;
-        } */
-            
         * {
             margin: 0;
             padding: 0;
@@ -888,7 +879,7 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
         }
     </style>
 
-         <style>
+    <style>
         .controls {
             background: var(--card-bg);
             border-radius: var(--radius-md);
@@ -1088,6 +1079,7 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
     padding: var(--spacing-xs) var(--spacing-sm); /* Adjusted padding for consistency */
 }
     </style>
+
 </head>
 <body>
     <div class="container">
@@ -1192,7 +1184,7 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
                 <i class="fas fa-file-export"></i> Export Selected
             </button>
             <button class="btn btn-danger" id="bulkDeleteBtn" disabled onclick="bulkDelete()">
-                <i class="fas fa-trash"></i> Delete Selected
+                <i class="fas fa-trash"></i> Remove Selected from Class
             </button>
         </div>
         <!-- Student List -->
@@ -1320,6 +1312,7 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
         let currentPage = 1;
         const rowsPerPage = 10;
         let currentView = 'table';
+
         // DOM Elements
         const studentTableBody = document.querySelector('#tableView tbody');
         const gridView = document.getElementById('gridView');
@@ -1332,6 +1325,7 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
         const sectionFilter = document.getElementById('sectionFilter');
         const sortSelect = document.getElementById('sortSelect');
         const profileModal = document.getElementById('profile-modal');
+
         // Initialize
         document.addEventListener('DOMContentLoaded', () => {
             updateStats();
@@ -1341,6 +1335,7 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
             document.querySelector('#studentForm').addEventListener('submit', saveStudent);
             document.getElementById('student-id').addEventListener('change', autoFillStudent);
         });
+
         // Auto fill student on LRN change
         function autoFillStudent() {
             const lrn = this.value;
@@ -1361,7 +1356,6 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
                         document.getElementById('emergency-contact').value = student.emergency_contact || '';
                         document.getElementById('student-photo-preview').src = student.photo || 'https://via.placeholder.com/100';
                     } else {
-                        // Clear personal fields
                         document.getElementById('first-name').value = '';
                         document.getElementById('middle-name').value = '';
                         document.getElementById('last-name').value = '';
@@ -1376,6 +1370,7 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
                 });
             }
         }
+
         // Update stats for cards
         function updateStats() {
             const totalStudents = students.length;
@@ -1385,6 +1380,7 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
             document.getElementById('active-students').textContent = activeStudents;
             document.getElementById('classes-enrolled').textContent = classesEnrolled;
         }
+
         // Populate filters
         function populateFilters() {
             gradeLevelFilter.innerHTML = '<option value="">All Grade Levels</option>';
@@ -1408,7 +1404,6 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
                 option.textContent = section;
                 sectionFilter.appendChild(option);
             });
-            // Populate modal selects
             const modalGradeSelect = document.getElementById('grade-level');
             const modalClassSelect = document.getElementById('class');
             const modalSectionSelect = document.getElementById('section');
@@ -1434,6 +1429,7 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
                 modalSectionSelect.appendChild(option);
             });
         }
+
         // Setup event listeners
         function setupEventListeners() {
             searchInput.addEventListener('input', applyFilters);
@@ -1443,6 +1439,7 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
             sectionFilter.addEventListener('change', applyFilters);
             sortSelect.addEventListener('change', applyFilters);
         }
+
         // Apply filters and sorting
         function applyFilters() {
             const searchTerm = searchInput.value.toLowerCase();
@@ -1467,6 +1464,7 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
             });
             renderViews(filteredStudents);
         }
+
         // Render views
         function renderViews(data) {
             gridView.classList.add('hidden');
@@ -1480,6 +1478,7 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
             }
             renderPagination(data.length);
         }
+
         // Render grid view
         function renderGridView(data) {
             gridView.innerHTML = '';
@@ -1511,7 +1510,7 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
                         <button class="btn btn-primary btn-sm" onclick="openProfileModal('edit', '${student.lrn}')">
                             <i class="fas fa-edit"></i> Edit
                         </button>
-                        <button class="btn btn-danger btn-sm" onclick="deleteStudent('${student.lrn}')">
+                        <button class="btn btn-danger btn-sm" onclick="deleteStudent('${student.lrn}', '${student.class_id}')">
                             <i class="fas fa-trash"></i> Remove
                         </button>
                     </div>
@@ -1519,6 +1518,7 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
                 gridView.appendChild(card);
             });
         }
+
         // Render table view
         function renderTableView(data) {
             studentTableBody.innerHTML = '';
@@ -1528,7 +1528,7 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
             paginatedData.forEach(student => {
                 const row = document.createElement('tr');
                 row.innerHTML = `
-                    <td><input type="checkbox" class="row-checkbox" data-id="${student.lrn}"></td>
+                    <td><input type="checkbox" class="row-checkbox" data-id="${student.lrn}" data-class-id="${student.class_id}"></td>
                     <td><img src="${student.photo}" alt="${student.fullName}" style="width: 40px; height: 40px; border-radius: var(--radius-sm);"></td>
                     <td>${student.lrn}</td>
                     <td>${student.fullName}</td>
@@ -1543,7 +1543,7 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
                             <button class="btn btn-primary btn-sm" onclick="openProfileModal('edit', '${student.lrn}')">
                                 <i class="fas fa-edit"></i>
                             </button>
-                            <button class="btn btn-danger btn-sm" onclick="deleteStudent('${student.lrn}')">
+                            <button class="btn btn-danger btn-sm" onclick="deleteStudent('${student.lrn}', '${student.class_id}')">
                                 <i class="fas fa-trash"></i>
                             </button>
                         </div>
@@ -1554,6 +1554,7 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
             updateBulkActions();
             document.querySelectorAll('.row-checkbox').forEach(cb => cb.addEventListener('change', updateBulkActions));
         }
+
         // Render pagination
         function renderPagination(totalRows) {
             const pageCount = Math.ceil(totalRows / rowsPerPage);
@@ -1565,11 +1566,13 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
                 <button class="pagination-btn" onclick="changePage(${currentPage + 1})" ${currentPage === pageCount ? 'disabled' : ''}>Next</button>
             `;
         }
+
         // Change page
         function changePage(page) {
             currentPage = page;
             applyFilters();
         }
+
         // Switch view
         function switchView(view) {
             currentView = view;
@@ -1577,6 +1580,7 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
             document.querySelector(`.view-btn[onclick="switchView('${view}')"]`).classList.add('active');
             applyFilters();
         }
+
         // Toggle select all
         function toggleSelectAll() {
             const selectAll = document.getElementById('selectAll');
@@ -1584,6 +1588,7 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
             checkboxes.forEach(checkbox => checkbox.checked = selectAll.checked);
             updateBulkActions();
         }
+
         // Update bulk actions
         function updateBulkActions() {
             const checkboxes = document.querySelectorAll('.row-checkbox:checked');
@@ -1592,6 +1597,7 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
             selectedCount.textContent = `${checkboxes.length} selected`;
             bulkButtons.forEach(btn => btn.disabled = checkboxes.length === 0);
         }
+
         // Bulk export
         function bulkExport() {
             const checkboxes = document.querySelectorAll('.row-checkbox:checked');
@@ -1612,22 +1618,66 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
             a.click();
             URL.revokeObjectURL(url);
         }
+
         // Bulk delete
         function bulkDelete() {
-            if (!confirm('Are you sure you want to delete selected students?')) return;
+            const gradeLevel = gradeLevelFilter.value;
+            const className = classFilter.value;
+            const section = sectionFilter.value;
+            if (!gradeLevel || !className || !section) {
+                alert('Please select Grade Level, Subject, and Section to remove students from a class.');
+                return;
+            }
+            if (!confirm('Are you sure you want to remove selected students from the selected class?')) return;
             const checkboxes = document.querySelectorAll('.row-checkbox:checked');
-            const promises = Array.from(checkboxes).map(cb => {
-                const lrn = cb.dataset.id;
-                return fetch(`?delete_lrn=${lrn}`)
-                    .then(res => res.json())
-                    .then(data => {
-                        if (data.success) {
-                            students = students.filter(s => s.lrn != lrn);
-                        }
-                    });
+            const lrns = Array.from(checkboxes).map(cb => cb.dataset.id);
+            const class_id = students.find(s => 
+                s.gradeLevel === gradeLevel && 
+                s.class === className && 
+                s.section === section
+            )?.class_id;
+            if (!class_id) {
+                alert('Invalid class selection.');
+                return;
+            }
+            fetch('', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: `bulk_delete=true&lrns=${encodeURIComponent(JSON.stringify(lrns))}&class_id=${class_id}`
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    students = students.filter(s => !lrns.includes(s.lrn.toString()) || s.class_id != class_id);
+                    applyFilters();
+                } else {
+                    alert('Error removing students from class.');
+                }
             });
-            Promise.all(promises).then(() => applyFilters());
         }
+
+        // Delete student from class
+        function deleteStudent(lrn, class_id) {
+            const gradeLevel = gradeLevelFilter.value;
+            const className = classFilter.value;
+            const section = sectionFilter.value;
+            if (!gradeLevel || !className || !section) {
+                alert('Please select Grade Level, Subject, and Section to remove the student from a class.');
+                return;
+            }
+            if (!confirm('Are you sure you want to remove this student from the selected class?')) return;
+            fetch(`?delete_lrn=${lrn}&class_id=${class_id}`)
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    students = students.filter(s => s.lrn != lrn || s.class_id != class_id);
+                    applyFilters();
+                } else {
+                    alert('Error removing student from class.');
+                }
+            });
+        }
+
         // Open profile modal
         function openProfileModal(mode, lrn = null) {
             const form = {
@@ -1646,13 +1696,11 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
                 emergencyContact: document.getElementById('emergency-contact'),
                 photoPreview: document.getElementById('student-photo-preview')
             };
-            // Reset form
             Object.values(form).forEach(input => {
                 if (input.tagName === 'IMG') input.src = 'https://via.placeholder.com/100';
                 else if (input.tagName === 'SELECT') input.value = '';
                 else input.value = '';
             });
-            // Clear and hide QR code container
             const qrContainer = document.getElementById('qr-container');
             const qrCodeDiv = document.getElementById('qr-code');
             qrCodeDiv.innerHTML = '';
@@ -1692,7 +1740,6 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
             } else {
                 document.getElementById('profile-modal-title').textContent = 'Add New Student';
             }
-            // Disable inputs for view mode
             Object.values(form).forEach(input => {
                 if (input.tagName !== 'IMG') input.disabled = mode === 'view';
             });
@@ -1700,6 +1747,7 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
             document.querySelector('.form-actions .btn-primary').style.display = mode === 'view' ? 'none' : 'inline-flex';
             profileModal.classList.add('show');
         }
+
         // Preview photo
         function previewPhoto(event) {
             const file = event.target.files[0];
@@ -1711,6 +1759,7 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
                 reader.readAsDataURL(file);
             }
         }
+
         // Save student
         function saveStudent(event) {
             event.preventDefault();
@@ -1728,18 +1777,7 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
                 }
             });
         }
-        // Delete student
-        function deleteStudent(lrn) {
-            if (!confirm('Are you sure you want to delete this student?')) return;
-            fetch(`?delete_lrn=${lrn}`)
-            .then(res => res.json())
-            .then(data => {
-                if (data.success) {
-                    students = students.filter(s => s.lrn != lrn);
-                    applyFilters();
-                }
-            });
-        }
+
         // Clear filters
         function clearFilters() {
             searchInput.value = '';
@@ -1750,12 +1788,14 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
             sortSelect.value = 'name-asc';
             applyFilters();
         }
+
         // Close modal
         function closeModal(type) {
             if (type === 'profile') {
                 profileModal.classList.remove('show');
             }
         }
+
         // Print QR code
         function printQRCode() {
             const qrCanvas = document.querySelector('#qr-code canvas');

@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1:3307
--- Generation Time: Aug 06, 2025 at 03:38 PM
+-- Generation Time: Aug 11, 2025 at 06:10 AM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -44,8 +44,9 @@ CREATE TABLE `classes` (
 --
 
 INSERT INTO `classes` (`class_id`, `section_name`, `subject_id`, `teacher_id`, `grade_level`, `room`, `attendance_percentage`, `status`, `created_at`) VALUES
-(1, 'Lennox', 1, 1, 'Grade 11', 'none', 0.00, 'active', '2025-08-06 06:17:24'),
-(2, 'Lennox', 1, 1, 'Grade 11', 'none', 0.00, 'active', '2025-08-06 06:19:51');
+(1, 'Lennox', 1, 1, 'Grade 11', '', 0.00, 'active', '2025-08-11 02:59:33'),
+(2, 'Galileo', 1, 1, 'Grade 11', '', 0.00, 'active', '2025-08-11 03:00:30'),
+(4, 'Galileo', 9, 1, 'Grade 10', '', 0.00, 'active', '2025-08-11 03:05:53');
 
 -- --------------------------------------------------------
 
@@ -59,6 +60,22 @@ CREATE TABLE `class_students` (
   `is_enrolled` tinyint(1) DEFAULT 1,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `class_students`
+--
+
+INSERT INTO `class_students` (`class_id`, `lrn`, `is_enrolled`, `created_at`) VALUES
+(1, 1, 1, '2025-08-11 06:09:12'),
+(1, 2, 1, '2025-08-11 06:09:12'),
+(1, 3, 1, '2025-08-11 06:09:12'),
+(1, 4, 1, '2025-08-11 06:09:12'),
+(1, 5, 1, '2025-08-11 06:09:12'),
+(1, 6, 1, '2025-08-11 06:09:12'),
+(1, 7, 1, '2025-08-11 06:09:12'),
+(1, 8, 1, '2025-08-11 06:09:12'),
+(1, 9, 1, '2025-08-11 06:09:12'),
+(1, 10, 1, '2025-08-11 06:09:12');
 
 -- --------------------------------------------------------
 
@@ -80,8 +97,8 @@ CREATE TABLE `schedules` (
 --
 
 INSERT INTO `schedules` (`schedule_id`, `class_id`, `day`, `start_time`, `end_time`, `created_at`) VALUES
-(1, 1, 'monday', '14:17:00', '15:17:00', '2025-08-06 06:17:24'),
-(2, 2, 'monday', '14:19:00', '16:19:00', '2025-08-06 06:19:51');
+(1, 1, 'monday', '10:00:00', '12:00:00', '2025-08-11 02:59:33'),
+(6, 2, 'monday', '11:00:00', '12:00:00', '2025-08-11 03:04:51');
 
 -- --------------------------------------------------------
 
@@ -91,8 +108,9 @@ INSERT INTO `schedules` (`schedule_id`, `class_id`, `day`, `start_time`, `end_ti
 
 CREATE TABLE `students` (
   `lrn` int(11) NOT NULL,
-  `first_name` varchar(50) NOT NULL,
   `last_name` varchar(50) NOT NULL,
+  `first_name` varchar(50) NOT NULL,
+  `middle_name` varchar(50) NOT NULL,
   `email` varchar(100) DEFAULT NULL,
   `gender` varchar(20) DEFAULT NULL,
   `dob` date DEFAULT NULL,
@@ -100,11 +118,26 @@ CREATE TABLE `students` (
   `address` varchar(255) DEFAULT NULL,
   `parent_name` varchar(100) DEFAULT NULL,
   `emergency_contact` varchar(20) DEFAULT NULL,
-  `attendance_rate` decimal(5,2) DEFAULT 0.00,
   `photo` varchar(255) DEFAULT 'no-icon.png',
-  `date_added` date DEFAULT NULL,
-  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+  `qr_code` varchar(255) DEFAULT NULL,
+  `date_added` date DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `students`
+--
+
+INSERT INTO `students` (`lrn`, `last_name`, `first_name`, `middle_name`, `email`, `gender`, `dob`, `grade_level`, `address`, `parent_name`, `emergency_contact`, `photo`, `qr_code`, `date_added`) VALUES
+(1, 'Doe', 'John', 'Anderson', 'john.doe@email.com', 'Male', '2005-03-15', 'Grade 10', '123 Main St', 'Jane Doe', '555-1234', 'icon.png', 'qr-code.png', '2025-08-11'),
+(2, 'Smith', 'Emma', 'Robinson', 'emma.smith@email.com', 'Female', '2006-07-22', 'Grade 9', '456 Oak Ave', 'Tom Smith', '555-5678', 'icon.png', 'qr-code.png', '2025-08-11'),
+(3, 'Lee', 'Michael', 'Hernandez', 'michael.lee@email.com', 'Male', '2004-11-10', 'Grade 11', '789 Pine Rd', 'Susan Lee', '555-9012', 'no-icon.png', 'qr-code.png', '2025-08-11'),
+(4, 'Chen', 'Sophia', 'Lopez', 'sophia.chen@email.com', 'Female', '2005-09-05', 'Grade 10', '321 Elm St', 'David Chen', '555-3456', 'no-icon.png', 'qr-code.png', '2025-08-11'),
+(5, 'Brown', 'James', 'Clark', 'james.brown@email.com', 'Male', '2006-01-30', 'Grade 9', '654 Birch Ln', 'Lisa Brown', '555-7890', 'no-icon.png', 'qr-code.png', '2025-08-11'),
+(6, 'Wilson', 'Olivia', 'Gomez	', 'olivia.wilson@email.com', 'Female', '2004-05-12', 'Grade 11', '987 Cedar Dr', 'Mike Wilson', '555-2345', 'no-icon.png', 'qr-code.png', '2025-08-11'),
+(7, 'Taylor', 'William', 'Parker', 'william.taylor@email.com', 'Male', '2005-12-18', 'Grade 10', '147 Maple Ave', 'Emily Taylor', '555-6789', 'no-icon.png', 'qr-code.png', '2025-08-11'),
+(8, 'Johnson', 'Ava', 'Nguyen', 'ava.johnson@email.com', 'Female', '2006-04-25', 'Grade 9', '258 Spruce Ct', 'Robert Johnson', '555-0123', 'no-icon.png', 'qr-code.png', '2025-08-11'),
+(9, 'Martinez', 'Ethan', 'Ramirez', 'ethan.martinez@email.com', 'Male', '2004-08-09', 'Grade 11', '369 Willow Rd', 'Maria Martinez', '555-4567', 'no-icon.png', 'qr-code.png', '2025-08-11'),
+(10, 'Garcia', 'Isabella', 'Reyes', 'isabella.garcia@email.com', 'Female', '2005-06-17', 'Grade 10', '741 Ash St', 'Carlos Garcia', '555-8901', 'no-icon.png', 'qr-code.png', '2025-08-11');
 
 -- --------------------------------------------------------
 
@@ -124,7 +157,8 @@ CREATE TABLE `subjects` (
 --
 
 INSERT INTO `subjects` (`subject_id`, `subject_code`, `subject_name`, `created_at`) VALUES
-(1, 'ICT-101', 'ICT', '2025-08-06 06:17:24');
+(1, 'ICT-101', 'ICT', '2025-08-11 02:59:33'),
+(9, 'SCI-101', 'Science', '2025-08-11 03:05:53');
 
 -- --------------------------------------------------------
 
@@ -156,7 +190,7 @@ CREATE TABLE `teachers` (
 --
 
 INSERT INTO `teachers` (`teacher_id`, `firstname`, `lastname`, `institution`, `email`, `username`, `password`, `picture`, `isActive`, `isVerified`, `otp_code`, `otp_purpose`, `otp_created_at`, `otp_expires_at`, `otp_is_used`, `created_at`) VALUES
-(1, 'Loraine', 'Castro', 'SRNTS', 'castro.loraine.26@gmail.com', 'lorainecastro', '$2y$10$AK3ZL2g3VEEPpsP8k0ZK3elYl6BzAh3sYAUxeiFvaHW6yXOKucgiO', 'profile_1_1754458788.jpg', 1, 1, NULL, 'EMAIL_VERIFICATION', '2025-08-06 13:38:16', NULL, 1, '2025-08-06 13:07:16');
+(1, 'Loraine', 'Castro', 'SRNTS', 'castro.loraine.26@gmail.com', '_lorainecastro', '$2y$10$AK3ZL2g3VEEPpsP8k0ZK3elYl6BzAh3sYAUxeiFvaHW6yXOKucgiO', 'profile_1_1754458788.jpg', 1, 1, NULL, 'EMAIL_VERIFICATION', '2025-08-06 13:38:16', NULL, 1, '2025-08-11 02:57:28');
 
 -- --------------------------------------------------------
 
@@ -177,7 +211,7 @@ CREATE TABLE `teacher_sessions` (
 --
 
 INSERT INTO `teacher_sessions` (`id`, `teacher_id`, `session_token`, `expires_at`, `created_at`) VALUES
-(4, 1, 'd642ea207634c8d363dbec6a039bf5f7ea7716b63d083fbafd09e63c08388a50', '2025-09-05 15:07:16', '2025-08-06 21:07:16');
+(2, 1, 'c92e81a9162a2c0ce408335fbb21363ce3ac3eb7c93248f1441737f0dc40d4bf', '2025-09-10 02:57:28', '2025-08-11 10:57:28');
 
 --
 -- Indexes for dumped tables
@@ -242,25 +276,19 @@ ALTER TABLE `teacher_sessions`
 -- AUTO_INCREMENT for table `classes`
 --
 ALTER TABLE `classes`
-  MODIFY `class_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+  MODIFY `class_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
 
 --
 -- AUTO_INCREMENT for table `schedules`
 --
 ALTER TABLE `schedules`
-  MODIFY `schedule_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
-
---
--- AUTO_INCREMENT for table `students`
---
-ALTER TABLE `students`
-  MODIFY `lrn` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `schedule_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
 
 --
 -- AUTO_INCREMENT for table `subjects`
 --
 ALTER TABLE `subjects`
-  MODIFY `subject_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+  MODIFY `subject_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
 
 --
 -- AUTO_INCREMENT for table `teachers`
@@ -272,7 +300,7 @@ ALTER TABLE `teachers`
 -- AUTO_INCREMENT for table `teacher_sessions`
 --
 ALTER TABLE `teacher_sessions`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
 
 --
 -- Constraints for dumped tables

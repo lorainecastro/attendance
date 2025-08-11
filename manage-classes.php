@@ -1858,6 +1858,197 @@ ob_end_flush();
         }
     </style>
 
+    <style>
+    .modal-body {
+        padding: 1.5rem 2rem;
+        max-height: 70vh;
+        overflow-y: auto;
+    }
+
+    .import-section {
+        margin-bottom: 1.5rem;
+        padding: 1rem;
+        background: var(--card-bg);
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow-sm);
+        border: 1px solid var(--border-color);
+    }
+
+    .import-controls {
+        display: flex;
+        gap: 1rem;
+        margin-bottom: 0.5rem;
+        flex-wrap: wrap;
+    }
+
+    .file-input {
+        padding: 0.5rem 1rem;
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius-md);
+        font-size: var(--font-size-sm);
+        background: var(--inputfield-color);
+        transition: var(--transition-normal);
+        max-width: 250px;
+    }
+
+    .import-note {
+        display: block;
+        color: var(--grayfont-color);
+        font-size: 0.75rem;
+        line-height: 1.2;
+    }
+
+    .preview-table-container {
+        margin-bottom: 1.5rem;
+        padding: 1rem;
+        background: var(--card-bg);
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow-sm);
+        border: 1px solid var(--border-color);
+    }
+
+    .preview-title {
+        font-size: var(--font-size-lg);
+        font-weight: 600;
+        color: var(--blackfont-color);
+        margin-bottom: 1rem;
+    }
+
+    .table-wrapper {
+        overflow-x: auto;
+        max-width: 100%;
+    }
+
+    .preview-table,
+    .student-table {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0;
+        min-width: 800px;
+    }
+
+    .preview-table th,
+    .student-table th,
+    .preview-table td,
+    .student-table td {
+        padding: 1rem 0.75rem;
+        text-align: left;
+        border-bottom: 1px solid var(--border-color);
+        white-space: nowrap;
+    }
+
+    .preview-table th,
+    .student-table th {
+        font-weight: 600;
+        color: var(--grayfont-color);
+        background: var(--inputfield-color);
+        position: sticky;
+        top: 0;
+        z-index: 5;
+    }
+
+    .student-table td {
+        color: var(--blackfont-color);
+    }
+
+    .preview-table tr:hover,
+    .student-table tr:hover {
+        background: var(--inputfieldhover-color);
+        transition: var(--transition-fast);
+    }
+
+    .student-table img {
+        border-radius: var(--radius-sm);
+        object-fit: cover;
+        max-width: 60px;
+        max-height: 60px;
+    }
+
+    .form-actions {
+        padding: 1.5rem 2rem;
+        border-top: 1px solid var(--border-color);
+        display: flex;
+        justify-content: flex-end;
+        gap: 1rem;
+    }
+
+    @media (max-width: 1024px) {
+        .modal-body {
+            padding: 1rem;
+        }
+
+        .import-controls {
+            flex-direction: column;
+        }
+
+        .file-input {
+            max-width: 100%;
+        }
+
+        .preview-table th:nth-child(n+8),
+        .preview-table td:nth-child(n+8),
+        .student-table th:nth-child(n+8),
+        .student-table td:nth-child(n+8) {
+            display: none;
+        }
+    }
+
+    @media (max-width: 768px) {
+        .preview-table th:nth-child(n+6),
+        .preview-table td:nth-child(n+6),
+        .student-table th:nth-child(n+6),
+        .student-table td:nth-child(n+6) {
+            display: none;
+        }
+
+        .modal-content {
+            width: 98%;
+            max-height: 95vh;
+        }
+
+        .import-section {
+            padding: 0.75rem;
+        }
+    }
+
+    @media (max-width: 576px) {
+        .preview-table th:nth-child(n+4),
+        .preview-table td:nth-child(n+4),
+        .student-table th:nth-child(n+4),
+        .student-table td:nth-child(n+4) {
+            display: none;
+        }
+
+        .modal-body {
+            padding: 0.75rem;
+        }
+
+        .preview-table-container,
+        .student-table-container {
+            padding: 0.75rem;
+        }
+
+        .preview-table th,
+        .preview-table td,
+        .student-table th,
+        .student-table td {
+            padding: 0.5rem 0.25rem;
+            font-size: 0.75rem;
+        }
+
+        .form-actions {
+            padding: 1rem;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .form-actions .btn {
+            width: 100%;
+            justify-content: center;
+        }
+    }
+</style>
+
 </head>
 
 <body>
@@ -2855,64 +3046,70 @@ ob_end_flush();
         }
 
         document.getElementById('importFile').addEventListener('change', function(event) {
-            const file = event.target.files[0];
-            if (!file) {
-                document.getElementById('previewTableContainer').style.display = 'none';
+    const file = event.target.files[0];
+    if (!file) {
+        const previewTableContainer = document.getElementById('previewTableContainer');
+        if (previewTableContainer) previewTableContainer.style.display = 'none';
+        return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        try {
+            const data = new Uint8Array(e.target.result);
+            const workbook = XLSX.read(data, { type: 'array' });
+            const firstSheet = workbook.SheetNames[0];
+            const worksheet = workbook.Sheets[firstSheet];
+            const rows = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+
+            const previewTableContainer = document.getElementById('previewTableContainer');
+            const previewTable = document.getElementById('previewTable');
+            const tbody = previewTable ? previewTable.querySelector('tbody') : null;
+
+            if (!previewTableContainer || !tbody) {
+                console.error('Preview table elements not found');
+                alert('Error: Preview table is not available.');
                 return;
             }
 
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                try {
-                    const data = new Uint8Array(e.target.result);
-                    const workbook = XLSX.read(data, {
-                        type: 'array'
-                    });
-                    const firstSheet = workbook.SheetNames[0];
-                    const worksheet = workbook.Sheets[firstSheet];
-                    const rows = XLSX.utils.sheet_to_json(worksheet, {
-                        header: 1
-                    });
+            tbody.innerHTML = '';
 
-                    const tbody = document.querySelector('#previewTable tbody');
-                    tbody.innerHTML = '';
+            if (rows.length <= 1) {
+                previewTableContainer.style.display = 'none';
+                alert('The selected Excel file is empty or contains only headers.');
+                return;
+            }
 
-                    if (rows.length <= 1) {
-                        document.getElementById('previewTableContainer').style.display = 'none';
-                        alert('The selected Excel file is empty or contains only headers.');
-                        return;
-                    }
-
-                    rows.slice(1).forEach(row => {
-                        if (row.length >= 11) { // Ensure row has at least 11 columns for preview
-                            const tr = document.createElement('tr');
-                            tr.innerHTML = `
-                            <td>${sanitizeHTML(row[0] || '')}</td>
-                            <td>${sanitizeHTML(row[1] || '')}</td>
-                            <td>${sanitizeHTML(row[2] || '')}</td>
-                            <td>${sanitizeHTML(row[3] || '')}</td>
-                            <td>${sanitizeHTML(row[4] || '')}</td>
-                            <td>${sanitizeHTML(row[5] || '')}</td>
-                            <td>${sanitizeHTML(row[6] || '')}</td>
-                            <td>${sanitizeHTML(row[7] || '')}</td>
-                            <td>${sanitizeHTML(row[8] || '')}</td>
-                            <td>${sanitizeHTML(row[9] || '')}</td>
-                            <td>${sanitizeHTML(row[10] || '')}</td>
-                        `;
-                            tbody.appendChild(tr);
-                        }
-                    });
-
-                    document.getElementById('previewTableContainer').style.display = 'block';
-                } catch (error) {
-                    console.error('Error reading Excel file:', error);
-                    alert('Error reading Excel file: ' + error.message);
-                    document.getElementById('previewTableContainer').style.display = 'none';
+            rows.slice(1).forEach(row => {
+                if (row.length >= 11) { // Ensure row has at least 11 columns for preview
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td>${sanitizeHTML(row[0] || '')}</td>
+                        <td>${sanitizeHTML(row[1] || '')}</td>
+                        <td>${sanitizeHTML(row[2] || '')}</td>
+                        <td>${sanitizeHTML(row[3] || '')}</td>
+                        <td>${sanitizeHTML(row[4] || '')}</td>
+                        <td>${sanitizeHTML(row[5] || '')}</td>
+                        <td>${sanitizeHTML(row[6] || '')}</td>
+                        <td>${sanitizeHTML(row[7] || '')}</td>
+                        <td>${sanitizeHTML(row[8] || '')}</td>
+                        <td>${sanitizeHTML(row[9] || '')}</td>
+                        <td>${sanitizeHTML(row[10] || '')}</td>
+                    `;
+                    tbody.appendChild(tr);
                 }
-            };
-            reader.readAsArrayBuffer(file);
-        });
+            });
 
+            previewTableContainer.style.display = 'block';
+        } catch (error) {
+            console.error('Error reading Excel file:', error);
+            alert('Error reading Excel file: ' + error.message);
+            const previewTableContainer = document.getElementById('previewTableContainer');
+            if (previewTableContainer) previewTableContainer.style.display = 'none';
+        }
+    };
+    reader.readAsArrayBuffer(file);
+});
         function importStudents() {
             const fileInput = document.getElementById('importFile');
             const file = fileInput.files[0];

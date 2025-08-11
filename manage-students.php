@@ -2,6 +2,7 @@
 ob_start();
 require 'config.php';
 session_start();
+
 // Validate session
 $user = validateSession();
 if (!$user) {
@@ -9,6 +10,176 @@ if (!$user) {
     header("Location: index.php");
     exit();
 }
+
+// Handle GET for lrn fetch
+if (isset($_GET['lrn'])) {
+    $pdo = getDBConnection();
+    $lrn = $_GET['lrn'];
+    $stmt = $pdo->prepare("SELECT * FROM students WHERE lrn = ?");
+    $stmt->execute([$lrn]);
+    $student = $stmt->fetch();
+    if ($student) {
+        echo json_encode(['success' => true, 'student' => $student]);
+    } else {
+        echo json_encode(['success' => false]);
+    }
+    exit();
+}
+
+// Handle delete
+if (isset($_GET['delete_lrn'])) {
+    $pdo = getDBConnection();
+    $lrn = $_GET['delete_lrn'];
+    try {
+        $pdo->beginTransaction();
+        $stmt = $pdo->prepare("DELETE FROM class_students WHERE lrn = ?");
+        $stmt->execute([$lrn]);
+        $stmt = $pdo->prepare("DELETE FROM students WHERE lrn = ?");
+        $stmt->execute([$lrn]);
+        $pdo->commit();
+        echo json_encode(['success' => true]);
+    } catch (PDOException $e) {
+        $pdo->rollBack();
+        error_log("Delete error: " . $e->getMessage());
+        echo json_encode(['success' => false]);
+    }
+    exit();
+}
+
+// Handle save POST
+if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['lrn'])) {
+    $pdo = getDBConnection();
+    $lrn = $_POST['lrn'];
+    $last_name = $_POST['last_name'];
+    $first_name = $_POST['first_name'];
+    $middle_name = $_POST['middle_name'];
+    $email = $_POST['email'];
+    $gender = $_POST['gender'];
+    $dob = $_POST['dob'];
+    $address = $_POST['address'];
+    $parent_name = $_POST['parent_name'];
+    $emergency_contact = $_POST['emergency_contact'];
+    $grade_level = $_POST['grade_level'];
+    $class = $_POST['class']; // subject_name
+    $section = $_POST['section'];
+
+    $photo = 'no-icon.png';
+    if (isset($_FILES['photo']) && $_FILES['photo']['error'] == 0) {
+        $ext = pathinfo($_FILES['photo']['name'], PATHINFO_EXTENSION);
+        $photo = $lrn . '_photo.' . $ext;
+        $path = 'Uploads/students/' . $photo; // Assume folder exists
+        move_uploaded_file($_FILES['photo']['tmp_name'], $path);
+    }
+
+    try {
+        $pdo->beginTransaction();
+        // Check if student exists
+        $stmt = $pdo->prepare("SELECT * FROM students WHERE lrn = ?");
+        $stmt->execute([$lrn]);
+        $existing = $stmt->fetch();
+
+        if ($existing) {
+            // Update student
+            if ($photo === 'no-icon.png') {
+                $photo = $existing['photo'];
+            }
+            $stmt = $pdo->prepare("
+                UPDATE students SET 
+                    last_name = ?, first_name = ?, middle_name = ?, email = ?, 
+                    gender = ?, dob = ?, grade_level = ?, address = ?, 
+                    parent_name = ?, emergency_contact = ?, photo = ?
+                WHERE lrn = ?
+            ");
+            $stmt->execute([
+                $last_name, $first_name, $middle_name, $email,
+                $gender, $dob, $grade_level, $address,
+                $parent_name, $emergency_contact, $photo, $lrn
+            ]);
+        } else {
+            // Insert new student
+            $stmt = $pdo->prepare("
+                INSERT INTO students (
+                    lrn, last_name, first_name, middle_name, email, gender, 
+                    dob, grade_level, address, parent_name, emergency_contact, 
+                    photo, date_added
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURDATE())
+            ");
+            $stmt->execute([
+                $lrn, $last_name, $first_name, $middle_name, $email, $gender,
+                $dob, $grade_level, $address, $parent_name, $emergency_contact,
+                $photo
+            ]);
+        }
+
+        // Find class_id
+        $teacher_id = $user['teacher_id'];
+        $stmt = $pdo->prepare("
+            SELECT c.class_id 
+            FROM classes c 
+            JOIN subjects sub ON c.subject_id = sub.subject_id 
+            WHERE c.grade_level = ? AND sub.subject_name = ? 
+            AND c.section_name = ? AND c.teacher_id = ?
+        ");
+        $stmt->execute([$grade_level, $class, $section, $teacher_id]);
+        $class = $stmt->fetch();
+
+        if ($class) {
+            $class_id = $class['class_id'];
+            // Enroll if not already
+            $stmt = $pdo->prepare("
+                INSERT IGNORE INTO class_students (class_id, lrn) 
+                VALUES (?, ?)
+            ");
+            $stmt->execute([$class_id, $lrn]);
+        }
+
+        $pdo->commit();
+        echo json_encode(['success' => true]);
+    } catch (PDOException $e) {
+        $pdo->rollBack();
+        error_log("Save error: " . $e->getMessage());
+        echo json_encode(['success' => false]);
+    }
+    exit();
+}
+
+// Fetch data for JS
+$teacher_id = $user['teacher_id'];
+$pdo = getDBConnection();
+
+// Fetch students
+$stmt = $pdo->prepare("
+    SELECT DISTINCT s.*, c.grade_level AS gradeLevel, sub.subject_name AS `class`, 
+        c.section_name AS section
+    FROM class_students cs
+    JOIN classes c ON cs.class_id = c.class_id
+    JOIN subjects sub ON c.subject_id = sub.subject_id
+    JOIN students s ON cs.lrn = s.lrn
+    WHERE c.teacher_id = ?
+");
+$stmt->execute([$teacher_id]);
+$students_data = $stmt->fetchAll();
+foreach ($students_data as &$row) {
+    $row['fullName'] = $row['last_name'] . ', ' . $row['first_name'] . ' ' . $row['middle_name'];
+}
+
+// Fetch filters data
+$stmt = $pdo->prepare("SELECT DISTINCT c.grade_level FROM classes c WHERE c.teacher_id = ?");
+$stmt->execute([$teacher_id]);
+$gradeLevels = $stmt->fetchAll(PDO::FETCH_COLUMN);
+
+$stmt = $pdo->prepare("
+    SELECT DISTINCT sub.subject_name 
+    FROM subjects sub 
+    JOIN classes c ON sub.subject_id = c.subject_id 
+    WHERE c.teacher_id = ?
+");
+$stmt->execute([$teacher_id]);
+$subjects = $stmt->fetchAll(PDO::FETCH_COLUMN);
+
+$stmt = $pdo->prepare("SELECT DISTINCT c.section_name FROM classes c WHERE c.teacher_id = ?");
+$stmt->execute([$teacher_id]);
+$sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -917,7 +1088,6 @@ if (!$user) {
     padding: var(--spacing-xs) var(--spacing-sm); /* Adjusted padding for consistency */
 }
     </style>
-
 </head>
 <body>
     <div class="container">
@@ -1052,7 +1222,7 @@ if (!$user) {
                     <h2 class="modal-title" id="profile-modal-title">Student Profile</h2>
                     <button class="close-btn" onclick="closeModal('profile')">×</button>
                 </div>
-                <form id="studentForm" class="modal-form">
+                <form id="studentForm" class="modal-form" enctype="multipart/form-data">
                     <div class="form-column">
                         <div class="form-group">
                             <label class="form-label">LRN</label>
@@ -1070,63 +1240,67 @@ if (!$user) {
                                     <i class="fas fa-print"></i> Print
                                 </button>
                             </div>
-                            <input type="file" id="student-photo" accept="image/*" onchange="previewPhoto(event)">
+                            <input type="file" id="student-photo" name="photo" accept="image/*" onchange="previewPhoto(event)">
                             <button type="button" class="btn btn-primary" onclick="document.getElementById('student-photo').click()">Change Photo</button>
                         </div>
                         <div class="form-group">
                             <label class="form-label">First Name</label>
-                            <input type="text" class="form-input" id="first-name" required>
+                            <input type="text" class="form-input" id="first-name" name="first_name" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Middle Name</label>
+                            <input type="text" class="form-input" id="middle-name" name="middle_name" required>
                         </div>
                         <div class="form-group">
                             <label class="form-label">Last Name</label>
-                            <input type="text" class="form-input" id="last-name" required>
+                            <input type="text" class="form-input" id="last-name" name="last_name" required>
                         </div>
                         <div class="form-group">
                             <label class="form-label">Email (Optional)</label>
-                            <input type="email" class="form-input" id="email">
+                            <input type="email" class="form-input" id="email" name="email">
                         </div>
                         <div class="form-group">
                             <label class="form-label">Gender</label>
-                            <select class="form-select" id="gender">
+                            <select class="form-select" id="gender" name="gender">
                                 <option value="Male">Male</option>
                                 <option value="Female">Female</option>
                             </select>
                         </div>
                         <div class="form-group">
                             <label class="form-label">Date of Birth</label>
-                            <input type="date" class="form-input" id="dob">
+                            <input type="date" class="form-input" id="dob" name="dob">
                         </div>
                     </div>
                     <div class="form-column">
                         <div class="form-group">
                             <label class="form-label">Grade Level</label>
-                            <select class="form-select" id="grade-level">
+                            <select class="form-select" id="grade-level" name="grade_level">
                                 <option value="">Select Grade Level</option>
                             </select>
                         </div>
                         <div class="form-group">
                             <label class="form-label">Subject</label>
-                            <select class="form-select" id="class">
+                            <select class="form-select" id="class" name="class">
                                 <option value="">Select Subject</option>
                             </select>
                         </div>
                         <div class="form-group">
                             <label class="form-label">Section</label>
-                            <select class="form-select" id="section">
+                            <select class="form-select" id="section" name="section">
                                 <option value="">Select Section</option>
                             </select>
                         </div>
                         <div class="form-group">
                             <label class="form-label">Address</label>
-                            <input type="text" class="form-input" id="address">
+                            <input type="text" class="form-input" id="address" name="address">
                         </div>
                         <div class="form-group">
                             <label class="form-label">Parent/Guardian Name</label>
-                            <input type="text" class="form-input" id="parent-name">
+                            <input type="text" class="form-input" id="parent-name" name="parent_name">
                         </div>
                         <div class="form-group">
                             <label class="form-label">Emergency Contact</label>
-                            <input type="text" class="form-input" id="emergency-contact">
+                            <input type="text" class="form-input" id="emergency-contact" name="emergency_contact">
                         </div>
                     </div>
                     <div class="form-actions">
@@ -1138,82 +1312,11 @@ if (!$user) {
         </div>
     </div>
     <script>
-        // Simulated class data (replace with AJAX call in production)
-        let classes = [
-            {
-                id: 1,
-                code: 'MATH-101-A',
-                sectionName: 'Diamond Section',
-                subject: 'Mathematics',
-                gradeLevel: 'Grade 7',
-                room: 'Room 201',
-                schedule: {
-                    monday: { start: '08:00', end: '09:30' },
-                    wednesday: { start: '08:00', end: '09:30' },
-                    friday: { start: '08:00', end: '09:30' }
-                },
-                status: 'active',
-                students: [
-                    { id: 1, firstName: 'John', lastName: 'Doe', email: 'john.doe@email.com' },
-                    { id: 2, firstName: 'Jane', lastName: 'Smith', email: 'jane.smith@email.com' },
-                    { id: 3, firstName: 'Mike', lastName: 'Johnson', email: 'mike.johnson@email.com' }
-                ]
-            },
-            {
-                id: 2,
-                code: 'SCI-201-B',
-                sectionName: 'Einstein Section',
-                subject: 'Science',
-                gradeLevel: 'Grade 10',
-                room: 'Lab 1',
-                schedule: {
-                    tuesday: { start: '10:00', end: '11:30' },
-                    thursday: { start: '10:00', end: '11:30' }
-                },
-                status: 'active',
-                students: [
-                    { id: 4, firstName: 'Alice', lastName: 'Brown', email: 'alice.brown@email.com' },
-                    { id: 5, firstName: 'Bob', lastName: 'Wilson', email: 'bob.wilson@email.com' }
-                ]
-            },
-            {
-                id: 3,
-                code: 'ENG-301-C',
-                sectionName: 'Shakespeare Section',
-                subject: 'English Literature',
-                gradeLevel: 'Grade 12',
-                room: 'Room 305',
-                schedule: {
-                    monday: { start: '14:00', end: '15:30' },
-                    wednesday: { start: '14:00', end: '15:30' }
-                },
-                status: 'inactive',
-                students: [
-                    { id: 6, firstName: 'Carol', lastName: 'Davis', email: 'carol.davis@email.com' },
-                    { id: 7, firstName: 'David', lastName: 'Miller', email: 'david.miller@email.com' },
-                    { id: 8, firstName: 'Emma', lastName: 'Garcia', email: 'emma.garcia@email.com' },
-                    { id: 9, firstName: 'Frank', lastName: 'Rodriguez', email: 'frank.rodriguez@email.com' }
-                ]
-            }
-        ];
-        // Student data
-        let students = classes.flatMap(cls => cls.students.map(student => ({
-            id: student.id,
-            firstName: student.firstName,
-            lastName: student.lastName,
-            email: student.email || '',
-            fullName: `${student.firstName} ${student.lastName}`,
-            gender: student.gender || 'Male',
-            dob: student.dob || '2010-01-01',
-            gradeLevel: cls.gradeLevel,
-            class: cls.subject,
-            section: cls.sectionName,
-            address: student.address || '123 Sample St',
-            parentName: student.parentName || 'Parent Name',
-            emergencyContact: student.emergencyContact || '09234567890',
-            dateAdded: student.dateAdded || '2024-09-01',
-            photo: student.photo || 'https://via.placeholder.com/100'
-        })));
+        // Data from PHP
+        let students = <?php echo json_encode($students_data); ?>;
+        let gradeLevels = <?php echo json_encode($gradeLevels); ?>;
+        let subjects = <?php echo json_encode($subjects); ?>;
+        let sections = <?php echo json_encode($sections); ?>;
         let currentPage = 1;
         const rowsPerPage = 10;
         let currentView = 'table';
@@ -1236,11 +1339,47 @@ if (!$user) {
             applyFilters();
             setupEventListeners();
             document.querySelector('#studentForm').addEventListener('submit', saveStudent);
+            document.getElementById('student-id').addEventListener('change', autoFillStudent);
         });
+        // Auto fill student on LRN change
+        function autoFillStudent() {
+            const lrn = this.value;
+            if (lrn.length === 12) {
+                fetch(`?lrn=${lrn}`)
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        const student = data.student;
+                        document.getElementById('first-name').value = student.first_name;
+                        document.getElementById('middle-name').value = student.middle_name;
+                        document.getElementById('last-name').value = student.last_name;
+                        document.getElementById('email').value = student.email || '';
+                        document.getElementById('gender').value = student.gender || 'Male';
+                        document.getElementById('dob').value = student.dob || '';
+                        document.getElementById('address').value = student.address || '';
+                        document.getElementById('parent-name').value = student.parent_name || '';
+                        document.getElementById('emergency-contact').value = student.emergency_contact || '';
+                        document.getElementById('student-photo-preview').src = student.photo || 'https://via.placeholder.com/100';
+                    } else {
+                        // Clear personal fields
+                        document.getElementById('first-name').value = '';
+                        document.getElementById('middle-name').value = '';
+                        document.getElementById('last-name').value = '';
+                        document.getElementById('email').value = '';
+                        document.getElementById('gender').value = 'Male';
+                        document.getElementById('dob').value = '';
+                        document.getElementById('address').value = '';
+                        document.getElementById('parent-name').value = '';
+                        document.getElementById('emergency-contact').value = '';
+                        document.getElementById('student-photo-preview').src = 'https://via.placeholder.com/100';
+                    }
+                });
+            }
+        }
         // Update stats for cards
         function updateStats() {
             const totalStudents = students.length;
-            const activeStudents = students.filter(s => classes.find(c => c.subject === s.class && c.sectionName === s.section)?.status === 'active').length;
+            const activeStudents = students.filter(s => s.status === 'active').length; // Assume status if added
             const classesEnrolled = [...new Set(students.map(s => `${s.class}-${s.section}`))].length;
             document.getElementById('total-students').textContent = totalStudents;
             document.getElementById('active-students').textContent = activeStudents;
@@ -1248,54 +1387,51 @@ if (!$user) {
         }
         // Populate filters
         function populateFilters() {
-            const subjects = [...new Set(classes.map(c => c.subject).filter(s => s))];
-            const sections = [...new Set(classes.map(c => c.sectionName).filter(s => s))];
-            const gradeLevels = [...new Set(classes.map(c => c.gradeLevel).filter(g => g))];
-            classFilter.innerHTML = '<option value="">All Subjects</option>';
-            sectionFilter.innerHTML = '<option value="">All Sections</option>';
             gradeLevelFilter.innerHTML = '<option value="">All Grade Levels</option>';
-            subjects.forEach(subject => {
-                const option = document.createElement('option');
-                option.value = subject;
-                option.textContent = subject;
-                classFilter.appendChild(option);
-            });
-            sections.forEach(section => {
-                const option = document.createElement('option');
-                option.value = section;
-                option.textContent = section;
-                sectionFilter.appendChild(option);
-            });
             gradeLevels.forEach(grade => {
                 const option = document.createElement('option');
                 option.value = grade;
                 option.textContent = grade;
                 gradeLevelFilter.appendChild(option);
             });
+            classFilter.innerHTML = '<option value="">All Subjects</option>';
+            subjects.forEach(subject => {
+                const option = document.createElement('option');
+                option.value = subject;
+                option.textContent = subject;
+                classFilter.appendChild(option);
+            });
+            sectionFilter.innerHTML = '<option value="">All Sections</option>';
+            sections.forEach(section => {
+                const option = document.createElement('option');
+                option.value = section;
+                option.textContent = section;
+                sectionFilter.appendChild(option);
+            });
             // Populate modal selects
+            const modalGradeSelect = document.getElementById('grade-level');
             const modalClassSelect = document.getElementById('class');
             const modalSectionSelect = document.getElementById('section');
-            const modalGradeSelect = document.getElementById('grade-level');
-            modalClassSelect.innerHTML = '<option value="">Select Subject</option>';
-            modalSectionSelect.innerHTML = '<option value="">Select Section</option>';
             modalGradeSelect.innerHTML = '<option value="">Select Grade Level</option>';
+            gradeLevels.forEach(grade => {
+                const option = document.createElement('option');
+                option.value = grade;
+                option.textContent = grade;
+                modalGradeSelect.appendChild(option);
+            });
+            modalClassSelect.innerHTML = '<option value="">Select Subject</option>';
             subjects.forEach(subject => {
                 const option = document.createElement('option');
                 option.value = subject;
                 option.textContent = subject;
                 modalClassSelect.appendChild(option);
             });
+            modalSectionSelect.innerHTML = '<option value="">Select Section</option>';
             sections.forEach(section => {
                 const option = document.createElement('option');
                 option.value = section;
                 option.textContent = section;
                 modalSectionSelect.appendChild(option);
-            });
-            gradeLevels.forEach(grade => {
-                const option = document.createElement('option');
-                option.value = grade;
-                option.textContent = grade;
-                modalGradeSelect.appendChild(option);
             });
         }
         // Setup event listeners
@@ -1316,7 +1452,7 @@ if (!$user) {
             const section = sectionFilter.value;
             let filteredStudents = students.filter(student => {
                 const matchesSearch = student.fullName.toLowerCase().includes(searchTerm) ||
-                    student.id.toString().includes(searchTerm);
+                    student.lrn.toString().includes(searchTerm);
                 const matchesGender = gender ? student.gender === gender : true;
                 const matchesGradeLevel = gradeLevel ? student.gradeLevel === gradeLevel : true;
                 const matchesClass = className ? student.class === className : true;
@@ -1326,7 +1462,7 @@ if (!$user) {
             filteredStudents.sort((a, b) => {
                 if (sortSelect.value === 'name-asc') return a.fullName.localeCompare(b.fullName);
                 if (sortSelect.value === 'name-desc') return b.fullName.localeCompare(a.fullName);
-                if (sortSelect.value === 'id') return a.id.toString().localeCompare(b.id.toString());
+                if (sortSelect.value === 'id') return a.lrn.toString().localeCompare(b.lrn.toString());
                 return 0;
             });
             renderViews(filteredStudents);
@@ -1362,20 +1498,20 @@ if (!$user) {
                         <h3>${student.fullName}</h3>
                     </div>
                     <div class="student-info">
-                        <p><i class="fas fa-id-card"></i> LRN: ${student.id}</p>
-                        <p><i class="fas fa-envelope"></i> ${student.emergencyContact}</p>
+                        <p><i class="fas fa-id-card"></i> LRN: ${student.lrn}</p>
+                        <p><i class="fas fa-envelope"></i> ${student.emergency_contact}</p>
                         <p><i class="fas fa-graduation-cap"></i> ${student.gradeLevel}</p>
                         <p><i class="fas fa-book"></i> ${student.class}</p>
                         <p><i class="fas fa-layer-group"></i> ${student.section}</p>
                     </div>
                     <div class="student-actions">
-                        <button class="btn btn-primary btn-sm" onclick="openProfileModal('view', '${student.id}')">
+                        <button class="btn btn-primary btn-sm" onclick="openProfileModal('view', '${student.lrn}')">
                             <i class="fas fa-eye"></i> View
                         </button>
-                        <button class="btn btn-primary btn-sm" onclick="openProfileModal('edit', '${student.id}')">
+                        <button class="btn btn-primary btn-sm" onclick="openProfileModal('edit', '${student.lrn}')">
                             <i class="fas fa-edit"></i> Edit
                         </button>
-                        <button class="btn btn-danger btn-sm" onclick="deleteStudent('${student.id}')">
+                        <button class="btn btn-danger btn-sm" onclick="deleteStudent('${student.lrn}')">
                             <i class="fas fa-trash"></i> Remove
                         </button>
                     </div>
@@ -1392,22 +1528,22 @@ if (!$user) {
             paginatedData.forEach(student => {
                 const row = document.createElement('tr');
                 row.innerHTML = `
-                    <td><input type="checkbox" class="row-checkbox" data-id="${student.id}"></td>
+                    <td><input type="checkbox" class="row-checkbox" data-id="${student.lrn}"></td>
                     <td><img src="${student.photo}" alt="${student.fullName}" style="width: 40px; height: 40px; border-radius: var(--radius-sm);"></td>
-                    <td>${student.id}</td>
+                    <td>${student.lrn}</td>
                     <td>${student.fullName}</td>
                     <td>${student.gradeLevel}</td>
                     <td>${student.class}</td>
                     <td>${student.section}</td>
                     <td>
                         <div class="actions">
-                            <button class="btn btn-primary btn-sm" onclick="openProfileModal('view', '${student.id}')">
+                            <button class="btn btn-primary btn-sm" onclick="openProfileModal('view', '${student.lrn}')">
                                 <i class="fas fa-eye"></i>
                             </button>
-                            <button class="btn btn-primary btn-sm" onclick="openProfileModal('edit', '${student.id}')">
+                            <button class="btn btn-primary btn-sm" onclick="openProfileModal('edit', '${student.lrn}')">
                                 <i class="fas fa-edit"></i>
                             </button>
-                            <button class="btn btn-danger btn-sm" onclick="deleteStudent('${student.id}')">
+                            <button class="btn btn-danger btn-sm" onclick="deleteStudent('${student.lrn}')">
                                 <i class="fas fa-trash"></i>
                             </button>
                         </div>
@@ -1456,16 +1592,16 @@ if (!$user) {
             selectedCount.textContent = `${checkboxes.length} selected`;
             bulkButtons.forEach(btn => btn.disabled = checkboxes.length === 0);
         }
-        // Bulk actions
+        // Bulk export
         function bulkExport() {
             const checkboxes = document.querySelectorAll('.row-checkbox:checked');
             const selectedStudents = Array.from(checkboxes).map(cb =>
-                students.find(s => s.id == cb.dataset.id)
+                students.find(s => s.lrn == cb.dataset.id)
             );
             const csv = [
-                'LRN,First Name,Last Name,Email,Gender,Grade Level,Subject,Section,Address,Emergency Contact',
+                'LRN,Last Name,First Name,Middle Name,Email,Gender,Grade Level,Subject,Section,Address,Emergency Contact',
                 ...selectedStudents.map(s =>
-                    `${s.id},${s.firstName},${s.lastName},${s.email},${s.gender},${s.gradeLevel},${s.class},${s.section},${s.address},${s.emergencyContact}`
+                    `${s.lrn},${s.last_name},${s.first_name},${s.middle_name},${s.email},${s.gender},${s.gradeLevel},${s.class},${s.section},${s.address},${s.emergency_contact}`
                 )
             ].join('\n');
             const blob = new Blob([csv], { type: 'text/csv' });
@@ -1476,21 +1612,28 @@ if (!$user) {
             a.click();
             URL.revokeObjectURL(url);
         }
+        // Bulk delete
         function bulkDelete() {
             if (!confirm('Are you sure you want to delete selected students?')) return;
             const checkboxes = document.querySelectorAll('.row-checkbox:checked');
-            const ids = Array.from(checkboxes).map(cb => cb.dataset.id);
-            classes.forEach(cls => {
-                cls.students = cls.students.filter(s => !ids.includes(s.id.toString()));
+            const promises = Array.from(checkboxes).map(cb => {
+                const lrn = cb.dataset.id;
+                return fetch(`?delete_lrn=${lrn}`)
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.success) {
+                            students = students.filter(s => s.lrn != lrn);
+                        }
+                    });
             });
-            students = students.filter(s => !ids.includes(s.id.toString()));
-            applyFilters();
+            Promise.all(promises).then(() => applyFilters());
         }
         // Open profile modal
-        function openProfileModal(mode, id) {
+        function openProfileModal(mode, lrn = null) {
             const form = {
                 studentId: document.getElementById('student-id'),
                 firstName: document.getElementById('first-name'),
+                middleName: document.getElementById('middle-name'),
                 lastName: document.getElementById('last-name'),
                 email: document.getElementById('email'),
                 gender: document.getElementById('gender'),
@@ -1514,26 +1657,27 @@ if (!$user) {
             const qrCodeDiv = document.getElementById('qr-code');
             qrCodeDiv.innerHTML = '';
             qrContainer.style.display = 'none';
-            if (mode !== 'add' && id) {
-                const student = students.find(s => s.id == id);
+            if (mode !== 'add' && lrn) {
+                const student = students.find(s => s.lrn == lrn);
                 document.getElementById('profile-modal-title').textContent = `${student.fullName}'s Profile`;
-                form.studentId.value = student.id;
-                form.firstName.value = student.firstName;
-                form.lastName.value = student.lastName;
-                form.email.value = student.email;
-                form.gender.value = student.gender;
-                form.dob.value = student.dob;
+                form.studentId.value = student.lrn;
+                form.firstName.value = student.first_name;
+                form.middleName.value = student.middle_name;
+                form.lastName.value = student.last_name;
+                form.email.value = student.email || '';
+                form.gender.value = student.gender || 'Male';
+                form.dob.value = student.dob || '';
                 form.gradeLevel.value = student.gradeLevel;
                 form.class.value = student.class;
                 form.section.value = student.section;
-                form.address.value = student.address;
-                form.parentName.value = student.parentName;
-                form.emergencyContact.value = student.emergencyContact;
-                form.photoPreview.src = student.photo;
+                form.address.value = student.address || '';
+                form.parentName.value = student.parent_name || '';
+                form.emergencyContact.value = student.emergency_contact || '';
+                form.photoPreview.src = student.photo || 'https://via.placeholder.com/100';
                 if (mode === 'view') {
                     qrContainer.style.display = 'flex';
                     const qrData = JSON.stringify({
-                        id: student.id,
+                        lrn: student.lrn,
                         fullName: student.fullName,
                         gradeLevel: student.gradeLevel,
                         class: student.class,
@@ -1570,81 +1714,31 @@ if (!$user) {
         // Save student
         function saveStudent(event) {
             event.preventDefault();
-            const form = {
-                studentId: document.getElementById('student-id').value.trim(),
-                firstName: document.getElementById('first-name').value.trim(),
-                lastName: document.getElementById('last-name').value.trim(),
-                email: document.getElementById('email').value.trim(),
-                gender: document.getElementById('gender').value,
-                dob: document.getElementById('dob').value,
-                gradeLevel: document.getElementById('grade-level').value,
-                class: document.getElementById('class').value,
-                section: document.getElementById('section').value,
-                address: document.getElementById('address').value.trim(),
-                parentName: document.getElementById('parent-name').value.trim(),
-                emergencyContact: document.getElementById('emergency-contact').value.trim(),
-                photo: document.getElementById('student-photo-preview').src
-            };
-            if (!form.firstName || !form.lastName || !form.gender || !form.dob || !form.gradeLevel ||
-                !form.class || !form.section || !form.address || !form.parentName || !form.emergencyContact) {
-                alert('Please fill in all required fields.');
-                return;
-            }
-            const newStudent = {
-                id: form.studentId || Date.now(),
-                firstName: form.firstName,
-                lastName: form.lastName,
-                email: form.email,
-                fullName: `${form.firstName} ${form.lastName}`,
-                gender: form.gender,
-                dob: form.dob,
-                gradeLevel: form.gradeLevel,
-                class: form.class,
-                section: form.section,
-                address: form.address,
-                parentName: form.parentName,
-                emergencyContact: form.emergencyContact,
-                dateAdded: new Date().toISOString().split('T')[0],
-                photo: form.photo
-            };
-            // Update class students
-            const classItem = classes.find(c => c.subject === form.class && c.sectionName === form.section);
-            if (classItem) {
-                const studentIndex = classItem.students.findIndex(s => s.id == newStudent.id);
-                if (studentIndex >= 0) {
-                    classItem.students[studentIndex] = {
-                        id: newStudent.id,
-                        firstName: newStudent.firstName,
-                        lastName: newStudent.lastName,
-                        email: newStudent.email
-                    };
+            const formData = new FormData(document.getElementById('studentForm'));
+            fetch('', {
+                method: 'POST',
+                body: formData
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    location.reload();
                 } else {
-                    classItem.students.push({
-                        id: newStudent.id,
-                        firstName: newStudent.firstName,
-                        lastName: newStudent.lastName,
-                        email: newStudent.email
-                    });
+                    alert('Error saving student.');
                 }
-            }
-            // Update students array
-            if (students.some(s => s.id == newStudent.id)) {
-                const index = students.findIndex(s => s.id == newStudent.id);
-                students[index] = newStudent;
-            } else {
-                students.push(newStudent);
-            }
-            applyFilters();
-            closeModal('profile');
+            });
         }
         // Delete student
-        function deleteStudent(id) {
+        function deleteStudent(lrn) {
             if (!confirm('Are you sure you want to delete this student?')) return;
-            classes.forEach(cls => {
-                cls.students = cls.students.filter(s => s.id != id);
+            fetch(`?delete_lrn=${lrn}`)
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    students = students.filter(s => s.lrn != lrn);
+                    applyFilters();
+                }
             });
-            students = students.filter(s => s.id != id);
-            applyFilters();
         }
         // Clear filters
         function clearFilters() {

@@ -1,0 +1,200 @@
+<style>
+        .controls {
+            background: var(--card-bg);
+            border-radius: var(--radius-md);
+            padding: var(--spacing-md);
+            box-shadow: var(--shadow-md);
+            margin-bottom: var(--spacing-lg);
+            display: flex;
+            flex-wrap: wrap;
+            gap: var(--spacing-sm);
+            align-items: center;
+            border: 1px solid var(--border-color);
+        }
+
+        .controls-left {
+            display: flex;
+            flex-wrap: wrap;
+            gap: var(--spacing-sm);
+            flex: 1;
+            align-items: center;
+        }
+
+        .controls-right {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--spacing-sm);
+    align-items: center;
+}
+
+.controls-right .btn.btn-primary {
+    order: 1; /* Places "Add Student" button first */
+}
+
+.controls-right .view-toggle {
+    order: 2; /* Places view-toggle after the button */
+}
+
+
+.controls-right .btn.btn-primary,
+.controls-right .view-btn {
+    height: 36px; /* Uniform height */
+    padding: 8px 12px; /* Consistent padding */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.controls-right .view-btn {
+    width: 38px; /* Square buttons for view toggle */
+    padding: 0; /* Remove padding for icon-only buttons */
+}
+
+.controls-right .view-btn.active {
+    background: #007bff;
+    color: white;
+    border-color: #007bff;
+}
+
+.controls-right {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start; /* Aligns items to the start */
+    gap: var(--spacing-sm);
+}
+
+        .search-container {
+            position: relative;
+            min-width: 200px;
+            flex: 1;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: var(--spacing-xs) var(--spacing-md) var(--spacing-xs) 2.5rem;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-sm);
+            font-size: var(--font-size-sm);
+            background: var(--inputfield-color);
+            transition: var(--transition-normal);
+        }
+
+        .search-icon {
+            position: absolute;
+            left: var(--spacing-sm);
+            top: 55%;
+            transform: translateY(-50%);
+            color: var(--grayfont-color);
+            font-size: 0.875rem;
+        }
+
+        .filter-select {
+            min-width: 180px;
+            padding: var(--spacing-xs) var(--spacing-sm);
+            width: 180px; 
+  height: 38px; 
+  box-sizing: border-box;
+        }
+
+        .btn {
+            padding: var(--spacing-xs) var(--spacing-md);
+            font-size: var(--font-size-sm);
+        }
+
+        .view-toggle {
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-sm);
+            overflow: hidden;
+            background: var(--inputfield-color);
+            display: flex;
+        }
+
+        .view-btn {
+            padding: var(--spacing-xs) var(--spacing-sm);
+            font-size: 0.875rem;
+        }
+
+        @media (max-width: 1024px) {
+            .controls {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .controls-right {
+                justify-content: flex-start;
+                margin-top: var(--spacing-sm);
+            }
+        }
+
+        @media (max-width: 768px) {
+            .controls-left {
+                flex-direction: column;
+                gap: var(--spacing-xs);
+            }
+
+            .controls-right {
+                flex-direction: column;
+                gap: var(--spacing-xs);
+            }
+
+            .search-container {
+                min-width: auto;
+                width: 100%;
+            }
+
+            .filter-select {
+                width: 100%;
+            }
+
+            .btn {
+                width: 100%;
+                justify-content: center;
+            }
+
+            .view-toggle {
+                width: 100%;
+                justify-content: space-between;
+            }
+        }
+
+        .preview-table-container {
+            margin-top: var(--spacing-lg);
+            background: var(--card-bg);
+            border-radius: var(--radius-lg);
+            padding: var(--spacing-lg);
+            box-shadow: var(--shadow-md);
+            border: 1px solid var(--border-color);
+        }
+
+        .preview-table-container h3 {
+            font-size: var(--font-size-lg);
+            font-weight: 600;
+            color: var(--blackfont-color);
+            margin-bottom: var(--spacing-md);
+        }
+    </style>
+
+    <style>
+        .student-actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: nowrap; /* Prevents wrapping to new lines */
+    align-items: center; /* Vertically centers the buttons */
+}
+
+.student-actions .btn {
+    white-space: nowrap; /* Prevents text wrapping within buttons */
+    min-width: auto; /* Allows buttons to size naturally */
+}
+
+.table td .actions {
+    display: flex;
+    gap: 10px; /* Consistent spacing between buttons */
+    align-items: center; /* Vertically centers the buttons */
+}
+
+.table td .actions .btn {
+    white-space: nowrap; /* Prevents text wrapping within buttons */
+    padding: var(--spacing-xs) var(--spacing-sm); /* Adjusted padding for consistency */
+}
+    </style>

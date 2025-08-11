@@ -2,6 +2,7 @@
 ob_start();
 require 'config.php';
 session_start();
+
 // Validate session
 $user = validateSession();
 if (!$user) {
@@ -10,6 +11,7 @@ if (!$user) {
     exit();
 }
 ?>
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -85,18 +87,22 @@ if (!$user) {
             display: flex;
             flex-direction: column;
         } */
-            
-        * {
+
+            * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-            font-family: var(--font-family);
+            font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
         }
+
         body {
             background-color: var(--card-bg);
             color: var(--blackfont-color);
             padding: 20px;
         }
+
+
+
         h1 {
             font-size: 24px;
             margin-bottom: 20px;
@@ -104,6 +110,7 @@ if (!$user) {
             position: relative;
             padding-bottom: 10px;
         }
+
         h1:after {
             content: '';
             position: absolute;
@@ -114,12 +121,14 @@ if (!$user) {
             background: var(--primary-gradient);
             border-radius: var(--radius-sm);
         }
+
         .stats-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
             gap: 20px;
             margin-bottom: 20px;
         }
+
         .card {
             background: var(--card-bg);
             border-radius: 12px;
@@ -127,16 +136,19 @@ if (!$user) {
             box-shadow: var(--shadow-md);
             transition: var(--transition-normal);
         }
+
         .card:hover {
             transform: translateY(-5px);
             box-shadow: var(--shadow-lg);
         }
+
         .card-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
             margin-bottom: 15px;
         }
+
         .card-icon {
             width: 48px;
             height: 48px;
@@ -147,20 +159,28 @@ if (!$user) {
             font-size: 24px;
             color: var(--whitefont-color);
         }
+
+        .bg-purple {
+            background: var(--primary-gradient);
+        }
+
         .bg-purple { background: var(--primary-gradient); }
         .bg-pink { background: var(--secondary-gradient); }
         .bg-blue { background: linear-gradient(135deg, #3b82f6, #60a5fa); }
         .bg-green { background: linear-gradient(135deg, #10b981, #34d399); }
+
         .card-title {
             font-size: 14px;
             color: var(--grayfont-color);
             margin-bottom: 5px;
         }
+
         .card-value {
             font-size: 24px;
             font-weight: 700;
             color: var(--blackfont-color);
         }
+
         .controls {
             background: var(--card-bg);
             border-radius: var(--radius-md);
@@ -173,6 +193,7 @@ if (!$user) {
             align-items: center;
             border: 1px solid var(--border-color);
         }
+
         .controls-left {
             display: flex;
             flex-wrap: wrap;
@@ -180,40 +201,20 @@ if (!$user) {
             flex: 1;
             align-items: center;
         }
+
         .controls-right {
             display: flex;
             flex-wrap: wrap;
             gap: var(--spacing-sm);
             align-items: center;
         }
-        .controls-right .btn.btn-primary {
-            order: 1;
-        }
-        .controls-right .view-toggle {
-            order: 2;
-        }
-        .controls-right .btn.btn-primary,
-        .controls-right .view-btn {
-            height: 36px;
-            padding: 8px 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        .controls-right .view-btn {
-            width: 38px;
-            padding: 0;
-        }
-        .controls-right .view-btn.active {
-            background: #007bff;
-            color: white;
-            border-color: #007bff;
-        }
+
         .search-container {
             position: relative;
             min-width: 200px;
             flex: 1;
         }
+
         .search-input {
             width: 100%;
             padding: var(--spacing-xs) var(--spacing-md) var(--spacing-xs) 2.5rem;
@@ -223,12 +224,14 @@ if (!$user) {
             background: var(--inputfield-color);
             transition: var(--transition-normal);
         }
+
         .search-input:focus {
             outline: none;
             border-color: var(--primary-blue);
             background: var(--white);
             box-shadow: 0 0 0 4px var(--primary-blue-light);
         }
+
         .search-icon {
             position: absolute;
             left: var(--spacing-sm);
@@ -237,24 +240,24 @@ if (!$user) {
             color: var(--grayfont-color);
             font-size: 0.875rem;
         }
+
         .filter-select {
-            min-width: 180px;
+            min-width: 140px;
             padding: var(--spacing-xs) var(--spacing-sm);
-            width: 180px;
-            height: 38px;
-            box-sizing: border-box;
             border: 1px solid var(--border-color);
             border-radius: var(--radius-md);
             font-size: var(--font-size-sm);
             background: var(--inputfield-color);
             transition: var(--transition-normal);
         }
+
         .filter-select:focus {
             outline: none;
             border-color: var(--primary-blue);
             background: var(--white);
             box-shadow: 0 0 0 4px var(--primary-blue-light);
         }
+
         .btn {
             padding: var(--spacing-xs) var(--spacing-md);
             border: none;
@@ -268,34 +271,42 @@ if (!$user) {
             gap: var(--spacing-xs);
             text-decoration: none;
         }
+
         .btn-primary {
             background: var(--primary-gradient);
             color: var(--whitefont-color);
         }
+
         .btn-primary:hover {
             background: var(--primary-blue-hover);
             transform: translateY(-2px);
         }
+
         .btn-secondary {
             background: var(--medium-gray);
             color: var(--whitefont-color);
         }
+
         .btn-secondary:hover {
             background: #4b5563;
             transform: translateY(-2px);
         }
+
         .btn-danger {
             background: linear-gradient(135deg, #ef4444, #f87171);
             color: var(--whitefont-color);
         }
+
         .btn-danger:hover {
             background: var(--danger-red);
             transform: translateY(-2px);
         }
+
         .btn-sm {
             padding: var(--spacing-xs) var(--spacing-sm);
             font-size: 0.75rem;
         }
+
         .view-toggle {
             border: 1px solid var(--border-color);
             border-radius: var(--radius-sm);
@@ -303,6 +314,7 @@ if (!$user) {
             background: var(--inputfield-color);
             display: flex;
         }
+
         .view-btn {
             padding: var(--spacing-xs) var(--spacing-sm);
             background: transparent;
@@ -312,18 +324,22 @@ if (!$user) {
             color: var(--grayfont-color);
             font-size: 0.875rem;
         }
+
         .view-btn:hover {
             background: var(--inputfieldhover-color);
         }
+
         .view-btn.active {
             background: var(--primary-gradient);
             color: var(--whitefont-color);
         }
+
         .student-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
             gap: var(--spacing-lg);
         }
+
         .student-card {
             background: var(--card-bg);
             border-radius: var(--radius-lg);
@@ -334,10 +350,12 @@ if (!$user) {
             position: relative;
             overflow: hidden;
         }
+
         .student-card:hover {
             transform: translateY(-5px);
             box-shadow: var(--shadow-lg);
         }
+
         .student-card::before {
             content: '';
             position: absolute;
@@ -347,20 +365,24 @@ if (!$user) {
             height: 100%;
             background: var(--primary-gradient);
         }
+
         .student-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
             margin-bottom: var(--spacing-md);
         }
+
         .student-header h3 {
             font-size: var(--font-size-lg);
             font-weight: 600;
             color: var(--blackfont-color);
         }
+
         .student-info {
             margin-bottom: var(--spacing-md);
         }
+
         .student-info p {
             color: var(--grayfont-color);
             margin-bottom: var(--spacing-xs);
@@ -369,20 +391,18 @@ if (!$user) {
             align-items: center;
             gap: var(--spacing-xs);
         }
+
         .student-info i {
             width: 16px;
             color: var(--primary-blue);
         }
+
         .student-actions {
             display: flex;
-            gap: 10px;
-            flex-wrap: nowrap;
-            align-items: center;
+            gap: var(--spacing-sm);
+            flex-wrap: wrap;
         }
-        .student-actions .btn {
-            white-space: nowrap;
-            min-width: auto;
-        }
+
         .table-container {
             background: var(--card-bg);
             border-radius: var(--radius-lg);
@@ -391,35 +411,47 @@ if (!$user) {
             overflow-x: auto;
             border: 1px solid var(--border-color);
         }
+
         .table {
             width: 100%;
             border-collapse: separate;
             border-spacing: 0;
         }
+
         .table th,
         .table td {
             padding: var(--spacing-md);
             text-align: left;
             border-bottom: 1px solid var(--border-color);
         }
+
         .table th {
             font-weight: 600;
             color: var(--grayfont-color);
             font-size: var(--font-size-sm);
             background: var(--inputfield-color);
         }
+
         .table tr:hover {
             background: var(--inputfieldhover-color);
         }
-        .table td .actions {
-            display: flex;
-            gap: 10px;
-            align-items: center;
+
+        .attendance-rate {
+            font-weight: 500;
         }
-        .table td .actions .btn {
-            white-space: nowrap;
-            padding: var(--spacing-xs) var(--spacing-sm);
+
+        .attendance-rate.high {
+            color: var(--success-green);
         }
+
+        .attendance-rate.medium {
+            color: var(--warning-yellow);
+        }
+
+        .attendance-rate.low {
+            color: var(--danger-red);
+        }
+
         .modal {
             display: none;
             position: fixed;
@@ -431,11 +463,13 @@ if (!$user) {
             background: rgba(0, 0, 0, 0.6);
             animation: fadeIn 0.3s ease;
         }
+
         .modal.show {
             display: flex;
             align-items: center;
             justify-content: center;
         }
+
         .modal-content {
             background: var(--card-bg);
             margin: 0 auto;
@@ -449,6 +483,7 @@ if (!$user) {
             animation: slideIn 0.3s ease;
             border: 1px solid var(--border-color);
         }
+
         .modal-header {
             padding: var(--spacing-xl) var(--spacing-2xl);
             border-bottom: 1px solid var(--border-color);
@@ -460,12 +495,14 @@ if (!$user) {
             border-top-left-radius: var(--radius-xl);
             border-top-right-radius: var(--radius-xl);
         }
+
         .modal-title {
             margin: 0;
             font-size: var(--font-size-2xl);
             font-weight: 700;
             color: var(--whitefont-color);
         }
+
         .close-btn {
             padding: var(--spacing-sm);
             background: none;
@@ -481,9 +518,11 @@ if (!$user) {
             border-radius: var(--radius-md);
             transition: var(--transition-normal);
         }
+
         .close-btn:hover {
             background: rgba(255, 255, 255, 0.2);
         }
+
         .modal-form {
             padding: var(--spacing-2xl);
             display: grid;
@@ -491,9 +530,11 @@ if (!$user) {
             gap: var(--spacing-xl);
             background: linear-gradient(180deg, #f9fafb, #ffffff);
         }
+
         .form-group {
             margin-bottom: var(--spacing-lg);
         }
+
         .form-label {
             display: block;
             margin-bottom: var(--spacing-sm);
@@ -501,6 +542,7 @@ if (!$user) {
             color: var(--blackfont-color);
             font-size: var(--font-size-base);
         }
+
         .form-input,
         .form-select {
             padding: var(--spacing-md) var(--spacing-lg);
@@ -512,6 +554,7 @@ if (!$user) {
             width: 100%;
             box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.05);
         }
+
         .form-input:focus,
         .form-select:focus {
             outline: none;
@@ -519,21 +562,25 @@ if (!$user) {
             background: var(--white);
             box-shadow: 0 0 0 4px var(--primary-blue-light);
         }
+
         .form-input:disabled,
         .form-select:disabled {
             background: var(--light-gray);
             opacity: 0.7;
             cursor: not-allowed;
         }
+
         .photo-upload {
             display: flex;
             align-items: center;
             gap: var(--spacing-md);
             flex-wrap: wrap;
         }
+
         .photo-upload input[type="file"] {
             display: none;
         }
+
         .photo-preview {
             width: 100px;
             height: 100px;
@@ -541,16 +588,19 @@ if (!$user) {
             object-fit: cover;
             border: 1px solid var(--border-color);
         }
+
         .qr-container {
             display: flex;
             flex-direction: column;
             align-items: flex-start;
             gap: var(--spacing-sm);
         }
+
         .qr-code {
             width: 100px;
             height: 100px;
         }
+
         .form-actions {
             grid-column: 1 / -1;
             display: flex;
@@ -559,12 +609,14 @@ if (!$user) {
             padding-top: var(--spacing-xl);
             border-top: 1px solid var(--border-color);
         }
+
         .pagination {
             display: flex;
             justify-content: center;
             gap: var(--spacing-sm);
             margin-top: var(--spacing-lg);
         }
+
         .pagination-btn {
             padding: var(--spacing-xs) var(--spacing-md);
             border: none;
@@ -575,13 +627,16 @@ if (!$user) {
             font-size: var(--font-size-sm);
             min-width: 60px;
         }
+
         .pagination-btn.active {
             background: var(--primary-gradient);
             color: var(--whitefont-color);
         }
+
         .pagination-btn:hover:not(.active) {
             background: var(--inputfieldhover-color);
         }
+
         .bulk-actions {
             background: var(--card-bg);
             border-radius: var(--radius-md);
@@ -594,111 +649,139 @@ if (!$user) {
             flex-wrap: wrap;
             border: 1px solid var(--border-color);
         }
+
         .selected-count {
             font-size: var(--font-size-sm);
             color: var(--grayfont-color);
         }
+
         .hidden {
             display: none;
         }
+
         @keyframes fadeIn {
             from { opacity: 0; }
             to { opacity: 1; }
         }
+
         @keyframes slideIn {
             from { transform: translateY(-20px); opacity: 0; }
             to { transform: translateY(0); opacity: 1; }
         }
+
         @media (max-width: 1024px) {
             .controls {
                 flex-direction: column;
                 align-items: stretch;
             }
+
             .controls-right {
                 justify-content: flex-start;
                 margin-top: var(--spacing-sm);
             }
+
             .stats-grid {
                 grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
             }
         }
+
         @media (max-width: 768px) {
             body {
                 padding: var(--spacing-sm);
             }
+
             .controls-left {
                 flex-direction: column;
                 gap: var(--spacing-xs);
             }
+
             .controls-right {
                 flex-direction: column;
                 gap: var(--spacing-xs);
             }
+
             .search-container {
                 min-width: auto;
                 width: 100%;
             }
+
             .filter-select {
                 width: 100%;
             }
+
             .btn {
                 width: 100%;
                 justify-content: center;
             }
+
             .view-toggle {
                 width: 100%;
                 justify-content: space-between;
             }
+
             .student-grid {
                 grid-template-columns: 1fr;
             }
+
             .modal-content {
                 width: 98%;
                 max-height: 95vh;
             }
+
             .modal-form {
                 grid-template-columns: 1fr;
                 padding: var(--spacing-lg);
             }
+
             .form-actions {
                 flex-direction: column;
                 gap: var(--spacing-sm);
             }
+
             .form-actions .btn {
                 width: 100%;
                 justify-content: center;
             }
+
             .table th:nth-child(n+6),
             .table td:nth-child(n+6) {
                 display: none;
             }
         }
+
         @media (max-width: 576px) {
             h1 {
                 font-size: var(--font-size-xl);
             }
+
             .table th:nth-child(n+4),
             .table td:nth-child(n+4) {
                 display: none;
             }
+
             .student-card {
                 padding: var(--spacing-sm);
             }
+
             .student-actions {
                 flex-direction: column;
             }
+
             .student-actions .btn {
                 width: 100%;
                 justify-content: center;
             }
+
             .view-toggle {
                 width: 100%;
             }
+
             .view-btn {
                 flex: 1;
                 justify-content: center;
             }
         }
+
         @media print {
             .controls,
             .bulk-actions,
@@ -706,9 +789,11 @@ if (!$user) {
             .modal {
                 display: none !important;
             }
+
             body {
                 padding: 0;
             }
+
             .student-card {
                 box-shadow: none;
                 border: 1px solid var(--border-color);
@@ -716,8 +801,8 @@ if (!$user) {
             }
         }
     </style>
-
-         <style>
+    
+     <style>
         .controls {
             background: var(--card-bg);
             border-radius: var(--radius-md);
@@ -922,6 +1007,7 @@ if (!$user) {
 <body>
     <div class="container">
         <h1>Student Management</h1>
+
         <!-- Stats Grid -->
         <div class="stats-grid">
             <div class="card">
@@ -956,6 +1042,20 @@ if (!$user) {
             <div class="card">
                 <div class="card-header">
                     <div>
+                        <div class="card-title">Average Attendance</div>
+                        <div class="card-value" id="average-attendance">0%</div>
+                    </div>
+                    <div class="card-icon bg-blue">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 16 16">
+                            <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
+                            <path d="M4 8a.5.5 0 0 1 .5-.5h7a.5.5 0 0 1 0 1h-7A.5.5 0 0 1 4 8z"/>
+                        </svg>
+                    </div>
+                </div>
+            </div>
+            <div class="card">
+                <div class="card-header">
+                    <div>
                         <div class="card-title">Classes Enrolled</div>
                         <div class="card-value" id="classes-enrolled">0</div>
                     </div>
@@ -969,6 +1069,7 @@ if (!$user) {
                 </div>
             </div>
         </div>
+
         <!-- Controls -->
         <div class="controls">
             <div class="controls-left">
@@ -983,36 +1084,47 @@ if (!$user) {
                 </select>
                 <select class="form-select filter-select" id="gradeLevelFilter">
                     <option value="">All Grade Levels</option>
+                    <!-- Populated dynamically -->
                 </select>
                 <select class="form-select filter-select" id="classFilter">
                     <option value="">All Subjects</option>
+                    <!-- Populated dynamically -->
                 </select>
                 <select class="form-select filter-select" id="sectionFilter">
                     <option value="">All Sections</option>
+                    <!-- Populated dynamically -->
+                </select>
+                <select class="form-select filter-select" id="attendanceRateFilter">
+                    <option value="">All Attendance Rates</option>
+                    <option value="90-100">90%+</option>
+                    <option value="80-90">80-90%</option>
+                    <option value="0-80">Below 80%</option>
                 </select>
                 <select class="form-select filter-select" id="sortSelect">
                     <option value="name-asc">Name (A-Z)</option>
                     <option value="name-desc">Name (Z-A)</option>
                     <option value="id">LRN</option>
+                    <option value="attendance">Attendance Rate</option>
                 </select>
                 <button class="btn btn-secondary" onclick="clearFilters()">
                     <i class="fas fa-times"></i> Clear Filters
                 </button>
             </div>
             <div class="controls-right">
-                <button class="btn btn-primary" onclick="openProfileModal('add')">
-                    <i class="fas fa-plus"></i> Add Student
-                </button>
-                <div class="view-toggle">
-                    <button class="view-btn active" onclick="switchView('table')">
-                        <i class="fas fa-list"></i>
-                    </button>
-                    <button class="view-btn" onclick="switchView('grid')">
-                        <i class="fas fa-th-large"></i>
-                    </button>
-                </div>
-            </div>
+    <button class="btn btn-primary" onclick="openProfileModal('add')">
+        <i class="fas fa-plus"></i> Add Student
+    </button>
+    <div class="view-toggle">
+        <button class="view-btn active" onclick="switchView('table')">
+            <i class="fas fa-list"></i>
+        </button>
+        <button class="view-btn" onclick="switchView('grid')">
+            <i class="fas fa-th-large"></i>
+        </button>
+    </div>
+</div>
         </div>
+
         <!-- Bulk Actions -->
         <div class="bulk-actions" id="bulkActions">
             <input type="checkbox" id="selectAll" onchange="toggleSelectAll()">
@@ -1025,6 +1137,7 @@ if (!$user) {
                 <i class="fas fa-trash"></i> Delete Selected
             </button>
         </div>
+
         <!-- Student List -->
         <div id="gridView" class="student-grid hidden"></div>
         <div id="tableView" class="table-container">
@@ -1038,6 +1151,7 @@ if (!$user) {
                         <th>Grade Level</th>
                         <th>Subject</th>
                         <th>Section</th>
+                        <th>Attendance Rate</th>
                         <th>Actions</th>
                     </tr>
                 </thead>
@@ -1045,6 +1159,7 @@ if (!$user) {
             </table>
         </div>
         <div class="pagination" id="pagination"></div>
+
         <!-- Student Profile Modal -->
         <div class="modal" id="profile-modal">
             <div class="modal-content">
@@ -1102,18 +1217,21 @@ if (!$user) {
                             <label class="form-label">Grade Level</label>
                             <select class="form-select" id="grade-level">
                                 <option value="">Select Grade Level</option>
+                                <!-- Populated dynamically -->
                             </select>
                         </div>
                         <div class="form-group">
                             <label class="form-label">Subject</label>
                             <select class="form-select" id="class">
                                 <option value="">Select Subject</option>
+                                <!-- Populated dynamically -->
                             </select>
                         </div>
                         <div class="form-group">
                             <label class="form-label">Section</label>
                             <select class="form-select" id="section">
                                 <option value="">Select Section</option>
+                                <!-- Populated dynamically -->
                             </select>
                         </div>
                         <div class="form-group">
@@ -1137,6 +1255,7 @@ if (!$user) {
             </div>
         </div>
     </div>
+
     <script>
         // Simulated class data (replace with AJAX call in production)
         let classes = [
@@ -1147,6 +1266,7 @@ if (!$user) {
                 subject: 'Mathematics',
                 gradeLevel: 'Grade 7',
                 room: 'Room 201',
+                attendancePercentage: 10,
                 schedule: {
                     monday: { start: '08:00', end: '09:30' },
                     wednesday: { start: '08:00', end: '09:30' },
@@ -1166,6 +1286,7 @@ if (!$user) {
                 subject: 'Science',
                 gradeLevel: 'Grade 10',
                 room: 'Lab 1',
+                attendancePercentage: 15,
                 schedule: {
                     tuesday: { start: '10:00', end: '11:30' },
                     thursday: { start: '10:00', end: '11:30' }
@@ -1183,6 +1304,7 @@ if (!$user) {
                 subject: 'English Literature',
                 gradeLevel: 'Grade 12',
                 room: 'Room 305',
+                attendancePercentage: 20,
                 schedule: {
                     monday: { start: '14:00', end: '15:30' },
                     wednesday: { start: '14:00', end: '15:30' }
@@ -1196,6 +1318,7 @@ if (!$user) {
                 ]
             }
         ];
+
         // Student data
         let students = classes.flatMap(cls => cls.students.map(student => ({
             id: student.id,
@@ -1211,12 +1334,15 @@ if (!$user) {
             address: student.address || '123 Sample St',
             parentName: student.parentName || 'Parent Name',
             emergencyContact: student.emergencyContact || '09234567890',
+            attendanceRate: student.attendanceRate || 90,
             dateAdded: student.dateAdded || '2024-09-01',
             photo: student.photo || 'https://via.placeholder.com/100'
         })));
+
         let currentPage = 1;
         const rowsPerPage = 10;
-        let currentView = 'table';
+        let currentView = 'table'; // Default to table view
+
         // DOM Elements
         const studentTableBody = document.querySelector('#tableView tbody');
         const gridView = document.getElementById('gridView');
@@ -1227,8 +1353,10 @@ if (!$user) {
         const gradeLevelFilter = document.getElementById('gradeLevelFilter');
         const classFilter = document.getElementById('classFilter');
         const sectionFilter = document.getElementById('sectionFilter');
+        const attendanceRateFilter = document.getElementById('attendanceRateFilter');
         const sortSelect = document.getElementById('sortSelect');
         const profileModal = document.getElementById('profile-modal');
+
         // Initialize
         document.addEventListener('DOMContentLoaded', () => {
             updateStats();
@@ -1237,60 +1365,74 @@ if (!$user) {
             setupEventListeners();
             document.querySelector('#studentForm').addEventListener('submit', saveStudent);
         });
+
         // Update stats for cards
         function updateStats() {
             const totalStudents = students.length;
             const activeStudents = students.filter(s => classes.find(c => c.subject === s.class && c.sectionName === s.section)?.status === 'active').length;
+            const averageAttendance = students.length ? (students.reduce((sum, s) => sum + s.attendanceRate, 0) / students.length).toFixed(1) : 0;
             const classesEnrolled = [...new Set(students.map(s => `${s.class}-${s.section}`))].length;
+
             document.getElementById('total-students').textContent = totalStudents;
             document.getElementById('active-students').textContent = activeStudents;
+            document.getElementById('average-attendance').textContent = `${averageAttendance}%`;
             document.getElementById('classes-enrolled').textContent = classesEnrolled;
         }
+
         // Populate filters
         function populateFilters() {
             const subjects = [...new Set(classes.map(c => c.subject).filter(s => s))];
             const sections = [...new Set(classes.map(c => c.sectionName).filter(s => s))];
             const gradeLevels = [...new Set(classes.map(c => c.gradeLevel).filter(g => g))];
+
             classFilter.innerHTML = '<option value="">All Subjects</option>';
             sectionFilter.innerHTML = '<option value="">All Sections</option>';
             gradeLevelFilter.innerHTML = '<option value="">All Grade Levels</option>';
+
             subjects.forEach(subject => {
                 const option = document.createElement('option');
                 option.value = subject;
                 option.textContent = subject;
                 classFilter.appendChild(option);
             });
+
             sections.forEach(section => {
                 const option = document.createElement('option');
                 option.value = section;
                 option.textContent = section;
                 sectionFilter.appendChild(option);
             });
+
             gradeLevels.forEach(grade => {
                 const option = document.createElement('option');
                 option.value = grade;
                 option.textContent = grade;
                 gradeLevelFilter.appendChild(option);
             });
+
             // Populate modal selects
             const modalClassSelect = document.getElementById('class');
             const modalSectionSelect = document.getElementById('section');
             const modalGradeSelect = document.getElementById('grade-level');
+
             modalClassSelect.innerHTML = '<option value="">Select Subject</option>';
             modalSectionSelect.innerHTML = '<option value="">Select Section</option>';
             modalGradeSelect.innerHTML = '<option value="">Select Grade Level</option>';
+
             subjects.forEach(subject => {
                 const option = document.createElement('option');
                 option.value = subject;
                 option.textContent = subject;
                 modalClassSelect.appendChild(option);
             });
+
             sections.forEach(section => {
                 const option = document.createElement('option');
                 option.value = section;
                 option.textContent = section;
                 modalSectionSelect.appendChild(option);
             });
+
             gradeLevels.forEach(grade => {
                 const option = document.createElement('option');
                 option.value = grade;
@@ -1298,6 +1440,7 @@ if (!$user) {
                 modalGradeSelect.appendChild(option);
             });
         }
+
         // Setup event listeners
         function setupEventListeners() {
             searchInput.addEventListener('input', applyFilters);
@@ -1305,8 +1448,10 @@ if (!$user) {
             gradeLevelFilter.addEventListener('change', applyFilters);
             classFilter.addEventListener('change', applyFilters);
             sectionFilter.addEventListener('change', applyFilters);
+            attendanceRateFilter.addEventListener('change', applyFilters);
             sortSelect.addEventListener('change', applyFilters);
         }
+
         // Apply filters and sorting
         function applyFilters() {
             const searchTerm = searchInput.value.toLowerCase();
@@ -1314,6 +1459,8 @@ if (!$user) {
             const gradeLevel = gradeLevelFilter.value;
             const className = classFilter.value;
             const section = sectionFilter.value;
+            const attendanceRange = attendanceRateFilter.value;
+
             let filteredStudents = students.filter(student => {
                 const matchesSearch = student.fullName.toLowerCase().includes(searchTerm) ||
                     student.id.toString().includes(searchTerm);
@@ -1321,20 +1468,30 @@ if (!$user) {
                 const matchesGradeLevel = gradeLevel ? student.gradeLevel === gradeLevel : true;
                 const matchesClass = className ? student.class === className : true;
                 const matchesSection = section ? student.section === section : true;
-                return matchesSearch && matchesGender && matchesGradeLevel && matchesClass && matchesSection;
+                const matchesAttendance = attendanceRange ? (
+                    attendanceRange === '90-100' ? student.attendanceRate >= 90 :
+                    attendanceRange === '80-90' ? student.attendanceRate >= 80 && student.attendanceRate < 90 :
+                    student.attendanceRate < 80
+                ) : true;
+                return matchesSearch && matchesGender && matchesGradeLevel && matchesClass && matchesSection && matchesAttendance;
             });
+
             filteredStudents.sort((a, b) => {
                 if (sortSelect.value === 'name-asc') return a.fullName.localeCompare(b.fullName);
                 if (sortSelect.value === 'name-desc') return b.fullName.localeCompare(a.fullName);
                 if (sortSelect.value === 'id') return a.id.toString().localeCompare(b.id.toString());
+                if (sortSelect.value === 'attendance') return b.attendanceRate - a.attendanceRate;
                 return 0;
             });
+
             renderViews(filteredStudents);
         }
+
         // Render views
         function renderViews(data) {
             gridView.classList.add('hidden');
             tableView.classList.add('hidden');
+
             if (currentView === 'grid') {
                 renderGridView(data);
                 gridView.classList.remove('hidden');
@@ -1344,17 +1501,22 @@ if (!$user) {
             }
             renderPagination(data.length);
         }
+
         // Render grid view
         function renderGridView(data) {
             gridView.innerHTML = '';
             const start = (currentPage - 1) * rowsPerPage;
             const end = start + rowsPerPage;
             const paginatedData = data.slice(start, end);
+
             if (paginatedData.length === 0) {
                 gridView.innerHTML = '<div class="no-students">No students found.</div>';
                 return;
             }
+
             paginatedData.forEach(student => {
+                const attendanceClass = student.attendanceRate >= 90 ? 'high' :
+                    student.attendanceRate >= 80 ? 'medium' : 'low';
                 const card = document.createElement('div');
                 card.className = 'student-card';
                 card.innerHTML = `
@@ -1367,6 +1529,7 @@ if (!$user) {
                         <p><i class="fas fa-graduation-cap"></i> ${student.gradeLevel}</p>
                         <p><i class="fas fa-book"></i> ${student.class}</p>
                         <p><i class="fas fa-layer-group"></i> ${student.section}</p>
+                        <p><i class="fas fa-percentage"></i> <span class="attendance-rate ${attendanceClass}">${student.attendanceRate}%</span></p>
                     </div>
                     <div class="student-actions">
                         <button class="btn btn-primary btn-sm" onclick="openProfileModal('view', '${student.id}')">
@@ -1383,13 +1546,17 @@ if (!$user) {
                 gridView.appendChild(card);
             });
         }
+
         // Render table view
         function renderTableView(data) {
             studentTableBody.innerHTML = '';
             const start = (currentPage - 1) * rowsPerPage;
             const end = start + rowsPerPage;
             const paginatedData = data.slice(start, end);
+
             paginatedData.forEach(student => {
+                const attendanceClass = student.attendanceRate >= 90 ? 'high' :
+                    student.attendanceRate >= 80 ? 'medium' : 'low';
                 const row = document.createElement('tr');
                 row.innerHTML = `
                     <td><input type="checkbox" class="row-checkbox" data-id="${student.id}"></td>
@@ -1399,6 +1566,7 @@ if (!$user) {
                     <td>${student.gradeLevel}</td>
                     <td>${student.class}</td>
                     <td>${student.section}</td>
+                    <td class="attendance-rate ${attendanceClass}">${student.attendanceRate}%</td>
                     <td>
                         <div class="actions">
                             <button class="btn btn-primary btn-sm" onclick="openProfileModal('view', '${student.id}')">
@@ -1415,9 +1583,11 @@ if (!$user) {
                 `;
                 studentTableBody.appendChild(row);
             });
+
             updateBulkActions();
             document.querySelectorAll('.row-checkbox').forEach(cb => cb.addEventListener('change', updateBulkActions));
         }
+
         // Render pagination
         function renderPagination(totalRows) {
             const pageCount = Math.ceil(totalRows / rowsPerPage);
@@ -1429,11 +1599,13 @@ if (!$user) {
                 <button class="pagination-btn" onclick="changePage(${currentPage + 1})" ${currentPage === pageCount ? 'disabled' : ''}>Next</button>
             `;
         }
+
         // Change page
         function changePage(page) {
             currentPage = page;
             applyFilters();
         }
+
         // Switch view
         function switchView(view) {
             currentView = view;
@@ -1441,6 +1613,7 @@ if (!$user) {
             document.querySelector(`.view-btn[onclick="switchView('${view}')"]`).classList.add('active');
             applyFilters();
         }
+
         // Toggle select all
         function toggleSelectAll() {
             const selectAll = document.getElementById('selectAll');
@@ -1448,6 +1621,7 @@ if (!$user) {
             checkboxes.forEach(checkbox => checkbox.checked = selectAll.checked);
             updateBulkActions();
         }
+
         // Update bulk actions
         function updateBulkActions() {
             const checkboxes = document.querySelectorAll('.row-checkbox:checked');
@@ -1456,18 +1630,21 @@ if (!$user) {
             selectedCount.textContent = `${checkboxes.length} selected`;
             bulkButtons.forEach(btn => btn.disabled = checkboxes.length === 0);
         }
+
         // Bulk actions
         function bulkExport() {
             const checkboxes = document.querySelectorAll('.row-checkbox:checked');
             const selectedStudents = Array.from(checkboxes).map(cb =>
                 students.find(s => s.id == cb.dataset.id)
             );
+
             const csv = [
-                'LRN,First Name,Last Name,Email,Gender,Grade Level,Subject,Section,Address,Emergency Contact',
+                'LRN,First Name,Last Name,Email,Gender,Grade Level,Subject,Section,Address,Emergency Contact,Attendance Rate',
                 ...selectedStudents.map(s =>
-                    `${s.id},${s.firstName},${s.lastName},${s.email},${s.gender},${s.gradeLevel},${s.class},${s.section},${s.address},${s.emergencyContact}`
+                    `${s.id},${s.firstName},${s.lastName},${s.email},${s.gender},${s.gradeLevel},${s.class},${s.section},${s.address},${s.emergencyContact},${s.attendanceRate}`
                 )
             ].join('\n');
+
             const blob = new Blob([csv], { type: 'text/csv' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
@@ -1476,6 +1653,7 @@ if (!$user) {
             a.click();
             URL.revokeObjectURL(url);
         }
+
         function bulkDelete() {
             if (!confirm('Are you sure you want to delete selected students?')) return;
             const checkboxes = document.querySelectorAll('.row-checkbox:checked');
@@ -1486,6 +1664,7 @@ if (!$user) {
             students = students.filter(s => !ids.includes(s.id.toString()));
             applyFilters();
         }
+
         // Open profile modal
         function openProfileModal(mode, id) {
             const form = {
@@ -1503,17 +1682,20 @@ if (!$user) {
                 emergencyContact: document.getElementById('emergency-contact'),
                 photoPreview: document.getElementById('student-photo-preview')
             };
+
             // Reset form
             Object.values(form).forEach(input => {
                 if (input.tagName === 'IMG') input.src = 'https://via.placeholder.com/100';
                 else if (input.tagName === 'SELECT') input.value = '';
                 else input.value = '';
             });
+
             // Clear and hide QR code container
             const qrContainer = document.getElementById('qr-container');
             const qrCodeDiv = document.getElementById('qr-code');
             qrCodeDiv.innerHTML = '';
             qrContainer.style.display = 'none';
+
             if (mode !== 'add' && id) {
                 const student = students.find(s => s.id == id);
                 document.getElementById('profile-modal-title').textContent = `${student.fullName}'s Profile`;
@@ -1530,6 +1712,7 @@ if (!$user) {
                 form.parentName.value = student.parentName;
                 form.emergencyContact.value = student.emergencyContact;
                 form.photoPreview.src = student.photo;
+
                 if (mode === 'view') {
                     qrContainer.style.display = 'flex';
                     const qrData = JSON.stringify({
@@ -1548,14 +1731,17 @@ if (!$user) {
             } else {
                 document.getElementById('profile-modal-title').textContent = 'Add New Student';
             }
+
             // Disable inputs for view mode
             Object.values(form).forEach(input => {
                 if (input.tagName !== 'IMG') input.disabled = mode === 'view';
             });
+
             document.querySelector('.photo-upload .btn').style.display = mode === 'view' ? 'none' : 'inline-flex';
             document.querySelector('.form-actions .btn-primary').style.display = mode === 'view' ? 'none' : 'inline-flex';
             profileModal.classList.add('show');
         }
+
         // Preview photo
         function previewPhoto(event) {
             const file = event.target.files[0];
@@ -1567,6 +1753,7 @@ if (!$user) {
                 reader.readAsDataURL(file);
             }
         }
+
         // Save student
         function saveStudent(event) {
             event.preventDefault();
@@ -1585,11 +1772,13 @@ if (!$user) {
                 emergencyContact: document.getElementById('emergency-contact').value.trim(),
                 photo: document.getElementById('student-photo-preview').src
             };
+
             if (!form.firstName || !form.lastName || !form.gender || !form.dob || !form.gradeLevel ||
                 !form.class || !form.section || !form.address || !form.parentName || !form.emergencyContact) {
                 alert('Please fill in all required fields.');
                 return;
             }
+
             const newStudent = {
                 id: form.studentId || Date.now(),
                 firstName: form.firstName,
@@ -1604,9 +1793,11 @@ if (!$user) {
                 address: form.address,
                 parentName: form.parentName,
                 emergencyContact: form.emergencyContact,
+                attendanceRate: 90,
                 dateAdded: new Date().toISOString().split('T')[0],
                 photo: form.photo
             };
+
             // Update class students
             const classItem = classes.find(c => c.subject === form.class && c.sectionName === form.section);
             if (classItem) {
@@ -1627,6 +1818,7 @@ if (!$user) {
                     });
                 }
             }
+
             // Update students array
             if (students.some(s => s.id == newStudent.id)) {
                 const index = students.findIndex(s => s.id == newStudent.id);
@@ -1634,9 +1826,11 @@ if (!$user) {
             } else {
                 students.push(newStudent);
             }
+
             applyFilters();
             closeModal('profile');
         }
+
         // Delete student
         function deleteStudent(id) {
             if (!confirm('Are you sure you want to delete this student?')) return;
@@ -1646,6 +1840,7 @@ if (!$user) {
             students = students.filter(s => s.id != id);
             applyFilters();
         }
+
         // Clear filters
         function clearFilters() {
             searchInput.value = '';
@@ -1653,15 +1848,18 @@ if (!$user) {
             gradeLevelFilter.value = '';
             classFilter.value = '';
             sectionFilter.value = '';
+            attendanceRateFilter.value = '';
             sortSelect.value = 'name-asc';
             applyFilters();
         }
+
         // Close modal
         function closeModal(type) {
             if (type === 'profile') {
                 profileModal.classList.remove('show');
             }
         }
+
         // Print QR code
         function printQRCode() {
             const qrCanvas = document.querySelector('#qr-code canvas');

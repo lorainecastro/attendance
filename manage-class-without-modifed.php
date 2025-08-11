@@ -1942,8 +1942,8 @@ ob_end_flush();
             border-bottom: 1px solid var(--border-color);
             white-space: nowrap;
             overflow: hidden;
-            /* text-overflow: ellipsis; */
-            max-width: 200px;
+            text-overflow: ellipsis;
+            max-width: 150px;
             /* Maximize column width while preventing overflow */
         }
 
@@ -2373,9 +2373,6 @@ ob_end_flush();
                                     <th>Address</th>
                                     <th>Parent Name</th>
                                     <th>Emergency Contact</th>
-                                    <th>Photo</th>
-                                    <th>QR Code</th>
-                                    <th>Actions</th>
                                 </tr>
                             </thead>
                             <tbody></tbody>
@@ -3109,9 +3106,6 @@ ob_end_flush();
                 });
         }
 
-        let previewData = [];
-        let excelHeader = [];
-
         document.getElementById('importFile').addEventListener('change', function(event) {
             const file = event.target.files[0];
             if (!file) {
@@ -3130,17 +3124,20 @@ ob_end_flush();
                     const firstSheet = workbook.SheetNames[0];
                     const worksheet = workbook.Sheets[firstSheet];
                     const rows = XLSX.utils.sheet_to_json(worksheet, {
-                        header: 1,
-                        raw: false // Use formatted values
+                        header: 1
                     });
 
                     const previewTableContainer = document.getElementById('previewTableContainer');
+                    const previewTable = document.getElementById('previewTable');
+                    const tbody = previewTable ? previewTable.querySelector('tbody') : null;
 
-                    if (!previewTableContainer) {
+                    if (!previewTableContainer || !tbody) {
                         console.error('Preview table elements not found');
                         alert('Error: Preview table is not available.');
                         return;
                     }
+
+                    tbody.innerHTML = '';
 
                     if (rows.length <= 1) {
                         previewTableContainer.style.display = 'none';
@@ -3148,10 +3145,26 @@ ob_end_flush();
                         return;
                     }
 
-                    excelHeader = rows[0];
-                    previewData = rows.slice(1).filter(row => row.length >= 11);
+                    rows.slice(1).forEach(row => {
+                        if (row.length >= 11) { // Ensure row has at least 11 columns for preview
+                            const tr = document.createElement('tr');
+                            tr.innerHTML = `
+                        <td>${sanitizeHTML(row[0] || '')}</td>
+                        <td>${sanitizeHTML(row[1] || '')}</td>
+                        <td>${sanitizeHTML(row[2] || '')}</td>
+                        <td>${sanitizeHTML(row[3] || '')}</td>
+                        <td>${sanitizeHTML(row[4] || '')}</td>
+                        <td>${sanitizeHTML(row[5] || '')}</td>
+                        <td>${sanitizeHTML(row[6] || '')}</td>
+                        <td>${sanitizeHTML(row[7] || '')}</td>
+                        <td>${sanitizeHTML(row[8] || '')}</td>
+                        <td>${sanitizeHTML(row[9] || '')}</td>
+                        <td>${sanitizeHTML(row[10] || '')}</td>
+                    `;
+                            tbody.appendChild(tr);
+                        }
+                    });
 
-                    renderPreviewTable();
                     previewTableContainer.style.display = 'block';
                 } catch (error) {
                     console.error('Error reading Excel file:', error);
@@ -3163,65 +3176,18 @@ ob_end_flush();
             reader.readAsArrayBuffer(file);
         });
 
-        function renderPreviewTable() {
-            const tbody = document.querySelector('#previewTable tbody');
-            if (!tbody) return;
-
-            tbody.innerHTML = '';
-
-            previewData.forEach((row, index) => {
-                const tr = document.createElement('tr');
-                tr.dataset.index = index;
-                tr.innerHTML = `
-                    <td>${sanitizeHTML(row[0] || '')}</td>
-                    <td>${sanitizeHTML(row[1] || '')}</td>
-                    <td>${sanitizeHTML(row[2] || '')}</td>
-                    <td>${sanitizeHTML(row[3] || '')}</td>
-                    <td>${sanitizeHTML(row[4] || '')}</td>
-                    <td>${sanitizeHTML(row[5] || '')}</td>
-                    <td>${sanitizeHTML(row[6] || '')}</td>
-                    <td>${sanitizeHTML(row[7] || '')}</td>
-                    <td>${sanitizeHTML(row[8] || '')}</td>
-                    <td>${sanitizeHTML(row[9] || '')}</td>
-                    <td>${sanitizeHTML(row[10] || '')}</td>
-                    <td>${sanitizeHTML(row[11] || '')}</td>
-                    <td>${sanitizeHTML(row[12] || '')}</td>
-                    <td>
-                        <button class="btn btn-sm btn-danger" onclick="removePreviewRow(this)">
-                            <i class="fas fa-trash"></i> Remove
-                        </button>
-                    </td>
-                `;
-                tbody.appendChild(tr);
-            });
-        }
-
-        function removePreviewRow(btn) {
-            const tr = btn.closest('tr');
-            const index = parseInt(tr.dataset.index);
-            previewData.splice(index, 1);
-            renderPreviewTable();
-        }
-
         function importStudents() {
-            if (previewData.length === 0) {
-                alert('No data to import.');
+            const fileInput = document.getElementById('importFile');
+            const file = fileInput.files[0];
+            if (!file) {
+                alert('Please select a file to import.');
                 return;
             }
-
-            // Create modified workbook
-            const newRows = [excelHeader, ...previewData];
-            const newWs = XLSX.utils.aoa_to_sheet(newRows);
-            const newWb = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(newWb, newWs, 'Sheet1');
-
-            const excelBuffer = XLSX.write(newWb, { bookType: 'xlsx', type: 'array' });
-            const blob = new Blob([excelBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
 
             const formData = new FormData();
             formData.append('action', 'importStudents');
             formData.append('classId', document.querySelector('#studentModal').dataset.classId || '0');
-            formData.append('file', blob, 'modified.xlsx');
+            formData.append('file', file);
 
             fetch('manage-classes.php', {
                     method: 'POST',
@@ -3239,7 +3205,6 @@ ob_end_flush();
                         document.getElementById('previewTableContainer').style.display = 'none';
                         document.getElementById('importFile').value = '';
                         document.querySelector('#previewTable tbody').innerHTML = '';
-                        previewData = [];
                         alert('Students imported successfully!');
                     } else {
                         alert('Failed to import students: ' + (data.error || 'Unknown error'));

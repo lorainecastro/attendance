@@ -2772,42 +2772,46 @@ ob_end_flush();
     }
 
     function renderStudentTable(students, classId) {
-        const tbody = document.querySelector('#studentTable tbody');
-        if (!tbody) return;
+    const tbody = document.querySelector('#studentTable tbody');
+    if (!tbody) return;
 
-        tbody.innerHTML = '';
+    tbody.innerHTML = '';
 
-        if (!students || students.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="15" class="no-classes">No students enrolled</td></tr>';
-            return;
-        }
-
-        students.forEach(student => {
-            const row = document.createElement('tr');
-            row.innerHTML = `
-                <td>${sanitizeHTML(student.lrn || 'N/A')}</td>
-                <td>${sanitizeHTML(student.first_name || 'N/A')}</td>
-                <td>${sanitizeHTML(student.middle_name || 'N/A')}</td>
-                <td>${sanitizeHTML(student.last_name || 'N/A')}</td>
-                <td>${sanitizeHTML(student.email || 'N/A')}</td>
-                <td>${sanitizeHTML(student.gender || 'N/A')}</td>
-                <td>${sanitizeHTML(student.dob || 'N/A')}</td>
-                <td>${sanitizeHTML(student.grade_level || 'N/A')}</td>
-                <td>${sanitizeHTML(student.address || 'N/A')}</td>
-                <td>${sanitizeHTML(student.parent_name || 'N/A')}</td>
-                <td>${sanitizeHTML(student.emergency_contact || 'N/A')}</td>
-                <td>${sanitizeHTML(student.photo ? '<img src="' + student.photo + '" alt="Student Photo" style="max-width: 50px; max-height: 50px;">' : 'N/A')}</td>
-                <td>${sanitizeHTML(student.qr_code || 'N/A')}</td>
-                <td>${sanitizeHTML(student.date_added || 'N/A')}</td>
-                <td class="actions">
-                    <button class="btn btn-sm btn-danger" onclick="deleteStudent(${classId}, '${student.lrn}')">
-                        <i class="fas fa-trash"></i>
-                    </button>
-                </td>
-            `;
-            tbody.appendChild(row);
-        });
+    if (!students || students.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="15" class="no-classes">No students enrolled</td></tr>';
+        return;
     }
+
+    students.forEach(student => {
+        const photoSrc = student.photo ? `uploads/${student.photo}` : '';
+        const qrSrc = student.qr_code ? `uploads/${student.qr_code}` : '';
+        console.log('Photo:', photoSrc, 'QR:', qrSrc); // Debug log
+
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td>${sanitizeHTML(student.lrn || 'N/A')}</td>
+            <td>${sanitizeHTML(student.first_name || 'N/A')}</td>
+            <td>${sanitizeHTML(student.middle_name || 'N/A')}</td>
+            <td>${sanitizeHTML(student.last_name || 'N/A')}</td>
+            <td>${sanitizeHTML(student.email || 'N/A')}</td>
+            <td>${sanitizeHTML(student.gender || 'N/A')}</td>
+            <td>${sanitizeHTML(student.dob || 'N/A')}</td>
+            <td>${sanitizeHTML(student.grade_level || 'N/A')}</td>
+            <td>${sanitizeHTML(student.address || 'N/A')}</td>
+            <td>${sanitizeHTML(student.parent_name || 'N/A')}</td>
+            <td>${sanitizeHTML(student.emergency_contact || 'N/A')}</td>
+            <td>${photoSrc ? `<img src="${photoSrc}" alt="Student Photo" style="max-width: 50px; max-height: 50px;">` : 'N/A'}</td>
+            <td>${qrSrc ? `<img src="${qrSrc}" alt="QR Code" style="max-width: 50px; max-height: 50px;">` : 'N/A'}</td>
+            <td>${sanitizeHTML(student.date_added || 'N/A')}</td>
+            <td class="actions">
+                <button class="btn btn-sm btn-danger" onclick="deleteStudent(${classId}, '${student.lrn}')">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </td>
+        `;
+        tbody.appendChild(row);
+    });
+}
 
     function deleteStudent(classId, lrn) {
         if (!confirm('Are you sure you want to delete this student from the class?')) return;

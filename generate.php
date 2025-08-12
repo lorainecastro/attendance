@@ -4,7 +4,7 @@ require 'vendor/autoload.php';
 use Endroid\QrCode\QrCode;
 use Endroid\QrCode\Writer\PngWriter;
 
-$qrCode = new QrCode('lorainecastro123');
+$qrCode = new QrCode('Loraine Castro 2022200167');
 
 $writer = new PngWriter();
 $result = $writer->write($qrCode);

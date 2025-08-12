@@ -84,7 +84,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['lrn']) && !isset($_POS
     if (isset($_FILES['photo']) && $_FILES['photo']['error'] == 0) {
         $ext = pathinfo($_FILES['photo']['name'], PATHINFO_EXTENSION);
         $photo = $lrn . '_photo.' . $ext;
-        $path = 'Uploads/students/' . $photo;
+        $path = 'uploads/students/' . $photo;
         move_uploaded_file($_FILES['photo']['tmp_name'], $path);
     }
 

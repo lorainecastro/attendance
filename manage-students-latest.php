@@ -997,6 +997,208 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
             margin-bottom: var(--spacing-md);
         }
     </style>
+
+    <style>
+        .controls {
+            background: var(--card-bg);
+            border-radius: var(--radius-md);
+            padding: var(--spacing-md);
+            box-shadow: var(--shadow-md);
+            margin-bottom: var(--spacing-lg);
+            display: flex;
+            flex-wrap: wrap;
+            gap: var(--spacing-sm);
+            align-items: center;
+            border: 1px solid var(--border-color);
+        }
+
+        .controls-left {
+            display: flex;
+            flex-wrap: wrap;
+            gap: var(--spacing-sm);
+            flex: 1;
+            align-items: center;
+        }
+
+        .controls-right {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--spacing-sm);
+    align-items: center;
+}
+
+.controls-right .btn.btn-primary {
+    order: 1; /* Places "Add Student" button first */
+}
+
+.controls-right .view-toggle {
+    order: 2; /* Places view-toggle after the button */
+}
+
+
+.controls-right .btn.btn-primary,
+.controls-right .view-btn {
+    height: 36px; /* Uniform height */
+    padding: 8px 12px; /* Consistent padding */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.controls-right .view-btn {
+    width: 38px; /* Square buttons for view toggle */
+    padding: 0; /* Remove padding for icon-only buttons */
+}
+
+.controls-right .view-btn.active {
+    background: #007bff;
+    color: white;
+    border-color: #007bff;
+}
+
+.controls-right {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start; /* Aligns items to the start */
+    gap: var(--spacing-sm);
+}
+
+        .search-container {
+            position: relative;
+            min-width: 200px;
+            flex: 1;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: var(--spacing-xs) var(--spacing-md) var(--spacing-xs) 2.5rem;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-sm);
+            font-size: var(--font-size-sm);
+            background: var(--inputfield-color);
+            transition: var(--transition-normal);
+        }
+
+        .search-icon {
+            position: absolute;
+            left: var(--spacing-sm);
+            top: 55%;
+            transform: translateY(-50%);
+            color: var(--grayfont-color);
+            font-size: 0.875rem;
+        }
+
+        .filter-select {
+            min-width: 180px;
+            padding: var(--spacing-xs) var(--spacing-sm);
+            width: 180px; 
+  height: 38px; 
+  box-sizing: border-box;
+        }
+
+        .btn {
+            padding: var(--spacing-xs) var(--spacing-md);
+            font-size: var(--font-size-sm);
+        }
+
+        .view-toggle {
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-sm);
+            overflow: hidden;
+            background: var(--inputfield-color);
+            display: flex;
+        }
+
+        .view-btn {
+            padding: var(--spacing-xs) var(--spacing-sm);
+            font-size: 0.875rem;
+        }
+
+        @media (max-width: 1024px) {
+            .controls {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .controls-right {
+                justify-content: flex-start;
+                margin-top: var(--spacing-sm);
+            }
+        }
+
+        @media (max-width: 768px) {
+            .controls-left {
+                flex-direction: column;
+                gap: var(--spacing-xs);
+            }
+
+            .controls-right {
+                flex-direction: column;
+                gap: var(--spacing-xs);
+            }
+
+            .search-container {
+                min-width: auto;
+                width: 100%;
+            }
+
+            .filter-select {
+                width: 100%;
+            }
+
+            .btn {
+                width: 100%;
+                justify-content: center;
+            }
+
+            .view-toggle {
+                width: 100%;
+                justify-content: space-between;
+            }
+        }
+
+        .preview-table-container {
+            margin-top: var(--spacing-lg);
+            background: var(--card-bg);
+            border-radius: var(--radius-lg);
+            padding: var(--spacing-lg);
+            box-shadow: var(--shadow-md);
+            border: 1px solid var(--border-color);
+        }
+
+        .preview-table-container h3 {
+            font-size: var(--font-size-lg);
+            font-weight: 600;
+            color: var(--blackfont-color);
+            margin-bottom: var(--spacing-md);
+        }
+    </style>
+
+    <style>
+        .student-actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: nowrap; /* Prevents wrapping to new lines */
+    align-items: center; /* Vertically centers the buttons */
+}
+
+.student-actions .btn {
+    white-space: nowrap; /* Prevents text wrapping within buttons */
+    min-width: auto; /* Allows buttons to size naturally */
+}
+
+.table td .actions {
+    display: flex;
+    gap: 10px; /* Consistent spacing between buttons */
+    align-items: center; /* Vertically centers the buttons */
+}
+
+.table td .actions .btn {
+    white-space: nowrap; /* Prevents text wrapping within buttons */
+    padding: var(--spacing-xs) var(--spacing-sm); /* Adjusted padding for consistency */
+}
+    </style>
+
 </head>
 <body>
     <div class="container">
@@ -1191,15 +1393,15 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
                             </select>
                         </div>
                         <div class="form-group">
-                            <label class="form-label">Subject</label>
-                            <select class="form-select" id="class" name="class">
-                                <option value="">Select Subject</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
                             <label class="form-label">Section</label>
                             <select class="form-select" id="section" name="section">
                                 <option value="">Select Section</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Subject</label>
+                            <select class="form-select" id="class" name="class">
+                                <option value="">Select Subject</option>
                             </select>
                         </div>
                         <div class="form-group">
@@ -1255,8 +1457,8 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
             setupEventListeners();
             document.querySelector('#studentForm').addEventListener('submit', saveStudent);
             document.getElementById('student-id').addEventListener('change', autoFillStudent);
-            document.getElementById('grade-level').addEventListener('change', updateSubjectAndSectionOptions);
-            document.getElementById('class').addEventListener('change', updateSectionOptions);
+            document.getElementById('grade-level').addEventListener('change', updateSectionOptions);
+            document.getElementById('section').addEventListener('change', updateSubjectOptions);
         });
 
         // Auto fill student on LRN change
@@ -1277,6 +1479,8 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
                             document.getElementById('address').value = student.address || '';
                             document.getElementById('parent-name').value = student.parent_name || '';
                             document.getElementById('emergency-contact').value = student.emergency_contact || '';
+                            document.getElementById('grade-level').value = student.grade_level;
+                            document.getElementById('grade-level').dispatchEvent(new Event('change'));
                             document.getElementById('student-photo-preview').src = student.photo ?
                                 'Uploads/' + student.photo :
                                 'https://via.placeholder.com/100';
@@ -1296,26 +1500,10 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
             }
         }
 
-        // Update subject and section options based on grade
-        function updateSubjectAndSectionOptions() {
-            const grade = document.getElementById('grade-level').value;
-            const availableSubjects = [...new Set(classes.filter(c => c.grade_level === grade).map(c => c.subject_name))];
-            const subjectSelect = document.getElementById('class');
-            subjectSelect.innerHTML = '<option value="">Select Subject</option>';
-            availableSubjects.forEach(sub => {
-                const option = document.createElement('option');
-                option.value = sub;
-                option.textContent = sub;
-                subjectSelect.appendChild(option);
-            });
-            updateSectionOptions();
-        }
-
-        // Update section options based on grade and subject
+        // Update section options based on grade
         function updateSectionOptions() {
             const grade = document.getElementById('grade-level').value;
-            const subject = document.getElementById('class').value;
-            const availableSections = classes.filter(c => c.grade_level === grade && c.subject_name === subject).map(c => c.section_name);
+            const availableSections = [...new Set(classes.filter(c => c.grade_level === grade).map(c => c.section_name))];
             const sectionSelect = document.getElementById('section');
             sectionSelect.innerHTML = '<option value="">Select Section</option>';
             availableSections.forEach(sec => {
@@ -1323,6 +1511,21 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
                 option.value = sec;
                 option.textContent = sec;
                 sectionSelect.appendChild(option);
+            });
+        }
+
+        // Update subject options based on grade and section
+        function updateSubjectOptions() {
+            const grade = document.getElementById('grade-level').value;
+            const section = document.getElementById('section').value;
+            const availableSubjects = [...new Set(classes.filter(c => c.grade_level === grade && c.section_name === section).map(c => c.subject_name))];
+            const subjectSelect = document.getElementById('class');
+            subjectSelect.innerHTML = '<option value="">Select Subject</option>';
+            availableSubjects.forEach(sub => {
+                const option = document.createElement('option');
+                option.value = sub;
+                option.textContent = sub;
+                subjectSelect.appendChild(option);
             });
         }
 
@@ -1620,8 +1823,8 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
                 gender: document.getElementById('gender'),
                 dob: document.getElementById('dob'),
                 gradeLevel: document.getElementById('grade-level'),
-                class: document.getElementById('class'),
                 section: document.getElementById('section'),
+                class: document.getElementById('class'),
                 address: document.getElementById('address'),
                 parentName: document.getElementById('parent-name'),
                 emergencyContact: document.getElementById('emergency-contact'),
@@ -1666,22 +1869,22 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
                 if (studentClass) {
                     form.gradeLevel.value = studentClass.grade_level;
                     console.log('Setting gradeLevel to:', studentClass.grade_level);
-                    updateSubjectAndSectionOptions();
-                    form.class.value = studentClass.subject_name;
                     updateSectionOptions();
                     form.section.value = studentClass.section_name;
+                    updateSubjectOptions();
+                    form.class.value = studentClass.subject_name;
                 } else {
                     console.warn(`No class found for class_id: ${student.class_id}, using fallback`);
                     form.gradeLevel.value = student.gradeLevel || '';
-                    updateSubjectAndSectionOptions();
-                    form.class.value = student.class || '';
                     updateSectionOptions();
                     form.section.value = student.section || '';
+                    updateSubjectOptions();
+                    form.class.value = student.class || '';
                 }
             } else {
                 document.getElementById('profile-modal-title').textContent = 'Add New Student';
-                document.getElementById('class').innerHTML = '<option value="">Select Subject</option>';
                 document.getElementById('section').innerHTML = '<option value="">Select Section</option>';
+                document.getElementById('class').innerHTML = '<option value="">Select Subject</option>';
             }
 
             Object.values(form).forEach(input => {

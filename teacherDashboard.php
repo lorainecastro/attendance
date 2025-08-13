@@ -1061,7 +1061,7 @@ $profileName = htmlspecialchars($currentUser['firstname'] . ' ' . $currentUser['
                             pageFile = 'manage-classes.php';
                             break;
                         case 2:
-                            pageFile = 'manage-students.php';
+                            pageFile = 'manage-students-latest.php';
                             break;
                         case 3:
                             pageFile = 'attendance.php';

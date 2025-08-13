@@ -193,16 +193,6 @@ foreach ($students_data as &$row) {
     $row['fullName'] = $row['last_name'] . ', ' . $row['first_name'] . ' ' . $row['middle_name'];
 }
 
-// Fetch classes data for dynamic dropdowns
-$stmt = $pdo->prepare("
-    SELECT c.class_id, c.grade_level, sub.subject_name, c.section_name 
-    FROM classes c 
-    JOIN subjects sub ON c.subject_id = sub.subject_id 
-    WHERE c.teacher_id = ?
-");
-$stmt->execute([$teacher_id]);
-$classes_data = $stmt->fetchAll();
-
 // Fetch filters data
 $stmt = $pdo->prepare("SELECT DISTINCT c.grade_level FROM classes c WHERE c.teacher_id = ?");
 $stmt->execute([$teacher_id]);
@@ -1446,9 +1436,6 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
                             <label class="form-label">Grade Level</label>
                             <select class="form-select" id="grade-level" name="grade_level">
                                 <option value="">Select Grade Level</option>
-                                <?php foreach ($gradeLevels as $grade): ?>
-                                    <option value="<?php echo $grade; ?>"><?php echo $grade; ?></option>
-                                <?php endforeach; ?>
                             </select>
                         </div>
                         <div class="form-group">
@@ -1487,7 +1474,6 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
     <script>
         // Data from PHP
         let students = <?php echo json_encode($students_data); ?>;
-        let classes = <?php echo json_encode($classes_data); ?>;
         let gradeLevels = <?php echo json_encode($gradeLevels); ?>;
         let subjects = <?php echo json_encode($subjects); ?>;
         let sections = <?php echo json_encode($sections); ?>;
@@ -1516,8 +1502,6 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
             setupEventListeners();
             document.querySelector('#studentForm').addEventListener('submit', saveStudent);
             document.getElementById('student-id').addEventListener('change', autoFillStudent);
-            document.getElementById('grade-level').addEventListener('change', updateSubjectAndSectionOptions);
-            document.getElementById('class').addEventListener('change', updateSectionOptions);
         });
 
         // Auto fill student on LRN change
@@ -1561,36 +1545,6 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
             }
         }
 
-        // Update subject and section options based on grade
-        function updateSubjectAndSectionOptions() {
-            const grade = document.getElementById('grade-level').value;
-            const availableSubjects = [...new Set(classes.filter(c => c.grade_level === grade).map(c => c.subject_name))];
-            const subjectSelect = document.getElementById('class');
-            subjectSelect.innerHTML = '<option value="">Select Subject</option>';
-            availableSubjects.forEach(sub => {
-                const option = document.createElement('option');
-                option.value = sub;
-                option.textContent = sub;
-                subjectSelect.appendChild(option);
-            });
-            updateSectionOptions();
-        }
-
-        // Update section options based on grade and subject
-        function updateSectionOptions() {
-            const grade = document.getElementById('grade-level').value;
-            const subject = document.getElementById('class').value;
-            const availableSections = classes.filter(c => c.grade_level === grade && c.subject_name === subject).map(c => c.section_name);
-            const sectionSelect = document.getElementById('section');
-            sectionSelect.innerHTML = '<option value="">Select Section</option>';
-            availableSections.forEach(sec => {
-                const option = document.createElement('option');
-                option.value = sec;
-                option.textContent = sec;
-                sectionSelect.appendChild(option);
-            });
-        }
-
         // Update stats for cards
         function updateStats() {
             const totalStudents = students.length;
@@ -1623,6 +1577,30 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
                 option.value = section;
                 option.textContent = section;
                 sectionFilter.appendChild(option);
+            });
+            const modalGradeSelect = document.getElementById('grade-level');
+            const modalClassSelect = document.getElementById('class');
+            const modalSectionSelect = document.getElementById('section');
+            modalGradeSelect.innerHTML = '<option value="">Select Grade Level</option>';
+            gradeLevels.forEach(grade => {
+                const option = document.createElement('option');
+                option.value = grade;
+                option.textContent = grade;
+                modalGradeSelect.appendChild(option);
+            });
+            modalClassSelect.innerHTML = '<option value="">Select Subject</option>';
+            subjects.forEach(subject => {
+                const option = document.createElement('option');
+                option.value = subject;
+                option.textContent = subject;
+                modalClassSelect.appendChild(option);
+            });
+            modalSectionSelect.innerHTML = '<option value="">Select Section</option>';
+            sections.forEach(section => {
+                const option = document.createElement('option');
+                option.value = section;
+                option.textContent = section;
+                modalSectionSelect.appendChild(option);
             });
         }
 
@@ -1756,9 +1734,12 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
             const pageCount = Math.ceil(totalRows / rowsPerPage);
             pagination.innerHTML = `
                 <button class="pagination-btn" onclick="changePage(${currentPage - 1})" ${currentPage === 1 ? 'disabled' : ''}>Previous</button>
-                ${Array.from({ length: pageCount }, (_, i) => `
-                <button class="pagination-btn ${currentPage === i + 1 ? 'active' : ''}" onclick="changePage(${i + 1})">${i + 1}</button>
-                `).join('')}
+                ${Array.from({ length: pageCount }, (_, i) => ` <
+                button class = "pagination-btn ${currentPage === i + 1 ? 'active' : ''}"
+            onclick = "changePage(${i + 1})" > $ {
+                i + 1
+            } < /button>
+            `).join('')}
                 <button class="pagination-btn" onclick="changePage(${currentPage + 1})" ${currentPage === pageCount ? 'disabled' : ''}>Next</button>
             `;
         }
@@ -1879,6 +1860,7 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
         }
 
         // Open profile modal
+        // Open profile modal
         function openProfileModal(mode, lrn = null) {
             const form = {
                 studentId: document.getElementById('student-id'),
@@ -1915,21 +1897,17 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
                 form.email.value = student.email || '';
                 form.gender.value = student.gender || 'Male';
                 form.dob.value = student.dob || '';
+                form.gradeLevel.value = student.gradeLevel;
+                form.class.value = student.class;
+                form.section.value = student.section;
                 form.address.value = student.address || '';
                 form.parentName.value = student.parent_name || '';
                 form.emergencyContact.value = student.emergency_contact || '';
                 form.photoPreview.src = student.photo ?
-                    'uploads/' + student.photo :
+                    'Uploads/' + student.photo :
                     'https://via.placeholder.com/100';
-                form.gradeLevel.value = student.gradeLevel;
-                updateSubjectAndSectionOptions();
-                form.class.value = student.class;
-                updateSectionOptions();
-                form.section.value = student.section;
             } else {
                 document.getElementById('profile-modal-title').textContent = 'Add New Student';
-                document.getElementById('class').innerHTML = '<option value="">Select Subject</option>';
-                document.getElementById('section').innerHTML = '<option value="">Select Section</option>';
             }
             Object.values(form).forEach(input => {
                 if (input.tagName !== 'IMG') input.disabled = mode === 'view';

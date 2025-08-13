@@ -65,36 +65,52 @@ if (isset($_POST['bulk_delete']) && isset($_POST['lrns']) && isset($_POST['class
 
 // Handle save POST
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['lrn']) && !isset($_POST['bulk_delete'])) {
+    // Set JSON content type
+    header('Content-Type: application/json; charset=utf-8');
+    
     $pdo = getDBConnection();
     $lrn = $_POST['lrn'];
-    $last_name = $_POST['last_name'];
-    $first_name = $_POST['first_name'];
-    $middle_name = $_POST['middle_name'];
-    $email = $_POST['email'];
-    $gender = $_POST['gender'];
-    $dob = $_POST['dob'];
-    $address = $_POST['address'];
-    $parent_name = $_POST['parent_name'];
-    $emergency_contact = $_POST['emergency_contact'];
-    $grade_level = $_POST['grade_level'];
-    $class = $_POST['class']; // subject_name
-    $section = $_POST['section'];
+    $last_name = $_POST['last_name'] ?? '';
+    $first_name = $_POST['first_name'] ?? '';
+    $middle_name = $_POST['middle_name'] ?? '';
+    $email = $_POST['email'] ?? null;
+    $gender = $_POST['gender'] ?? null;
+    $dob = $_POST['dob'] ?? null;
+    $address = $_POST['address'] ?? null;
+    $parent_name = $_POST['parent_name'] ?? null;
+    $emergency_contact = $_POST['emergency_contact'] ?? null;
+    $grade_level = $_POST['grade_level'] ?? null;
+    $class = $_POST['class'] ?? null; // subject_name
+    $section = $_POST['section'] ?? null;
 
+    // Validate required fields
+    if (empty($lrn) || empty($last_name) || empty($first_name) || empty($middle_name) || empty($grade_level) || empty($class) || empty($section)) {
+        echo json_encode(['success' => false, 'message' => 'Missing required fields']);
+        exit();
+    }
+
+    // Handle photo upload
     $photo = 'no-icon.png';
     if (isset($_FILES['photo']) && $_FILES['photo']['error'] == 0) {
         $ext = pathinfo($_FILES['photo']['name'], PATHINFO_EXTENSION);
         $photo = $lrn . '_photo.' . $ext;
         $path = 'Uploads/students/' . $photo;
-        move_uploaded_file($_FILES['photo']['tmp_name'], $path);
+        if (!move_uploaded_file($_FILES['photo']['tmp_name'], $path)) {
+            echo json_encode(['success' => false, 'message' => 'Failed to upload photo']);
+            exit();
+        }
     }
 
     try {
         $pdo->beginTransaction();
+
+        // Check if LRN exists in students table
         $stmt = $pdo->prepare("SELECT * FROM students WHERE lrn = ?");
         $stmt->execute([$lrn]);
         $existing = $stmt->fetch();
 
         if ($existing) {
+            // Update existing student
             if ($photo === 'no-icon.png') {
                 $photo = $existing['photo'];
             }
@@ -106,20 +122,11 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['lrn']) && !isset($_POS
                 WHERE lrn = ?
             ");
             $stmt->execute([
-                $last_name,
-                $first_name,
-                $middle_name,
-                $email,
-                $gender,
-                $dob,
-                $grade_level,
-                $address,
-                $parent_name,
-                $emergency_contact,
-                $photo,
-                $lrn
+                $last_name, $first_name, $middle_name, $email, $gender, $dob,
+                $grade_level, $address, $parent_name, $emergency_contact, $photo, $lrn
             ]);
         } else {
+            // Insert new student
             $stmt = $pdo->prepare("
                 INSERT INTO students (
                     lrn, last_name, first_name, middle_name, email, gender, 
@@ -128,21 +135,12 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['lrn']) && !isset($_POS
                 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURDATE())
             ");
             $stmt->execute([
-                $lrn,
-                $last_name,
-                $first_name,
-                $middle_name,
-                $email,
-                $gender,
-                $dob,
-                $grade_level,
-                $address,
-                $parent_name,
-                $emergency_contact,
-                $photo
+                $lrn, $last_name, $first_name, $middle_name, $email, $gender,
+                $dob, $grade_level, $address, $parent_name, $emergency_contact, $photo
             ]);
         }
 
+        // Get class_id based on grade_level, subject_name, section, and teacher_id
         $teacher_id = $user['teacher_id'];
         $stmt = $pdo->prepare("
             SELECT c.class_id 
@@ -156,23 +154,35 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['lrn']) && !isset($_POS
 
         if ($class) {
             $class_id = $class['class_id'];
+            // Check if student is already enrolled in this class
             $stmt = $pdo->prepare("
-                INSERT IGNORE INTO class_students (class_id, lrn) 
-                VALUES (?, ?)
+                SELECT * FROM class_students 
+                WHERE class_id = ? AND lrn = ?
             ");
             $stmt->execute([$class_id, $lrn]);
+            if (!$stmt->fetch()) {
+                // Insert into class_students
+                $stmt = $pdo->prepare("
+                    INSERT INTO class_students (class_id, lrn, is_enrolled, created_at) 
+                    VALUES (?, ?, 1, NOW())
+                ");
+                $stmt->execute([$class_id, $lrn]);
+            }
+        } else {
+            $pdo->rollBack();
+            echo json_encode(['success' => false, 'message' => 'Class not found']);
+            exit();
         }
 
         $pdo->commit();
-        echo json_encode(['success' => true]);
+        echo json_encode(['success' => true, 'message' => 'Student saved successfully']);
     } catch (PDOException $e) {
         $pdo->rollBack();
         error_log("Save error: " . $e->getMessage());
-        echo json_encode(['success' => false]);
+        echo json_encode(['success' => false, 'message' => 'Database error']);
     }
     exit();
 }
-
 // Fetch data for JS
 $teacher_id = $user['teacher_id'];
 $pdo = getDBConnection();
@@ -1909,22 +1919,31 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
 
         // Save student
         function saveStudent(event) {
-            event.preventDefault();
-            const formData = new FormData(document.getElementById('studentForm'));
-            fetch('', {
-                method: 'POST',
-                body: formData
-            })
-                .then(res => res.json())
-                .then(data => {
-                    if (data.success) {
-                        location.reload();
-                    } else {
-                        alert('Error saving student.');
-                    }
-                });
-        }
-
+    event.preventDefault();
+    const formData = new FormData(document.getElementById('studentForm'));
+    fetch('', {
+        method: 'POST',
+        body: formData
+    })
+        .then(res => {
+            if (!res.ok) {
+                throw new Error(`HTTP error! Status: ${res.status}`);
+            }
+            return res.json();
+        })
+        .then(data => {
+            if (data.success) {
+                alert(data.message || 'Student saved successfully');
+                location.reload();
+            } else {
+                alert(data.message || 'Error saving student');
+            }
+        })
+        .catch(error => {
+            console.error('Fetch error:', error);
+            alert('An error occurred while saving the student. Please check the console for details.');
+        });
+}
         // Clear filters
         function clearFilters() {
             searchInput.value = '';

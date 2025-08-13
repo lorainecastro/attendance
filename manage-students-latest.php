@@ -1388,6 +1388,19 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
                     </div>
                 </div>
             </div>
+            <div class="card">
+        <div class="card-header">
+            <div>
+                <div class="card-title">Students Without QR Codes</div>
+                <div class="card-value" id="no-qr-students"><?php echo htmlspecialchars($no_qr_count); ?></div>
+            </div>
+            <div class="card-icon bg-blue">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 16 16">
+                    <path d="M6.5 1A1.5 1.5 0 0 0 5 2.5V3H1.5A1.5 1.5 0 0 0 0 4.5v8A1.5 1.5 0 0 0 1.5 14h13a1.5 1.5 0 0 0 1.5-1.5v-8A1.5 1.5 0 0 0 14.5 3H11v-.5A1.5 1.5 0 0 0 9.5 1h-3zm0 1h3a.5.5 0 0 1 .5.5V3H6v-.5a.5.5 0 0 1 .5-.5zm1.886 6.914L7.5 7.028V10.5a.5.5 0 0 1-1 0V7.028L5.614 8.914a.5.5 0 0 1-.707-.707L6.793 6.32V2.75a.5.5 0 0 1 1 0v3.57l1.886-1.887a.5.5 0 0 1 .707.707z"/>
+                </svg>
+            </div>
+        </div>
+    </div>
         </div>
         <!-- Controls -->
         <div class="controls">

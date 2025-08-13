@@ -1,11 +1,21 @@
 <?php
+ini_set('display_errors', '0');
+ini_set('display_startup_errors', '0');
+error_reporting(E_ALL);
 ob_start();
+
 require 'config.php';
 session_start();
 
 // Validate session
 $user = validateSession();
 if (!$user) {
+    if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['lrn'])) {
+        header('Content-Type: application/json; charset=utf-8');
+        ob_clean();
+        echo json_encode(['success' => false, 'message' => 'Session expired, please log in again']);
+        exit();
+    }
     destroySession();
     header("Location: index.php");
     exit();
@@ -13,6 +23,8 @@ if (!$user) {
 
 // Handle GET for lrn fetch
 if (isset($_GET['lrn'])) {
+    header('Content-Type: application/json; charset=utf-8');
+    ob_clean();
     $pdo = getDBConnection();
     $lrn = $_GET['lrn'];
     $stmt = $pdo->prepare("SELECT * FROM students WHERE lrn = ?");
@@ -28,6 +40,8 @@ if (isset($_GET['lrn'])) {
 
 // Handle single student removal from class
 if (isset($_GET['delete_lrn']) && isset($_GET['class_id'])) {
+    header('Content-Type: application/json; charset=utf-8');
+    ob_clean();
     $pdo = getDBConnection();
     $lrn = $_GET['delete_lrn'];
     $class_id = $_GET['class_id'];
@@ -37,13 +51,15 @@ if (isset($_GET['delete_lrn']) && isset($_GET['class_id'])) {
         echo json_encode(['success' => true]);
     } catch (PDOException $e) {
         error_log("Remove from class error: " . $e->getMessage());
-        echo json_encode(['success' => false]);
+        echo json_encode(['success' => false, 'message' => 'Database error: ' . $e->getMessage()]);
     }
     exit();
 }
 
 // Handle bulk removal from class
 if (isset($_POST['bulk_delete']) && isset($_POST['lrns']) && isset($_POST['class_id'])) {
+    header('Content-Type: application/json; charset=utf-8');
+    ob_clean();
     $pdo = getDBConnection();
     $lrns = json_decode($_POST['lrns'], true);
     $class_id = $_POST['class_id'];
@@ -58,15 +74,15 @@ if (isset($_POST['bulk_delete']) && isset($_POST['lrns']) && isset($_POST['class
     } catch (PDOException $e) {
         $pdo->rollBack();
         error_log("Bulk remove from class error: " . $e->getMessage());
-        echo json_encode(['success' => false]);
+        echo json_encode(['success' => false, 'message' => 'Database error: ' . $e->getMessage()]);
     }
     exit();
 }
 
 // Handle save POST
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['lrn']) && !isset($_POST['bulk_delete'])) {
-    // Set JSON content type
     header('Content-Type: application/json; charset=utf-8');
+    ob_clean();
     
     $pdo = getDBConnection();
     $lrn = $_POST['lrn'];
@@ -89,12 +105,18 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['lrn']) && !isset($_POS
         exit();
     }
 
+    // Validate LRN format
+    if (!preg_match('/^\d{12}$/', $lrn)) {
+        echo json_encode(['success' => false, 'message' => 'LRN must be exactly 12 digits']);
+        exit();
+    }
+
     // Handle photo upload
-    $photo = 'no-icon.png';
+    $photo = 'no-image.png';
     if (isset($_FILES['photo']) && $_FILES['photo']['error'] == 0) {
         $ext = pathinfo($_FILES['photo']['name'], PATHINFO_EXTENSION);
         $photo = $lrn . '_photo.' . $ext;
-        $path = 'Uploads/students/' . $photo;
+        $path = 'uploads/' . $photo;
         if (!move_uploaded_file($_FILES['photo']['tmp_name'], $path)) {
             echo json_encode(['success' => false, 'message' => 'Failed to upload photo']);
             exit();
@@ -111,7 +133,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['lrn']) && !isset($_POS
 
         if ($existing) {
             // Update existing student
-            if ($photo === 'no-icon.png') {
+            if ($photo === 'no-image.png') {
                 $photo = $existing['photo'];
             }
             $stmt = $pdo->prepare("
@@ -167,6 +189,10 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['lrn']) && !isset($_POS
                     VALUES (?, ?, 1, NOW())
                 ");
                 $stmt->execute([$class_id, $lrn]);
+            } else {
+                $pdo->rollBack();
+                echo json_encode(['success' => false, 'message' => 'Student is already enrolled in this class']);
+                exit();
             }
         } else {
             $pdo->rollBack();
@@ -179,10 +205,11 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['lrn']) && !isset($_POS
     } catch (PDOException $e) {
         $pdo->rollBack();
         error_log("Save error: " . $e->getMessage());
-        echo json_encode(['success' => false, 'message' => 'Database error']);
+        echo json_encode(['success' => false, 'message' => 'Database error: ' . $e->getMessage()]);
     }
     exit();
 }
+
 // Fetch data for JS
 $teacher_id = $user['teacher_id'];
 $pdo = getDBConnection();
@@ -239,7 +266,8 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
     <title>Student Management - Student Attendance System</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-    <style>
+    <!-- <link rel="stylesheet" href="styles.css"> Your separate CSS file -->
+     <style>
         :root {
             --primary-blue: #3b82f6;
             --primary-blue-hover: #2563eb;
@@ -1208,7 +1236,6 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
     padding: var(--spacing-xs) var(--spacing-sm); /* Adjusted padding for consistency */
 }
     </style>
-
 </head>
 <body>
     <div class="container">
@@ -1347,12 +1374,12 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
                     <div class="form-column">
                         <div class="form-group">
                             <label class="form-label">LRN</label>
-                            <input type="text" class="form-input" id="student-id" maxlength="12" onkeypress="return (event.charCode !=8 && event.charCode ==0 || (event.charCode >= 48 && event.charCode <= 57))" pattern="[0-9]{12}" title="Please enter exactly 12 digits">
+                            <input type="text" class="form-input" id="student-id" name="lrn" maxlength="12" onkeypress="return (event.charCode !=8 && event.charCode ==0 || (event.charCode >= 48 && event.charCode <= 57))" pattern="[0-9]{12}" title="Please enter exactly 12 digits" required>
                         </div>
                         <div class="form-group photo-upload">
                             <div>
                                 <label class="form-label">Photo</label>
-                                <img id="student-photo-preview" src="https://via.placeholder.com/100" alt="Student Photo" class="photo-preview">
+                                <img id="student-photo-preview" src="uploads/no-icon.png" alt="Student Photo" class="photo-preview">
                             </div>
                             <div id="qr-container" class="qr-container" style="display: none;">
                                 <label class="form-label">QR Code</label>
@@ -1395,7 +1422,7 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
                     <div class="form-column">
                         <div class="form-group">
                             <label class="form-label">Grade Level</label>
-                            <select class="form-select" id="grade-level" name="grade_level">
+                            <select class="form-select" id="grade-level" name="grade_level" required>
                                 <option value="">Select Grade Level</option>
                                 <?php foreach ($gradeLevels as $grade): ?>
                                     <option value="<?php echo htmlspecialchars($grade); ?>"><?php echo htmlspecialchars($grade); ?></option>
@@ -1404,13 +1431,13 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
                         </div>
                         <div class="form-group">
                             <label class="form-label">Section</label>
-                            <select class="form-select" id="section" name="section">
+                            <select class="form-select" id="section" name="section" required>
                                 <option value="">Select Section</option>
                             </select>
                         </div>
                         <div class="form-group">
                             <label class="form-label">Subject</label>
-                            <select class="form-select" id="class" name="class">
+                            <select class="form-select" id="class" name="class" required>
                                 <option value="">Select Subject</option>
                             </select>
                         </div>
@@ -1476,7 +1503,15 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
             const lrn = this.value;
             if (lrn.length === 12) {
                 fetch(`?lrn=${lrn}`)
-                    .then(res => res.json())
+                    .then(res => {
+                        if (!res.ok) {
+                            return res.text().then(text => {
+                                console.error('Non-JSON response:', text);
+                                throw new Error(`HTTP error! Status: ${res.status}`);
+                            });
+                        }
+                        return res.json();
+                    })
                     .then(data => {
                         if (data.success) {
                             const student = data.student;
@@ -1489,11 +1524,11 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
                             document.getElementById('address').value = student.address || '';
                             document.getElementById('parent-name').value = student.parent_name || '';
                             document.getElementById('emergency-contact').value = student.emergency_contact || '';
-                            document.getElementById('grade-level').value = student.grade_level;
+                            document.getElementById('grade-level').value = student.grade_level || '';
                             document.getElementById('grade-level').dispatchEvent(new Event('change'));
                             document.getElementById('student-photo-preview').src = student.photo ?
-                                'Uploads/' + student.photo :
-                                'https://via.placeholder.com/100';
+                                'uploads/' + student.photo :
+                                'uploads/no-icon.png';
                         } else {
                             document.getElementById('first-name').value = '';
                             document.getElementById('middle-name').value = '';
@@ -1504,11 +1539,14 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
                             document.getElementById('address').value = '';
                             document.getElementById('parent-name').value = '';
                             document.getElementById('emergency-contact').value = '';
-                            document.getElementById('student-photo-preview').src = 'https://via.placeholder.com/100';
+                            document.getElementById('student-photo-preview').src = 'uploads/no-icon.png';
                         }
+                    })
+                    .catch(error => {
+                        console.error('Fetch error in autoFillStudent:', error);
                     });
-            }
         }
+    }
 
         // Update section options based on grade
         function updateSectionOptions() {
@@ -1522,6 +1560,7 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
                 option.textContent = sec;
                 sectionSelect.appendChild(option);
             });
+            document.getElementById('class').innerHTML = '<option value="">Select Subject</option>';
         }
 
         // Update subject options based on grade and section
@@ -1542,7 +1581,7 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
         // Update stats for cards
         function updateStats() {
             const totalStudents = students.length;
-            const activeStudents = students.filter(s => s.status === 'active').length; // Assume status if added
+            const activeStudents = students.filter(s => s.status === 'active').length; // Assumes status field exists
             const classesEnrolled = [...new Set(students.map(s => `${s.class}-${s.section}`))].length;
             document.getElementById('total-students').textContent = totalStudents;
             document.getElementById('active-students').textContent = activeStudents;
@@ -1642,7 +1681,7 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
                     </div>
                     <div class="student-info">
                         <p><i class="fas fa-id-card"></i> LRN: ${student.lrn}</p>
-                        <p><i class="fas fa-envelope"></i> ${student.emergency_contact}</p>
+                        <p><i class="fas fa-envelope"></i> ${student.emergency_contact || 'N/A'}</p>
                         <p><i class="fas fa-graduation-cap"></i> ${student.gradeLevel}</p>
                         <p><i class="fas fa-book"></i> ${student.class}</p>
                         <p><i class="fas fa-layer-group"></i> ${student.section}</p>
@@ -1673,7 +1712,7 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
                 const row = document.createElement('tr');
                 row.innerHTML = `
                     <td><input type="checkbox" class="row-checkbox" data-id="${student.lrn}" data-class-id="${student.class_id}"></td>
-                    <td><img src="Uploads/${student.photo}" alt="${student.fullName}" style="width: 45px; height: 45px; border-radius: 50%;"></td>
+                    <td><img src="${student.photo ? 'uploads/' + student.photo : 'uploads/no-icon.png'}" alt="${student.fullName}" style="width: 45px; height: 45px; border-radius: 50%;"></td>
                     <td>${student.lrn}</td>
                     <td>${student.fullName}</td>
                     <td>${student.gradeLevel}</td>
@@ -1751,7 +1790,7 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
             const csv = [
                 'LRN,Last Name,First Name,Middle Name,Email,Gender,Grade Level,Subject,Section,Address,Emergency Contact',
                 ...selectedStudents.map(s =>
-                    `${s.lrn},${s.last_name},${s.first_name},${s.middle_name},${s.email},${s.gender},${s.gradeLevel},${s.class},${s.section},${s.address},${s.emergency_contact}`
+                    `${s.lrn},${s.last_name},${s.first_name},${s.middle_name},${s.email || ''},${s.gender},${s.gradeLevel},${s.class},${s.section},${s.address || ''},${s.emergency_contact || ''}`
                 )
             ].join('\n');
             const blob = new Blob([csv], { type: 'text/csv' });
@@ -1789,14 +1828,26 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                 body: `bulk_delete=true&lrns=${encodeURIComponent(JSON.stringify(lrns))}&class_id=${class_id}`
             })
-                .then(res => res.json())
+                .then(res => {
+                    if (!res.ok) {
+                        return res.text().then(text => {
+                            console.error('Non-JSON response:', text);
+                            throw new Error(`HTTP error! Status: ${res.status}`);
+                        });
+                    }
+                    return res.json();
+                })
                 .then(data => {
                     if (data.success) {
                         students = students.filter(s => !lrns.includes(s.lrn.toString()) || s.class_id != class_id);
                         applyFilters();
                     } else {
-                        alert('Error removing students from class.');
+                        alert(data.message || 'Error removing students from class.');
                     }
+                })
+                .catch(error => {
+                    console.error('Fetch error in bulkDelete:', error);
+                    alert('An error occurred while removing students. Please check the console for details.');
                 });
         }
 
@@ -1811,14 +1862,26 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
             }
             if (!confirm('Are you sure you want to remove this student from the selected class?')) return;
             fetch(`?delete_lrn=${lrn}&class_id=${class_id}`)
-                .then(res => res.json())
+                .then(res => {
+                    if (!res.ok) {
+                        return res.text().then(text => {
+                            console.error('Non-JSON response:', text);
+                            throw new Error(`HTTP error! Status: ${res.status}`);
+                        });
+                    }
+                    return res.json();
+                })
                 .then(data => {
                     if (data.success) {
                         students = students.filter(s => s.lrn != lrn || s.class_id != class_id);
                         applyFilters();
                     } else {
-                        alert('Error removing student from class.');
+                        alert(data.message || 'Error removing student from class.');
                     }
+                })
+                .catch(error => {
+                    console.error('Fetch error in deleteStudent:', error);
+                    alert('An error occurred while removing the student. Please check the console for details.');
                 });
         }
 
@@ -1841,7 +1904,7 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
                 photoPreview: document.getElementById('student-photo-preview')
             };
             Object.values(form).forEach(input => {
-                if (input.tagName === 'IMG') input.src = 'https://via.placeholder.com/100';
+                if (input.tagName === 'IMG') input.src = 'uploads/no-icon.png';
                 else if (input.tagName === 'SELECT') input.value = '';
                 else input.value = '';
             });
@@ -1870,8 +1933,8 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
                 form.parentName.value = student.parent_name || '';
                 form.emergencyContact.value = student.emergency_contact || '';
                 form.photoPreview.src = student.photo ?
-                    'Uploads/' + student.photo :
-                    'https://via.placeholder.com/100';
+                    'uploads/' + student.photo :
+                    'uploads/no-icon.png';
 
                 // Find the class details based on class_id
                 const studentClass = classes.find(c => String(c.class_id) === String(student.class_id));
@@ -1919,31 +1982,39 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
 
         // Save student
         function saveStudent(event) {
-    event.preventDefault();
-    const formData = new FormData(document.getElementById('studentForm'));
-    fetch('', {
-        method: 'POST',
-        body: formData
-    })
-        .then(res => {
-            if (!res.ok) {
-                throw new Error(`HTTP error! Status: ${res.status}`);
-            }
-            return res.json();
-        })
-        .then(data => {
-            if (data.success) {
-                alert(data.message || 'Student saved successfully');
-                location.reload();
-            } else {
-                alert(data.message || 'Error saving student');
-            }
-        })
-        .catch(error => {
-            console.error('Fetch error:', error);
-            alert('An error occurred while saving the student. Please check the console for details.');
-        });
-}
+            event.preventDefault();
+            const formData = new FormData(document.getElementById('studentForm'));
+            fetch('', {
+                method: 'POST',
+                body: formData
+            })
+                .then(res => {
+                    console.log('Response Status:', res.status);
+                    console.log('Response Headers:', [...res.headers.entries()]);
+                    if (!res.ok) {
+                        return res.text().then(text => {
+                            console.error('Non-JSON response:', text);
+                            throw new Error(`HTTP error! Status: ${res.status}`);
+                        });
+                    }
+                    return res.json();
+                })
+                .then(data => {
+                    if (data.success) {
+                        alert(data.message || 'Student saved successfully');
+                        document.getElementById('studentForm').reset();
+                        closeModal('profile');
+                        location.reload();
+                    } else {
+                        alert(data.message || 'Error saving student');
+                    }
+                })
+                .catch(error => {
+                    console.error('Fetch error in saveStudent:', error);
+                    alert('An error occurred while saving the student. Please check the console for details.');
+                });
+        }
+
         // Clear filters
         function clearFilters() {
             searchInput.value = '';

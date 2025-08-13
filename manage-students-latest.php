@@ -1842,15 +1842,15 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
 
         // Render pagination
         function renderPagination(totalRows) {
-    const pageCount = Math.ceil(totalRows / rowsPerPage);
-    pagination.innerHTML = `
-        <button class="pagination-btn" onclick="changePage(${currentPage - 1})" ${currentPage === 1 ? 'disabled' : ''}>Previous</button>
-        ${Array.from({ length: pageCount }, (_, i) => `
-            <button class="pagination-btn ${currentPage === i + 1 ? 'active' : ''}" onclick="changePage(${i + 1})">${i + 1}</button>
-        `).join('')}
-        <button class="pagination-btn" onclick="changePage(${currentPage + 1})" ${currentPage === pageCount ? 'disabled' : ''}>Next</button>
-    `;
-}
+            const pageCount = Math.ceil(totalRows / rowsPerPage);
+            pagination.innerHTML = `
+                <button class="pagination-btn" onclick="changePage(${currentPage - 1})" ${currentPage === 1 ? 'disabled' : ''}>Previous</button>
+                ${Array.from({ length: pageCount }, (_, i) => `
+                    <button class="pagination-btn ${currentPage === i + 1 ? 'active' : ''}" onclick="changePage(${i + 1})">${i + 1}</button>
+                `).join('')}
+                <button class="pagination-btn" onclick="changePage(${currentPage + 1})" ${currentPage === pageCount ? 'disabled' : ''}>Next</button>
+            `;
+        }
 
         // Change page
         function changePage(page) {

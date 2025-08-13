@@ -1572,7 +1572,7 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
         let subjects = <?php echo json_encode($subjects); ?>;
         let sections = <?php echo json_encode($sections); ?>;
         let currentPage = 1;
-        const rowsPerPage = 10;
+        const rowsPerPage = 5;
         let currentView = 'table';
 
         // DOM Elements

@@ -1685,78 +1685,62 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
         }
 
         // Open profile modal
-        function openProfileModal(mode, lrn = null) {
-            const form = {
-                studentId: document.getElementById('student-id'),
-                firstName: document.getElementById('first-name'),
-                middleName: document.getElementById('middle-name'),
-                lastName: document.getElementById('last-name'),
-                email: document.getElementById('email'),
-                gender: document.getElementById('gender'),
-                dob: document.getElementById('dob'),
-                gradeLevel: document.getElementById('grade-level'),
-                class: document.getElementById('class'),
-                section: document.getElementById('section'),
-                address: document.getElementById('address'),
-                parentName: document.getElementById('parent-name'),
-                emergencyContact: document.getElementById('emergency-contact'),
-                photoPreview: document.getElementById('student-photo-preview')
-            };
-            Object.values(form).forEach(input => {
-                if (input.tagName === 'IMG') input.src = 'https://via.placeholder.com/100';
-                else if (input.tagName === 'SELECT') input.value = '';
-                else input.value = '';
-            });
-            const qrContainer = document.getElementById('qr-container');
-            const qrCodeDiv = document.getElementById('qr-code');
-            qrCodeDiv.innerHTML = '';
-            qrContainer.style.display = 'none';
-            if (mode !== 'add' && lrn) {
-                const student = students.find(s => s.lrn == lrn);
-                document.getElementById('profile-modal-title').textContent = `${student.fullName}'s Profile`;
-                form.studentId.value = student.lrn;
-                form.firstName.value = student.first_name;
-                form.middleName.value = student.middle_name;
-                form.lastName.value = student.last_name;
-                form.email.value = student.email || '';
-                form.gender.value = student.gender || 'Male';
-                form.dob.value = student.dob || '';
-                form.gradeLevel.value = student.gradeLevel;
-                form.class.value = student.class;
-                form.section.value = student.section;
-                form.address.value = student.address || '';
-                form.parentName.value = student.parent_name || '';
-                form.emergencyContact.value = student.emergency_contact || '';
-                form.photoPreview.src = student.photo 
-    ? 'uploads/' + student.photo 
-    : 'https://via.placeholder.com/100';
-
-                if (mode === 'view') {
-                    qrContainer.style.display = 'flex';
-                    const qrData = JSON.stringify({
-                        lrn: student.lrn,
-                        fullName: student.fullName,
-                        gradeLevel: student.gradeLevel,
-                        class: student.class,
-                        section: student.section
-                    });
-                    new QRCode(qrCodeDiv, {
-                        text: qrData,
-                        width: 100,
-                        height: 100
-                    });
-                }
-            } else {
-                document.getElementById('profile-modal-title').textContent = 'Add New Student';
-            }
-            Object.values(form).forEach(input => {
-                if (input.tagName !== 'IMG') input.disabled = mode === 'view';
-            });
-            document.querySelector('.photo-upload .btn').style.display = mode === 'view' ? 'none' : 'inline-flex';
-            document.querySelector('.form-actions .btn-primary').style.display = mode === 'view' ? 'none' : 'inline-flex';
-            profileModal.classList.add('show');
-        }
-
+        // Open profile modal
+function openProfileModal(mode, lrn = null) {
+    const form = {
+        studentId: document.getElementById('student-id'),
+        firstName: document.getElementById('first-name'),
+        middleName: document.getElementById('middle-name'),
+        lastName: document.getElementById('last-name'),
+        email: document.getElementById('email'),
+        gender: document.getElementById('gender'),
+        dob: document.getElementById('dob'),
+        gradeLevel: document.getElementById('grade-level'),
+        class: document.getElementById('class'),
+        section: document.getElementById('section'),
+        address: document.getElementById('address'),
+        parentName: document.getElementById('parent-name'),
+        emergencyContact: document.getElementById('emergency-contact'),
+        photoPreview: document.getElementById('student-photo-preview')
+    };
+    Object.values(form).forEach(input => {
+        if (input.tagName === 'IMG') input.src = 'https://via.placeholder.com/100';
+        else if (input.tagName === 'SELECT') input.value = '';
+        else input.value = '';
+    });
+    const qrContainer = document.getElementById('qr-container');
+    const qrCodeDiv = document.getElementById('qr-code');
+    qrCodeDiv.innerHTML = '';
+    qrContainer.style.display = 'none'; // Keep QR code hidden in all modes
+    if (mode !== 'add' && lrn) {
+        const student = students.find(s => s.lrn == lrn);
+        document.getElementById('profile-modal-title').textContent = `${student.fullName}'s Profile`;
+        form.studentId.value = student.lrn;
+        form.firstName.value = student.first_name;
+        form.middleName.value = student.middle_name;
+        form.lastName.value = student.last_name;
+        form.email.value = student.email || '';
+        form.gender.value = student.gender || 'Male';
+        form.dob.value = student.dob || '';
+        form.gradeLevel.value = student.gradeLevel;
+        form.class.value = student.class;
+        form.section.value = student.section;
+        form.address.value = student.address || '';
+        form.parentName.value = student.parent_name || '';
+        form.emergencyContact.value = student.emergency_contact || '';
+        form.photoPreview.src = student.photo 
+            ? 'Uploads/' + student.photo 
+            : 'https://via.placeholder.com/100';
+    } else {
+        document.getElementById('profile-modal-title').textContent = 'Add New Student';
+    }
+    Object.values(form).forEach(input => {
+        if (input.tagName !== 'IMG') input.disabled = mode === 'view';
+    });
+    document.querySelector('.photo-upload .btn').style.display = mode === 'view' ? 'none' : 'inline-flex';
+    document.querySelector('.form-actions .btn-primary').style.display = mode === 'view' ? 'none' : 'inline-flex';
+    profileModal.classList.add('show');
+}
         // Preview photo
         function previewPhoto(event) {
             const file = event.target.files[0];

@@ -250,6 +250,17 @@ foreach ($students_data as &$row) {
     $row['fullName'] = $row['last_name'] . ', ' . $row['first_name'] . ' ' . $row['middle_name'];
 }
 
+// Fetch count of students without QR codes
+$stmt = $pdo->prepare("
+    SELECT COUNT(DISTINCT s.lrn) AS no_qr_count
+    FROM class_students cs
+    JOIN classes c ON cs.class_id = c.class_id
+    JOIN students s ON cs.lrn = s.lrn
+    WHERE c.teacher_id = ? AND s.qr_code IS NULL
+");
+$stmt->execute([$teacher_id]);
+$no_qr_count = $stmt->fetchColumn();
+
 // Fetch classes data for dynamic dropdowns
 $stmt = $pdo->prepare("
     SELECT c.class_id, c.grade_level, sub.subject_name, c.section_name 

@@ -84,7 +84,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['lrn']) && !isset($_POS
     if (isset($_FILES['photo']) && $_FILES['photo']['error'] == 0) {
         $ext = pathinfo($_FILES['photo']['name'], PATHINFO_EXTENSION);
         $photo = $lrn . '_photo.' . $ext;
-        $path = 'uploads/students/' . $photo;
+        $path = 'Uploads/students/' . $photo;
         move_uploaded_file($_FILES['photo']['tmp_name'], $path);
     }
 
@@ -223,7 +223,6 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
 ?>
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -886,25 +885,13 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
         }
 
         @keyframes fadeIn {
-            from {
-                opacity: 0;
-            }
-
-            to {
-                opacity: 1;
-            }
+            from { opacity: 0; }
+            to { opacity: 1; }
         }
 
         @keyframes slideIn {
-            from {
-                transform: translateY(-20px);
-                opacity: 0;
-            }
-
-            to {
-                transform: translateY(0);
-                opacity: 1;
-            }
+            from { transform: translateY(-20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
         }
 
         @media (max-width: 1024px) {
@@ -924,96 +911,60 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
         }
 
         @media (max-width: 768px) {
-            body {
-                padding: var(--spacing-sm);
-            }
-
+            body { padding: var(--spacing-sm); }
             .controls-left {
                 flex-direction: column;
                 gap: var(--spacing-xs);
             }
-
             .controls-right {
                 flex-direction: column;
                 gap: var(--spacing-xs);
             }
-
             .search-container {
                 min-width: auto;
                 width: 100%;
             }
-
-            .filter-select {
-                width: 100%;
-            }
-
+            .filter-select { width: 100%; }
             .btn {
                 width: 100%;
                 justify-content: center;
             }
-
             .view-toggle {
                 width: 100%;
                 justify-content: space-between;
             }
-
-            .student-grid {
-                grid-template-columns: 1fr;
-            }
-
+            .student-grid { grid-template-columns: 1fr; }
             .modal-content {
                 width: 98%;
                 max-height: 95vh;
             }
-
             .modal-form {
                 grid-template-columns: 1fr;
                 padding: var(--spacing-lg);
             }
-
             .form-actions {
                 flex-direction: column;
                 gap: var(--spacing-sm);
             }
-
             .form-actions .btn {
                 width: 100%;
                 justify-content: center;
             }
-
             .table th:nth-child(n+6),
-            .table td:nth-child(n+6) {
-                display: none;
-            }
+            .table td:nth-child(n+6) { display: none; }
         }
 
         @media (max-width: 576px) {
-            h1 {
-                font-size: var(--font-size-xl);
-            }
-
+            h1 { font-size: var(--font-size-xl); }
             .table th:nth-child(n+4),
-            .table td:nth-child(n+4) {
-                display: none;
-            }
-
-            .student-card {
-                padding: var(--spacing-sm);
-            }
-
-            .student-actions {
-                flex-direction: column;
-            }
-
+            .table td:nth-child(n+4) { display: none; }
+            .student-card { padding: var(--spacing-sm); }
+            .student-actions { flex-direction: column; }
             .student-actions .btn {
                 width: 100%;
                 justify-content: center;
             }
-
-            .view-toggle {
-                width: 100%;
-            }
-
+            .view-toggle { width: 100%; }
             .view-btn {
                 flex: 1;
                 justify-content: center;
@@ -1021,192 +972,16 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
         }
 
         @media print {
-
-            .controls,
-            .bulk-actions,
-            .student-actions,
-            .modal {
-                display: none !important;
-            }
-
-            body {
-                padding: 0;
-            }
-
+            .controls, .bulk-actions, .student-actions, .modal { display: none !important; }
+            body { padding: 0; }
             .student-card {
                 box-shadow: none;
                 border: 1px solid var(--border-color);
                 page-break-inside: avoid;
             }
         }
-    </style>
 
-    <style>
-        .controls {
-            background: var(--card-bg);
-            border-radius: var(--radius-md);
-            padding: var(--spacing-md);
-            box-shadow: var(--shadow-md);
-            margin-bottom: var(--spacing-lg);
-            display: flex;
-            flex-wrap: wrap;
-            gap: var(--spacing-sm);
-            align-items: center;
-            border: 1px solid var(--border-color);
-        }
-
-        .controls-left {
-            display: flex;
-            flex-wrap: wrap;
-            gap: var(--spacing-sm);
-            flex: 1;
-            align-items: center;
-        }
-
-        .controls-right {
-            display: flex;
-            flex-wrap: wrap;
-            gap: var(--spacing-sm);
-            align-items: center;
-        }
-
-        .controls-right .btn.btn-primary {
-            order: 1;
-            /* Places "Add Student" button first */
-        }
-
-        .controls-right .view-toggle {
-            order: 2;
-            /* Places view-toggle after the button */
-        }
-
-
-        .controls-right .btn.btn-primary,
-        .controls-right .view-btn {
-            height: 36px;
-            /* Uniform height */
-            padding: 8px 12px;
-            /* Consistent padding */
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .controls-right .view-btn {
-            width: 38px;
-            /* Square buttons for view toggle */
-            padding: 0;
-            /* Remove padding for icon-only buttons */
-        }
-
-        .controls-right .view-btn.active {
-            background: #007bff;
-            color: white;
-            border-color: #007bff;
-        }
-
-        .controls-right {
-            display: flex;
-            flex-direction: column;
-            align-items: flex-start;
-            /* Aligns items to the start */
-            gap: var(--spacing-sm);
-        }
-
-        .search-container {
-            position: relative;
-            min-width: 200px;
-            flex: 1;
-        }
-
-        .search-input {
-            width: 100%;
-            padding: var(--spacing-xs) var(--spacing-md) var(--spacing-xs) 2.5rem;
-            border: 1px solid var(--border-color);
-            border-radius: var(--radius-sm);
-            font-size: var(--font-size-sm);
-            background: var(--inputfield-color);
-            transition: var(--transition-normal);
-        }
-
-        .search-icon {
-            position: absolute;
-            left: var(--spacing-sm);
-            top: 55%;
-            transform: translateY(-50%);
-            color: var(--grayfont-color);
-            font-size: 0.875rem;
-        }
-
-        .filter-select {
-            min-width: 180px;
-            padding: var(--spacing-xs) var(--spacing-sm);
-            width: 180px;
-            height: 38px;
-            box-sizing: border-box;
-        }
-
-        .btn {
-            padding: var(--spacing-xs) var(--spacing-md);
-            font-size: var(--font-size-sm);
-        }
-
-        .view-toggle {
-            border: 1px solid var(--border-color);
-            border-radius: var(--radius-sm);
-            overflow: hidden;
-            background: var(--inputfield-color);
-            display: flex;
-        }
-
-        .view-btn {
-            padding: var(--spacing-xs) var(--spacing-sm);
-            font-size: 0.875rem;
-        }
-
-        @media (max-width: 1024px) {
-            .controls {
-                flex-direction: column;
-                align-items: stretch;
-            }
-
-            .controls-right {
-                justify-content: flex-start;
-                margin-top: var(--spacing-sm);
-            }
-        }
-
-        @media (max-width: 768px) {
-            .controls-left {
-                flex-direction: column;
-                gap: var(--spacing-xs);
-            }
-
-            .controls-right {
-                flex-direction: column;
-                gap: var(--spacing-xs);
-            }
-
-            .search-container {
-                min-width: auto;
-                width: 100%;
-            }
-
-            .filter-select {
-                width: 100%;
-            }
-
-            .btn {
-                width: 100%;
-                justify-content: center;
-            }
-
-            .view-toggle {
-                width: 100%;
-                justify-content: space-between;
-            }
-        }
-
+        .controls-right { display: flex; flex-direction: column; align-items: flex-start; gap: var(--spacing-sm); }
         .preview-table-container {
             margin-top: var(--spacing-lg);
             background: var(--card-bg);
@@ -1215,7 +990,6 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
             box-shadow: var(--shadow-md);
             border: 1px solid var(--border-color);
         }
-
         .preview-table-container h3 {
             font-size: var(--font-size-lg);
             font-weight: 600;
@@ -1223,42 +997,7 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
             margin-bottom: var(--spacing-md);
         }
     </style>
-
-    <style>
-        .student-actions {
-            display: flex;
-            gap: 10px;
-            flex-wrap: nowrap;
-            /* Prevents wrapping to new lines */
-            align-items: center;
-            /* Vertically centers the buttons */
-        }
-
-        .student-actions .btn {
-            white-space: nowrap;
-            /* Prevents text wrapping within buttons */
-            min-width: auto;
-            /* Allows buttons to size naturally */
-        }
-
-        .table td .actions {
-            display: flex;
-            gap: 10px;
-            /* Consistent spacing between buttons */
-            align-items: center;
-            /* Vertically centers the buttons */
-        }
-
-        .table td .actions .btn {
-            white-space: nowrap;
-            /* Prevents text wrapping within buttons */
-            padding: var(--spacing-xs) var(--spacing-sm);
-            /* Adjusted padding for consistency */
-        }
-    </style>
-
 </head>
-
 <body>
     <div class="container">
         <h1>Student Management</h1>
@@ -1447,7 +1186,7 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
                             <select class="form-select" id="grade-level" name="grade_level">
                                 <option value="">Select Grade Level</option>
                                 <?php foreach ($gradeLevels as $grade): ?>
-                                    <option value="<?php echo $grade; ?>"><?php echo $grade; ?></option>
+                                    <option value="<?php echo htmlspecialchars($grade); ?>"><?php echo htmlspecialchars($grade); ?></option>
                                 <?php endforeach; ?>
                             </select>
                         </div>
@@ -1539,9 +1278,8 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
                             document.getElementById('parent-name').value = student.parent_name || '';
                             document.getElementById('emergency-contact').value = student.emergency_contact || '';
                             document.getElementById('student-photo-preview').src = student.photo ?
-                                'uploads/' + student.photo :
+                                'Uploads/' + student.photo :
                                 'https://via.placeholder.com/100';
-
                         } else {
                             document.getElementById('first-name').value = '';
                             document.getElementById('middle-name').value = '';
@@ -1552,10 +1290,7 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
                             document.getElementById('address').value = '';
                             document.getElementById('parent-name').value = '';
                             document.getElementById('emergency-contact').value = '';
-                            document.getElementById('student-photo-preview').src = student.photo ?
-                                'uploads/' + student.photo :
-                                'https://via.placeholder.com/100';
-
+                            document.getElementById('student-photo-preview').src = 'https://via.placeholder.com/100';
                         }
                     });
             }
@@ -1725,7 +1460,7 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
                 const row = document.createElement('tr');
                 row.innerHTML = `
                     <td><input type="checkbox" class="row-checkbox" data-id="${student.lrn}" data-class-id="${student.class_id}"></td>
-                    <td><img src="uploads/${student.photo}" alt="${student.fullName}" style="width: 45px; height: 45px; border-radius: 50%;"></td>
+                    <td><img src="Uploads/${student.photo}" alt="${student.fullName}" style="width: 45px; height: 45px; border-radius: 50%;"></td>
                     <td>${student.lrn}</td>
                     <td>${student.fullName}</td>
                     <td>${student.gradeLevel}</td>
@@ -1806,9 +1541,7 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
                     `${s.lrn},${s.last_name},${s.first_name},${s.middle_name},${s.email},${s.gender},${s.gradeLevel},${s.class},${s.section},${s.address},${s.emergency_contact}`
                 )
             ].join('\n');
-            const blob = new Blob([csv], {
-                type: 'text/csv'
-            });
+            const blob = new Blob([csv], { type: 'text/csv' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
@@ -1839,12 +1572,10 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
                 return;
             }
             fetch('', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded'
-                    },
-                    body: `bulk_delete=true&lrns=${encodeURIComponent(JSON.stringify(lrns))}&class_id=${class_id}`
-                })
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: `bulk_delete=true&lrns=${encodeURIComponent(JSON.stringify(lrns))}&class_id=${class_id}`
+            })
                 .then(res => res.json())
                 .then(data => {
                     if (data.success) {
@@ -1879,80 +1610,88 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
         }
 
         // Open profile modal
-        // Open profile modal
-function openProfileModal(mode, lrn = null) {
-    const form = {
-        studentId: document.getElementById('student-id'),
-        firstName: document.getElementById('first-name'),
-        middleName: document.getElementById('middle-name'),
-        lastName: document.getElementById('last-name'),
-        email: document.getElementById('email'),
-        gender: document.getElementById('gender'),
-        dob: document.getElementById('dob'),
-        gradeLevel: document.getElementById('grade-level'),
-        class: document.getElementById('class'),
-        section: document.getElementById('section'),
-        address: document.getElementById('address'),
-        parentName: document.getElementById('parent-name'),
-        emergencyContact: document.getElementById('emergency-contact'),
-        photoPreview: document.getElementById('student-photo-preview')
-    };
-    Object.values(form).forEach(input => {
-        if (input.tagName === 'IMG') input.src = 'https://via.placeholder.com/100';
-        else if (input.tagName === 'SELECT') input.value = '';
-        else input.value = '';
-    });
-    const qrContainer = document.getElementById('qr-container');
-    const qrCodeDiv = document.getElementById('qr-code');
-    qrCodeDiv.innerHTML = '';
-    qrContainer.style.display = 'none'; // Keep QR code hidden in all modes
+        function openProfileModal(mode, lrn = null) {
+            const form = {
+                studentId: document.getElementById('student-id'),
+                firstName: document.getElementById('first-name'),
+                middleName: document.getElementById('middle-name'),
+                lastName: document.getElementById('last-name'),
+                email: document.getElementById('email'),
+                gender: document.getElementById('gender'),
+                dob: document.getElementById('dob'),
+                gradeLevel: document.getElementById('grade-level'),
+                class: document.getElementById('class'),
+                section: document.getElementById('section'),
+                address: document.getElementById('address'),
+                parentName: document.getElementById('parent-name'),
+                emergencyContact: document.getElementById('emergency-contact'),
+                photoPreview: document.getElementById('student-photo-preview')
+            };
+            Object.values(form).forEach(input => {
+                if (input.tagName === 'IMG') input.src = 'https://via.placeholder.com/100';
+                else if (input.tagName === 'SELECT') input.value = '';
+                else input.value = '';
+            });
+            const qrContainer = document.getElementById('qr-container');
+            const qrCodeDiv = document.getElementById('qr-code');
+            qrCodeDiv.innerHTML = '';
+            qrContainer.style.display = 'none';
 
-    if (mode !== 'add' && lrn) {
-        const student = students.find(s => s.lrn == lrn);
-        document.getElementById('profile-modal-title').textContent = `${student.fullName}'s Profile`;
-        form.studentId.value = student.lrn;
-        form.firstName.value = student.first_name;
-        form.middleName.value = student.middle_name;
-        form.lastName.value = student.last_name;
-        form.email.value = student.email || '';
-        form.gender.value = student.gender || 'Male';
-        form.dob.value = student.dob || '';
-        form.address.value = student.address || '';
-        form.parentName.value = student.parent_name || '';
-        form.emergencyContact.value = student.emergency_contact || '';
-        form.photoPreview.src = student.photo ?
-            'Uploads/' + student.photo :
-            'https://via.placeholder.com/100';
+            if (mode !== 'add' && lrn) {
+                const student = students.find(s => s.lrn == lrn);
+                if (!student) {
+                    console.error(`No student found for LRN: ${lrn}`);
+                    alert('Student not found.');
+                    return;
+                }
+                console.log('Student:', student);
+                document.getElementById('profile-modal-title').textContent = `${student.fullName}'s Profile`;
+                form.studentId.value = student.lrn;
+                form.firstName.value = student.first_name;
+                form.middleName.value = student.middle_name;
+                form.lastName.value = student.last_name;
+                form.email.value = student.email || '';
+                form.gender.value = student.gender || 'Male';
+                form.dob.value = student.dob || '';
+                form.address.value = student.address || '';
+                form.parentName.value = student.parent_name || '';
+                form.emergencyContact.value = student.emergency_contact || '';
+                form.photoPreview.src = student.photo ?
+                    'Uploads/' + student.photo :
+                    'https://via.placeholder.com/100';
 
-        // Find the class details based on class_id
-        const studentClass = classes.find(c => c.class_id == student.class_id);
-        if (studentClass) {
-            form.gradeLevel.value = studentClass.grade_level; // Set grade level based on class_id
-            updateSubjectAndSectionOptions(); // Update subject options based on grade level
-            form.class.value = studentClass.subject_name; // Set subject
-            updateSectionOptions(); // Update section options based on grade and subject
-            form.section.value = studentClass.section_name; // Set section
-        } else {
-            // Fallback to student's gradeLevel if class_id not found
-            form.gradeLevel.value = student.gradeLevel;
-            updateSubjectAndSectionOptions();
-            form.class.value = student.class;
-            updateSectionOptions();
-            form.section.value = student.section;
+                // Find the class details based on class_id
+                const studentClass = classes.find(c => String(c.class_id) === String(student.class_id));
+                console.log('Student Class:', studentClass);
+                if (studentClass) {
+                    form.gradeLevel.value = studentClass.grade_level;
+                    console.log('Setting gradeLevel to:', studentClass.grade_level);
+                    updateSubjectAndSectionOptions();
+                    form.class.value = studentClass.subject_name;
+                    updateSectionOptions();
+                    form.section.value = studentClass.section_name;
+                } else {
+                    console.warn(`No class found for class_id: ${student.class_id}, using fallback`);
+                    form.gradeLevel.value = student.gradeLevel || '';
+                    updateSubjectAndSectionOptions();
+                    form.class.value = student.class || '';
+                    updateSectionOptions();
+                    form.section.value = student.section || '';
+                }
+            } else {
+                document.getElementById('profile-modal-title').textContent = 'Add New Student';
+                document.getElementById('class').innerHTML = '<option value="">Select Subject</option>';
+                document.getElementById('section').innerHTML = '<option value="">Select Section</option>';
+            }
+
+            Object.values(form).forEach(input => {
+                if (input.tagName !== 'IMG') input.disabled = mode === 'view';
+            });
+            document.querySelector('.photo-upload .btn').style.display = mode === 'view' ? 'none' : 'inline-flex';
+            document.querySelector('.form-actions .btn-primary').style.display = mode === 'view' ? 'none' : 'inline-flex';
+            profileModal.classList.add('show');
         }
-    } else {
-        document.getElementById('profile-modal-title').textContent = 'Add New Student';
-        document.getElementById('class').innerHTML = '<option value="">Select Subject</option>';
-        document.getElementById('section').innerHTML = '<option value="">Select Section</option>';
-    }
 
-    Object.values(form).forEach(input => {
-        if (input.tagName !== 'IMG') input.disabled = mode === 'view';
-    });
-    document.querySelector('.photo-upload .btn').style.display = mode === 'view' ? 'none' : 'inline-flex';
-    document.querySelector('.form-actions .btn-primary').style.display = mode === 'view' ? 'none' : 'inline-flex';
-    profileModal.classList.add('show');
-}
         // Preview photo
         function previewPhoto(event) {
             const file = event.target.files[0];
@@ -1970,9 +1709,9 @@ function openProfileModal(mode, lrn = null) {
             event.preventDefault();
             const formData = new FormData(document.getElementById('studentForm'));
             fetch('', {
-                    method: 'POST',
-                    body: formData
-                })
+                method: 'POST',
+                body: formData
+            })
                 .then(res => res.json())
                 .then(data => {
                     if (data.success) {
@@ -2026,5 +1765,4 @@ function openProfileModal(mode, lrn = null) {
         }
     </script>
 </body>
-
 </html>

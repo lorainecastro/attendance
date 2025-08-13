@@ -83,7 +83,7 @@ if (isset($_POST['bulk_delete']) && isset($_POST['lrns']) && isset($_POST['class
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['lrn']) && !isset($_POST['bulk_delete'])) {
     header('Content-Type: application/json; charset=utf-8');
     ob_clean();
-    
+
     $pdo = getDBConnection();
     $lrn = $_POST['lrn'];
     $last_name = $_POST['last_name'] ?? '';
@@ -144,8 +144,18 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['lrn']) && !isset($_POS
                 WHERE lrn = ?
             ");
             $stmt->execute([
-                $last_name, $first_name, $middle_name, $email, $gender, $dob,
-                $grade_level, $address, $parent_name, $emergency_contact, $photo, $lrn
+                $last_name,
+                $first_name,
+                $middle_name,
+                $email,
+                $gender,
+                $dob,
+                $grade_level,
+                $address,
+                $parent_name,
+                $emergency_contact,
+                $photo,
+                $lrn
             ]);
         } else {
             // Insert new student
@@ -157,8 +167,18 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['lrn']) && !isset($_POS
                 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURDATE())
             ");
             $stmt->execute([
-                $lrn, $last_name, $first_name, $middle_name, $email, $gender,
-                $dob, $grade_level, $address, $parent_name, $emergency_contact, $photo
+                $lrn,
+                $last_name,
+                $first_name,
+                $middle_name,
+                $email,
+                $gender,
+                $dob,
+                $grade_level,
+                $address,
+                $parent_name,
+                $emergency_contact,
+                $photo
             ]);
         }
 
@@ -260,6 +280,7 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
 ?>
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -267,7 +288,7 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <!-- <link rel="stylesheet" href="styles.css"> Your separate CSS file -->
-     <style>
+    <style>
         :root {
             --primary-blue: #3b82f6;
             --primary-blue-hover: #2563eb;
@@ -923,13 +944,25 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
         }
 
         @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
+            from {
+                opacity: 0;
+            }
+
+            to {
+                opacity: 1;
+            }
         }
 
         @keyframes slideIn {
-            from { transform: translateY(-20px); opacity: 0; }
-            to { transform: translateY(0); opacity: 1; }
+            from {
+                transform: translateY(-20px);
+                opacity: 0;
+            }
+
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
         }
 
         @media (max-width: 1024px) {
@@ -949,60 +982,96 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
         }
 
         @media (max-width: 768px) {
-            body { padding: var(--spacing-sm); }
+            body {
+                padding: var(--spacing-sm);
+            }
+
             .controls-left {
                 flex-direction: column;
                 gap: var(--spacing-xs);
             }
+
             .controls-right {
                 flex-direction: column;
                 gap: var(--spacing-xs);
             }
+
             .search-container {
                 min-width: auto;
                 width: 100%;
             }
-            .filter-select { width: 100%; }
+
+            .filter-select {
+                width: 100%;
+            }
+
             .btn {
                 width: 100%;
                 justify-content: center;
             }
+
             .view-toggle {
                 width: 100%;
                 justify-content: space-between;
             }
-            .student-grid { grid-template-columns: 1fr; }
+
+            .student-grid {
+                grid-template-columns: 1fr;
+            }
+
             .modal-content {
                 width: 98%;
                 max-height: 95vh;
             }
+
             .modal-form {
                 grid-template-columns: 1fr;
                 padding: var(--spacing-lg);
             }
+
             .form-actions {
                 flex-direction: column;
                 gap: var(--spacing-sm);
             }
+
             .form-actions .btn {
                 width: 100%;
                 justify-content: center;
             }
+
             .table th:nth-child(n+6),
-            .table td:nth-child(n+6) { display: none; }
+            .table td:nth-child(n+6) {
+                display: none;
+            }
         }
 
         @media (max-width: 576px) {
-            h1 { font-size: var(--font-size-xl); }
+            h1 {
+                font-size: var(--font-size-xl);
+            }
+
             .table th:nth-child(n+4),
-            .table td:nth-child(n+4) { display: none; }
-            .student-card { padding: var(--spacing-sm); }
-            .student-actions { flex-direction: column; }
+            .table td:nth-child(n+4) {
+                display: none;
+            }
+
+            .student-card {
+                padding: var(--spacing-sm);
+            }
+
+            .student-actions {
+                flex-direction: column;
+            }
+
             .student-actions .btn {
                 width: 100%;
                 justify-content: center;
             }
-            .view-toggle { width: 100%; }
+
+            .view-toggle {
+                width: 100%;
+            }
+
             .view-btn {
                 flex: 1;
                 justify-content: center;
@@ -1010,8 +1079,18 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
         }
 
         @media print {
-            .controls, .bulk-actions, .student-actions, .modal { display: none !important; }
-            body { padding: 0; }
+
+            .controls,
+            .bulk-actions,
+            .student-actions,
+            .modal {
+                display: none !important;
+            }
+
+            body {
+                padding: 0;
+            }
+
             .student-card {
                 box-shadow: none;
                 border: 1px solid var(--border-color);
@@ -1019,7 +1098,13 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
             }
         }
 
-        .controls-right { display: flex; flex-direction: column; align-items: flex-start; gap: var(--spacing-sm); }
+        .controls-right {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: var(--spacing-sm);
+        }
+
         .preview-table-container {
             margin-top: var(--spacing-lg);
             background: var(--card-bg);
@@ -1028,6 +1113,7 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
             box-shadow: var(--shadow-md);
             border: 1px solid var(--border-color);
         }
+
         .preview-table-container h3 {
             font-size: var(--font-size-lg);
             font-weight: 600;
@@ -1059,47 +1145,54 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
         }
 
         .controls-right {
-    display: flex;
-    flex-wrap: wrap;
-    gap: var(--spacing-sm);
-    align-items: center;
-}
+            display: flex;
+            flex-wrap: wrap;
+            gap: var(--spacing-sm);
+            align-items: center;
+        }
 
-.controls-right .btn.btn-primary {
-    order: 1; /* Places "Add Student" button first */
-}
+        .controls-right .btn.btn-primary {
+            order: 1;
+            /* Places "Add Student" button first */
+        }
 
-.controls-right .view-toggle {
-    order: 2; /* Places view-toggle after the button */
-}
+        .controls-right .view-toggle {
+            order: 2;
+            /* Places view-toggle after the button */
+        }
 
 
-.controls-right .btn.btn-primary,
-.controls-right .view-btn {
-    height: 36px; /* Uniform height */
-    padding: 8px 12px; /* Consistent padding */
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
+        .controls-right .btn.btn-primary,
+        .controls-right .view-btn {
+            height: 36px;
+            /* Uniform height */
+            padding: 8px 12px;
+            /* Consistent padding */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
 
-.controls-right .view-btn {
-    width: 38px; /* Square buttons for view toggle */
-    padding: 0; /* Remove padding for icon-only buttons */
-}
+        .controls-right .view-btn {
+            width: 38px;
+            /* Square buttons for view toggle */
+            padding: 0;
+            /* Remove padding for icon-only buttons */
+        }
 
-.controls-right .view-btn.active {
-    background: #007bff;
-    color: white;
-    border-color: #007bff;
-}
+        .controls-right .view-btn.active {
+            background: #007bff;
+            color: white;
+            border-color: #007bff;
+        }
 
-.controls-right {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start; /* Aligns items to the start */
-    gap: var(--spacing-sm);
-}
+        .controls-right {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            /* Aligns items to the start */
+            gap: var(--spacing-sm);
+        }
 
         .search-container {
             position: relative;
@@ -1129,9 +1222,9 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
         .filter-select {
             min-width: 180px;
             padding: var(--spacing-xs) var(--spacing-sm);
-            width: 180px; 
-  height: 38px; 
-  box-sizing: border-box;
+            width: 180px;
+            height: 38px;
+            box-sizing: border-box;
         }
 
         .btn {
@@ -1214,29 +1307,38 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
 
     <style>
         .student-actions {
-    display: flex;
-    gap: 10px;
-    flex-wrap: nowrap; /* Prevents wrapping to new lines */
-    align-items: center; /* Vertically centers the buttons */
-}
+            display: flex;
+            gap: 10px;
+            flex-wrap: nowrap;
+            /* Prevents wrapping to new lines */
+            align-items: center;
+            /* Vertically centers the buttons */
+        }
 
-.student-actions .btn {
-    white-space: nowrap; /* Prevents text wrapping within buttons */
-    min-width: auto; /* Allows buttons to size naturally */
-}
+        .student-actions .btn {
+            white-space: nowrap;
+            /* Prevents text wrapping within buttons */
+            min-width: auto;
+            /* Allows buttons to size naturally */
+        }
 
-.table td .actions {
-    display: flex;
-    gap: 10px; /* Consistent spacing between buttons */
-    align-items: center; /* Vertically centers the buttons */
-}
+        .table td .actions {
+            display: flex;
+            gap: 10px;
+            /* Consistent spacing between buttons */
+            align-items: center;
+            /* Vertically centers the buttons */
+        }
 
-.table td .actions .btn {
-    white-space: nowrap; /* Prevents text wrapping within buttons */
-    padding: var(--spacing-xs) var(--spacing-sm); /* Adjusted padding for consistency */
-}
+        .table td .actions .btn {
+            white-space: nowrap;
+            /* Prevents text wrapping within buttons */
+            padding: var(--spacing-xs) var(--spacing-sm);
+            /* Adjusted padding for consistency */
+        }
     </style>
 </head>
+
 <body>
     <div class="container">
         <h1>Student Management</h1>
@@ -1545,8 +1647,8 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
                     .catch(error => {
                         console.error('Fetch error in autoFillStudent:', error);
                     });
+            }
         }
-    }
 
         // Update section options based on grade
         function updateSectionOptions() {
@@ -1743,9 +1845,12 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
             const pageCount = Math.ceil(totalRows / rowsPerPage);
             pagination.innerHTML = `
                 <button class="pagination-btn" onclick="changePage(${currentPage - 1})" ${currentPage === 1 ? 'disabled' : ''}>Previous</button>
-                ${Array.from({ length: pageCount }, (_, i) => `
-                <button class="pagination-btn ${currentPage === i + 1 ? 'active' : ''}" onclick="changePage(${i + 1})">${i + 1}</button>
-                `).join('')}
+                ${Array.from({ length: pageCount }, (_, i) => ` <
+                button class = "pagination-btn ${currentPage === i + 1 ? 'active' : ''}"
+            onclick = "changePage(${i + 1})" > $ {
+                i + 1
+            } < /button>
+            `).join('')}
                 <button class="pagination-btn" onclick="changePage(${currentPage + 1})" ${currentPage === pageCount ? 'disabled' : ''}>Next</button>
             `;
         }
@@ -1793,7 +1898,9 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
                     `${s.lrn},${s.last_name},${s.first_name},${s.middle_name},${s.email || ''},${s.gender},${s.gradeLevel},${s.class},${s.section},${s.address || ''},${s.emergency_contact || ''}`
                 )
             ].join('\n');
-            const blob = new Blob([csv], { type: 'text/csv' });
+            const blob = new Blob([csv], {
+                type: 'text/csv'
+            });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
@@ -1824,10 +1931,12 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
                 return;
             }
             fetch('', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                body: `bulk_delete=true&lrns=${encodeURIComponent(JSON.stringify(lrns))}&class_id=${class_id}`
-            })
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded'
+                    },
+                    body: `bulk_delete=true&lrns=${encodeURIComponent(JSON.stringify(lrns))}&class_id=${class_id}`
+                })
                 .then(res => {
                     if (!res.ok) {
                         return res.text().then(text => {
@@ -1985,9 +2094,9 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
             event.preventDefault();
             const formData = new FormData(document.getElementById('studentForm'));
             fetch('', {
-                method: 'POST',
-                body: formData
-            })
+                    method: 'POST',
+                    body: formData
+                })
                 .then(res => {
                     console.log('Response Status:', res.status);
                     console.log('Response Headers:', [...res.headers.entries()]);
@@ -2058,4 +2167,5 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
         }
     </script>
 </body>
+
 </html>

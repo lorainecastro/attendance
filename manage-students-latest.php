@@ -1402,7 +1402,7 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
             <div class="card">
                 <div class="card-header">
                     <div>
-                        <div class="card-title">Students Without QR Codes</div>
+                        <div class="card-title">LRN Without QR Codes</div>
                         <div class="card-value" id="no-qr-students"><?php echo htmlspecialchars($no_qr_count); ?></div>
                     </div>
                     <div class="card-icon bg-blue">

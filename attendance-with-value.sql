@@ -183,6 +183,7 @@ CREATE TABLE `teachers` (
 
 INSERT INTO `teachers` (`teacher_id`, `firstname`, `lastname`, `institution`, `email`, `username`, `password`, `picture`, `isActive`, `isVerified`, `otp_code`, `otp_purpose`, `otp_created_at`, `otp_expires_at`, `otp_is_used`, `created_at`) VALUES
 (1, 'Loraine', 'Castro', 'SRNTS', 'castro.loraine.26@gmail.com', '_lorainecastro', '$2y$10$AK3ZL2g3VEEPpsP8k0ZK3elYl6BzAh3sYAUxeiFvaHW6yXOKucgiO', 'profile_1_1754458788.jpg', 1, 1, NULL, 'EMAIL_VERIFICATION', '2025-08-06 13:38:16', NULL, 1, '2025-08-11 10:33:30');
+(2, 'Loraine', 'Castro', 'SRNTS', 'elci.bank@gmail.com', 'lorainecastro', '$2y$10$AK3ZL2g3VEEPpsP8k0ZK3elYl6BzAh3sYAUxeiFvaHW6yXOKucgiO', 'profile_1_1754458788.jpg', 1, 1, NULL, 'EMAIL_VERIFICATION', '2025-08-06 13:38:16', NULL, 1, '2025-08-11 10:33:30');
 
 -- --------------------------------------------------------
 

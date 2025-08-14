@@ -1,0 +1,19 @@
+Class Management
+- If the teacher trying to input the subject_code that is existing in the subjects, add the subject_name of that subject_code in the Subject textfield and disabled the textfield, if not existing just enable it
+
+- Generate QR code when importing using endroid, and add it in the database
+- Add "Add Student" button with the import to manually add student includi8ng in the import and generate QR Code for them also - AJAX
+
+
+Student Management
+- Click the CARD: LRN Without QR Codes then add modal with the list of the students with LRN, Photo, Fullname-Surname first, Grade Level, Subject, Section - remove this
+
+- Generating QR Code for all - remove this
+- Generating QR Code for Add New Student - remove this
+
+
+- If the teacher edit the student, just update the class_id in the class_students where lrn is equal, do not add again because it is just editing not inserting
+
+- Change the Logic for Deleting Students, from filtering to select student they want to delete and add modal the LRN, Grade Level, Section, and Subject
+
+- Display the QR Code also in the Table 

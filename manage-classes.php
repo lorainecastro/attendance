@@ -14,6 +14,20 @@ if (!$isAjax && !$user) {
     exit();
 }
 
+// Function to check subject by code
+function checkSubjectByCode($subject_code) {
+    $pdo = getDBConnection();
+    try {
+        $stmt = $pdo->prepare("SELECT subject_name FROM subjects WHERE subject_code = ?");
+        $stmt->execute([$subject_code]);
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+        return ['success' => true, 'exists' => !!$result, 'subject_name' => $result ? $result['subject_name'] : null];
+    } catch (PDOException $e) {
+        error_log("Check subject error: " . $e->getMessage());
+        return ['success' => false, 'error' => 'Failed to check subject: ' . $e->getMessage()];
+    }
+}
+
 // Function to check for duplicate class
 function isDuplicateClass($pdo, $section_name, $subject_id, $teacher_id, $grade_level, $class_id = null)
 {
@@ -307,7 +321,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     header('Content-Type: application/json');
     ob_clean();
 
-    if ($_POST['action'] === 'addClass') {
+    if ($_POST['action'] === 'checkSubject') {
+        $subject_code = $_POST['subjectCode'] ?? '';
+        if (!$subject_code) {
+            echo json_encode(['success' => false, 'error' => 'Missing subject code']);
+            exit;
+        }
+        echo json_encode(checkSubjectByCode($subject_code));
+        exit;
+    } elseif ($_POST['action'] === 'addClass') {
         $classData = [
             'code' => $_POST['classCode'] ?? '',
             'sectionName' => $_POST['sectionName'] ?? '',
@@ -596,8 +618,8 @@ ob_end_flush();
 
         .form-input:disabled,
         .form-select:disabled {
-            background: var(--light-gray);
-            opacity: 0.7;
+            /* background: var(--light-gray); */
+            /* opacity: 0.7; */
             cursor: not-allowed;
         }
 
@@ -2326,7 +2348,6 @@ ob_end_flush();
         </div>
     </div>
 
-
     <div id="viewModal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
@@ -2471,6 +2492,7 @@ ob_end_flush();
             const subjectFilter = document.getElementById('subjectFilter');
             const sectionFilter = document.getElementById('sectionFilter');
             const classForm = document.getElementById('classForm');
+            const classCodeInput = document.getElementById('classCode');
 
             if (searchInput) searchInput.addEventListener('input', handleSearch);
             if (gradeFilter) gradeFilter.addEventListener('change', handleFilter);
@@ -2478,6 +2500,7 @@ ob_end_flush();
             if (subjectFilter) subjectFilter.addEventListener('change', handleFilter);
             if (sectionFilter) sectionFilter.addEventListener('change', handleFilter);
             if (classForm) classForm.addEventListener('submit', handleFormSubmit);
+            if (classCodeInput) classCodeInput.addEventListener('blur', checkSubjectCode);
 
             const scheduleCheckboxes = document.querySelectorAll('input[name="scheduleDays"]');
             scheduleCheckboxes.forEach(checkbox => {
@@ -2491,6 +2514,52 @@ ob_end_flush();
                         modal.classList.remove('show');
                     }
                 });
+            });
+        }
+
+        function checkSubjectCode() {
+            const classCodeInput = document.getElementById('classCode');
+            const subjectInput = document.getElementById('subject');
+            if (!classCodeInput || !subjectInput) return;
+
+            const subjectCode = classCodeInput.value.trim();
+            if (!subjectCode) {
+                subjectInput.disabled = false;
+                subjectInput.value = '';
+                return;
+            }
+
+            fetch('manage-classes.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: `action=checkSubject&subjectCode=${encodeURIComponent(subjectCode)}`
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok: ' + response.statusText);
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.success) {
+                    if (data.exists && data.subject_name) {
+                        subjectInput.value = data.subject_name;
+                        subjectInput.disabled = true;
+                    } else {
+                        subjectInput.value = '';
+                        subjectInput.disabled = false;
+                    }
+                } else {
+                    console.error('Error checking subject code:', data.error);
+                    subjectInput.disabled = false;
+                }
+            })
+            .catch(error => {
+                console.error('Error checking subject code:', error);
+                subjectInput.disabled = false;
             });
         }
 
@@ -2709,9 +2778,14 @@ ob_end_flush();
             const modalTitle = document.getElementById('modalTitle');
             const classForm = document.getElementById('classForm');
             const classModal = document.getElementById('classModal');
+            const subjectInput = document.getElementById('subject');
 
             if (modalTitle) modalTitle.textContent = 'Add New Class';
             if (classForm) classForm.reset();
+            if (subjectInput) {
+                subjectInput.disabled = false;
+                subjectInput.value = '';
+            }
             clearScheduleInputs();
             if (classModal) classModal.classList.add('show');
         }
@@ -2728,6 +2802,7 @@ ob_end_flush();
 
             editingClassId = classId;
             const modalTitle = document.getElementById('modalTitle');
+            const subjectInput = document.getElementById('subject');
             if (modalTitle) modalTitle.textContent = 'Edit Class';
 
             const fields = {
@@ -2743,6 +2818,10 @@ ob_end_flush();
                 const element = document.getElementById(id);
                 if (element) element.value = value;
             });
+
+            if (subjectInput) {
+                subjectInput.disabled = true; // Disable subject field initially when editing
+            }
 
             clearScheduleInputs();
             if (classItem.schedule) {
@@ -2763,6 +2842,9 @@ ob_end_flush();
 
             const classModal = document.getElementById('classModal');
             if (classModal) classModal.classList.add('show');
+
+            // Trigger subject code check to ensure consistency
+            checkSubjectCode();
         }
 
         function viewClass(classId) {

@@ -1515,7 +1515,7 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
                                 </button>
                             </div>
                             <input type="file" id="student-photo" name="photo" accept="image/*" onchange="previewPhoto(event)">
-                            <button type="button" class="btn btn-primary" onclick="document.getElementById('student-photo').click()">Change Photo</button>
+                            <button type="button" class="btn btn-primary" id="change-photo-btn" onclick="document.getElementById('student-photo').click()">Change Photo</button>
                         </div>
                         <div class="form-group">
                             <label class="form-label">First Name</label>
@@ -2031,17 +2031,21 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
                 address: document.getElementById('address'),
                 parentName: document.getElementById('parent-name'),
                 emergencyContact: document.getElementById('emergency-contact'),
-                photoPreview: document.getElementById('student-photo-preview')
+                photoPreview: document.getElementById('student-photo-preview'),
+                photoInput: document.getElementById('student-photo')
             };
             Object.values(form).forEach(input => {
                 if (input.tagName === 'IMG') input.src = 'uploads/no-icon.png';
                 else if (input.tagName === 'SELECT') input.value = '';
+                else if (input.tagName === 'INPUT' && input.type === 'file') input.value = '';
                 else input.value = '';
             });
             const qrContainer = document.getElementById('qr-container');
             const qrCodeDiv = document.getElementById('qr-code');
             qrCodeDiv.innerHTML = '';
             qrContainer.style.display = 'none';
+            const changePhotoBtn = document.getElementById('change-photo-btn');
+            changePhotoBtn.style.display = mode === 'view' ? 'none' : 'inline-flex';
 
             if (mode !== 'add' && lrn) {
                 const student = students.find(s => s.lrn == lrn);
@@ -2091,9 +2095,9 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
             }
 
             Object.values(form).forEach(input => {
-                if (input.tagName !== 'IMG') input.disabled = mode === 'view';
+                if (input.tagName !== 'IMG' && input.type !== 'file') input.disabled = mode === 'view';
             });
-            document.querySelector('.photo-upload .btn').style.display = mode === 'view' ? 'none' : 'inline-flex';
+            form.photoInput.disabled = mode === 'view';
             document.querySelector('.form-actions .btn-primary').style.display = mode === 'view' ? 'none' : 'inline-flex';
             profileModal.classList.add('show');
         }
@@ -2101,12 +2105,15 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
         // Preview photo
         function previewPhoto(event) {
             const file = event.target.files[0];
+            const photoPreview = document.getElementById('student-photo-preview');
             if (file) {
                 const reader = new FileReader();
                 reader.onload = e => {
-                    document.getElementById('student-photo-preview').src = e.target.result;
+                    photoPreview.src = e.target.result;
                 };
                 reader.readAsDataURL(file);
+            } else {
+                photoPreview.src = 'uploads/no-icon.png';
             }
         }
 

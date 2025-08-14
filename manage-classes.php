@@ -20,7 +20,8 @@ if (!$isAjax && !$user) {
 }
 
 // Function to check subject by code
-function checkSubjectByCode($subject_code) {
+function checkSubjectByCode($subject_code)
+{
     $pdo = getDBConnection();
     try {
         $stmt = $pdo->prepare("SELECT subject_name FROM subjects WHERE subject_code = ?");
@@ -2574,37 +2575,37 @@ ob_end_flush();
             }
 
             fetch('manage-classes.php', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded',
-                    'X-Requested-With': 'XMLHttpRequest'
-                },
-                body: `action=checkSubject&subjectCode=${encodeURIComponent(subjectCode)}`
-            })
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error('Network response was not ok: ' + response.statusText);
-                }
-                return response.json();
-            })
-            .then(data => {
-                if (data.success) {
-                    if (data.exists && data.subject_name) {
-                        subjectInput.value = data.subject_name;
-                        subjectInput.disabled = true;
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    body: `action=checkSubject&subjectCode=${encodeURIComponent(subjectCode)}`
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok: ' + response.statusText);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.success) {
+                        if (data.exists && data.subject_name) {
+                            subjectInput.value = data.subject_name;
+                            subjectInput.disabled = true;
+                        } else {
+                            subjectInput.value = '';
+                            subjectInput.disabled = false;
+                        }
                     } else {
-                        subjectInput.value = '';
+                        console.error('Error checking subject code:', data.error);
                         subjectInput.disabled = false;
                     }
-                } else {
-                    console.error('Error checking subject code:', data.error);
+                })
+                .catch(error => {
+                    console.error('Error checking subject code:', error);
                     subjectInput.disabled = false;
-                }
-            })
-            .catch(error => {
-                console.error('Error checking subject code:', error);
-                subjectInput.disabled = false;
-            });
+                });
         }
 
         function renderClasses() {
@@ -3239,59 +3240,65 @@ ob_end_flush();
         let excelHeader = [];
 
         document.getElementById('importFile').addEventListener('change', function(event) {
-    const file = event.target.files[0];
-    if (!file) {
-        const previewTableContainer = document.getElementById('previewTableContainer');
-        if (previewTableContainer) previewTableContainer.style.display = 'none';
-        return;
-    }
-
-    const reader = new FileReader();
-    reader.onload = function(e) {
-        try {
-            const data = new Uint8Array(e.target.result);
-            const workbook = XLSX.read(data, { type: 'array' });
-            const firstSheet = workbook.SheetNames[0];
-            const worksheet = workbook.Sheets[firstSheet];
-            const rows = XLSX.utils.sheet_to_json(worksheet, { header: 1, raw: false });
-
-            const previewTableContainer = document.getElementById('previewTableContainer');
-
-            if (!previewTableContainer) {
-                console.error('Preview table elements not found');
-                alert('Error: Preview table is not available.');
+            const file = event.target.files[0];
+            if (!file) {
+                const previewTableContainer = document.getElementById('previewTableContainer');
+                if (previewTableContainer) previewTableContainer.style.display = 'none';
                 return;
             }
 
-            if (rows.length <= 1) {
-                previewTableContainer.style.display = 'none';
-                alert('The selected Excel file is empty or contains only headers.');
-                return;
-            }
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, {
+                        type: 'array'
+                    });
+                    const firstSheet = workbook.SheetNames[0];
+                    const worksheet = workbook.Sheets[firstSheet];
+                    const rows = XLSX.utils.sheet_to_json(worksheet, {
+                        header: 1,
+                        raw: false
+                    });
 
-            excelHeader = rows[0];
-            previewData = rows.slice(1).filter(row => row.length >= 11);
-            renderPreviewTable();
-            previewTableContainer.style.display = 'block';
-        } catch (error) {
-            console.error('Error reading Excel file:', error);
-            alert('Error reading Excel file: ' + error.message);
-            const previewTableContainer = document.getElementById('previewTableContainer');
-            if (previewTableContainer) previewTableContainer.style.display = 'none';
-        }
-    };
-    reader.readAsArrayBuffer(file);
-});
+                    const previewTableContainer = document.getElementById('previewTableContainer');
+
+                    if (!previewTableContainer) {
+                        console.error('Preview table elements not found');
+                        alert('Error: Preview table is not available.');
+                        return;
+                    }
+
+                    if (rows.length <= 1) {
+                        previewTableContainer.style.display = 'none';
+                        alert('The selected Excel file is empty or contains only headers.');
+                        return;
+                    }
+
+                    excelHeader = rows[0];
+                    previewData = rows.slice(1).filter(row => row.length >= 11);
+                    renderPreviewTable();
+                    previewTableContainer.style.display = 'block';
+                } catch (error) {
+                    console.error('Error reading Excel file:', error);
+                    alert('Error reading Excel file: ' + error.message);
+                    const previewTableContainer = document.getElementById('previewTableContainer');
+                    if (previewTableContainer) previewTableContainer.style.display = 'none';
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        });
+
         function renderPreviewTable() {
-    const tbody = document.querySelector('#previewTable tbody');
-    if (!tbody) return;
+            const tbody = document.querySelector('#previewTable tbody');
+            if (!tbody) return;
 
-    tbody.innerHTML = '';
+            tbody.innerHTML = '';
 
-    previewData.forEach((row, index) => {
-        const tr = document.createElement('tr');
-        tr.dataset.index = index;
-        tr.innerHTML = `
+            previewData.forEach((row, index) => {
+                const tr = document.createElement('tr');
+                tr.dataset.index = index;
+                tr.innerHTML = `
             <td>${sanitizeHTML(row[0] || '')}</td>
             <td>${sanitizeHTML(row[1] || '')}</td>
             <td>${sanitizeHTML(row[2] || '')}</td>
@@ -3311,9 +3318,10 @@ ob_end_flush();
                 </button>
             </td>
         `;
-        tbody.appendChild(tr);
-    });
-}
+                tbody.appendChild(tr);
+            });
+        }
+
         function removePreviewRow(btn) {
             const tr = btn.closest('tr');
             const index = parseInt(tr.dataset.index);
@@ -3322,52 +3330,58 @@ ob_end_flush();
         }
 
         function importStudents() {
-    if (previewData.length === 0) {
-        alert('No data to import.');
-        return;
-    }
+            if (previewData.length === 0) {
+                alert('No data to import.');
+                return;
+            }
 
-    // Create modified workbook
-    const newRows = [excelHeader, ...previewData];
-    const newWs = XLSX.utils.aoa_to_sheet(newRows);
-    const newWb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(newWb, newWs, 'Sheet1');
+            // Create modified workbook
+            const newRows = [excelHeader, ...previewData];
+            const newWs = XLSX.utils.aoa_to_sheet(newRows);
+            const newWb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(newWb, newWs, 'Sheet1');
 
-    const excelBuffer = XLSX.write(newWb, { bookType: 'xlsx', type: 'array' });
-    const blob = new Blob([excelBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+            const excelBuffer = XLSX.write(newWb, {
+                bookType: 'xlsx',
+                type: 'array'
+            });
+            const blob = new Blob([excelBuffer], {
+                type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+            });
 
-    const formData = new FormData();
-    formData.append('action', 'importStudents');
-    formData.append('classId', document.querySelector('#studentModal').dataset.classId || '0');
-    formData.append('file', blob, 'students.xlsx');
+            const formData = new FormData();
+            formData.append('action', 'importStudents');
+            formData.append('classId', document.querySelector('#studentModal').dataset.classId || '0');
+            formData.append('file', blob, 'students.xlsx');
 
-    fetch('manage-classes.php', {
-        method: 'POST',
-        body: formData
-    })
-    .then(response => {
-        if (!response.ok) {
-            throw new Error('Network response was not ok: ' + response.statusText);
+            fetch('manage-classes.php', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok: ' + response.statusText);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.success) {
+                        fetchStudents(document.querySelector('#studentModal').dataset.classId);
+                        document.getElementById('previewTableContainer').style.display = 'none';
+                        document.getElementById('importFile').value = '';
+                        document.querySelector('#previewTable tbody').innerHTML = '';
+                        previewData = [];
+                        alert('Students imported successfully!');
+                    } else {
+                        alert('Failed to import students: ' + (data.error || 'Unknown error'));
+                    }
+                })
+                .catch(error => {
+                    console.error('Error importing students:', error);
+                    alert('Error importing students: ' + error.message);
+                });
         }
-        return response.json();
-    })
-    .then(data => {
-        if (data.success) {
-            fetchStudents(document.querySelector('#studentModal').dataset.classId);
-            document.getElementById('previewTableContainer').style.display = 'none';
-            document.getElementById('importFile').value = '';
-            document.querySelector('#previewTable tbody').innerHTML = '';
-            previewData = [];
-            alert('Students imported successfully!');
-        } else {
-            alert('Failed to import students: ' + (data.error || 'Unknown error'));
-        }
-    })
-    .catch(error => {
-        console.error('Error importing students:', error);
-        alert('Error importing students: ' + error.message);
-    });
-}
+
         function toggleSelectAll() {
             const selectAll = document.getElementById('selectAll');
             const checkboxes = document.querySelectorAll('.row-checkbox');

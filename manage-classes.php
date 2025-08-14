@@ -264,8 +264,47 @@ function importStudents($class_id, $filePath)
         $pdo->beginTransaction();
         $header = array_shift($rows); // Remove header row
 
+        // Store QR codes to be generated
+        $qrs_to_generate = [];
+        foreach ($rows as $index => $row) {
+            if (count($row) >= 11) { // Ensure row has at least 11 columns
+                $lrn = $row[0] ?? null;
+                if ($lrn && (!isset($row[12]) || empty(trim($row[12])))) {
+                    $qrs_to_generate[] = [
+                        'lrn' => $lrn,
+                        'content' => "$lrn, {$row[1]}, {$row[2]}" . (isset($row[3]) && !empty($row[3]) ? " {$row[3]}" : '')
+                    ];
+                }
+            }
+        }
+
+        // Generate QR codes if needed
+        $qr_files = [];
+        if (!empty($qrs_to_generate)) {
+            foreach ($qrs_to_generate as $item) {
+                $qrCode = new QrCode($item['content']);
+                $writer = new PngWriter();
+                $result = $writer->write($qrCode);
+                $dir = 'qrcodes';
+                if (!file_exists($dir)) {
+                    mkdir($dir, 0777, true);
+                }
+                $filename = $item['lrn'] . '.png';
+                $savePath = $dir . '/' . $filename;
+                $result->saveToFile($savePath);
+                $qr_files[$item['lrn']] = $filename;
+            }
+        }
+
+        // Insert or update students
         foreach ($rows as $row) {
-            if (count($row) >= 11) { // Ensure row has at least 11 columns (up to Emergency Contact), Photo and QR optional
+            if (count($row) >= 11) { // Ensure row has at least 11 columns
+                $lrn = $row[0] ?? null;
+                if (!$lrn) continue; // Skip if LRN is missing
+
+                // Use generated QR code if available, else use provided or null
+                $qr_code = isset($qr_files[$lrn]) ? $qr_files[$lrn] : (isset($row[12]) && !empty(trim($row[12])) ? trim($row[12]) : null);
+
                 $stmt = $pdo->prepare("
                     INSERT INTO students (lrn, last_name, first_name, middle_name, email, gender, dob, grade_level, address, parent_name, emergency_contact, photo, qr_code, date_added)
                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURDATE())
@@ -279,25 +318,27 @@ function importStudents($class_id, $filePath)
                         grade_level = VALUES(grade_level),
                         address = VALUES(address),
                         parent_name = VALUES(parent_name),
-                        emergency_contact = VALUES(emergency_contact)
+                        emergency_contact = VALUES(emergency_contact),
+                        photo = VALUES(photo),
+                        qr_code = VALUES(qr_code)
                 ");
                 $stmt->execute([
-                    $row[0] ?? null,  // lrn
-                    $row[1] ?? null,  // last_name
-                    $row[2] ?? null,  // first_name
-                    $row[3] ?? null,  // middle_name
-                    $row[4] ?? null,  // email
-                    $row[5] ?? null,  // gender
-                    $row[6] ?? null,  // dob
-                    $row[7] ?? null,  // grade_level
-                    $row[8] ?? null,  // address
-                    $row[9] ?? null,  // parent_name
-                    $row[10] ?? null, // emergency_contact
-                    $row[11] ?? null, // photo
-                    $row[12] ?? null  // qr_code
+                    $lrn,                          // lrn
+                    $row[1] ?? null,              // last_name
+                    $row[2] ?? null,              // first_name
+                    $row[3] ?? null,              // middle_name
+                    $row[4] ?? null,              // email
+                    $row[5] ?? null,              // gender
+                    $row[6] ?? null,              // dob
+                    $row[7] ?? null,              // grade_level
+                    $row[8] ?? null,              // address
+                    $row[9] ?? null,              // parent_name
+                    $row[10] ?? null,             // emergency_contact
+                    $row[11] ?? null,             // photo
+                    $qr_code                      // qr_code
                 ]);
-                $lrn = $row[0]; // Use the lrn from the Excel row
 
+                // Enroll student in class
                 $stmt = $pdo->prepare("
                     INSERT INTO class_students (class_id, lrn, is_enrolled)
                     VALUES (?, ?, 1)
@@ -324,27 +365,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     header('Content-Type: application/json');
     ob_clean();
 
-    if ($_POST['action'] === 'generateQrs') {
-        $qrs = json_decode($_POST['qrs'], true);
-        $results = [];
-        foreach ($qrs as $item) {
-            $lrn = $item['lrn'];
-            $content = $item['content'];
-            $qrCode = new QrCode($content);
-            $writer = new PngWriter();
-            $result = $writer->write($qrCode);
-            $dir = 'qrcodes';
-            if (!file_exists($dir)) {
-                mkdir($dir, 0777, true);
-            }
-            $filename = $lrn . '.png';
-            $savePath = $dir . '/' . $filename;
-            $result->saveToFile($savePath);
-            $results[$lrn] = $filename;
-        }
-        echo json_encode(['success' => true, 'data' => $results]);
-        exit;
-    } elseif ($_POST['action'] === 'checkSubject') {
+    if ($_POST['action'] === 'checkSubject') {
         $subject_code = $_POST['subjectCode'] ?? '';
         if (!$subject_code) {
             echo json_encode(['success' => false, 'error' => 'Missing subject code']);
@@ -3218,125 +3239,81 @@ ob_end_flush();
         let excelHeader = [];
 
         document.getElementById('importFile').addEventListener('change', function(event) {
-            const file = event.target.files[0];
-            if (!file) {
-                const previewTableContainer = document.getElementById('previewTableContainer');
-                if (previewTableContainer) previewTableContainer.style.display = 'none';
+    const file = event.target.files[0];
+    if (!file) {
+        const previewTableContainer = document.getElementById('previewTableContainer');
+        if (previewTableContainer) previewTableContainer.style.display = 'none';
+        return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        try {
+            const data = new Uint8Array(e.target.result);
+            const workbook = XLSX.read(data, { type: 'array' });
+            const firstSheet = workbook.SheetNames[0];
+            const worksheet = workbook.Sheets[firstSheet];
+            const rows = XLSX.utils.sheet_to_json(worksheet, { header: 1, raw: false });
+
+            const previewTableContainer = document.getElementById('previewTableContainer');
+
+            if (!previewTableContainer) {
+                console.error('Preview table elements not found');
+                alert('Error: Preview table is not available.');
                 return;
             }
 
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                try {
-                    const data = new Uint8Array(e.target.result);
-                    const workbook = XLSX.read(data, {
-                        type: 'array'
-                    });
-                    const firstSheet = workbook.SheetNames[0];
-                    const worksheet = workbook.Sheets[firstSheet];
-                    const rows = XLSX.utils.sheet_to_json(worksheet, {
-                        header: 1,
-                        raw: false // Use formatted values
-                    });
+            if (rows.length <= 1) {
+                previewTableContainer.style.display = 'none';
+                alert('The selected Excel file is empty or contains only headers.');
+                return;
+            }
 
-                    const previewTableContainer = document.getElementById('previewTableContainer');
-
-                    if (!previewTableContainer) {
-                        console.error('Preview table elements not found');
-                        alert('Error: Preview table is not available.');
-                        return;
-                    }
-
-                    if (rows.length <= 1) {
-                        previewTableContainer.style.display = 'none';
-                        alert('The selected Excel file is empty or contains only headers.');
-                        return;
-                    }
-
-                    excelHeader = rows[0];
-                    previewData = rows.slice(1).filter(row => row.length >= 11);
-
-                    const needingQR = previewData.filter(row => !row[12] || row[12].trim() === '').map(row => ({
-                        lrn: row[0],
-                        content: `${row[0]}, ${row[1]}, ${row[2]}${row[3] ? ' ' + row[3] : ''}`.trim()
-                    }));
-
-                    if (needingQR.length > 0) {
-                        fetch('manage-classes.php', {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/x-www-form-urlencoded'
-                            },
-                            body: `action=generateQrs&qrs=${encodeURIComponent(JSON.stringify(needingQR))}`
-                        })
-                        .then(response => response.json())
-                        .then(data => {
-                            if (data.success) {
-                                previewData.forEach(row => {
-                                    const lrn = row[0];
-                                    if ((!row[12] || row[12].trim() === '') && data.data[lrn]) {
-                                        row[12] = data.data[lrn];
-                                    }
-                                });
-                                renderPreviewTable();
-                                previewTableContainer.style.display = 'block';
-                            } else {
-                                alert('Error generating QR codes: ' + (data.error || 'Unknown error'));
-                                previewTableContainer.style.display = 'none';
-                            }
-                        })
-                        .catch(error => {
-                            console.error('Error generating QR codes:', error);
-                            alert('Error generating QR codes: ' + error.message);
-                            previewTableContainer.style.display = 'none';
-                        });
-                    } else {
-                        renderPreviewTable();
-                        previewTableContainer.style.display = 'block';
-                    }
-                } catch (error) {
-                    console.error('Error reading Excel file:', error);
-                    alert('Error reading Excel file: ' + error.message);
-                    const previewTableContainer = document.getElementById('previewTableContainer');
-                    if (previewTableContainer) previewTableContainer.style.display = 'none';
-                }
-            };
-            reader.readAsArrayBuffer(file);
-        });
-
-        function renderPreviewTable() {
-            const tbody = document.querySelector('#previewTable tbody');
-            if (!tbody) return;
-
-            tbody.innerHTML = '';
-
-            previewData.forEach((row, index) => {
-                const tr = document.createElement('tr');
-                tr.dataset.index = index;
-                tr.innerHTML = `
-                    <td>${sanitizeHTML(row[0] || '')}</td>
-                    <td>${sanitizeHTML(row[1] || '')}</td>
-                    <td>${sanitizeHTML(row[2] || '')}</td>
-                    <td>${sanitizeHTML(row[3] || '')}</td>
-                    <td>${sanitizeHTML(row[4] || '')}</td>
-                    <td>${sanitizeHTML(row[5] || '')}</td>
-                    <td>${sanitizeHTML(row[6] || '')}</td>
-                    <td>${sanitizeHTML(row[7] || '')}</td>
-                    <td>${sanitizeHTML(row[8] || '')}</td>
-                    <td>${sanitizeHTML(row[9] || '')}</td>
-                    <td>${sanitizeHTML(row[10] || '')}</td>
-                    <td>${sanitizeHTML(row[11] || '')}</td>
-                    <td>${row[12] ? `<img src="qrcodes/${sanitizeHTML(row[12])}" alt="QR Code" style="max-width: 50px; max-height: 50px;">` : ''}</td>
-                    <td>
-                        <button class="btn btn-sm btn-danger" onclick="removePreviewRow(this)">
-                            <i class="fas fa-trash"></i> Remove
-                        </button>
-                    </td>
-                `;
-                tbody.appendChild(tr);
-            });
+            excelHeader = rows[0];
+            previewData = rows.slice(1).filter(row => row.length >= 11);
+            renderPreviewTable();
+            previewTableContainer.style.display = 'block';
+        } catch (error) {
+            console.error('Error reading Excel file:', error);
+            alert('Error reading Excel file: ' + error.message);
+            const previewTableContainer = document.getElementById('previewTableContainer');
+            if (previewTableContainer) previewTableContainer.style.display = 'none';
         }
+    };
+    reader.readAsArrayBuffer(file);
+});
+        function renderPreviewTable() {
+    const tbody = document.querySelector('#previewTable tbody');
+    if (!tbody) return;
 
+    tbody.innerHTML = '';
+
+    previewData.forEach((row, index) => {
+        const tr = document.createElement('tr');
+        tr.dataset.index = index;
+        tr.innerHTML = `
+            <td>${sanitizeHTML(row[0] || '')}</td>
+            <td>${sanitizeHTML(row[1] || '')}</td>
+            <td>${sanitizeHTML(row[2] || '')}</td>
+            <td>${sanitizeHTML(row[3] || '')}</td>
+            <td>${sanitizeHTML(row[4] || '')}</td>
+            <td>${sanitizeHTML(row[5] || '')}</td>
+            <td>${sanitizeHTML(row[6] || '')}</td>
+            <td>${sanitizeHTML(row[7] || '')}</td>
+            <td>${sanitizeHTML(row[8] || '')}</td>
+            <td>${sanitizeHTML(row[9] || '')}</td>
+            <td>${sanitizeHTML(row[10] || '')}</td>
+            <td>${sanitizeHTML(row[11] || '')}</td>
+            <td>${sanitizeHTML(row[12] || 'To be generated')}</td>
+            <td>
+                <button class="btn btn-sm btn-danger" onclick="removePreviewRow(this)">
+                    <i class="fas fa-trash"></i> Remove
+                </button>
+            </td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
         function removePreviewRow(btn) {
             const tr = btn.closest('tr');
             const index = parseInt(tr.dataset.index);
@@ -3345,58 +3322,52 @@ ob_end_flush();
         }
 
         function importStudents() {
-            if (previewData.length === 0) {
-                alert('No data to import.');
-                return;
-            }
+    if (previewData.length === 0) {
+        alert('No data to import.');
+        return;
+    }
 
-            // Create modified workbook
-            const newRows = [excelHeader, ...previewData];
-            const newWs = XLSX.utils.aoa_to_sheet(newRows);
-            const newWb = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(newWb, newWs, 'Sheet1');
+    // Create modified workbook
+    const newRows = [excelHeader, ...previewData];
+    const newWs = XLSX.utils.aoa_to_sheet(newRows);
+    const newWb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(newWb, newWs, 'Sheet1');
 
-            const excelBuffer = XLSX.write(newWb, {
-                bookType: 'xlsx',
-                type: 'array'
-            });
-            const blob = new Blob([excelBuffer], {
-                type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-            });
+    const excelBuffer = XLSX.write(newWb, { bookType: 'xlsx', type: 'array' });
+    const blob = new Blob([excelBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
 
-            const formData = new FormData();
-            formData.append('action', 'importStudents');
-            formData.append('classId', document.querySelector('#studentModal').dataset.classId || '0');
-            formData.append('file', blob, 'modified.xlsx');
+    const formData = new FormData();
+    formData.append('action', 'importStudents');
+    formData.append('classId', document.querySelector('#studentModal').dataset.classId || '0');
+    formData.append('file', blob, 'students.xlsx');
 
-            fetch('manage-classes.php', {
-                    method: 'POST',
-                    body: formData
-                })
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error('Network response was not ok: ' + response.statusText);
-                    }
-                    return response.json();
-                })
-                .then(data => {
-                    if (data.success) {
-                        fetchStudents(document.querySelector('#studentModal').dataset.classId);
-                        document.getElementById('previewTableContainer').style.display = 'none';
-                        document.getElementById('importFile').value = '';
-                        document.querySelector('#previewTable tbody').innerHTML = '';
-                        previewData = [];
-                        alert('Students imported successfully!');
-                    } else {
-                        alert('Failed to import students: ' + (data.error || 'Unknown error'));
-                    }
-                })
-                .catch(error => {
-                    console.error('Error importing students:', error);
-                    alert('Error importing students: ' + error.message);
-                });
+    fetch('manage-classes.php', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Network response was not ok: ' + response.statusText);
         }
-
+        return response.json();
+    })
+    .then(data => {
+        if (data.success) {
+            fetchStudents(document.querySelector('#studentModal').dataset.classId);
+            document.getElementById('previewTableContainer').style.display = 'none';
+            document.getElementById('importFile').value = '';
+            document.querySelector('#previewTable tbody').innerHTML = '';
+            previewData = [];
+            alert('Students imported successfully!');
+        } else {
+            alert('Failed to import students: ' + (data.error || 'Unknown error'));
+        }
+    })
+    .catch(error => {
+        console.error('Error importing students:', error);
+        alert('Error importing students: ' + error.message);
+    });
+}
         function toggleSelectAll() {
             const selectAll = document.getElementById('selectAll');
             const checkboxes = document.querySelectorAll('.row-checkbox');

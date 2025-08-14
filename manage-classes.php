@@ -1,6 +1,11 @@
 <?php
 ob_start();
 require 'config.php';
+require 'vendor/autoload.php';
+
+use Endroid\QrCode\QrCode;
+use Endroid\QrCode\Writer\PngWriter;
+
 session_start();
 
 // Detect AJAX request
@@ -250,8 +255,6 @@ function deleteStudentFromClass($class_id, $lrn)
 // Function to import students from Excel
 function importStudents($class_id, $filePath)
 {
-    require 'vendor/autoload.php';
-
     $pdo = getDBConnection();
     try {
         $spreadsheet = \PhpOffice\PhpSpreadsheet\IOFactory::load($filePath);
@@ -321,7 +324,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     header('Content-Type: application/json');
     ob_clean();
 
-    if ($_POST['action'] === 'checkSubject') {
+    if ($_POST['action'] === 'generateQrs') {
+        $qrs = json_decode($_POST['qrs'], true);
+        $results = [];
+        foreach ($qrs as $item) {
+            $lrn = $item['lrn'];
+            $content = $item['content'];
+            $qrCode = new QrCode($content);
+            $writer = new PngWriter();
+            $result = $writer->write($qrCode);
+            $dir = 'qrcodes';
+            if (!file_exists($dir)) {
+                mkdir($dir, 0777, true);
+            }
+            $filename = $lrn . '.png';
+            $savePath = $dir . '/' . $filename;
+            $result->saveToFile($savePath);
+            $results[$lrn] = $filename;
+        }
+        echo json_encode(['success' => true, 'data' => $results]);
+        exit;
+    } elseif ($_POST['action'] === 'checkSubject') {
         $subject_code = $_POST['subjectCode'] ?? '';
         if (!$subject_code) {
             echo json_encode(['success' => false, 'error' => 'Missing subject code']);
@@ -3132,7 +3155,7 @@ ob_end_flush();
 
             students.forEach(student => {
                 const photoSrc = student.photo ? `uploads/${student.photo}` : '';
-                const qrSrc = student.qr_code ? `uploads/${student.qr_code}` : '';
+                const qrSrc = student.qr_code ? `qrcodes/${student.qr_code}` : '';
                 console.log('Photo:', photoSrc, 'QR:', qrSrc); // Debug log
 
                 const row = document.createElement('tr');
@@ -3233,8 +3256,44 @@ ob_end_flush();
                     excelHeader = rows[0];
                     previewData = rows.slice(1).filter(row => row.length >= 11);
 
-                    renderPreviewTable();
-                    previewTableContainer.style.display = 'block';
+                    const needingQR = previewData.filter(row => !row[12] || row[12].trim() === '').map(row => ({
+                        lrn: row[0],
+                        content: `${row[0]}, ${row[1]}, ${row[2]}${row[3] ? ' ' + row[3] : ''}`.trim()
+                    }));
+
+                    if (needingQR.length > 0) {
+                        fetch('manage-classes.php', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/x-www-form-urlencoded'
+                            },
+                            body: `action=generateQrs&qrs=${encodeURIComponent(JSON.stringify(needingQR))}`
+                        })
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.success) {
+                                previewData.forEach(row => {
+                                    const lrn = row[0];
+                                    if ((!row[12] || row[12].trim() === '') && data.data[lrn]) {
+                                        row[12] = data.data[lrn];
+                                    }
+                                });
+                                renderPreviewTable();
+                                previewTableContainer.style.display = 'block';
+                            } else {
+                                alert('Error generating QR codes: ' + (data.error || 'Unknown error'));
+                                previewTableContainer.style.display = 'none';
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Error generating QR codes:', error);
+                            alert('Error generating QR codes: ' + error.message);
+                            previewTableContainer.style.display = 'none';
+                        });
+                    } else {
+                        renderPreviewTable();
+                        previewTableContainer.style.display = 'block';
+                    }
                 } catch (error) {
                     console.error('Error reading Excel file:', error);
                     alert('Error reading Excel file: ' + error.message);
@@ -3267,7 +3326,7 @@ ob_end_flush();
                     <td>${sanitizeHTML(row[9] || '')}</td>
                     <td>${sanitizeHTML(row[10] || '')}</td>
                     <td>${sanitizeHTML(row[11] || '')}</td>
-                    <td>${sanitizeHTML(row[12] || '')}</td>
+                    <td>${row[12] ? `<img src="qrcodes/${sanitizeHTML(row[12])}" alt="QR Code" style="max-width: 50px; max-height: 50px;">` : ''}</td>
                     <td>
                         <button class="btn btn-sm btn-danger" onclick="removePreviewRow(this)">
                             <i class="fas fa-trash"></i> Remove

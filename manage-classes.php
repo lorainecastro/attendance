@@ -270,7 +270,7 @@ function importStudents($class_id, $filePath)
         foreach ($rows as $index => $row) {
             if (count($row) >= 11) { // Ensure row has at least 11 columns
                 $lrn = $row[0] ?? null;
-                if ($lrn && (!isset($row[12]) || empty(trim($row[12])))) {
+                if ($lrn) {
                     $qrs_to_generate[] = [
                         'lrn' => $lrn,
                         'content' => "$lrn, {$row[1]}, {$row[2]}" . (isset($row[3]) && !empty($row[3]) ? " {$row[3]}" : '')
@@ -304,7 +304,7 @@ function importStudents($class_id, $filePath)
                 if (!$lrn) continue; // Skip if LRN is missing
 
                 // Use generated QR code if available, else use provided or null
-                $qr_code = isset($qr_files[$lrn]) ? $qr_files[$lrn] : (isset($row[12]) && !empty(trim($row[12])) ? trim($row[12]) : null);
+                $qr_code = isset($qr_files[$lrn]) ? $qr_files[$lrn] : null;
 
                 $stmt = $pdo->prepare("
                     INSERT INTO students (lrn, last_name, first_name, middle_name, email, gender, dob, grade_level, address, parent_name, emergency_contact, photo, qr_code, date_added)
@@ -3298,6 +3298,7 @@ ob_end_flush();
             previewData.forEach((row, index) => {
                 const tr = document.createElement('tr');
                 tr.dataset.index = index;
+                const photoHtml = row[11] ? `<img src="uploads/${sanitizeHTML(row[11])}" alt="Photo" style="max-width: 45px; max-height: 45px; border-radius:50%;">` : 'To be provided';
                 tr.innerHTML = `
             <td>${sanitizeHTML(row[0] || '')}</td>
             <td>${sanitizeHTML(row[1] || '')}</td>
@@ -3310,8 +3311,8 @@ ob_end_flush();
             <td>${sanitizeHTML(row[8] || '')}</td>
             <td>${sanitizeHTML(row[9] || '')}</td>
             <td>${sanitizeHTML(row[10] || '')}</td>
-            <td>${sanitizeHTML(row[11] || '')}</td>
-            <td>${sanitizeHTML(row[12] || 'To be generated')}</td>
+            <td>${photoHtml}</td>
+            <td><div id="qr_${index}" style="display: inline-block;"></div></td>
             <td>
                 <button class="btn btn-sm btn-danger" onclick="removePreviewRow(this)">
                     <i class="fas fa-trash"></i> Remove
@@ -3319,6 +3320,19 @@ ob_end_flush();
             </td>
         `;
                 tbody.appendChild(tr);
+            });
+
+            // Generate QR codes after rendering rows
+            previewData.forEach((row, index) => {
+                const qrDiv = document.getElementById(`qr_${index}`);
+                if (qrDiv && row[0]) { // If LRN exists
+                    const content = `${row[0]}, ${row[1]}, ${row[2]}` + (row[3] ? ` ${row[3]}` : '');
+                    new QRCode(qrDiv, {
+                        text: content,
+                        width: 50,
+                        height: 50
+                    });
+                }
             });
         }
 

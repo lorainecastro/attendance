@@ -1587,6 +1587,67 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
                 </form>
             </div>
         </div>
+
+        <!-- Delete Confirmation Modal -->
+<!-- Delete Confirmation Modal -->
+<div class="modal" id="delete-modal">
+    <div class="modal-content">
+        <div class="modal-header" style="background: linear-gradient(135deg, #ef4444, #f87171);">
+            <h2 class="modal-title" id="delete-modal-title">Confirm Removal</h2>
+            <button class="close-btn" onclick="closeModal('delete')">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="modal-body" style="padding: var(--spacing-2xl);">
+            <!-- Single student deletion content -->
+            <div id="single-delete-content" class="hidden">
+                <p style="font-size: var(--font-size-base); color: var(--grayfont-color); margin-bottom: var(--spacing-lg);">
+                    Are you sure you want to remove the following student from the class?
+                </p>
+                <div style="display: flex; align-items: center; gap: var(--spacing-lg); background: var(--inputfield-color); padding: var(--spacing-md); border-radius: var(--radius-md); border: 1px solid var(--border-color);">
+                    <img id="delete-student-photo" src="Uploads/no-icon.png" alt="Student Photo" style="width: 80px; height: 80px; border-radius: var(--radius-md); object-fit: cover; border: 2px solid var(--border-color);">
+                    <div style="flex: 1;">
+                        <p style="margin-bottom: var(--spacing-sm);"><strong style="color: var(--blackfont-color);">LRN:</strong> <span id="delete-student-lrn"></span></p>
+                        <p style="margin-bottom: var(--spacing-sm);"><strong style="color: var(--blackfont-color);">Full Name:</strong> <span id="delete-student-name"></span></p>
+                        <p style="margin-bottom: var(--spacing-sm);"><strong style="color: var(--blackfont-color);">Grade Level:</strong> <span id="delete-student-grade"></span></p>
+                        <p style="margin-bottom: var(--spacing-sm);"><strong style="color: var(--blackfont-color);">Subject:</strong> <span id="delete-student-subject"></span></p>
+                        <p><strong style="color: var(--blackfont-color);">Section:</strong> <span id="delete-student-section"></span></p>
+                    </div>
+                </div>
+            </div>
+            <!-- Bulk deletion content -->
+            <div id="bulk-delete-content" class="hidden">
+                <p style="font-size: var(--font-size-base); color: var(--grayfont-color); margin-bottom: var(--spacing-lg);">
+                    Are you sure you want to remove the following students from their respective classes?
+                </p>
+                <div class="preview-table-container">
+                    <table class="table w-full">
+                        <thead>
+                            <tr>
+                                <th style="padding: var(--spacing-md); font-size: var(--font-size-sm); text-align: left;">Photo</th>
+                                <th style="padding: var(--spacing-md); font-size: var(--font-size-sm); text-align: left;">LRN</th>
+                                <th style="padding: var(--spacing-md); font-size: var(--font-size-sm); text-align: left;">Full Name</th>
+                                <th style="padding: var(--spacing-md); font-size: var(--font-size-sm); text-align: left;">Grade Level</th>
+                                <th style="padding: var(--spacing-md); font-size: var(--font-size-sm); text-align: left;">Subject</th>
+                                <th style="padding: var(--spacing-md); font-size: var(--font-size-sm); text-align: left;">Section</th>
+                                <th style="padding: var(--spacing-md); font-size: var(--font-size-sm); text-align: left;">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="bulk-delete-table"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        <div class="form-actions" style="padding: var(--spacing-lg) var(--spacing-2xl); border-top: 1px solid var(--border-color); display: flex; gap: var(--spacing-md); justify-content: flex-end; background: var(--card-bg);">
+            <button type="button" class="btn btn-secondary" onclick="closeModal('delete')" style="padding: var(--spacing-sm) var(--spacing-lg); font-size: var(--font-size-sm);">
+                <i class="fas fa-times" style="margin-right: var(--spacing-xs);"></i> Cancel
+            </button>
+            <button type="button" class="btn btn-danger" id="confirm-delete-btn" onclick="confirmDelete()" style="padding: var(--spacing-sm) var(--spacing-lg); font-size: var(--font-size-sm);">
+                <i class="fas fa-trash" style="margin-right: var(--spacing-xs);"></i> Remove
+            </button>
+        </div>
+    </div>
+</div>
     </div>
     <script>
         // Data from PHP
@@ -1931,90 +1992,163 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
         }
 
         // Bulk delete
-        function bulkDelete() {
-            const gradeLevel = gradeLevelFilter.value;
-            const className = classFilter.value;
-            const section = sectionFilter.value;
-            if (!gradeLevel || !className || !section) {
-                alert('Please select Grade Level, Subject, and Section to remove students from a class.');
-                return;
-            }
-            if (!confirm('Are you sure you want to remove selected students from the selected class?')) return;
-            const checkboxes = document.querySelectorAll('.row-checkbox:checked');
-            const lrns = Array.from(checkboxes).map(cb => cb.dataset.id);
-            const class_id = students.find(s =>
-                s.gradeLevel === gradeLevel &&
-                s.class === className &&
-                s.section === section
-            )?.class_id;
-            if (!class_id) {
-                alert('Invalid class selection.');
-                return;
-            }
-            fetch('', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded'
-                    },
-                    body: `bulk_delete=true&lrns=${encodeURIComponent(JSON.stringify(lrns))}&class_id=${class_id}`
-                })
-                .then(res => {
-                    if (!res.ok) {
-                        return res.text().then(text => {
-                            console.error('Non-JSON response:', text);
-                            throw new Error(`HTTP error! Status: ${res.status}`);
-                        });
-                    }
-                    return res.json();
-                })
-                .then(data => {
-                    if (data.success) {
-                        students = students.filter(s => !lrns.includes(s.lrn.toString()) || s.class_id != class_id);
-                        applyFilters();
-                    } else {
-                        alert(data.message || 'Error removing students from class.');
-                    }
-                })
-                .catch(error => {
-                    console.error('Fetch error in bulkDelete:', error);
-                    alert('An error occurred while removing students. Please check the console for details.');
-                });
-        }
+        // Bulk delete
+function bulkDelete() {
+    const checkboxes = document.querySelectorAll('.row-checkbox:checked');
+    if (checkboxes.length === 0) {
+        alert('No students selected.');
+        return;
+    }
 
+    const selectedStudents = Array.from(checkboxes).map(cb => ({
+        lrn: cb.dataset.id,
+        class_id: cb.dataset.classId
+    }));
+
+    // Populate bulk delete modal
+    const tableBody = document.getElementById('bulk-delete-table');
+    tableBody.innerHTML = '';
+    selectedStudents.forEach(({ lrn, class_id }) => {
+        const student = students.find(s => s.lrn == lrn && String(s.class_id) === String(class_id));
+        if (student) {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td><img src="${student.photo ? 'uploads/' + student.photo : 'uploads/no-icon.png'}" alt="${student.fullName}" style="width: 60px; height: 60px; border-radius: 50%; object-fit: cover; border: 2px solid var(--border-color);"></td>
+                <td>${student.lrn}</td>
+                <td>${student.fullName}</td>
+                <td>${student.gradeLevel}</td>
+                <td>${student.class}</td>
+                <td>${student.section}</td>
+                <td>
+                    <button class="btn btn-danger btn-sm" onclick="removeFromBulkSelection('${student.lrn}', '${student.class_id}')">
+                        <i class="fas fa-times"></i> Remove
+                    </button>
+                </td>
+            `;
+            tableBody.appendChild(row);
+        }
+    });
+
+    document.getElementById('delete-modal-title').textContent = 'Confirm Bulk Removal';
+    document.getElementById('single-delete-content').classList.add('hidden');
+    document.getElementById('bulk-delete-content').classList.remove('hidden');
+    document.getElementById('confirm-delete-btn').dataset.lrns = JSON.stringify(selectedStudents);
+    document.getElementById('confirm-delete-btn').dataset.mode = 'bulk';
+    document.getElementById('delete-modal').classList.add('show');
+}
+
+// Remove student from bulk selection
+function removeFromBulkSelection(lrn, class_id) {
+    const checkbox = document.querySelector(`.row-checkbox[data-id="${lrn}"][data-class-id="${class_id}"]`);
+    if (checkbox) {
+        checkbox.checked = false;
+        updateBulkActions();
+        bulkDelete(); // Refresh the modal
+    }
+}
+
+// Confirm deletion
+function confirmDelete() {
+    const confirmBtn = document.getElementById('confirm-delete-btn');
+    const mode = confirmBtn.dataset.mode;
+
+    if (mode === 'single') {
+        const lrn = confirmBtn.dataset.lrn;
+        const class_id = confirmBtn.dataset.classId;
+        fetch(`?delete_lrn=${lrn}&class_id=${class_id}`)
+            .then(res => {
+                if (!res.ok) {
+                    return res.text().then(text => {
+                        console.error('Non-JSON response:', text);
+                        throw new Error(`HTTP error! Status: ${res.status}`);
+                    });
+                }
+                return res.json();
+            })
+            .then(data => {
+                if (data.success) {
+                    students = students.filter(s => s.lrn != lrn || String(s.class_id) !== String(class_id));
+                    applyFilters();
+                    closeModal('delete');
+                } else {
+                    alert(data.message || 'Error removing student from class.');
+                }
+            })
+            .catch(error => {
+                console.error('Fetch error in confirmDelete (single):', error);
+                alert('An error occurred while removing the student. Please check the console for details.');
+            });
+    } else if (mode === 'bulk') {
+        const lrns = JSON.parse(confirmBtn.dataset.lrns);
+        const groupedByClass = lrns.reduce((acc, { lrn, class_id }) => {
+            acc[class_id] = acc[class_id] || [];
+            acc[class_id].push(lrn);
+            return acc;
+        }, {});
+
+        const deletePromises = Object.entries(groupedByClass).map(([class_id, lrns]) => {
+            return fetch('', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                },
+                body: `bulk_delete=true&lrns=${encodeURIComponent(JSON.stringify(lrns))}&class_id=${class_id}`
+            })
+            .then(res => {
+                if (!res.ok) {
+                    return res.text().then(text => {
+                        console.error('Non-JSON response:', text);
+                        throw new Error(`HTTP error! Status: ${res.status}`);
+                    });
+                }
+                return res.json();
+            });
+        });
+
+        Promise.all(deletePromises)
+            .then(results => {
+                const allSuccessful = results.every(data => data.success);
+                if (allSuccessful) {
+                    lrns.forEach(({ lrn, class_id }) => {
+                        students = students.filter(s => s.lrn != lrn || String(s.class_id) !== String(class_id));
+                    });
+                    applyFilters();
+                    closeModal('delete');
+                } else {
+                    const errorMessage = results.find(data => !data.success)?.message || 'Error removing some students from class.';
+                    alert(errorMessage);
+                }
+            })
+            .catch(error => {
+                console.error('Fetch error in confirmDelete (bulk):', error);
+                alert('An error occurred while removing students. Please check the console for details.');
+            });
+    }
+}
         // Delete student from class
-        function deleteStudent(lrn, class_id) {
-            const gradeLevel = gradeLevelFilter.value;
-            const className = classFilter.value;
-            const section = sectionFilter.value;
-            if (!gradeLevel || !className || !section) {
-                alert('Please select Grade Level, Subject, and Section to remove the student from a class.');
-                return;
-            }
-            if (!confirm('Are you sure you want to remove this student from the selected class?')) return;
-            fetch(`?delete_lrn=${lrn}&class_id=${class_id}`)
-                .then(res => {
-                    if (!res.ok) {
-                        return res.text().then(text => {
-                            console.error('Non-JSON response:', text);
-                            throw new Error(`HTTP error! Status: ${res.status}`);
-                        });
-                    }
-                    return res.json();
-                })
-                .then(data => {
-                    if (data.success) {
-                        students = students.filter(s => s.lrn != lrn || s.class_id != class_id);
-                        applyFilters();
-                    } else {
-                        alert(data.message || 'Error removing student from class.');
-                    }
-                })
-                .catch(error => {
-                    console.error('Fetch error in deleteStudent:', error);
-                    alert('An error occurred while removing the student. Please check the console for details.');
-                });
-        }
+        // Delete student from class
+function deleteStudent(lrn, class_id) {
+    const student = students.find(s => s.lrn == lrn && String(s.class_id) === String(class_id));
+    if (!student) {
+        alert('Student not found.');
+        return;
+    }
 
+    // Populate single delete modal
+    document.getElementById('delete-modal-title').textContent = 'Confirm Student Removal';
+    document.getElementById('delete-student-photo').src = student.photo ? 'uploads/' + student.photo : 'uploads/no-icon.png';
+    document.getElementById('delete-student-lrn').textContent = student.lrn;
+    document.getElementById('delete-student-name').textContent = student.fullName;
+    document.getElementById('delete-student-grade').textContent = student.gradeLevel;
+    document.getElementById('delete-student-subject').textContent = student.class;
+    document.getElementById('delete-student-section').textContent = student.section;
+    document.getElementById('single-delete-content').classList.remove('hidden');
+    document.getElementById('bulk-delete-content').classList.add('hidden');
+    document.getElementById('confirm-delete-btn').dataset.lrn = lrn;
+    document.getElementById('confirm-delete-btn').dataset.classId = class_id;
+    document.getElementById('confirm-delete-btn').dataset.mode = 'single';
+    document.getElementById('delete-modal').classList.add('show');
+}
         // Open profile modal
         function openProfileModal(mode, lrn = null) {
             const form = {
@@ -2163,12 +2297,21 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
             applyFilters();
         }
 
-        // Close modal
-        function closeModal(type) {
-            if (type === 'profile') {
-                profileModal.classList.remove('show');
-            }
-        }
+        // Update closeModal to handle delete modal
+function closeModal(type) {
+    if (type === 'profile') {
+        profileModal.classList.remove('show');
+    } else if (type === 'delete') {
+        document.getElementById('delete-modal').classList.remove('show');
+        document.getElementById('single-delete-content').classList.add('hidden');
+        document.getElementById('bulk-delete-content').classList.add('hidden');
+        document.getElementById('bulk-delete-table').innerHTML = '';
+        document.getElementById('confirm-delete-btn').removeAttribute('data-lrn');
+        document.getElementById('confirm-delete-btn').removeAttribute('data-classId');
+        document.getElementById('confirm-delete-btn').removeAttribute('data-lrns');
+        document.getElementById('confirm-delete-btn').removeAttribute('data-mode');
+    }
+}
 
         // Print QR code
         function printQRCode() {

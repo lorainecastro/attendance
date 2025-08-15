@@ -1361,6 +1361,17 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
             /* Aligns with surrounding content */
         }
 
+        #tableSelectAll {
+            width: 10px;
+            /* Fallback width */
+            height: 10px;
+            /* Fallback height */
+            transform: scale(1.5);
+            /* Scales the checkbox to 1.5x its default size */
+            vertical-align: middle;
+            /* Aligns with surrounding content */
+        }
+
         .row-checkbox {
             width: 10px;
             /* Fallback width */

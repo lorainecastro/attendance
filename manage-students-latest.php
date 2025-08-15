@@ -1639,7 +1639,7 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
                             Are you sure you want to remove the following student from the class?
                         </p>
                         <div style="display: flex; align-items: center; gap: var(--spacing-lg); background: var(--inputfield-color); padding: var(--spacing-md); border-radius: var(--radius-md); border: 1px solid var(--border-color);">
-                            <img id="delete-student-photo" src="Uploads/no-icon.png" alt="Student Photo" style="width: 80px; height: 80px; border-radius: var(--radius-md); object-fit: cover; border: 2px solid var(--border-color);">
+                            <img id="delete-student-photo" src="Uploads/no-icon.png" alt="Student Photo" style="width: 160px; height: 160px; border-radius: var(--radius-md); object-fit: cover; border: 2px solid var(--border-color);">
                             <div style="flex: 1;">
                                 <p style="margin-bottom: var(--spacing-sm);"><strong style="color: var(--blackfont-color);">LRN:</strong> <span id="delete-student-lrn"></span></p>
                                 <p style="margin-bottom: var(--spacing-sm);"><strong style="color: var(--blackfont-color);">Full Name:</strong> <span id="delete-student-name"></span></p>

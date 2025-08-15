@@ -2196,6 +2196,261 @@ ob_end_flush();
         }
     </style>
 
+    <style>
+        /* Class Details (View Modal) Styles */
+        #viewModal .modal-content {
+            max-width: 900px;
+            /* Slightly narrower for better focus */
+            width: 90%;
+            border-radius: var(--radius-xl);
+            box-shadow: var(--shadow-lg);
+            border: 1px solid var(--border-color);
+            background: var(--card-bg);
+        }
+
+        #viewModal .modal-header {
+            padding: var(--spacing-xl) var(--spacing-2xl);
+            background: var(--primary-gradient);
+            border-top-left-radius: var(--radius-xl);
+            border-top-right-radius: var(--radius-xl);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        #viewModal .modal-title {
+            font-size: var(--font-size-2xl);
+            font-weight: 700;
+            color: var(--whitefont-color);
+            letter-spacing: 0.02em;
+        }
+
+        #viewModal .close-btn {
+            background: none;
+            border: none;
+            font-size: 1.75rem;
+            cursor: pointer;
+            color: var(--whitefont-color);
+            padding: var(--spacing-sm);
+            width: 48px;
+            height: 48px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: var(--radius-md);
+            transition: var(--transition-normal);
+        }
+
+        #viewModal .close-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: scale(1.1);
+        }
+
+        #viewModal .modal-body {
+            padding: var(--spacing-2xl);
+            max-height: 70vh;
+            overflow-y: auto;
+            background: linear-gradient(180deg, #f9fafb, #ffffff);
+        }
+
+        .detail-row {
+            display: flex;
+            align-items: center;
+            margin-bottom: var(--spacing-lg);
+            padding: var(--spacing-md) var(--spacing-lg);
+            background: var(--inputfield-color);
+            border-radius: var(--radius-md);
+            transition: var(--transition-normal);
+            border: 1px solid var(--border-color);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .detail-row:hover {
+            background: var(--inputfieldhover-color);
+            box-shadow: var(--shadow-md);
+            transform: translateY(-2px);
+        }
+
+        .detail-row strong {
+            flex: 0 0 180px;
+            /* Wider label for better readability */
+            font-weight: 600;
+            color: var(--blackfont-color);
+            font-size: var(--font-size-base);
+            letter-spacing: 0.01em;
+        }
+
+        .detail-row span,
+        .detail-row div {
+            flex: 1;
+            color: var(--grayfont-color);
+            font-size: var(--font-size-sm);
+            line-height: 1.5;
+        }
+
+        .schedule-details {
+            padding-left: var(--spacing-lg);
+            color: var(--grayfont-color);
+            width: 100%;
+        }
+
+        .schedule-details .schedule-item {
+            margin-bottom: var(--spacing-sm);
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+            font-size: var(--font-size-sm);
+            line-height: 1.4;
+        }
+
+        .schedule-details .schedule-item::before {
+            content: "•";
+            color: var(--primary-blue);
+            font-size: 1.2rem;
+            margin-right: var(--spacing-sm);
+        }
+
+        .detail-row .status-badge {
+            padding: 0.5rem 1rem;
+            border-radius: 9999px;
+            font-size: var(--font-size-sm);
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .detail-row .status-badge.active {
+            background-color: rgba(34, 197, 94, 0.15);
+            color: var(--success-green);
+        }
+
+        .detail-row .status-badge.inactive {
+            background-color: rgba(239, 68, 68, 0.15);
+            color: var(--danger-red);
+        }
+
+        #viewModal .form-actions {
+            padding: var(--spacing-xl) var(--spacing-2xl);
+            border-top: 1px solid var(--border-color);
+            display: flex;
+            justify-content: flex-end;
+            gap: var(--spacing-md);
+            background: var(--card-bg);
+        }
+
+        #viewModal .btn {
+            padding: var(--spacing-md) var(--spacing-xl);
+            font-size: var(--font-size-base);
+            font-weight: 600;
+            border-radius: var(--radius-md);
+            transition: var(--transition-normal);
+        }
+
+        #viewModal .btn-secondary {
+            background: var(--medium-gray);
+            color: var(--whitefont-color);
+            box-shadow: var(--shadow-sm);
+        }
+
+        #viewModal .btn-secondary:hover {
+            background: #4b5563;
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-md);
+        }
+
+        #viewContent {
+            padding: 30px;
+        }
+
+        /* Responsive Adjustments */
+        @media (max-width: 768px) {
+            #viewModal .modal-content {
+                width: 98%;
+                max-height: 95vh;
+            }
+
+            #viewModal .modal-header {
+                padding: var(--spacing-lg) var(--spacing-xl);
+            }
+
+            #viewModal .modal-body {
+                padding: var(--spacing-lg);
+            }
+
+            .detail-row {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: var(--spacing-sm);
+                padding: var(--spacing-md);
+                margin-bottom: var(--spacing-md);
+            }
+
+            .detail-row strong {
+                flex: none;
+                width: 100%;
+                font-size: var(--font-size-sm);
+            }
+
+            .detail-row span,
+            .detail-row div {
+                font-size: 0.875rem;
+            }
+
+            .schedule-details {
+                padding-left: var(--spacing-sm);
+            }
+
+            .schedule-details .schedule-item {
+                font-size: 0.875rem;
+                margin-bottom: var(--spacing-xs);
+            }
+
+            #viewModal .form-actions {
+                padding: var(--spacing-md) var(--spacing-lg);
+                flex-direction: column;
+                gap: var(--spacing-sm);
+            }
+
+            #viewModal .btn {
+                width: 100%;
+                justify-content: center;
+            }
+        }
+
+        @media (max-width: 576px) {
+            #viewModal .modal-header {
+                padding: var(--spacing-md);
+            }
+
+            #viewModal .modal-body {
+                padding: var(--spacing-md);
+            }
+
+            .detail-row {
+                padding: var(--spacing-sm);
+                margin-bottom: var(--spacing-sm);
+            }
+
+            .detail-row strong {
+                font-size: 0.875rem;
+            }
+
+            .detail-row span,
+            .detail-row div {
+                font-size: 0.75rem;
+            }
+
+            .schedule-details .schedule-item {
+                font-size: 0.75rem;
+            }
+
+            #viewModal .form-actions {
+                padding: var(--spacing-sm);
+            }
+        }
+    </style>
+
 </head>
 
 <body>
@@ -2357,7 +2612,7 @@ ob_end_flush();
                         <label class="class-form-label" for="subject">Subject</label>
                         <input type="text" class="class-form-input" id="subject" required placeholder="e.g., Mathematics, Science, English">
                     </div>
-                    
+
                     <div class="class-form-group">
                         <label class="class-form-label" for="room">Room (Optional)</label>
                         <input type="text" class="class-form-input" id="room" placeholder="e.g., Room 201, Lab 1">

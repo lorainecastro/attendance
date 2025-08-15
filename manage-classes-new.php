@@ -2334,18 +2334,6 @@ ob_end_flush();
                 <!-- First Column: Class Details -->
                 <div class="class-form-column">
                     <div class="class-form-group">
-                        <label class="class-form-label" for="classCode">Subject Code</label>
-                        <input type="text" class="class-form-input" id="classCode" required placeholder="e.g., MATH-101-A">
-                    </div>
-                    <div class="class-form-group">
-                        <label class="class-form-label" for="sectionName">Section Name</label>
-                        <input type="text" class="class-form-input" id="sectionName" required placeholder="e.g., Section A, Diamond, Einstein">
-                    </div>
-                    <div class="class-form-group">
-                        <label class="class-form-label" for="subject">Subject</label>
-                        <input type="text" class="class-form-input" id="subject" required placeholder="e.g., Mathematics, Science, English">
-                    </div>
-                    <div class="class-form-group">
                         <label class="class-form-label" for="gradeLevel">Grade Level</label>
                         <select class="class-form-select" id="gradeLevel" required>
                             <option value="">Select Grade</option>
@@ -2357,6 +2345,19 @@ ob_end_flush();
                             <option value="Grade 12">Grade 12</option>
                         </select>
                     </div>
+                    <div class="class-form-group">
+                        <label class="class-form-label" for="classCode">Subject Code</label>
+                        <input type="text" class="class-form-input" id="classCode" required placeholder="e.g., MATH-101-A">
+                    </div>
+                    <div class="class-form-group">
+                        <label class="class-form-label" for="sectionName">Section Name</label>
+                        <input type="text" class="class-form-input" id="sectionName" required placeholder="e.g., Section A, Diamond, Einstein">
+                    </div>
+                    <div class="class-form-group">
+                        <label class="class-form-label" for="subject">Subject</label>
+                        <input type="text" class="class-form-input" id="subject" required placeholder="e.g., Mathematics, Science, English">
+                    </div>
+                    
                     <div class="class-form-group">
                         <label class="class-form-label" for="room">Room (Optional)</label>
                         <input type="text" class="class-form-input" id="room" placeholder="e.g., Room 201, Lab 1">

@@ -1058,7 +1058,7 @@ $profileName = htmlspecialchars($currentUser['firstname'] . ' ' . $currentUser['
                             pageFile = 'dashboard.php';
                             break;
                         case 1:
-                            pageFile = 'manage-classes-latest.php';
+                            pageFile = 'manage-classes.php';
                             break;
                         case 2:
                             pageFile = 'manage-students-latest.php';

@@ -270,7 +270,7 @@ function importStudents($class_id, $filePath)
         foreach ($rows as $index => $row) {
             if (count($row) >= 11) { // Ensure row has at least 11 columns
                 $lrn = $row[0] ?? null;
-                if ($lrn) {
+                if ($lrn && (!isset($row[12]) || empty(trim($row[12])))) {
                     $qrs_to_generate[] = [
                         'lrn' => $lrn,
                         'content' => "$lrn, {$row[1]}, {$row[2]}" . (isset($row[3]) && !empty($row[3]) ? " {$row[3]}" : '')
@@ -304,7 +304,7 @@ function importStudents($class_id, $filePath)
                 if (!$lrn) continue; // Skip if LRN is missing
 
                 // Use generated QR code if available, else use provided or null
-                $qr_code = isset($qr_files[$lrn]) ? $qr_files[$lrn] : null;
+                $qr_code = isset($qr_files[$lrn]) ? $qr_files[$lrn] : (isset($row[12]) && !empty(trim($row[12])) ? trim($row[12]) : null);
 
                 $stmt = $pdo->prepare("
                     INSERT INTO students (lrn, last_name, first_name, middle_name, email, gender, dob, grade_level, address, parent_name, emergency_contact, photo, qr_code, date_added)
@@ -438,6 +438,41 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             echo json_encode($result);
         } else {
             echo json_encode(['success' => false, 'error' => 'Failed to upload file']);
+        }
+        exit;
+    }
+    // Add this new action handler in your existing AJAX requests section
+    elseif ($_POST['action'] === 'generateQRCodes') {
+        $qrs_json = $_POST['qrs'] ?? '[]';
+        $qrs_to_generate = json_decode($qrs_json, true);
+
+        if (empty($qrs_to_generate)) {
+            echo json_encode(['success' => false, 'error' => 'No QR codes to generate']);
+            exit;
+        }
+
+        try {
+            // Use your existing QR code generation logic
+            $qr_files = [];
+
+            foreach ($qrs_to_generate as $item) {
+                $qrCode = new QrCode($item['content']);
+                $writer = new PngWriter();
+                $result = $writer->write($qrCode);
+                $dir = 'qrcodes';
+                if (!file_exists($dir)) {
+                    mkdir($dir, 0777, true);
+                }
+                $filename = $item['lrn'] . '.png';
+                $savePath = $dir . '/' . $filename;
+                $result->saveToFile($savePath);
+                $qr_files[$item['lrn']] = $filename;
+            }
+
+            echo json_encode(['success' => true, 'qr_files' => $qr_files]);
+        } catch (Exception $e) {
+            error_log("QR Code generation error: " . $e->getMessage());
+            echo json_encode(['success' => false, 'error' => 'Failed to generate QR codes: ' . $e->getMessage()]);
         }
         exit;
     }
@@ -2161,6 +2196,261 @@ ob_end_flush();
         }
     </style>
 
+    <style>
+        /* Class Details (View Modal) Styles */
+        #viewModal .modal-content {
+            max-width: 900px;
+            /* Slightly narrower for better focus */
+            width: 90%;
+            border-radius: var(--radius-xl);
+            box-shadow: var(--shadow-lg);
+            border: 1px solid var(--border-color);
+            background: var(--card-bg);
+        }
+
+        #viewModal .modal-header {
+            padding: var(--spacing-xl) var(--spacing-2xl);
+            background: var(--primary-gradient);
+            border-top-left-radius: var(--radius-xl);
+            border-top-right-radius: var(--radius-xl);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        #viewModal .modal-title {
+            font-size: var(--font-size-2xl);
+            font-weight: 700;
+            color: var(--whitefont-color);
+            letter-spacing: 0.02em;
+        }
+
+        #viewModal .close-btn {
+            background: none;
+            border: none;
+            font-size: 1.75rem;
+            cursor: pointer;
+            color: var(--whitefont-color);
+            padding: var(--spacing-sm);
+            width: 48px;
+            height: 48px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: var(--radius-md);
+            transition: var(--transition-normal);
+        }
+
+        #viewModal .close-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: scale(1.1);
+        }
+
+        #viewModal .modal-body {
+            padding: var(--spacing-2xl);
+            max-height: 70vh;
+            overflow-y: auto;
+            background: linear-gradient(180deg, #f9fafb, #ffffff);
+        }
+
+        .detail-row {
+            display: flex;
+            align-items: center;
+            margin-bottom: var(--spacing-lg);
+            padding: var(--spacing-md) var(--spacing-lg);
+            background: var(--inputfield-color);
+            border-radius: var(--radius-md);
+            transition: var(--transition-normal);
+            border: 1px solid var(--border-color);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .detail-row:hover {
+            background: var(--inputfieldhover-color);
+            box-shadow: var(--shadow-md);
+            transform: translateY(-2px);
+        }
+
+        .detail-row strong {
+            flex: 0 0 180px;
+            /* Wider label for better readability */
+            font-weight: 600;
+            color: var(--blackfont-color);
+            font-size: var(--font-size-base);
+            letter-spacing: 0.01em;
+        }
+
+        .detail-row span,
+        .detail-row div {
+            flex: 1;
+            color: var(--grayfont-color);
+            font-size: var(--font-size-sm);
+            line-height: 1.5;
+        }
+
+        .schedule-details {
+            padding-left: var(--spacing-lg);
+            color: var(--grayfont-color);
+            width: 100%;
+        }
+
+        .schedule-details .schedule-item {
+            margin-bottom: var(--spacing-sm);
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+            font-size: var(--font-size-sm);
+            line-height: 1.4;
+        }
+
+        .schedule-details .schedule-item::before {
+            content: "•";
+            color: var(--primary-blue);
+            font-size: 1.2rem;
+            margin-right: var(--spacing-sm);
+        }
+
+        .detail-row .status-badge {
+            padding: 0.5rem 1rem;
+            border-radius: 9999px;
+            font-size: var(--font-size-sm);
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .detail-row .status-badge.active {
+            background-color: rgba(34, 197, 94, 0.15);
+            color: var(--success-green);
+        }
+
+        .detail-row .status-badge.inactive {
+            background-color: rgba(239, 68, 68, 0.15);
+            color: var(--danger-red);
+        }
+
+        #viewModal .form-actions {
+            padding: var(--spacing-xl) var(--spacing-2xl);
+            border-top: 1px solid var(--border-color);
+            display: flex;
+            justify-content: flex-end;
+            gap: var(--spacing-md);
+            background: var(--card-bg);
+        }
+
+        #viewModal .btn {
+            padding: var(--spacing-md) var(--spacing-xl);
+            font-size: var(--font-size-base);
+            font-weight: 600;
+            border-radius: var(--radius-md);
+            transition: var(--transition-normal);
+        }
+
+        #viewModal .btn-secondary {
+            background: var(--medium-gray);
+            color: var(--whitefont-color);
+            box-shadow: var(--shadow-sm);
+        }
+
+        #viewModal .btn-secondary:hover {
+            background: #4b5563;
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-md);
+        }
+
+        #viewContent {
+            padding: 30px;
+        }
+
+        /* Responsive Adjustments */
+        @media (max-width: 768px) {
+            #viewModal .modal-content {
+                width: 98%;
+                max-height: 95vh;
+            }
+
+            #viewModal .modal-header {
+                padding: var(--spacing-lg) var(--spacing-xl);
+            }
+
+            #viewModal .modal-body {
+                padding: var(--spacing-lg);
+            }
+
+            .detail-row {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: var(--spacing-sm);
+                padding: var(--spacing-md);
+                margin-bottom: var(--spacing-md);
+            }
+
+            .detail-row strong {
+                flex: none;
+                width: 100%;
+                font-size: var(--font-size-sm);
+            }
+
+            .detail-row span,
+            .detail-row div {
+                font-size: 0.875rem;
+            }
+
+            .schedule-details {
+                padding-left: var(--spacing-sm);
+            }
+
+            .schedule-details .schedule-item {
+                font-size: 0.875rem;
+                margin-bottom: var(--spacing-xs);
+            }
+
+            #viewModal .form-actions {
+                padding: var(--spacing-md) var(--spacing-lg);
+                flex-direction: column;
+                gap: var(--spacing-sm);
+            }
+
+            #viewModal .btn {
+                width: 100%;
+                justify-content: center;
+            }
+        }
+
+        @media (max-width: 576px) {
+            #viewModal .modal-header {
+                padding: var(--spacing-md);
+            }
+
+            #viewModal .modal-body {
+                padding: var(--spacing-md);
+            }
+
+            .detail-row {
+                padding: var(--spacing-sm);
+                margin-bottom: var(--spacing-sm);
+            }
+
+            .detail-row strong {
+                font-size: 0.875rem;
+            }
+
+            .detail-row span,
+            .detail-row div {
+                font-size: 0.75rem;
+            }
+
+            .schedule-details .schedule-item {
+                font-size: 0.75rem;
+            }
+
+            #viewModal .form-actions {
+                padding: var(--spacing-sm);
+            }
+        }
+    </style>
+
 </head>
 
 <body>
@@ -2299,18 +2589,6 @@ ob_end_flush();
                 <!-- First Column: Class Details -->
                 <div class="class-form-column">
                     <div class="class-form-group">
-                        <label class="class-form-label" for="classCode">Subject Code</label>
-                        <input type="text" class="class-form-input" id="classCode" required placeholder="e.g., MATH-101-A">
-                    </div>
-                    <div class="class-form-group">
-                        <label class="class-form-label" for="sectionName">Section Name</label>
-                        <input type="text" class="class-form-input" id="sectionName" required placeholder="e.g., Section A, Diamond, Einstein">
-                    </div>
-                    <div class="class-form-group">
-                        <label class="class-form-label" for="subject">Subject</label>
-                        <input type="text" class="class-form-input" id="subject" required placeholder="e.g., Mathematics, Science, English">
-                    </div>
-                    <div class="class-form-group">
                         <label class="class-form-label" for="gradeLevel">Grade Level</label>
                         <select class="class-form-select" id="gradeLevel" required>
                             <option value="">Select Grade</option>
@@ -2322,6 +2600,19 @@ ob_end_flush();
                             <option value="Grade 12">Grade 12</option>
                         </select>
                     </div>
+                    <div class="class-form-group">
+                        <label class="class-form-label" for="classCode">Subject Code</label>
+                        <input type="text" class="class-form-input" id="classCode" required placeholder="e.g., MATH-101-A">
+                    </div>
+                    <div class="class-form-group">
+                        <label class="class-form-label" for="sectionName">Section Name</label>
+                        <input type="text" class="class-form-input" id="sectionName" required placeholder="e.g., Section A, Diamond, Einstein">
+                    </div>
+                    <div class="class-form-group">
+                        <label class="class-form-label" for="subject">Subject</label>
+                        <input type="text" class="class-form-input" id="subject" required placeholder="e.g., Mathematics, Science, English">
+                    </div>
+
                     <div class="class-form-group">
                         <label class="class-form-label" for="room">Room (Optional)</label>
                         <input type="text" class="class-form-input" id="room" placeholder="e.g., Room 201, Lab 1">
@@ -3298,7 +3589,6 @@ ob_end_flush();
             previewData.forEach((row, index) => {
                 const tr = document.createElement('tr');
                 tr.dataset.index = index;
-                const photoHtml = row[11] ? `<img src="uploads/${sanitizeHTML(row[11])}" alt="Photo" style="max-width: 45px; max-height: 45px; border-radius:50%;">` : 'To be provided';
                 tr.innerHTML = `
             <td>${sanitizeHTML(row[0] || '')}</td>
             <td>${sanitizeHTML(row[1] || '')}</td>
@@ -3311,8 +3601,8 @@ ob_end_flush();
             <td>${sanitizeHTML(row[8] || '')}</td>
             <td>${sanitizeHTML(row[9] || '')}</td>
             <td>${sanitizeHTML(row[10] || '')}</td>
-            <td>${photoHtml}</td>
-            <td><div id="qr_${index}" style="display: inline-block;"></div></td>
+            <td>${sanitizeHTML(row[11] || '')}</td>
+            <td>${sanitizeHTML(row[12] || 'To be generated')}</td>
             <td>
                 <button class="btn btn-sm btn-danger" onclick="removePreviewRow(this)">
                     <i class="fas fa-trash"></i> Remove
@@ -3320,19 +3610,6 @@ ob_end_flush();
             </td>
         `;
                 tbody.appendChild(tr);
-            });
-
-            // Generate QR codes after rendering rows
-            previewData.forEach((row, index) => {
-                const qrDiv = document.getElementById(`qr_${index}`);
-                if (qrDiv && row[0]) { // If LRN exists
-                    const content = `${row[0]}, ${row[1]}, ${row[2]}` + (row[3] ? ` ${row[3]}` : '');
-                    new QRCode(qrDiv, {
-                        text: content,
-                        width: 50,
-                        height: 50
-                    });
-                }
             });
         }
 
@@ -3400,6 +3677,270 @@ ob_end_flush();
             const selectAll = document.getElementById('selectAll');
             const checkboxes = document.querySelectorAll('.row-checkbox');
             checkboxes.forEach(checkbox => checkbox.checked = selectAll.checked);
+        }
+    </script>
+
+    <script>
+        // Updated file change event listener
+        document.getElementById('importFile').addEventListener('change', function(event) {
+            const file = event.target.files[0];
+            if (!file) {
+                const previewTableContainer = document.getElementById('previewTableContainer');
+                if (previewTableContainer) previewTableContainer.style.display = 'none';
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, {
+                        type: 'array'
+                    });
+                    const firstSheet = workbook.SheetNames[0];
+                    const worksheet = workbook.Sheets[firstSheet];
+                    const rows = XLSX.utils.sheet_to_json(worksheet, {
+                        header: 1,
+                        raw: false
+                    });
+
+                    const previewTableContainer = document.getElementById('previewTableContainer');
+
+                    if (!previewTableContainer) {
+                        console.error('Preview table elements not found');
+                        alert('Error: Preview table is not available.');
+                        return;
+                    }
+
+                    if (rows.length <= 1) {
+                        previewTableContainer.style.display = 'none';
+                        alert('The selected Excel file is empty or contains only headers.');
+                        return;
+                    }
+
+                    excelHeader = rows[0];
+                    previewData = rows.slice(1).filter(row => row.length >= 11);
+
+                    // Process QR codes - generate filenames for missing QR codes
+                    processQRCodeFilenames();
+
+                    // Generate QR codes on server and display them
+                    generateAndDisplayQRCodes();
+
+                    renderPreviewTable();
+                    previewTableContainer.style.display = 'block';
+                } catch (error) {
+                    console.error('Error reading Excel file:', error);
+                    alert('Error reading Excel file: ' + error.message);
+                    const previewTableContainer = document.getElementById('previewTableContainer');
+                    if (previewTableContainer) previewTableContainer.style.display = 'none';
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        });
+
+        // Function to process QR code filenames
+        function processQRCodeFilenames() {
+            previewData.forEach((row, index) => {
+                const lrn = row[0];
+
+                // If QR code is empty or not provided, set the expected filename
+                if (!row[12] || row[12].toString().trim() === '') {
+                    const qrFilename = `${lrn}.png`;
+                    previewData[index][12] = qrFilename;
+                }
+            });
+        }
+
+        // Function to generate QR codes using your existing server-side system
+        function generateAndDisplayQRCodes() {
+            // Prepare data for QR codes that need to be generated
+            const qrsToGenerate = [];
+
+            previewData.forEach((row, index) => {
+                const lrn = row[0];
+                const lastName = row[1] || '';
+                const firstName = row[2] || '';
+                const middleName = row[3] || '';
+
+                // Check if this QR code needs to be generated (empty or just filename)
+                if (!row[12] || row[12].toString().trim() === '' || row[12] === `${lrn}.png`) {
+                    const qrContent = `${lrn}, ${lastName}, ${firstName}${middleName ? ' ' + middleName : ''}`;
+                    qrsToGenerate.push({
+                        lrn: lrn,
+                        content: qrContent,
+                        index: index
+                    });
+                }
+            });
+
+            if (qrsToGenerate.length > 0) {
+                // Send request to server to generate QR codes
+                generateQRCodesOnServer(qrsToGenerate);
+            } else {
+                // All QR codes already exist, just update display
+                updateAllQRDisplays();
+            }
+        }
+
+        // Function to generate QR codes on server
+        function generateQRCodesOnServer(qrsToGenerate) {
+            const formData = new FormData();
+            formData.append('action', 'generateQRCodes');
+            formData.append('qrs', JSON.stringify(qrsToGenerate));
+
+            fetch('manage-classes.php', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success && data.qr_files) {
+                        // Update preview data with generated QR codes
+                        Object.keys(data.qr_files).forEach(lrn => {
+                            const index = previewData.findIndex(row => row[0] === lrn);
+                            if (index !== -1) {
+                                previewData[index][12] = data.qr_files[lrn];
+                                updatePreviewQRCode(index, `qrcodes/${data.qr_files[lrn]}`, data.qr_files[lrn]);
+                            }
+                        });
+                    }
+                    updateAllQRDisplays();
+                })
+                .catch(error => {
+                    console.error('Error generating QR codes:', error);
+                    updateAllQRDisplays();
+                });
+        }
+
+        // Function to update all QR code displays
+        function updateAllQRDisplays() {
+            previewData.forEach((row, index) => {
+                if (row[12]) {
+                    const qrPath = `qrcodes/${row[12]}`;
+                    updatePreviewQRCode(index, qrPath, row[12]);
+                }
+            });
+        }
+
+        // Function to update QR code in specific preview table row
+        function updatePreviewQRCode(index, qrPath, filename) {
+            const tbody = document.querySelector('#previewTable tbody');
+            if (!tbody) return;
+
+            const row = tbody.querySelector(`tr[data-index="${index}"]`);
+            if (!row) return;
+
+            const qrCell = row.cells[12];
+            if (qrCell) {
+                qrCell.innerHTML = `<img src="${qrPath}" alt="QR Code" style="max-width: 50px; max-height: 50px;" onerror="this.style.display='none'; this.nextSibling.style.display='inline';"><span style="display:none;">QR: ${filename}</span>`;
+            }
+        }
+
+        // Updated renderPreviewTable function
+        function renderPreviewTable() {
+            const tbody = document.querySelector('#previewTable tbody');
+            if (!tbody) return;
+
+            tbody.innerHTML = '';
+
+            previewData.forEach((row, index) => {
+                const tr = document.createElement('tr');
+                tr.dataset.index = index;
+
+                // Handle photo display - show actual image like in student table
+                const photoValue = row[11] || '';
+                let photoDisplay = '';
+                if (photoValue && (photoValue.includes('.jpg') || photoValue.includes('.jpeg') || photoValue.includes('.png') || photoValue.includes('.gif'))) {
+                    photoDisplay = `<img src="uploads/${photoValue}" alt="Student Photo" style="max-width: 45px; max-height: 45px; border-radius: 50%;" onerror="this.style.display='none'; this.nextSibling.style.display='inline';"><span style="display:none;">${sanitizeHTML(photoValue)}</span>`;
+                } else if (photoValue) {
+                    photoDisplay = sanitizeHTML(photoValue);
+                } else {
+                    photoDisplay = 'Photo To Be Provided';
+                }
+
+                // Handle QR code display - initially show filename, will be updated with image
+                let qrDisplay = '';
+                if (row[12] && row[12].toString().trim() !== '') {
+                    // Try to show existing QR code image
+                    const qrPath = `qrcodes/${row[12]}`;
+                    qrDisplay = `<img src="${qrPath}" alt="QR Code" style="max-width: 50px; max-height: 50px;" onerror="this.style.display='none'; this.nextSibling.style.display='inline';"><span style="display:none;">QR: ${row[12]}</span>`;
+                } else {
+                    qrDisplay = 'To be generated';
+                }
+
+                tr.innerHTML = `
+            <td>${sanitizeHTML(row[0] || '')}</td>
+            <td>${sanitizeHTML(row[1] || '')}</td>
+            <td>${sanitizeHTML(row[2] || '')}</td>
+            <td>${sanitizeHTML(row[3] || '')}</td>
+            <td>${sanitizeHTML(row[4] || '')}</td>
+            <td>${sanitizeHTML(row[5] || '')}</td>
+            <td>${sanitizeHTML(row[6] || '')}</td>
+            <td>${sanitizeHTML(row[7] || '')}</td>
+            <td>${sanitizeHTML(row[8] || '')}</td>
+            <td>${sanitizeHTML(row[9] || '')}</td>
+            <td>${sanitizeHTML(row[10] || '')}</td>
+            <td>${photoDisplay}</td>
+            <td>${qrDisplay}</td>
+            <td>
+                <button class="btn btn-sm btn-danger" onclick="removePreviewRow(this)">
+                    <i class="fas fa-trash"></i> Remove
+                </button>
+            </td>
+        `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        // Updated renderStudentTable function to show QR code filename
+        function renderStudentTable(students, classId) {
+            const tbody = document.querySelector('#studentTable tbody');
+            if (!tbody) return;
+
+            tbody.innerHTML = '';
+
+            if (!students || students.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="15" class="no-classes">No students enrolled</td></tr>';
+                return;
+            }
+
+            students.forEach(student => {
+                const photoSrc = student.photo ? `uploads/${student.photo}` : '';
+                const qrSrc = student.qr_code ? `qrcodes/${student.qr_code}` : '';
+
+                // Display QR code with filename
+                let qrDisplay = '';
+                if (qrSrc) {
+                    qrDisplay = `<img src="${qrSrc}" alt="QR Code" style="max-width: 50px; max-height: 50px;"><br><small>${student.qr_code}</small>`;
+                } else {
+                    qrDisplay = 'QR Code To Be Provided';
+                }
+
+                const row = document.createElement('tr');
+                row.innerHTML = `
+            <td>${sanitizeHTML(student.lrn || 'N/A')}</td>
+            <td>${sanitizeHTML(student.first_name || 'N/A')}</td>
+            <td>${sanitizeHTML(student.middle_name || 'N/A')}</td>
+            <td>${sanitizeHTML(student.last_name || 'N/A')}</td>
+            <td>${sanitizeHTML(student.email || 'N/A')}</td>
+            <td>${sanitizeHTML(student.gender || 'N/A')}</td>
+            <td>${sanitizeHTML(student.dob || 'N/A')}</td>
+            <td>${sanitizeHTML(student.grade_level || 'N/A')}</td>
+            <td>${sanitizeHTML(student.address || 'N/A')}</td>
+            <td>${sanitizeHTML(student.parent_name || 'N/A')}</td>
+            <td>${sanitizeHTML(student.emergency_contact || 'N/A')}</td>
+            <td>${photoSrc ? `<img src="${photoSrc}" alt="Student Photo" style="max-width: 45px; max-height: 45px; border-radius:50%;">` : 'Photo To Be Provided'}</td>
+            <td>${qrDisplay}</td>
+            <td>${sanitizeHTML(student.date_added || 'N/A')}</td>
+            <td class="actions">
+                <button class="btn btn-sm btn-danger" onclick="deleteStudent(${classId}, '${student.lrn}')">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </td>
+        `;
+                tbody.appendChild(row);
+            });
         }
     </script>
 </body>

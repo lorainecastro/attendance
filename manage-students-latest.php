@@ -172,11 +172,21 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['lrn']) && !isset($_POS
     if (isset($_FILES['photo']) && $_FILES['photo']['error'] == 0) {
         $ext = pathinfo($_FILES['photo']['name'], PATHINFO_EXTENSION);
         $photo = $lrn . '_photo.' . $ext;
-        $path = 'uploads/' . $photo;
+        $dir = 'uploads';
+        // Create Uploads directory if it doesn't exist
+        if (!file_exists($dir)) {
+            mkdir($dir, 0777, true);
+            // Set permissions to ensure web server can read/write
+            chmod($dir, 0777);
+        }
+        $path = $dir . '/' . $photo;
         if (!move_uploaded_file($_FILES['photo']['tmp_name'], $path)) {
+            error_log("Failed to move uploaded file to $path: " . $_FILES['photo']['error']);
             echo json_encode(['success' => false, 'message' => 'Failed to upload photo']);
             exit();
         }
+        // Set file permissions to ensure accessibility and deletability
+        chmod($path, 0666);
     }
 
     try {

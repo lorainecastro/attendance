@@ -1507,20 +1507,21 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
         <div id="gridView" class="student-grid hidden"></div>
         <div id="tableView" class="table-container">
             <table class="table">
-                <thead>
-                    <tr>
-                        <th><input type="checkbox" id="tableSelectAll" onchange="toggleSelectAll()"></th>
-                        <th>Photo</th>
-                        <th>LRN</th>
-                        <th>Full Name</th>
-                        <th>Grade Level</th>
-                        <th>Subject</th>
-                        <th>Section</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody></tbody>
-            </table>
+    <thead>
+        <tr>
+            <th><input type="checkbox" id="tableSelectAll" onchange="toggleSelectAll()"></th>
+            <th>Photo</th>
+            <th>QR Code</th>
+            <th>LRN</th>
+            <th>Full Name</th>
+            <th>Grade Level</th>
+            <th>Subject</th>
+            <th>Section</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody></tbody>
+</table>
         </div>
         <div class="pagination" id="pagination"></div>
         <!-- Student Profile Modal -->
@@ -1924,39 +1925,55 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
 
         // Render table view
         function renderTableView(data) {
-            studentTableBody.innerHTML = '';
-            const start = (currentPage - 1) * rowsPerPage;
-            const end = start + rowsPerPage;
-            const paginatedData = data.slice(start, end);
-            paginatedData.forEach(student => {
-                const row = document.createElement('tr');
-                row.innerHTML = `
-                    <td><input type="checkbox" class="row-checkbox" data-id="${student.lrn}" data-class-id="${student.class_id}"></td>
-                    <td><img src="${student.photo ? 'uploads/' + student.photo : 'uploads/no-icon.png'}" alt="${student.fullName}" style="width: 45px; height: 45px; border-radius: 50%;"></td>
-                    <td>${student.lrn}</td>
-                    <td>${student.fullName}</td>
-                    <td>${student.gradeLevel}</td>
-                    <td>${student.class}</td>
-                    <td>${student.section}</td>
-                    <td>
-                        <div class="actions">
-                            <button class="btn btn-primary btn-sm" onclick="openProfileModal('view', '${student.lrn}')">
-                                <i class="fas fa-eye"></i>
-                            </button>
-                            <button class="btn btn-primary btn-sm" onclick="openProfileModal('edit', '${student.lrn}')">
-                                <i class="fas fa-edit"></i>
-                            </button>
-                            <button class="btn btn-danger btn-sm" onclick="deleteStudent('${student.lrn}', '${student.class_id}')">
-                                <i class="fas fa-trash"></i>
-                            </button>
-                        </div>
-                    </td>
-                `;
-                studentTableBody.appendChild(row);
+    studentTableBody.innerHTML = '';
+    const start = (currentPage - 1) * rowsPerPage;
+    const end = start + rowsPerPage;
+    const paginatedData = data.slice(start, end);
+    paginatedData.forEach(student => {
+        const row = document.createElement('tr');
+        const qrCodeId = `qr-${student.lrn}-${student.class_id}`;
+        row.innerHTML = `
+            <td><input type="checkbox" class="row-checkbox" data-id="${student.lrn}" data-class-id="${student.class_id}"></td>
+            <td><img src="${student.photo ? 'Uploads/' + student.photo : 'Uploads/no-icon.png'}" alt="${student.fullName}" style="width: 45px; height: 45px; border-radius: 50%;"></td>
+            <td><div id="${qrCodeId}" style="width: 45px; height: 45px;"></div></td>
+            <td>${student.lrn}</td>
+            <td>${student.fullName}</td>
+            <td>${student.gradeLevel}</td>
+            <td>${student.class}</td>
+            <td>${student.section}</td>
+            <td>
+                <div class="actions">
+                    <button class="btn btn-primary btn-sm" onclick="openProfileModal('view', '${student.lrn}')">
+                        <i class="fas fa-eye"></i>
+                    </button>
+                    <button class="btn btn-primary btn-sm" onclick="openProfileModal('edit', '${student.lrn}')">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button class="btn btn-danger btn-sm" onclick="deleteStudent('${student.lrn}', '${student.class_id}')">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            </td>
+        `;
+        studentTableBody.appendChild(row);
+
+        // Generate QR code for this student
+        if (student.qr_code) {
+            new QRCode(document.getElementById(qrCodeId), {
+                text: student.qr_code,
+                width: 45,
+                height: 45,
+                colorDark: "#000000",
+                colorLight: "#ffffff",
+                correctLevel: QRCode.CorrectLevel.H
             });
-            updateBulkActions();
-            document.querySelectorAll('.row-checkbox').forEach(cb => cb.addEventListener('change', updateBulkActions));
+        } else {
+            document.getElementById(qrCodeId).innerHTML = 'No QR';
         }
+    });
+    updateBulkActions();
+    document.querySelectorAll('.row-checkbox').forEach(cb => cb.addEventListener('change', updateBulkActions));
+}
 
         // Render pagination
         function renderPagination(totalRows) {
@@ -2193,91 +2210,107 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
         }
         // Open profile modal
         function openProfileModal(mode, lrn = null) {
-            const form = {
-                studentId: document.getElementById('student-id'),
-                firstName: document.getElementById('first-name'),
-                middleName: document.getElementById('middle-name'),
-                lastName: document.getElementById('last-name'),
-                email: document.getElementById('email'),
-                gender: document.getElementById('gender'),
-                dob: document.getElementById('dob'),
-                gradeLevel: document.getElementById('grade-level'),
-                section: document.getElementById('section'),
-                class: document.getElementById('class'),
-                address: document.getElementById('address'),
-                parentName: document.getElementById('parent-name'),
-                emergencyContact: document.getElementById('emergency-contact'),
-                photoPreview: document.getElementById('student-photo-preview'),
-                photoInput: document.getElementById('student-photo')
-            };
-            Object.values(form).forEach(input => {
-                if (input.tagName === 'IMG') input.src = 'uploads/no-icon.png';
-                else if (input.tagName === 'SELECT') input.value = '';
-                else if (input.tagName === 'INPUT' && input.type === 'file') input.value = '';
-                else input.value = '';
+    const form = {
+        studentId: document.getElementById('student-id'),
+        firstName: document.getElementById('first-name'),
+        middleName: document.getElementById('middle-name'),
+        lastName: document.getElementById('last-name'),
+        email: document.getElementById('email'),
+        gender: document.getElementById('gender'),
+        dob: document.getElementById('dob'),
+        gradeLevel: document.getElementById('grade-level'),
+        section: document.getElementById('section'),
+        class: document.getElementById('class'),
+        address: document.getElementById('address'),
+        parentName: document.getElementById('parent-name'),
+        emergencyContact: document.getElementById('emergency-contact'),
+        photoPreview: document.getElementById('student-photo-preview'),
+        photoInput: document.getElementById('student-photo')
+    };
+    Object.values(form).forEach(input => {
+        if (input.tagName === 'IMG') input.src = 'Uploads/no-icon.png';
+        else if (input.tagName === 'SELECT') input.value = '';
+        else if (input.tagName === 'INPUT' && input.type === 'file') input.value = '';
+        else input.value = '';
+    });
+    const qrContainer = document.getElementById('qr-container');
+    const qrCodeDiv = document.getElementById('qr-code');
+    qrCodeDiv.innerHTML = '';
+    qrContainer.style.display = 'none';
+    const changePhotoBtn = document.getElementById('change-photo-btn');
+    changePhotoBtn.style.display = mode === 'view' ? 'none' : 'inline-flex';
+
+    if (mode !== 'add' && lrn) {
+        const student = students.find(s => s.lrn == lrn);
+        if (!student) {
+            console.error(`No student found for LRN: ${lrn}`);
+            alert('Student not found.');
+            return;
+        }
+        console.log('Student:', student);
+        document.getElementById('profile-modal-title').textContent = `${student.fullName}'s Profile`;
+        form.studentId.value = student.lrn;
+        form.firstName.value = student.first_name;
+        form.middleName.value = student.middle_name;
+        form.lastName.value = student.last_name;
+        form.email.value = student.email || '';
+        form.gender.value = student.gender || 'Male';
+        form.dob.value = student.dob || '';
+        form.address.value = student.address || '';
+        form.parentName.value = student.parent_name || '';
+        form.emergencyContact.value = student.emergency_contact || '';
+        form.photoPreview.src = student.photo ?
+            'Uploads/' + student.photo :
+            'Uploads/no-icon.png';
+
+        // Display QR code in view and edit modes
+        if (student.qr_code) {
+            qrContainer.style.display = 'block';
+            new QRCode(qrCodeDiv, {
+                text: student.qr_code,
+                width: 100,
+                height: 100,
+                colorDark: "#000000",
+                colorLight: "#ffffff",
+                correctLevel: QRCode.CorrectLevel.H
             });
-            const qrContainer = document.getElementById('qr-container');
-            const qrCodeDiv = document.getElementById('qr-code');
-            qrCodeDiv.innerHTML = '';
-            qrContainer.style.display = 'none';
-            const changePhotoBtn = document.getElementById('change-photo-btn');
-            changePhotoBtn.style.display = mode === 'view' ? 'none' : 'inline-flex';
-
-            if (mode !== 'add' && lrn) {
-                const student = students.find(s => s.lrn == lrn);
-                if (!student) {
-                    console.error(`No student found for LRN: ${lrn}`);
-                    alert('Student not found.');
-                    return;
-                }
-                console.log('Student:', student);
-                document.getElementById('profile-modal-title').textContent = `${student.fullName}'s Profile`;
-                form.studentId.value = student.lrn;
-                form.firstName.value = student.first_name;
-                form.middleName.value = student.middle_name;
-                form.lastName.value = student.last_name;
-                form.email.value = student.email || '';
-                form.gender.value = student.gender || 'Male';
-                form.dob.value = student.dob || '';
-                form.address.value = student.address || '';
-                form.parentName.value = student.parent_name || '';
-                form.emergencyContact.value = student.emergency_contact || '';
-                form.photoPreview.src = student.photo ?
-                    'uploads/' + student.photo :
-                    'uploads/no-icon.png';
-
-                // Find the class details based on class_id
-                const studentClass = classes.find(c => String(c.class_id) === String(student.class_id));
-                console.log('Student Class:', studentClass);
-                if (studentClass) {
-                    form.gradeLevel.value = studentClass.grade_level;
-                    console.log('Setting gradeLevel to:', studentClass.grade_level);
-                    updateSectionOptions();
-                    form.section.value = studentClass.section_name;
-                    updateSubjectOptions();
-                    form.class.value = studentClass.subject_name;
-                } else {
-                    console.warn(`No class found for class_id: ${student.class_id}, using fallback`);
-                    form.gradeLevel.value = student.gradeLevel || '';
-                    updateSectionOptions();
-                    form.section.value = student.section || '';
-                    updateSubjectOptions();
-                    form.class.value = student.class || '';
-                }
-            } else {
-                document.getElementById('profile-modal-title').textContent = 'Add New Student';
-                document.getElementById('section').innerHTML = '<option value="">Select Section</option>';
-                document.getElementById('class').innerHTML = '<option value="">Select Subject</option>';
-            }
-
-            Object.values(form).forEach(input => {
-                if (input.tagName !== 'IMG' && input.type !== 'file') input.disabled = mode === 'view';
-            });
-            form.photoInput.disabled = mode === 'view';
-            document.querySelector('.form-actions .btn-primary').style.display = mode === 'view' ? 'none' : 'inline-flex';
-            profileModal.classList.add('show');
+        } else {
+            qrContainer.style.display = 'block';
+            qrCodeDiv.innerHTML = '<p>No QR Code available</p>';
         }
 
+        // Find the class details based on class_id
+        const studentClass = classes.find(c => String(c.class_id) === String(student.class_id));
+        console.log('Student Class:', studentClass);
+        if (studentClass) {
+            form.gradeLevel.value = studentClass.grade_level;
+            console.log('Setting gradeLevel to:', studentClass.grade_level);
+            updateSectionOptions();
+            form.section.value = studentClass.section_name;
+            updateSubjectOptions();
+            form.class.value = studentClass.subject_name;
+        } else {
+            console.warn(`No class found for class_id: ${student.class_id}, using fallback`);
+            form.gradeLevel.value = student.gradeLevel || '';
+            updateSectionOptions();
+            form.section.value = student.section || '';
+            updateSubjectOptions();
+            form.class.value = student.class || '';
+        }
+    } else {
+        document.getElementById('profile-modal-title').textContent = 'Add New Student';
+        document.getElementById('section').innerHTML = '<option value="">Select Section</option>';
+        document.getElementById('class').innerHTML = '<option value="">Select Subject</option>';
+        qrContainer.style.display = 'none';
+    }
+
+    Object.values(form).forEach(input => {
+        if (input.tagName !== 'IMG' && input.type !== 'file') input.disabled = mode === 'view';
+    });
+    form.photoInput.disabled = mode === 'view';
+    document.querySelector('.form-actions .btn-primary').style.display = mode === 'view' ? 'none' : 'inline-flex';
+    profileModal.classList.add('show');
+}
         // Preview photo
         function previewPhoto(event) {
             const file = event.target.files[0];

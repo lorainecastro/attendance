@@ -121,6 +121,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action']) && $_POST['a
 }
 
 // Handle save POST
+// Handle save POST
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['lrn']) && !isset($_POST['bulk_delete'])) {
     header('Content-Type: application/json; charset=utf-8');
     ob_clean();
@@ -204,6 +205,49 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['lrn']) && !isset($_POS
                 $qr_code,
                 $lrn
             ]);
+
+            // Get current class_id for the student
+            $stmt = $pdo->prepare("SELECT class_id FROM class_students WHERE lrn = ?");
+            $stmt->execute([$lrn]);
+            $current_class = $stmt->fetch();
+
+            // Get new class_id based on grade_level, subject_name, section, and teacher_id
+            $teacher_id = $user['teacher_id'];
+            $stmt = $pdo->prepare("
+                SELECT c.class_id 
+                FROM classes c 
+                JOIN subjects sub ON c.subject_id = sub.subject_id 
+                WHERE c.grade_level = ? AND sub.subject_name = ? 
+                AND c.section_name = ? AND c.teacher_id = ?
+            ");
+            $stmt->execute([$grade_level, $class, $section, $teacher_id]);
+            $new_class = $stmt->fetch();
+
+            if ($new_class) {
+                $new_class_id = $new_class['class_id'];
+                if ($current_class) {
+                    // Update class_id in class_students if it has changed
+                    if ($current_class['class_id'] != $new_class_id) {
+                        $stmt = $pdo->prepare("
+                            UPDATE class_students 
+                            SET class_id = ?, is_enrolled = 1, created_at = NOW()
+                            WHERE lrn = ?
+                        ");
+                        $stmt->execute([$new_class_id, $lrn]);
+                    }
+                } else {
+                    // Insert new enrollment if no current class
+                    $stmt = $pdo->prepare("
+                        INSERT INTO class_students (class_id, lrn, is_enrolled, created_at) 
+                        VALUES (?, ?, 1, NOW())
+                    ");
+                    $stmt->execute([$new_class_id, $lrn]);
+                }
+            } else {
+                $pdo->rollBack();
+                echo json_encode(['success' => false, 'message' => 'Class not found']);
+                exit();
+            }
         } else {
             // Insert new student
             $stmt = $pdo->prepare("
@@ -228,30 +272,21 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['lrn']) && !isset($_POS
                 $photo,
                 $qr_code
             ]);
-        }
 
-        // Get class_id based on grade_level, subject_name, section, and teacher_id
-        $teacher_id = $user['teacher_id'];
-        $stmt = $pdo->prepare("
-            SELECT c.class_id 
-            FROM classes c 
-            JOIN subjects sub ON c.subject_id = sub.subject_id 
-            WHERE c.grade_level = ? AND sub.subject_name = ? 
-            AND c.section_name = ? AND c.teacher_id = ?
-        ");
-        $stmt->execute([$grade_level, $class, $section, $teacher_id]);
-        $class = $stmt->fetch();
-
-        if ($class) {
-            $class_id = $class['class_id'];
-            // Check if student is already enrolled in this class
+            // Get new class_id
+            $teacher_id = $user['teacher_id'];
             $stmt = $pdo->prepare("
-                SELECT * FROM class_students 
-                WHERE class_id = ? AND lrn = ?
+                SELECT c.class_id 
+                FROM classes c 
+                JOIN subjects sub ON c.subject_id = sub.subject_id 
+                WHERE c.grade_level = ? AND sub.subject_name = ? 
+                AND c.section_name = ? AND c.teacher_id = ?
             ");
-            $stmt->execute([$class_id, $lrn]);
-            if (!$stmt->fetch()) {
-                // Insert into class_students
+            $stmt->execute([$grade_level, $class, $section, $teacher_id]);
+            $new_class = $stmt->fetch();
+
+            if ($new_class) {
+                $class_id = $new_class['class_id'];
                 $stmt = $pdo->prepare("
                     INSERT INTO class_students (class_id, lrn, is_enrolled, created_at) 
                     VALUES (?, ?, 1, NOW())
@@ -259,13 +294,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['lrn']) && !isset($_POS
                 $stmt->execute([$class_id, $lrn]);
             } else {
                 $pdo->rollBack();
-                echo json_encode(['success' => false, 'message' => 'Student is already enrolled in this class']);
+                echo json_encode(['success' => false, 'message' => 'Class not found']);
                 exit();
             }
-        } else {
-            $pdo->rollBack();
-            echo json_encode(['success' => false, 'message' => 'Class not found']);
-            exit();
         }
 
         $pdo->commit();

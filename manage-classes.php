@@ -560,13 +560,6 @@ ob_end_flush();
             font-family: var(--font-family);
         }
 
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: var(--font-family);
-        }
-
         html {
             height: 100%;
             /* Ensure html takes full viewport height */

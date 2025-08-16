@@ -43,7 +43,7 @@ if (isset($_GET['lrn'])) {
     exit();
 }
 
-// Handle single student removal from class
+// Inside the single student deletion handler
 if (isset($_GET['delete_lrn']) && isset($_GET['class_id'])) {
     header('Content-Type: application/json; charset=utf-8');
     ob_clean();
@@ -51,6 +51,19 @@ if (isset($_GET['delete_lrn']) && isset($_GET['class_id'])) {
     $lrn = $_GET['delete_lrn'];
     $class_id = $_GET['class_id'];
     try {
+        // Fetch student photo to delete it
+        $stmt = $pdo->prepare("SELECT photo FROM students WHERE lrn = ?");
+        $stmt->execute([$lrn]);
+        $student = $stmt->fetch();
+        if ($student && $student['photo'] && $student['photo'] !== 'no-icon.png') {
+            $photo_path = 'uploads/' . $student['photo'];
+            if (file_exists($photo_path)) {
+                if (!unlink($photo_path)) {
+                    error_log("Failed to delete photo: $photo_path");
+                }
+            }
+        }
+        // Delete from class_students
         $stmt = $pdo->prepare("DELETE FROM class_students WHERE lrn = ? AND class_id = ?");
         $stmt->execute([$lrn, $class_id]);
         echo json_encode(['success' => true]);

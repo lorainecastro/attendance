@@ -5,6 +5,11 @@ error_reporting(E_ALL);
 ob_start();
 
 require 'config.php';
+require 'vendor/autoload.php'; // Add this for Endroid
+
+use Endroid\QrCode\QrCode;
+use Endroid\QrCode\Writer\PngWriter;
+
 session_start();
 
 // Validate session
@@ -79,6 +84,42 @@ if (isset($_POST['bulk_delete']) && isset($_POST['lrns']) && isset($_POST['class
     exit();
 }
 
+// Handle generate QR
+if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action']) && $_POST['action'] == 'generateQR') {
+    header('Content-Type: application/json; charset=utf-8');
+    ob_clean();
+
+    $lrn = $_POST['lrn'] ?? '';
+    $last_name = $_POST['last_name'] ?? '';
+    $first_name = $_POST['first_name'] ?? '';
+    $middle_name = $_POST['middle_name'] ?? '';
+
+    if (empty($lrn) || strlen($lrn) != 12 || empty($last_name) || empty($first_name)) {
+        echo json_encode(['success' => false, 'message' => 'Missing required fields for QR generation']);
+        exit();
+    }
+
+    $content = "$lrn, $last_name, $first_name" . ($middle_name ? " $middle_name" : '');
+
+    try {
+        $qrCode = new QrCode($content);
+        $writer = new PngWriter();
+        $result = $writer->write($qrCode);
+        $dir = 'qrcodes';
+        if (!file_exists($dir)) {
+            mkdir($dir, 0777, true);
+        }
+        $filename = $lrn . '.png';
+        $savePath = $dir . '/' . $filename;
+        $result->saveToFile($savePath);
+        echo json_encode(['success' => true, 'filename' => $filename]);
+    } catch (Exception $e) {
+        error_log("QR Code generation error: " . $e->getMessage());
+        echo json_encode(['success' => false, 'message' => 'Failed to generate QR code: ' . $e->getMessage()]);
+    }
+    exit();
+}
+
 // Handle save POST
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['lrn']) && !isset($_POST['bulk_delete'])) {
     header('Content-Type: application/json; charset=utf-8');
@@ -98,6 +139,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['lrn']) && !isset($_POS
     $grade_level = $_POST['grade_level'] ?? null;
     $class = $_POST['class'] ?? null; // subject_name
     $section = $_POST['section'] ?? null;
+    $qr_code = $_POST['qr_code'] ?? null;
 
     // Validate required fields
     if (empty($lrn) || empty($last_name) || empty($first_name) || empty($middle_name) || empty($grade_level) || empty($class) || empty($section)) {
@@ -112,7 +154,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['lrn']) && !isset($_POS
     }
 
     // Handle photo upload
-    $photo = 'no-image.png';
+    $photo = 'no-icon.png';
     if (isset($_FILES['photo']) && $_FILES['photo']['error'] == 0) {
         $ext = pathinfo($_FILES['photo']['name'], PATHINFO_EXTENSION);
         $photo = $lrn . '_photo.' . $ext;
@@ -133,14 +175,18 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['lrn']) && !isset($_POS
 
         if ($existing) {
             // Update existing student
-            if ($photo === 'no-image.png') {
+            if ($photo === 'no-icon.png') {
                 $photo = $existing['photo'];
+            }
+            if (empty($qr_code)) {
+                $qr_code = $existing['qr_code'];
             }
             $stmt = $pdo->prepare("
                 UPDATE students SET 
                     last_name = ?, first_name = ?, middle_name = ?, email = ?, 
                     gender = ?, dob = ?, grade_level = ?, address = ?, 
-                    parent_name = ?, emergency_contact = ?, photo = ?
+                    parent_name = ?, emergency_contact = ?, photo = ?,
+                    qr_code = ?
                 WHERE lrn = ?
             ");
             $stmt->execute([
@@ -155,6 +201,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['lrn']) && !isset($_POS
                 $parent_name,
                 $emergency_contact,
                 $photo,
+                $qr_code,
                 $lrn
             ]);
         } else {
@@ -163,8 +210,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['lrn']) && !isset($_POS
                 INSERT INTO students (
                     lrn, last_name, first_name, middle_name, email, gender, 
                     dob, grade_level, address, parent_name, emergency_contact, 
-                    photo, date_added
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURDATE())
+                    photo, qr_code, date_added
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURDATE())
             ");
             $stmt->execute([
                 $lrn,
@@ -178,7 +225,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['lrn']) && !isset($_POS
                 $address,
                 $parent_name,
                 $emergency_contact,
-                $photo
+                $photo,
+                $qr_code
             ]);
         }
 
@@ -297,7 +345,6 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Student Management - Student Attendance System</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <!-- <link rel="stylesheet" href="styles.css"> Your separate CSS file -->
     <style>
         :root {
@@ -1639,7 +1686,7 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
                             Are you sure you want to remove the following student from the class?
                         </p>
                         <div style="display: flex; align-items: center; gap: var(--spacing-lg); background: var(--inputfield-color); padding: var(--spacing-md); border-radius: var(--radius-md); border: 1px solid var(--border-color);">
-                            <img id="delete-student-photo" src="Uploads/no-icon.png" alt="Student Photo" style="width: 160px; height: 160px; border-radius: var(--radius-md); object-fit: cover; border: 2px solid var(--border-color);">
+                            <img id="delete-student-photo" src="uploads/no-icon.png" alt="Student Photo" style="width: 160px; height: 160px; border-radius: var(--radius-md); object-fit: cover; border: 2px solid var(--border-color);">
                             <div style="flex: 1;">
                                 <p style="margin-bottom: var(--spacing-sm);"><strong style="color: var(--blackfont-color);">LRN:</strong> <span id="delete-student-lrn"></span></p>
                                 <p style="margin-bottom: var(--spacing-sm);"><strong style="color: var(--blackfont-color);">Full Name:</strong> <span id="delete-student-name"></span></p>
@@ -1934,7 +1981,7 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
         const qrCodeId = `qr-${student.lrn}-${student.class_id}`;
         row.innerHTML = `
             <td><input type="checkbox" class="row-checkbox" data-id="${student.lrn}" data-class-id="${student.class_id}"></td>
-            <td><img src="${student.photo ? 'Uploads/' + student.photo : 'Uploads/no-icon.png'}" alt="${student.fullName}" style="width: 45px; height: 45px; border-radius: 50%;"></td>
+            <td><img src="${student.photo ? 'uploads/' + student.photo : 'uploads/no-icon.png'}" alt="${student.fullName}" style="width: 45px; height: 45px; border-radius: 50%;"></td>
             <td><div id="${qrCodeId}" style="width: 45px; height: 45px;"></div></td>
             <td>${student.lrn}</td>
             <td>${student.fullName}</td>
@@ -1959,14 +2006,7 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
 
         // Generate QR code for this student
         if (student.qr_code) {
-            new QRCode(document.getElementById(qrCodeId), {
-                text: student.qr_code,
-                width: 45,
-                height: 45,
-                colorDark: "#000000",
-                colorLight: "#ffffff",
-                correctLevel: QRCode.CorrectLevel.H
-            });
+            document.getElementById(qrCodeId).innerHTML = `<img src="qrcodes/${student.qr_code}" width="45" height="45">`;
         } else {
             document.getElementById(qrCodeId).innerHTML = 'No QR';
         }
@@ -2066,7 +2106,7 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
                 if (student) {
                     const row = document.createElement('tr');
                     row.innerHTML = `
-                <td><img src="${student.photo ? 'uploads/' + student.photo : 'uploads/no-icon.png'}" alt="${student.fullName}" style="width: 60px; height: 60px; border-radius: 50%; object-fit: cover; border: 2px solid var(--border-color);"></td>
+                <td><img src="${student.photo ? 'uploads/' + student.photo : 'uploads/no-icon.png'}" alt="${student.fullName}" style="width: 60px; height: 60px; border-radius: 50%; object-fit: cover;"></td>
                 <td>${student.lrn}</td>
                 <td>${student.fullName}</td>
                 <td>${student.gradeLevel}</td>
@@ -2228,9 +2268,9 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
         photoInput: document.getElementById('student-photo')
     };
     Object.values(form).forEach(input => {
-        if (input.tagName === 'IMG') input.src = 'Uploads/no-icon.png';
+        if (input.tagName === 'IMG') input.src = 'uploads/no-icon.png';
         else if (input.tagName === 'SELECT') input.value = '';
-        else if (input.tagName === 'INPUT' && input.type === 'file') input.value = '';
+        else if (input.type === 'file') input.value = '';
         else input.value = '';
     });
     const qrContainer = document.getElementById('qr-container');
@@ -2239,6 +2279,7 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
     qrContainer.style.display = 'none';
     const changePhotoBtn = document.getElementById('change-photo-btn');
     changePhotoBtn.style.display = mode === 'view' ? 'none' : 'inline-flex';
+    document.getElementById('qr_code_input').value = '';
 
     if (mode !== 'add' && lrn) {
         const student = students.find(s => s.lrn == lrn);
@@ -2260,20 +2301,13 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
         form.parentName.value = student.parent_name || '';
         form.emergencyContact.value = student.emergency_contact || '';
         form.photoPreview.src = student.photo ?
-            'Uploads/' + student.photo :
-            'Uploads/no-icon.png';
+            'uploads/' + student.photo :
+            'uploads/no-icon.png';
 
         // Display QR code in view and edit modes
         if (student.qr_code) {
             qrContainer.style.display = 'block';
-            new QRCode(qrCodeDiv, {
-                text: student.qr_code,
-                width: 100,
-                height: 100,
-                colorDark: "#000000",
-                colorLight: "#ffffff",
-                correctLevel: QRCode.CorrectLevel.H
-            });
+            qrCodeDiv.innerHTML = `<img src="qrcodes/${student.qr_code}" width="100" height="100">`;
         } else {
             qrContainer.style.display = 'block';
             qrCodeDiv.innerHTML = '<p>No QR Code available</p>';
@@ -2390,8 +2424,8 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
 
         // Print QR code
         function printQRCode() {
-            const qrCanvas = document.querySelector('#qr-code canvas');
-            if (!qrCanvas) return;
+            const qrImg = document.querySelector('#qr-code img');
+            if (!qrImg) return;
             const printWindow = window.open('', '_blank');
             printWindow.document.write(`
                 <html>
@@ -2403,7 +2437,7 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
                     </style>
                 </head>
                 <body>
-                    <img src="${qrCanvas.toDataURL('image/png')}" alt="QR Code">
+                    <img src="${qrImg.src}" alt="QR Code">
                 </body>
                 </html>
             `);
@@ -2411,6 +2445,57 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
             printWindow.focus();
             printWindow.print();
         }
+    </script>
+    <script>
+        // QR Generation Logic
+        document.addEventListener('DOMContentLoaded', () => {
+            const lrnInput = document.getElementById('student-id');
+            const firstNameInput = document.getElementById('first-name');
+            const middleNameInput = document.getElementById('middle-name');
+            const lastNameInput = document.getElementById('last-name');
+            const qrContainer = document.getElementById('qr-container');
+            const qrCodeDiv = document.getElementById('qr-code');
+            const qrCodeHidden = document.getElementById('qr_code_input') || (function() {
+                const hidden = document.createElement('input');
+                hidden.type = 'hidden';
+                hidden.name = 'qr_code';
+                hidden.id = 'qr_code_input';
+                document.getElementById('studentForm').appendChild(hidden);
+                return hidden;
+            })();
+
+            function generateQR() {
+                const lrn = lrnInput.value.trim();
+                const first_name = firstNameInput.value.trim();
+                const middle_name = middleNameInput.value.trim();
+                const last_name = lastNameInput.value.trim();
+
+                if (lrn.length === 12 && first_name && last_name) {
+                    fetch('', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                        body: `action=generateQR&lrn=${encodeURIComponent(lrn)}&first_name=${encodeURIComponent(first_name)}&middle_name=${encodeURIComponent(middle_name)}&last_name=${encodeURIComponent(last_name)}`
+                    })
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.success) {
+                            const filename = data.filename;
+                            qrCodeDiv.innerHTML = `<img src="qrcodes/${filename}" width="100" height="100">`;
+                            qrContainer.style.display = 'block';
+                            qrCodeHidden.value = filename;
+                        } else {
+                            console.error('QR generation failed:', data.message);
+                        }
+                    })
+                    .catch(err => console.error('Error generating QR:', err));
+                }
+            }
+
+            lrnInput.addEventListener('change', generateQR);
+            firstNameInput.addEventListener('change', generateQR);
+            middleNameInput.addEventListener('change', generateQR);
+            lastNameInput.addEventListener('change', generateQR);
+        });
     </script>
 </body>
 

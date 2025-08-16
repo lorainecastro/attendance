@@ -1623,7 +1623,6 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
         </div>
 
         <!-- Delete Confirmation Modal -->
-        <!-- Delete Confirmation Modal -->
         <div class="modal" id="delete-modal">
             <div class="modal-content">
                 <div class="modal-header" style="background: linear-gradient(135deg, #ef4444, #f87171);">

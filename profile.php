@@ -33,7 +33,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 // Handle file upload
                 $picture = $user['picture'] ?? 'no-icon.png';
-                $upload_dir = 'Uploads/';
+                $upload_dir = 'uploads/';
                 // Ensure upload directory exists with proper permissions
                 if (!is_dir($upload_dir)) {
                     if (!mkdir($upload_dir, 0755, true)) {
@@ -42,7 +42,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
                 // Verify default image exists
                 if (!file_exists($upload_dir . 'no-icon.png')) {
-                    error_log("Default image 'no-icon.png' not found in Uploads/ folder.");
+                    error_log("Default image 'no-icon.png' not found in uploads/ folder.");
                 }
 
                 if (isset($_FILES['profile-picture']) && $_FILES['profile-picture']['error'] === UPLOAD_ERR_OK) {
@@ -504,7 +504,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <div class="profile-header-content">
             <div class="profile-image-section">
                 <div class="profile-image-container">
-                    <img src="Uploads/<?php echo htmlspecialchars($user['picture'] ?? 'no-icon.png'); ?>" alt="Profile" class="profile-image" id="profilePreview">
+                    <img src="uploads/<?php echo htmlspecialchars($user['picture'] ?? 'no-icon.png'); ?>" alt="Profile" class="profile-image" id="profilePreview">
                 </div>
             </div>
             <div class="profile-info">

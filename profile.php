@@ -36,7 +36,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $upload_dir = 'uploads/';
                 // Ensure upload directory exists with proper permissions
                 if (!is_dir($upload_dir)) {
-                    if (!mkdir($upload_dir, 0755, true)) {
+                    if (!mkdir($upload_dir, 0777, true)) {
                         throw new Exception('Failed to create upload directory.');
                     }
                 }
@@ -53,9 +53,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     }
                     $picture = 'profile_' . $user['teacher_id'] . '_' . time() . '.' . $ext;
                     $upload_path = $upload_dir . $picture;
-                    if (!move_uploaded_file($_FILES['profile-picture']['tmp_name'], $upload_path)) {
-                        throw new Exception('Failed to upload profile picture.');
+                    // Read and write the file content instead of moving
+                    $fileContent = file_get_contents($_FILES['profile-picture']['tmp_name']);
+                    if (file_put_contents($upload_path, $fileContent) === false) {
+                        error_log("Failed to save profile picture to $upload_path");
+                        throw new Exception('Failed to save profile picture.');
                     }
+                    chmod($upload_path, 0644); // Set file permissions to readable
                 }
 
                 if (empty($firstname) || empty($lastname) || empty($username)) {

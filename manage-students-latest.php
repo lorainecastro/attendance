@@ -967,13 +967,6 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
             cursor: not-allowed;
         }
 
-        .photo-upload {
-            display: flex;
-            align-items: center;
-            gap: var(--spacing-md);
-            flex-wrap: wrap;
-        }
-
         .photo-upload input[type="file"] {
             display: none;
         }
@@ -1484,6 +1477,35 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
             cursor: pointer;
         }
     </style>
+
+    <style>
+        .photo-qr-container {
+            display: flex;
+            flex-direction: row;
+            gap: var(--spacing-md);
+            align-items: flex-start;
+            margin-bottom: var(--spacing-lg);
+        }
+
+        .photo-upload, .qr-container {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+        }
+
+        .photo-upload img, .qr-container img {
+            width: 100px;
+            height: 100px;
+            border-radius: var(--radius-md);
+            object-fit: cover;
+            border: 1px solid var(--border-color);
+        }
+
+        .photo-upload button, .qr-container button {
+            width: 100px;
+            justify-content: center;
+        }
+    </style>
 </head>
 
 <body>
@@ -1639,20 +1661,18 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
                             <label class="form-label">LRN</label>
                             <input type="text" class="form-input" id="student-id" name="lrn" maxlength="12" onkeypress="return (event.charCode !=8 && event.charCode ==0 || (event.charCode >= 48 && event.charCode <= 57))" pattern="[0-9]{12}" title="Please enter exactly 12 digits" required>
                         </div>
-                        <div class="form-group photo-upload">
-                            <div>
+                                                <div class="form-group photo-qr-container">
+                            <div class="photo-upload">
                                 <label class="form-label">Photo</label>
-                                <img id="student-photo-preview" src="uploads/no-icon.png" alt="Student Photo" class="photo-preview">
+                                <img id="student-photo-preview" src="Uploads/no-icon.png" alt="Student Photo">
+                                <input type="file" id="student-photo" name="photo" accept="image/*" onchange="previewPhoto(event)">
+                                <button type="button" class="btn btn-primary" id="change-photo-btn" onclick="document.getElementById('student-photo').click()">Change</button>
                             </div>
                             <div id="qr-container" class="qr-container" style="display: none;">
                                 <label class="form-label">QR Code</label>
                                 <div id="qr-code" class="qr-code"></div>
-                                <button type="button" class="btn btn-primary" onclick="printQRCode()">
-                                    <i class="fas fa-print"></i> Print
-                                </button>
+                                <button type="button" class="btn btn-primary" onclick="printQRCode()"><i class="fas fa-print"></i>Print</button>
                             </div>
-                            <input type="file" id="student-photo" name="photo" accept="image/*" onchange="previewPhoto(event)">
-                            <button type="button" class="btn btn-primary" id="change-photo-btn" onclick="document.getElementById('student-photo').click()">Change Photo</button>
                         </div>
                         <div class="form-group">
                             <label class="form-label">First Name</label>

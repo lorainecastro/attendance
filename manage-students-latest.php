@@ -122,9 +122,11 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action']) && $_POST['a
         if (!file_exists($dir)) {
             mkdir($dir, 0777, true);
         }
+        chmod($dir, 0777); // Ensure directory permissions
         $filename = $lrn . '.png';
         $savePath = $dir . '/' . $filename;
         $result->saveToFile($savePath);
+        chmod($savePath, 0644); // Set file permissions to readable
         echo json_encode(['success' => true, 'filename' => $filename]);
     } catch (Exception $e) {
         error_log("QR Code generation error: " . $e->getMessage());
@@ -133,7 +135,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action']) && $_POST['a
     exit();
 }
 
-// Handle save POST
 // Handle save POST
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['lrn']) && !isset($_POST['bulk_delete'])) {
     header('Content-Type: application/json; charset=utf-8');
@@ -176,17 +177,17 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['lrn']) && !isset($_POS
         // Create Uploads directory if it doesn't exist
         if (!file_exists($dir)) {
             mkdir($dir, 0777, true);
-            // Set permissions to ensure web server can read/write
-            chmod($dir, 0777);
         }
+        chmod($dir, 0777); // Ensure directory permissions
         $path = $dir . '/' . $photo;
-        if (!move_uploaded_file($_FILES['photo']['tmp_name'], $path)) {
-            error_log("Failed to move uploaded file to $path: " . $_FILES['photo']['error']);
-            echo json_encode(['success' => false, 'message' => 'Failed to upload photo']);
+        // Read and write the file content instead of moving
+        $fileContent = file_get_contents($_FILES['photo']['tmp_name']);
+        if (file_put_contents($path, $fileContent) === false) {
+            error_log("Failed to save photo to $path");
+            echo json_encode(['success' => false, 'message' => 'Failed to save photo']);
             exit();
         }
-        // Set file permissions to ensure accessibility and deletability
-        chmod($path, 0666);
+        chmod($path, 0644); // Set file permissions to readable
     }
 
     try {

@@ -135,6 +135,198 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action']) && $_POST['a
     exit();
 }
 
+// Handle Excel export
+if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action']) && $_POST['action'] == 'exportExcel') {
+    header('Content-Type: application/json; charset=utf-8');
+    ob_clean();
+
+    $lrns = json_decode($_POST['lrns'], true);
+    
+    if (empty($lrns) || !is_array($lrns)) {
+        echo json_encode(['success' => false, 'message' => 'No students selected for export']);
+        exit();
+    }
+
+    try {
+        $pdo = getDBConnection();
+        $teacher_id = $user['teacher_id'];
+        
+        // Prepare the query to fetch selected students
+        $placeholders = str_repeat('?,', count($lrns) - 1) . '?';
+        $stmt = $pdo->prepare("
+            SELECT DISTINCT s.*, c.grade_level, sub.subject_name as class_name, 
+                   c.section_name as section, s.date_added
+            FROM class_students cs
+            JOIN classes c ON cs.class_id = c.class_id
+            JOIN subjects sub ON c.subject_id = sub.subject_id
+            JOIN students s ON cs.lrn = s.lrn
+            WHERE c.teacher_id = ? AND s.lrn IN ($placeholders)
+            ORDER BY s.last_name, s.first_name
+        ");
+        
+        $params = array_merge([$teacher_id], $lrns);
+        $stmt->execute($params);
+        $students = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        if (empty($students)) {
+            echo json_encode(['success' => false, 'message' => 'No students found for export']);
+            exit();
+        }
+
+        // Create new Spreadsheet
+        $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->setTitle('Students Export');
+
+        // Set headers
+        $headers = [
+            'A1' => 'LRN',
+            'B1' => 'Last Name',
+            'C1' => 'First Name', 
+            'D1' => 'Middle Name',
+            'E1' => 'Email',
+            'F1' => 'Gender',
+            'G1' => 'Date of Birth',
+            'H1' => 'Grade Level',
+            'I1' => 'Address',
+            'J1' => 'Parent Name',
+            'K1' => 'Emergency Contact',
+            'L1' => 'Photo',
+            'M1' => 'QR Code',
+            'N1' => 'Date Added'
+        ];
+
+        // Apply headers with styling
+        foreach ($headers as $cell => $value) {
+            $sheet->setCellValue($cell, $value);
+        }
+
+        // Style the header row
+        $headerStyle = [
+            'font' => [
+                'bold' => true,
+                'color' => ['rgb' => 'FFFFFF'],
+                'size' => 12,
+            ],
+            'fill' => [
+                'fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID,
+                'startColor' => ['rgb' => '3B82F6'],
+            ],
+            'alignment' => [
+                'horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER,
+                'vertical' => \PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER,
+            ],
+            'borders' => [
+                'allBorders' => [
+                    'borderStyle' => \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN,
+                    'color' => ['rgb' => '000000'],
+                ],
+            ],
+        ];
+        $sheet->getStyle('A1:N1')->applyFromArray($headerStyle);
+
+        // Set column widths
+        $sheet->getColumnDimension('A')->setWidth(15); // LRN
+        $sheet->getColumnDimension('B')->setWidth(20); // Last Name
+        $sheet->getColumnDimension('C')->setWidth(20); // First Name
+        $sheet->getColumnDimension('D')->setWidth(20); // Middle Name
+        $sheet->getColumnDimension('E')->setWidth(25); // Email
+        $sheet->getColumnDimension('F')->setWidth(10); // Gender
+        $sheet->getColumnDimension('G')->setWidth(15); // DOB
+        $sheet->getColumnDimension('H')->setWidth(12); // Grade Level
+        $sheet->getColumnDimension('I')->setWidth(30); // Address
+        $sheet->getColumnDimension('J')->setWidth(25); // Parent Name
+        $sheet->getColumnDimension('K')->setWidth(20); // Emergency Contact
+        $sheet->getColumnDimension('L')->setWidth(15); // Photo
+        $sheet->getColumnDimension('M')->setWidth(15); // QR Code
+        $sheet->getColumnDimension('N')->setWidth(15); // Date Added
+
+        // Fill data
+        $row = 2;
+        foreach ($students as $student) {
+            $sheet->setCellValue('A' . $row, $student['lrn']);
+            $sheet->setCellValue('B' . $row, $student['last_name']);
+            $sheet->setCellValue('C' . $row, $student['first_name']);
+            $sheet->setCellValue('D' . $row, $student['middle_name']);
+            $sheet->setCellValue('E' . $row, $student['email'] ?: 'N/A');
+            $sheet->setCellValue('F' . $row, $student['gender'] ?: 'N/A');
+            $sheet->setCellValue('G' . $row, $student['dob'] ? date('Y-m-d', strtotime($student['dob'])) : 'N/A');
+            $sheet->setCellValue('H' . $row, $student['grade_level']);
+            $sheet->setCellValue('I' . $row, $student['address'] ?: 'N/A');
+            $sheet->setCellValue('J' . $row, $student['parent_name'] ?: 'N/A');
+            $sheet->setCellValue('K' . $row, $student['emergency_contact'] ?: 'N/A');
+            $sheet->setCellValue('L' . $row, $student['photo'] ?: 'no-icon.png');
+            $sheet->setCellValue('M' . $row, $student['qr_code'] ?: 'No QR Code');
+            $sheet->setCellValue('N' . $row, $student['date_added'] ? date('Y-m-d', strtotime($student['date_added'])) : 'N/A');
+            
+            $row++;
+        }
+
+        // Apply borders to all data
+        $dataRange = 'A1:N' . ($row - 1);
+        $dataStyle = [
+            'borders' => [
+                'allBorders' => [
+                    'borderStyle' => \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN,
+                    'color' => ['rgb' => 'CCCCCC'],
+                ],
+            ],
+            'alignment' => [
+                'vertical' => \PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER,
+            ],
+        ];
+        $sheet->getStyle($dataRange)->applyFromArray($dataStyle);
+
+        // Alternate row colors
+        for ($i = 2; $i < $row; $i++) {
+            if ($i % 2 == 0) {
+                $sheet->getStyle('A' . $i . ':N' . $i)->applyFromArray([
+                    'fill' => [
+                        'fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID,
+                        'startColor' => ['rgb' => 'F8FAFC'],
+                    ],
+                ]);
+            }
+        }
+
+        // Create filename with timestamp
+        $timestamp = date('Y-m-d_H-i-s');
+        $filename = "students_export_{$timestamp}.xlsx";
+        $exportDir = 'exports';
+        
+        // Create exports directory if it doesn't exist
+        if (!file_exists($exportDir)) {
+            mkdir($exportDir, 0777, true);
+            chmod($exportDir, 0777);
+        }
+
+        $filepath = $exportDir . '/' . $filename;
+
+        // Save the file
+        $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
+        $writer->save($filepath);
+        chmod($filepath, 0644);
+
+        // Clean up memory
+        $spreadsheet->disconnectWorksheets();
+        unset($spreadsheet);
+
+        echo json_encode([
+            'success' => true, 
+            'filename' => $filename,
+            'message' => 'Excel file generated successfully'
+        ]);
+
+    } catch (Exception $e) {
+        error_log("Excel export error: " . $e->getMessage());
+        echo json_encode([
+            'success' => false, 
+            'message' => 'Failed to generate Excel file: ' . $e->getMessage()
+        ]);
+    }
+    exit();
+}
+
 // Handle save POST
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['lrn']) && !isset($_POST['bulk_delete'])) {
     header('Content-Type: application/json; charset=utf-8');
@@ -2189,29 +2381,66 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
             document.getElementById('tableSelectAll').indeterminate = !pageAllSelected && pageSomeSelected;
         }
 
-        // Bulk export
-        function bulkExport() {
-            const selectedStudentsData = students.filter(s => selectedStudents.has(`${s.lrn}-${s.class_id}`));
-            if (selectedStudentsData.length === 0) {
-                alert('No students selected.');
-                return;
-            }
-            const csv = [
-                'LRN,Last Name,First Name,Middle Name,Email,Gender,Grade Level,Subject,Section,Address,Emergency Contact',
-                ...selectedStudentsData.map(s =>
-                    `${s.lrn},${s.last_name},${s.first_name},${s.middle_name},${s.email || ''},${s.gender},${s.gradeLevel},${s.class},${s.section},${s.address || ''},${s.emergency_contact || ''}`
-                )
-            ].join('\n');
-            const blob = new Blob([csv], {
-                type: 'text/csv'
+        // Modified JavaScript function for bulk export
+function bulkExport() {
+    const checkboxes = document.querySelectorAll('.row-checkbox:checked');
+    if (checkboxes.length === 0) {
+        alert('No students selected for export.');
+        return;
+    }
+
+    const selectedLRNs = Array.from(checkboxes).map(cb => cb.dataset.id);
+    
+    // Show loading state
+    const exportBtn = document.getElementById('bulkExportBtn');
+    const originalText = exportBtn.innerHTML;
+    exportBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating...';
+    exportBtn.disabled = true;
+
+    fetch('', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded'
+        },
+        body: `action=exportExcel&lrns=${encodeURIComponent(JSON.stringify(selectedLRNs))}`
+    })
+    .then(res => {
+        if (!res.ok) {
+            return res.text().then(text => {
+                console.error('Non-JSON response:', text);
+                throw new Error(`HTTP error! Status: ${res.status}`);
             });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = 'selected_students.csv';
-            a.click();
-            URL.revokeObjectURL(url);
         }
+        return res.json();
+    })
+    .then(data => {
+        if (data.success) {
+            // Create download link
+            const downloadLink = document.createElement('a');
+            downloadLink.href = `exports/${data.filename}`;
+            downloadLink.download = data.filename;
+            downloadLink.style.display = 'none';
+            document.body.appendChild(downloadLink);
+            downloadLink.click();
+            document.body.removeChild(downloadLink);
+            
+            // Show success message
+            alert('Excel file generated successfully!');
+        } else {
+            alert(data.message || 'Failed to generate Excel file');
+        }
+    })
+    .catch(error => {
+        console.error('Export error:', error);
+        alert('An error occurred while generating the Excel file. Please check the console for details.');
+    })
+    .finally(() => {
+        // Reset button state
+        exportBtn.innerHTML = originalText;
+        exportBtn.disabled = false;
+    });
+}
+
 
         // Bulk delete
         function bulkDelete() {

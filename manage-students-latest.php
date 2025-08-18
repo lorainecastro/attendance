@@ -1617,7 +1617,7 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
         </div>
         <!-- Bulk Actions -->
         <div class="bulk-actions" id="bulkActions">
-            <input type="checkbox" id="selectAll" onchange="toggleSelectAll()">
+            <input type="checkbox" id="selectAll" onchange="toggleGlobalSelect()">
             <label for="selectAll">Select All</label>
             <span class="selected-count" id="selectedCount">0 selected</span>
             <button class="btn btn-primary" id="bulkExportBtn" disabled onclick="bulkExport()">
@@ -1633,7 +1633,7 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
             <table class="table">
     <thead>
         <tr>
-            <th><input type="checkbox" id="tableSelectAll" onchange="toggleSelectAll()"></th>
+            <th><input type="checkbox" id="tableSelectAll" onchange="togglePageSelect()"></th>
             <th>Photo</th>
             <th>QR Code</th>
             <th>LRN</th>
@@ -1815,6 +1815,8 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
         let currentPage = 1;
         const rowsPerPage = 5;
         let currentView = 'table';
+        let filteredStudents = [];
+        const selectedStudents = new Set();
 
         // DOM Elements
         const studentTableBody = document.querySelector('#tableView tbody');
@@ -1973,7 +1975,7 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
             const gradeLevel = gradeLevelFilter.value;
             const className = classFilter.value;
             const section = sectionFilter.value;
-            let filteredStudents = students.filter(student => {
+            filteredStudents = students.filter(student => {
                 const matchesSearch = student.fullName.toLowerCase().includes(searchTerm) ||
                     student.lrn.toString().includes(searchTerm);
                 const matchesGender = gender ? student.gender === gender : true;
@@ -2086,8 +2088,23 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
             document.getElementById(qrCodeId).innerHTML = 'No QR';
         }
     });
+    // Set checkbox states based on selectedStudents set
+    document.querySelectorAll('.row-checkbox').forEach(cb => {
+        const key = `${cb.dataset.id}-${cb.dataset.classId}`;
+        cb.checked = selectedStudents.has(key);
+        cb.addEventListener('change', (e) => {
+            const changeKey = `${e.target.dataset.id}-${e.target.dataset.classId}`;
+            if (e.target.checked) {
+                selectedStudents.add(changeKey);
+            } else {
+                selectedStudents.delete(changeKey);
+            }
+            updateBulkActions();
+            updateHeaderCheckboxes();
+        });
+    });
     updateBulkActions();
-    document.querySelectorAll('.row-checkbox').forEach(cb => cb.addEventListener('change', updateBulkActions));
+    updateHeaderCheckboxes();
 }
 
         // Render pagination
@@ -2116,32 +2133,72 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
             applyFilters();
         }
 
-        // Toggle select all
-        function toggleSelectAll() {
-            const selectAll = document.getElementById('selectAll');
-            const checkboxes = document.querySelectorAll('.row-checkbox');
-            checkboxes.forEach(checkbox => checkbox.checked = selectAll.checked);
+        // Toggle global select
+        function toggleGlobalSelect() {
+            const isChecked = document.getElementById('selectAll').checked;
+            if (isChecked) {
+                filteredStudents.forEach(student => {
+                    const key = `${student.lrn}-${student.class_id}`;
+                    selectedStudents.add(key);
+                });
+            } else {
+                selectedStudents.clear();
+            }
+            document.querySelectorAll('.row-checkbox').forEach(cb => {
+                cb.checked = isChecked;
+            });
             updateBulkActions();
+            updateHeaderCheckboxes();
+        }
+
+        // Toggle page select
+        function togglePageSelect() {
+            const isChecked = document.getElementById('tableSelectAll').checked;
+            document.querySelectorAll('.row-checkbox').forEach(cb => {
+                cb.checked = isChecked;
+                const key = `${cb.dataset.id}-${cb.dataset.classId}`;
+                if (isChecked) {
+                    selectedStudents.add(key);
+                } else {
+                    selectedStudents.delete(key);
+                }
+            });
+            updateBulkActions();
+            updateHeaderCheckboxes();
         }
 
         // Update bulk actions
         function updateBulkActions() {
-            const checkboxes = document.querySelectorAll('.row-checkbox:checked');
-            const selectedCount = document.getElementById('selectedCount');
-            const bulkButtons = document.querySelectorAll('.bulk-actions .btn');
-            selectedCount.textContent = `${checkboxes.length} selected`;
-            bulkButtons.forEach(btn => btn.disabled = checkboxes.length === 0);
+            document.getElementById('selectedCount').textContent = `${selectedStudents.size} selected`;
+            document.querySelectorAll('.bulk-actions .btn').forEach(btn => btn.disabled = selectedStudents.size === 0);
+        }
+
+        // Update header checkboxes
+        function updateHeaderCheckboxes() {
+            // Global
+            const allSelected = filteredStudents.length > 0 && filteredStudents.every(s => selectedStudents.has(`${s.lrn}-${s.class_id}`));
+            const someSelected = filteredStudents.some(s => selectedStudents.has(`${s.lrn}-${s.class_id}`));
+            document.getElementById('selectAll').checked = allSelected;
+            document.getElementById('selectAll').indeterminate = !allSelected && someSelected;
+
+            // Page
+            const currentCheckboxes = document.querySelectorAll('.row-checkbox');
+            const pageAllSelected = currentCheckboxes.length > 0 && Array.from(currentCheckboxes).every(cb => cb.checked);
+            const pageSomeSelected = Array.from(currentCheckboxes).some(cb => cb.checked);
+            document.getElementById('tableSelectAll').checked = pageAllSelected;
+            document.getElementById('tableSelectAll').indeterminate = !pageAllSelected && pageSomeSelected;
         }
 
         // Bulk export
         function bulkExport() {
-            const checkboxes = document.querySelectorAll('.row-checkbox:checked');
-            const selectedStudents = Array.from(checkboxes).map(cb =>
-                students.find(s => s.lrn == cb.dataset.id)
-            );
+            const selectedStudentsData = students.filter(s => selectedStudents.has(`${s.lrn}-${s.class_id}`));
+            if (selectedStudentsData.length === 0) {
+                alert('No students selected.');
+                return;
+            }
             const csv = [
                 'LRN,Last Name,First Name,Middle Name,Email,Gender,Grade Level,Subject,Section,Address,Emergency Contact',
-                ...selectedStudents.map(s =>
+                ...selectedStudentsData.map(s =>
                     `${s.lrn},${s.last_name},${s.first_name},${s.middle_name},${s.email || ''},${s.gender},${s.gradeLevel},${s.class},${s.section},${s.address || ''},${s.emergency_contact || ''}`
                 )
             ].join('\n');
@@ -2157,26 +2214,21 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
         }
 
         // Bulk delete
-        // Bulk delete
         function bulkDelete() {
-            const checkboxes = document.querySelectorAll('.row-checkbox:checked');
-            if (checkboxes.length === 0) {
+            if (selectedStudents.size === 0) {
                 alert('No students selected.');
                 return;
             }
 
-            const selectedStudents = Array.from(checkboxes).map(cb => ({
-                lrn: cb.dataset.id,
-                class_id: cb.dataset.classId
-            }));
+            const selected = Array.from(selectedStudents).map(key => {
+                const [lrn, class_id] = key.split('-');
+                return { lrn, class_id };
+            });
 
             // Populate bulk delete modal
             const tableBody = document.getElementById('bulk-delete-table');
             tableBody.innerHTML = '';
-            selectedStudents.forEach(({
-                lrn,
-                class_id
-            }) => {
+            selected.forEach(({ lrn, class_id }) => {
                 const student = students.find(s => s.lrn == lrn && String(s.class_id) === String(class_id));
                 if (student) {
                     const row = document.createElement('tr');
@@ -2200,19 +2252,18 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
             document.getElementById('delete-modal-title').textContent = 'Confirm Bulk Removal';
             document.getElementById('single-delete-content').classList.add('hidden');
             document.getElementById('bulk-delete-content').classList.remove('hidden');
-            document.getElementById('confirm-delete-btn').dataset.lrns = JSON.stringify(selectedStudents);
+            document.getElementById('confirm-delete-btn').dataset.lrns = JSON.stringify(selected);
             document.getElementById('confirm-delete-btn').dataset.mode = 'bulk';
             document.getElementById('delete-modal').classList.add('show');
         }
 
         // Remove student from bulk selection
         function removeFromBulkSelection(lrn, class_id) {
-            const checkbox = document.querySelector(`.row-checkbox[data-id="${lrn}"][data-class-id="${class_id}"]`);
-            if (checkbox) {
-                checkbox.checked = false;
-                updateBulkActions();
-                bulkDelete(); // Refresh the modal
-            }
+            const key = `${lrn}-${class_id}`;
+            selectedStudents.delete(key);
+            updateBulkActions();
+            updateHeaderCheckboxes();
+            bulkDelete(); // Refresh the modal
         }
 
         // Confirm deletion
@@ -2235,6 +2286,8 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
                     })
                     .then(data => {
                         if (data.success) {
+                            const key = `${lrn}-${class_id}`;
+                            selectedStudents.delete(key);
                             students = students.filter(s => s.lrn != lrn || String(s.class_id) !== String(class_id));
                             applyFilters();
                             closeModal('delete');
@@ -2280,12 +2333,8 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
                     .then(results => {
                         const allSuccessful = results.every(data => data.success);
                         if (allSuccessful) {
-                            lrns.forEach(({
-                                lrn,
-                                class_id
-                            }) => {
-                                students = students.filter(s => s.lrn != lrn || String(s.class_id) !== String(class_id));
-                            });
+                            students = students.filter(s => !selectedStudents.has(`${s.lrn}-${s.class_id}`));
+                            selectedStudents.clear();
                             applyFilters();
                             closeModal('delete');
                         } else {
@@ -2299,7 +2348,6 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
                     });
             }
         }
-        // Delete student from class
         // Delete student from class
         function deleteStudent(lrn, class_id) {
             const student = students.find(s => s.lrn == lrn && String(s.class_id) === String(class_id));

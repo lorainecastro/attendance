@@ -1,26 +1,11 @@
 <?php
-ini_set('display_errors', '0');
-ini_set('display_startup_errors', '0');
-error_reporting(E_ALL);
 ob_start();
-
 require 'config.php';
-require 'vendor/autoload.php'; // Add this for Endroid
-
-use Endroid\QrCode\QrCode;
-use Endroid\QrCode\Writer\PngWriter;
-
 session_start();
 
 // Validate session
 $user = validateSession();
 if (!$user) {
-    if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['lrn'])) {
-        header('Content-Type: application/json; charset=utf-8');
-        ob_clean();
-        echo json_encode(['success' => false, 'message' => 'Session expired, please log in again']);
-        exit();
-    }
     destroySession();
     header("Location: index.php");
     exit();
@@ -28,8 +13,6 @@ if (!$user) {
 
 // Handle GET for lrn fetch
 if (isset($_GET['lrn'])) {
-    header('Content-Type: application/json; charset=utf-8');
-    ob_clean();
     $pdo = getDBConnection();
     $lrn = $_GET['lrn'];
     $stmt = $pdo->prepare("SELECT * FROM students WHERE lrn = ?");
@@ -43,41 +26,24 @@ if (isset($_GET['lrn'])) {
     exit();
 }
 
-// Inside the single student deletion handler
+// Handle single student removal from class
 if (isset($_GET['delete_lrn']) && isset($_GET['class_id'])) {
-    header('Content-Type: application/json; charset=utf-8');
-    ob_clean();
     $pdo = getDBConnection();
     $lrn = $_GET['delete_lrn'];
     $class_id = $_GET['class_id'];
     try {
-        // Fetch student photo to delete it
-        $stmt = $pdo->prepare("SELECT photo FROM students WHERE lrn = ?");
-        $stmt->execute([$lrn]);
-        $student = $stmt->fetch();
-        if ($student && $student['photo'] && $student['photo'] !== 'no-icon.png') {
-            $photo_path = 'uploads/' . $student['photo'];
-            if (file_exists($photo_path)) {
-                if (!unlink($photo_path)) {
-                    error_log("Failed to delete photo: $photo_path");
-                }
-            }
-        }
-        // Delete from class_students
         $stmt = $pdo->prepare("DELETE FROM class_students WHERE lrn = ? AND class_id = ?");
         $stmt->execute([$lrn, $class_id]);
         echo json_encode(['success' => true]);
     } catch (PDOException $e) {
         error_log("Remove from class error: " . $e->getMessage());
-        echo json_encode(['success' => false, 'message' => 'Database error: ' . $e->getMessage()]);
+        echo json_encode(['success' => false]);
     }
     exit();
 }
 
 // Handle bulk removal from class
 if (isset($_POST['bulk_delete']) && isset($_POST['lrns']) && isset($_POST['class_id'])) {
-    header('Content-Type: application/json; charset=utf-8');
-    ob_clean();
     $pdo = getDBConnection();
     $lrns = json_decode($_POST['lrns'], true);
     $class_id = $_POST['class_id'];
@@ -92,318 +58,51 @@ if (isset($_POST['bulk_delete']) && isset($_POST['lrns']) && isset($_POST['class
     } catch (PDOException $e) {
         $pdo->rollBack();
         error_log("Bulk remove from class error: " . $e->getMessage());
-        echo json_encode(['success' => false, 'message' => 'Database error: ' . $e->getMessage()]);
-    }
-    exit();
-}
-
-// Handle generate QR
-if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action']) && $_POST['action'] == 'generateQR') {
-    header('Content-Type: application/json; charset=utf-8');
-    ob_clean();
-
-    $lrn = $_POST['lrn'] ?? '';
-    $last_name = $_POST['last_name'] ?? '';
-    $first_name = $_POST['first_name'] ?? '';
-    $middle_name = $_POST['middle_name'] ?? '';
-
-    if (empty($lrn) || strlen($lrn) != 12 || empty($last_name) || empty($first_name)) {
-        echo json_encode(['success' => false, 'message' => 'Missing required fields for QR generation']);
-        exit();
-    }
-
-    $content = "$lrn, $last_name, $first_name" . ($middle_name ? " $middle_name" : '');
-
-    try {
-        $qrCode = new QrCode($content);
-        $writer = new PngWriter();
-        $result = $writer->write($qrCode);
-        $dir = 'qrcodes';
-        if (!file_exists($dir)) {
-            mkdir($dir, 0777, true);
-        }
-        chmod($dir, 0777); // Ensure directory permissions
-        $filename = $lrn . '.png';
-        $savePath = $dir . '/' . $filename;
-        $result->saveToFile($savePath);
-        chmod($savePath, 0644); // Set file permissions to readable
-        echo json_encode(['success' => true, 'filename' => $filename]);
-    } catch (Exception $e) {
-        error_log("QR Code generation error: " . $e->getMessage());
-        echo json_encode(['success' => false, 'message' => 'Failed to generate QR code: ' . $e->getMessage()]);
-    }
-    exit();
-}
-
-// Handle Excel export
-if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action']) && $_POST['action'] == 'exportExcel') {
-    header('Content-Type: application/json; charset=utf-8');
-    ob_clean();
-
-    $lrns = json_decode($_POST['lrns'], true);
-    
-    if (empty($lrns) || !is_array($lrns)) {
-        echo json_encode(['success' => false, 'message' => 'No students selected for export']);
-        exit();
-    }
-
-    try {
-        $pdo = getDBConnection();
-        $teacher_id = $user['teacher_id'];
-        
-        // Prepare the query to fetch selected students
-        $placeholders = str_repeat('?,', count($lrns) - 1) . '?';
-        $stmt = $pdo->prepare("
-            SELECT DISTINCT s.*, c.grade_level, sub.subject_name as class_name, 
-                   c.section_name as section, s.date_added
-            FROM class_students cs
-            JOIN classes c ON cs.class_id = c.class_id
-            JOIN subjects sub ON c.subject_id = sub.subject_id
-            JOIN students s ON cs.lrn = s.lrn
-            WHERE c.teacher_id = ? AND s.lrn IN ($placeholders)
-            ORDER BY s.last_name, s.first_name
-        ");
-        
-        $params = array_merge([$teacher_id], $lrns);
-        $stmt->execute($params);
-        $students = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-        if (empty($students)) {
-            echo json_encode(['success' => false, 'message' => 'No students found for export']);
-            exit();
-        }
-
-        // Create new Spreadsheet
-        $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
-        $sheet = $spreadsheet->getActiveSheet();
-        $sheet->setTitle('Students Export');
-
-        // Set headers
-        $headers = [
-            'A1' => 'LRN',
-            'B1' => 'Last Name',
-            'C1' => 'First Name', 
-            'D1' => 'Middle Name',
-            'E1' => 'Email',
-            'F1' => 'Gender',
-            'G1' => 'Date of Birth',
-            'H1' => 'Grade Level',
-            'I1' => 'Address',
-            'J1' => 'Parent Name',
-            'K1' => 'Emergency Contact',
-            'L1' => 'Photo',
-            'M1' => 'QR Code',
-            'N1' => 'Date Added'
-        ];
-
-        // Apply headers with styling
-        foreach ($headers as $cell => $value) {
-            $sheet->setCellValue($cell, $value);
-        }
-
-        // Style the header row
-        $headerStyle = [
-            'font' => [
-                'bold' => true,
-                'color' => ['rgb' => 'FFFFFF'],
-                'size' => 12,
-            ],
-            'fill' => [
-                'fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID,
-                'startColor' => ['rgb' => '3B82F6'],
-            ],
-            'alignment' => [
-                'horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER,
-                'vertical' => \PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER,
-            ],
-            'borders' => [
-                'allBorders' => [
-                    'borderStyle' => \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN,
-                    'color' => ['rgb' => '000000'],
-                ],
-            ],
-        ];
-        $sheet->getStyle('A1:N1')->applyFromArray($headerStyle);
-
-        // Set column widths
-        $sheet->getColumnDimension('A')->setWidth(15); // LRN
-        $sheet->getColumnDimension('B')->setWidth(20); // Last Name
-        $sheet->getColumnDimension('C')->setWidth(20); // First Name
-        $sheet->getColumnDimension('D')->setWidth(20); // Middle Name
-        $sheet->getColumnDimension('E')->setWidth(25); // Email
-        $sheet->getColumnDimension('F')->setWidth(10); // Gender
-        $sheet->getColumnDimension('G')->setWidth(15); // DOB
-        $sheet->getColumnDimension('H')->setWidth(12); // Grade Level
-        $sheet->getColumnDimension('I')->setWidth(30); // Address
-        $sheet->getColumnDimension('J')->setWidth(25); // Parent Name
-        $sheet->getColumnDimension('K')->setWidth(20); // Emergency Contact
-        $sheet->getColumnDimension('L')->setWidth(15); // Photo
-        $sheet->getColumnDimension('M')->setWidth(15); // QR Code
-        $sheet->getColumnDimension('N')->setWidth(15); // Date Added
-
-        // Fill data
-        $row = 2;
-        foreach ($students as $student) {
-            $sheet->setCellValue('A' . $row, $student['lrn']);
-            $sheet->setCellValue('B' . $row, $student['last_name']);
-            $sheet->setCellValue('C' . $row, $student['first_name']);
-            $sheet->setCellValue('D' . $row, $student['middle_name']);
-            $sheet->setCellValue('E' . $row, $student['email'] ?: 'N/A');
-            $sheet->setCellValue('F' . $row, $student['gender'] ?: 'N/A');
-            $sheet->setCellValue('G' . $row, $student['dob'] ? date('Y-m-d', strtotime($student['dob'])) : 'N/A');
-            $sheet->setCellValue('H' . $row, $student['grade_level']);
-            $sheet->setCellValue('I' . $row, $student['address'] ?: 'N/A');
-            $sheet->setCellValue('J' . $row, $student['parent_name'] ?: 'N/A');
-            $sheet->setCellValue('K' . $row, $student['emergency_contact'] ?: 'N/A');
-            $sheet->setCellValue('L' . $row, $student['photo'] ?: 'no-icon.png');
-            $sheet->setCellValue('M' . $row, $student['qr_code'] ?: 'No QR Code');
-            $sheet->setCellValue('N' . $row, $student['date_added'] ? date('Y-m-d', strtotime($student['date_added'])) : 'N/A');
-            
-            $row++;
-        }
-
-        // Apply borders to all data
-        $dataRange = 'A1:N' . ($row - 1);
-        $dataStyle = [
-            'borders' => [
-                'allBorders' => [
-                    'borderStyle' => \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN,
-                    'color' => ['rgb' => 'CCCCCC'],
-                ],
-            ],
-            'alignment' => [
-                'vertical' => \PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER,
-            ],
-        ];
-        $sheet->getStyle($dataRange)->applyFromArray($dataStyle);
-
-        // Alternate row colors
-        for ($i = 2; $i < $row; $i++) {
-            if ($i % 2 == 0) {
-                $sheet->getStyle('A' . $i . ':N' . $i)->applyFromArray([
-                    'fill' => [
-                        'fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID,
-                        'startColor' => ['rgb' => 'F8FAFC'],
-                    ],
-                ]);
-            }
-        }
-
-        // Create filename with timestamp
-        $timestamp = date('Y-m-d_H-i-s');
-        $filename = "students_export_{$timestamp}.xlsx";
-        $exportDir = 'exports';
-        
-        // Create exports directory if it doesn't exist
-        if (!file_exists($exportDir)) {
-            mkdir($exportDir, 0777, true);
-            chmod($exportDir, 0777);
-        }
-
-        $filepath = $exportDir . '/' . $filename;
-
-        // Save the file
-        $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
-        $writer->save($filepath);
-        chmod($filepath, 0644);
-
-        // Clean up memory
-        $spreadsheet->disconnectWorksheets();
-        unset($spreadsheet);
-
-        echo json_encode([
-            'success' => true, 
-            'filename' => $filename,
-            'message' => 'Excel file generated successfully'
-        ]);
-
-    } catch (Exception $e) {
-        error_log("Excel export error: " . $e->getMessage());
-        echo json_encode([
-            'success' => false, 
-            'message' => 'Failed to generate Excel file: ' . $e->getMessage()
-        ]);
+        echo json_encode(['success' => false]);
     }
     exit();
 }
 
 // Handle save POST
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['lrn']) && !isset($_POST['bulk_delete'])) {
-    header('Content-Type: application/json; charset=utf-8');
-    ob_clean();
-
     $pdo = getDBConnection();
     $lrn = $_POST['lrn'];
-    $last_name = $_POST['last_name'] ?? '';
-    $first_name = $_POST['first_name'] ?? '';
-    $middle_name = $_POST['middle_name'] ?? '';
-    $email = $_POST['email'] ?? null;
-    $gender = $_POST['gender'] ?? null;
-    $dob = $_POST['dob'] ?? null;
-    $address = $_POST['address'] ?? null;
-    $parent_name = $_POST['parent_name'] ?? null;
-    $emergency_contact = $_POST['emergency_contact'] ?? null;
-    $grade_level = $_POST['grade_level'] ?? null;
-    $class = $_POST['class'] ?? null; // subject_name
-    $section = $_POST['section'] ?? null;
-    $qr_code = $_POST['qr_code'] ?? null;
+    $last_name = $_POST['last_name'];
+    $first_name = $_POST['first_name'];
+    $middle_name = $_POST['middle_name'];
+    $email = $_POST['email'];
+    $gender = $_POST['gender'];
+    $dob = $_POST['dob'];
+    $address = $_POST['address'];
+    $parent_name = $_POST['parent_name'];
+    $emergency_contact = $_POST['emergency_contact'];
+    $grade_level = $_POST['grade_level'];
+    $class = $_POST['class']; // subject_name
+    $section = $_POST['section'];
 
-    // Validate required fields
-    if (empty($lrn) || empty($last_name) || empty($first_name) || empty($middle_name) || empty($grade_level) || empty($class) || empty($section)) {
-        echo json_encode(['success' => false, 'message' => 'Missing required fields']);
-        exit();
-    }
-
-    // Validate LRN format
-    if (!preg_match('/^\d{12}$/', $lrn)) {
-        echo json_encode(['success' => false, 'message' => 'LRN must be exactly 12 digits']);
-        exit();
-    }
-
-    // Handle photo upload
     $photo = 'no-icon.png';
     if (isset($_FILES['photo']) && $_FILES['photo']['error'] == 0) {
         $ext = pathinfo($_FILES['photo']['name'], PATHINFO_EXTENSION);
         $photo = $lrn . '_photo.' . $ext;
-        $dir = 'uploads';
-        // Create Uploads directory if it doesn't exist
-        if (!file_exists($dir)) {
-            mkdir($dir, 0777, true);
-        }
-        chmod($dir, 0777); // Ensure directory permissions
-        $path = $dir . '/' . $photo;
-        // Read and write the file content instead of moving
-        $fileContent = file_get_contents($_FILES['photo']['tmp_name']);
-        if (file_put_contents($path, $fileContent) === false) {
-            error_log("Failed to save photo to $path");
-            echo json_encode(['success' => false, 'message' => 'Failed to save photo']);
-            exit();
-        }
-        chmod($path, 0644); // Set file permissions to readable
+        $path = 'uploads/students/' . $photo;
+        move_uploaded_file($_FILES['photo']['tmp_name'], $path);
     }
 
     try {
         $pdo->beginTransaction();
-
-        // Check if LRN exists in students table
         $stmt = $pdo->prepare("SELECT * FROM students WHERE lrn = ?");
         $stmt->execute([$lrn]);
         $existing = $stmt->fetch();
 
         if ($existing) {
-            // Update existing student
             if ($photo === 'no-icon.png') {
                 $photo = $existing['photo'];
-            }
-            if (empty($qr_code)) {
-                $qr_code = $existing['qr_code'];
             }
             $stmt = $pdo->prepare("
                 UPDATE students SET 
                     last_name = ?, first_name = ?, middle_name = ?, email = ?, 
                     gender = ?, dob = ?, grade_level = ?, address = ?, 
-                    parent_name = ?, emergency_contact = ?, photo = ?,
-                    qr_code = ?
+                    parent_name = ?, emergency_contact = ?, photo = ?
                 WHERE lrn = ?
             ");
             $stmt->execute([
@@ -418,60 +117,15 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['lrn']) && !isset($_POS
                 $parent_name,
                 $emergency_contact,
                 $photo,
-                $qr_code,
                 $lrn
             ]);
-
-            // Get current class_id for the student
-            $stmt = $pdo->prepare("SELECT class_id FROM class_students WHERE lrn = ?");
-            $stmt->execute([$lrn]);
-            $current_class = $stmt->fetch();
-
-            // Get new class_id based on grade_level, subject_name, section, and teacher_id
-            $teacher_id = $user['teacher_id'];
-            $stmt = $pdo->prepare("
-                SELECT c.class_id 
-                FROM classes c 
-                JOIN subjects sub ON c.subject_id = sub.subject_id 
-                WHERE c.grade_level = ? AND sub.subject_name = ? 
-                AND c.section_name = ? AND c.teacher_id = ?
-            ");
-            $stmt->execute([$grade_level, $class, $section, $teacher_id]);
-            $new_class = $stmt->fetch();
-
-            if ($new_class) {
-                $new_class_id = $new_class['class_id'];
-                if ($current_class) {
-                    // Update class_id in class_students if it has changed
-                    if ($current_class['class_id'] != $new_class_id) {
-                        $stmt = $pdo->prepare("
-                            UPDATE class_students 
-                            SET class_id = ?, is_enrolled = 1, created_at = NOW()
-                            WHERE lrn = ?
-                        ");
-                        $stmt->execute([$new_class_id, $lrn]);
-                    }
-                } else {
-                    // Insert new enrollment if no current class
-                    $stmt = $pdo->prepare("
-                        INSERT INTO class_students (class_id, lrn, is_enrolled, created_at) 
-                        VALUES (?, ?, 1, NOW())
-                    ");
-                    $stmt->execute([$new_class_id, $lrn]);
-                }
-            } else {
-                $pdo->rollBack();
-                echo json_encode(['success' => false, 'message' => 'Class not found']);
-                exit();
-            }
         } else {
-            // Insert new student
             $stmt = $pdo->prepare("
                 INSERT INTO students (
                     lrn, last_name, first_name, middle_name, email, gender, 
                     dob, grade_level, address, parent_name, emergency_contact, 
-                    photo, qr_code, date_added
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURDATE())
+                    photo, date_added
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURDATE())
             ");
             $stmt->execute([
                 $lrn,
@@ -485,42 +139,36 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['lrn']) && !isset($_POS
                 $address,
                 $parent_name,
                 $emergency_contact,
-                $photo,
-                $qr_code
+                $photo
             ]);
+        }
 
-            // Get new class_id
-            $teacher_id = $user['teacher_id'];
+        $teacher_id = $user['teacher_id'];
+        $stmt = $pdo->prepare("
+            SELECT c.class_id 
+            FROM classes c 
+            JOIN subjects sub ON c.subject_id = sub.subject_id 
+            WHERE c.grade_level = ? AND sub.subject_name = ? 
+            AND c.section_name = ? AND c.teacher_id = ?
+        ");
+        $stmt->execute([$grade_level, $class, $section, $teacher_id]);
+        $class = $stmt->fetch();
+
+        if ($class) {
+            $class_id = $class['class_id'];
             $stmt = $pdo->prepare("
-                SELECT c.class_id 
-                FROM classes c 
-                JOIN subjects sub ON c.subject_id = sub.subject_id 
-                WHERE c.grade_level = ? AND sub.subject_name = ? 
-                AND c.section_name = ? AND c.teacher_id = ?
+                INSERT IGNORE INTO class_students (class_id, lrn) 
+                VALUES (?, ?)
             ");
-            $stmt->execute([$grade_level, $class, $section, $teacher_id]);
-            $new_class = $stmt->fetch();
-
-            if ($new_class) {
-                $class_id = $new_class['class_id'];
-                $stmt = $pdo->prepare("
-                    INSERT INTO class_students (class_id, lrn, is_enrolled, created_at) 
-                    VALUES (?, ?, 1, NOW())
-                ");
-                $stmt->execute([$class_id, $lrn]);
-            } else {
-                $pdo->rollBack();
-                echo json_encode(['success' => false, 'message' => 'Class not found']);
-                exit();
-            }
+            $stmt->execute([$class_id, $lrn]);
         }
 
         $pdo->commit();
-        echo json_encode(['success' => true, 'message' => 'Student saved successfully']);
+        echo json_encode(['success' => true]);
     } catch (PDOException $e) {
         $pdo->rollBack();
         error_log("Save error: " . $e->getMessage());
-        echo json_encode(['success' => false, 'message' => 'Database error: ' . $e->getMessage()]);
+        echo json_encode(['success' => false]);
     }
     exit();
 }
@@ -544,17 +192,6 @@ $students_data = $stmt->fetchAll();
 foreach ($students_data as &$row) {
     $row['fullName'] = $row['last_name'] . ', ' . $row['first_name'] . ' ' . $row['middle_name'];
 }
-
-// Fetch count of students without QR codes
-$stmt = $pdo->prepare("
-    SELECT COUNT(DISTINCT s.lrn) AS no_qr_count
-    FROM class_students cs
-    JOIN classes c ON cs.class_id = c.class_id
-    JOIN students s ON cs.lrn = s.lrn
-    WHERE c.teacher_id = ? AND s.qr_code IS NULL
-");
-$stmt->execute([$teacher_id]);
-$no_qr_count = $stmt->fetchColumn();
 
 // Fetch classes data for dynamic dropdowns
 $stmt = $pdo->prepare("
@@ -592,7 +229,7 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Student Management - Student Attendance System</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <!-- <link rel="stylesheet" href="styles.css"> Your separate CSS file -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
         :root {
             --primary-blue: #3b82f6;
@@ -1159,6 +796,13 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
             cursor: not-allowed;
         }
 
+        .photo-upload {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-md);
+            flex-wrap: wrap;
+        }
+
         .photo-upload input[type="file"] {
             display: none;
         }
@@ -1395,29 +1039,6 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
                 page-break-inside: avoid;
             }
         }
-
-        .controls-right {
-            display: flex;
-            flex-direction: column;
-            align-items: flex-start;
-            gap: var(--spacing-sm);
-        }
-
-        .preview-table-container {
-            margin-top: var(--spacing-lg);
-            background: var(--card-bg);
-            border-radius: var(--radius-lg);
-            padding: var(--spacing-lg);
-            box-shadow: var(--shadow-md);
-            border: 1px solid var(--border-color);
-        }
-
-        .preview-table-container h3 {
-            font-size: var(--font-size-lg);
-            font-weight: 600;
-            color: var(--blackfont-color);
-            margin-bottom: var(--spacing-md);
-        }
     </style>
 
     <style>
@@ -1636,68 +1257,6 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
         }
     </style>
 
-    <style>
-        #selectAll {
-            width: 10px;
-            /* Fallback width */
-            height: 10px;
-            /* Fallback height */
-            transform: scale(1.5);
-            /* Scales the checkbox to 1.5x its default size */
-            vertical-align: middle;
-            /* Aligns with surrounding content */
-        }
-
-        #tableSelectAll {
-            width: 10px;
-            /* Fallback width */
-            height: 10px;
-            /* Fallback height */
-            transform: scale(1.5);
-            /* Scales the checkbox to 1.5x its default size */
-            vertical-align: middle;
-            /* Aligns with surrounding content */
-        }
-
-        .row-checkbox {
-            width: 10px;
-            /* Fallback width */
-            height: 10px;
-            /* Fallback height */
-            transform: scale(1.5);
-            /* Scales the checkbox to 1.5x its default size */
-            cursor: pointer;
-        }
-    </style>
-
-    <style>
-        .photo-qr-container {
-            display: flex;
-            flex-direction: row;
-            gap: var(--spacing-md);
-            align-items: flex-start;
-            margin-bottom: var(--spacing-lg);
-        }
-
-        .photo-upload, .qr-container {
-            display: flex;
-            flex-direction: column;
-            align-items: flex-start;
-        }
-
-        .photo-upload img, .qr-container img {
-            width: 100px;
-            height: 100px;
-            border-radius: var(--radius-md);
-            object-fit: cover;
-            border: 1px solid var(--border-color);
-        }
-
-        .photo-upload button, .qr-container button {
-            width: 100px;
-            justify-content: center;
-        }
-    </style>
 </head>
 
 <body>
@@ -1749,19 +1308,6 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
                     </div>
                 </div>
             </div>
-            <div class="card">
-                <div class="card-header">
-                    <div>
-                        <div class="card-title">LRN Without QR Codes</div>
-                        <div class="card-value" id="no-qr-students"><?php echo htmlspecialchars($no_qr_count); ?></div>
-                    </div>
-                    <div class="card-icon bg-blue">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 16 16">
-                            <path d="M6.5 1A1.5 1.5 0 0 0 5 2.5V3H1.5A1.5 1.5 0 0 0 0 4.5v8A1.5 1.5 0 0 0 1.5 14h13a1.5 1.5 0 0 0 1.5-1.5v-8A1.5 1.5 0 0 0 14.5 3H11v-.5A1.5 1.5 0 0 0 9.5 1h-3zm0 1h3a.5.5 0 0 1 .5.5V3H6v-.5a.5.5 0 0 1 .5-.5zm1.886 6.914L7.5 7.028V10.5a.5.5 0 0 1-1 0V7.028L5.614 8.914a.5.5 0 0 1-.707-.707L6.793 6.32V2.75a.5.5 0 0 1 1 0v3.57l1.886-1.887a.5.5 0 0 1 .707.707z" />
-                        </svg>
-                    </div>
-                </div>
-            </div>
         </div>
         <!-- Controls -->
         <div class="controls">
@@ -1809,7 +1355,7 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
         </div>
         <!-- Bulk Actions -->
         <div class="bulk-actions" id="bulkActions">
-            <input type="checkbox" id="selectAll" onchange="toggleGlobalSelect()">
+            <input type="checkbox" id="selectAll" onchange="toggleSelectAll()">
             <label for="selectAll">Select All</label>
             <span class="selected-count" id="selectedCount">0 selected</span>
             <button class="btn btn-primary" id="bulkExportBtn" disabled onclick="bulkExport()">
@@ -1823,21 +1369,20 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
         <div id="gridView" class="student-grid hidden"></div>
         <div id="tableView" class="table-container">
             <table class="table">
-    <thead>
-        <tr>
-            <th><input type="checkbox" id="tableSelectAll" onchange="togglePageSelect()"></th>
-            <th>Photo</th>
-            <th>QR Code</th>
-            <th>LRN</th>
-            <th>Full Name</th>
-            <th>Grade Level</th>
-            <th>Subject</th>
-            <th>Section</th>
-            <th>Actions</th>
-        </tr>
-    </thead>
-    <tbody></tbody>
-</table>
+                <thead>
+                    <tr>
+                        <th><input type="checkbox" id="tableSelectAll" onchange="toggleSelectAll()"></th>
+                        <th>Photo</th>
+                        <th>LRN</th>
+                        <th>Full Name</th>
+                        <th>Grade Level</th>
+                        <th>Subject</th>
+                        <th>Section</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
         </div>
         <div class="pagination" id="pagination"></div>
         <!-- Student Profile Modal -->
@@ -1851,20 +1396,22 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
                     <div class="form-column">
                         <div class="form-group">
                             <label class="form-label">LRN</label>
-                            <input type="text" class="form-input" id="student-id" name="lrn" maxlength="12" onkeypress="return (event.charCode !=8 && event.charCode ==0 || (event.charCode >= 48 && event.charCode <= 57))" pattern="[0-9]{12}" title="Please enter exactly 12 digits" required>
+                            <input type="text" class="form-input" id="student-id" maxlength="12" onkeypress="return (event.charCode !=8 && event.charCode ==0 || (event.charCode >= 48 && event.charCode <= 57))" pattern="[0-9]{12}" title="Please enter exactly 12 digits">
                         </div>
-                                                <div class="form-group photo-qr-container">
-                            <div class="photo-upload">
+                        <div class="form-group photo-upload">
+                            <div>
                                 <label class="form-label">Photo</label>
-                                <img id="student-photo-preview" src="Uploads/no-icon.png" alt="Student Photo">
-                                <input type="file" id="student-photo" name="photo" accept="image/*" onchange="previewPhoto(event)">
-                                <button type="button" class="btn btn-primary" id="change-photo-btn" onclick="document.getElementById('student-photo').click()">Change</button>
+                                <img id="student-photo-preview" src="https://via.placeholder.com/100" alt="Student Photo" class="photo-preview">
                             </div>
                             <div id="qr-container" class="qr-container" style="display: none;">
                                 <label class="form-label">QR Code</label>
                                 <div id="qr-code" class="qr-code"></div>
-                                <button type="button" class="btn btn-primary" onclick="printQRCode()"><i class="fas fa-print"></i>Print</button>
+                                <button type="button" class="btn btn-primary" onclick="printQRCode()">
+                                    <i class="fas fa-print"></i> Print
+                                </button>
                             </div>
+                            <input type="file" id="student-photo" name="photo" accept="image/*" onchange="previewPhoto(event)">
+                            <button type="button" class="btn btn-primary" onclick="document.getElementById('student-photo').click()">Change Photo</button>
                         </div>
                         <div class="form-group">
                             <label class="form-label">First Name</label>
@@ -1897,23 +1444,23 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
                     <div class="form-column">
                         <div class="form-group">
                             <label class="form-label">Grade Level</label>
-                            <select class="form-select" id="grade-level" name="grade_level" required>
+                            <select class="form-select" id="grade-level" name="grade_level">
                                 <option value="">Select Grade Level</option>
                                 <?php foreach ($gradeLevels as $grade): ?>
-                                    <option value="<?php echo htmlspecialchars($grade); ?>"><?php echo htmlspecialchars($grade); ?></option>
+                                    <option value="<?php echo $grade; ?>"><?php echo $grade; ?></option>
                                 <?php endforeach; ?>
                             </select>
                         </div>
                         <div class="form-group">
-                            <label class="form-label">Section</label>
-                            <select class="form-select" id="section" name="section" required>
-                                <option value="">Select Section</option>
+                            <label class="form-label">Subject</label>
+                            <select class="form-select" id="class" name="class">
+                                <option value="">Select Subject</option>
                             </select>
                         </div>
                         <div class="form-group">
-                            <label class="form-label">Subject</label>
-                            <select class="form-select" id="class" name="class" required>
-                                <option value="">Select Subject</option>
+                            <label class="form-label">Section</label>
+                            <select class="form-select" id="section" name="section">
+                                <option value="">Select Section</option>
                             </select>
                         </div>
                         <div class="form-group">
@@ -1936,66 +1483,6 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
                 </form>
             </div>
         </div>
-
-        <!-- Delete Confirmation Modal -->
-        <div class="modal" id="delete-modal">
-            <div class="modal-content">
-                <div class="modal-header" style="background: linear-gradient(135deg, #ef4444, #f87171);">
-                    <h2 class="modal-title" id="delete-modal-title">Confirm Removal</h2>
-                    <button class="close-btn" onclick="closeModal('delete')">
-                        <i class="fas fa-times"></i>
-                    </button>
-                </div>
-                <div class="modal-body" style="padding: var(--spacing-2xl);">
-                    <!-- Single student deletion content -->
-                    <div id="single-delete-content" class="hidden">
-                        <p style="font-size: var(--font-size-base); color: var(--grayfont-color); margin-bottom: var(--spacing-lg);">
-                            Are you sure you want to remove the following student from the class?
-                        </p>
-                        <div style="display: flex; align-items: center; gap: var(--spacing-lg); background: var(--inputfield-color); padding: var(--spacing-md); border-radius: var(--radius-md); border: 1px solid var(--border-color);">
-                            <img id="delete-student-photo" src="uploads/no-icon.png" alt="Student Photo" style="width: 160px; height: 160px; border-radius: var(--radius-md); object-fit: cover; border: 2px solid var(--border-color);">
-                            <div style="flex: 1;">
-                                <p style="margin-bottom: var(--spacing-sm);"><strong style="color: var(--blackfont-color);">LRN:</strong> <span id="delete-student-lrn"></span></p>
-                                <p style="margin-bottom: var(--spacing-sm);"><strong style="color: var(--blackfont-color);">Full Name:</strong> <span id="delete-student-name"></span></p>
-                                <p style="margin-bottom: var(--spacing-sm);"><strong style="color: var(--blackfont-color);">Grade Level:</strong> <span id="delete-student-grade"></span></p>
-                                <p style="margin-bottom: var(--spacing-sm);"><strong style="color: var(--blackfont-color);">Subject:</strong> <span id="delete-student-subject"></span></p>
-                                <p><strong style="color: var(--blackfont-color);">Section:</strong> <span id="delete-student-section"></span></p>
-                            </div>
-                        </div>
-                    </div>
-                    <!-- Bulk deletion content -->
-                    <div id="bulk-delete-content" class="hidden">
-                        <p style="font-size: var(--font-size-base); color: var(--grayfont-color); margin-bottom: var(--spacing-lg);">
-                            Are you sure you want to remove the following students from their respective classes?
-                        </p>
-                        <div class="preview-table-container">
-                            <table class="table w-full">
-                                <thead>
-                                    <tr>
-                                        <th style="padding: var(--spacing-md); font-size: var(--font-size-sm); text-align: left;">Photo</th>
-                                        <th style="padding: var(--spacing-md); font-size: var(--font-size-sm); text-align: left;">LRN</th>
-                                        <th style="padding: var(--spacing-md); font-size: var(--font-size-sm); text-align: left;">Full Name</th>
-                                        <th style="padding: var(--spacing-md); font-size: var(--font-size-sm); text-align: left;">Grade Level</th>
-                                        <th style="padding: var(--spacing-md); font-size: var(--font-size-sm); text-align: left;">Subject</th>
-                                        <th style="padding: var(--spacing-md); font-size: var(--font-size-sm); text-align: left;">Section</th>
-                                        <th style="padding: var(--spacing-md); font-size: var(--font-size-sm); text-align: left;">Action</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="bulk-delete-table"></tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-                <div class="form-actions" style="padding: var(--spacing-lg) var(--spacing-2xl); border-top: 1px solid var(--border-color); display: flex; gap: var(--spacing-md); justify-content: flex-end; background: var(--card-bg);">
-                    <button type="button" class="btn btn-secondary" onclick="closeModal('delete')" style="padding: var(--spacing-sm) var(--spacing-lg); font-size: var(--font-size-sm);">
-                        <i class="fas fa-times" style="margin-right: var(--spacing-xs);"></i> Cancel
-                    </button>
-                    <button type="button" class="btn btn-danger" id="confirm-delete-btn" onclick="confirmDelete()" style="padding: var(--spacing-sm) var(--spacing-lg); font-size: var(--font-size-sm);">
-                        <i class="fas fa-trash" style="margin-right: var(--spacing-xs);"></i> Remove
-                    </button>
-                </div>
-            </div>
-        </div>
     </div>
     <script>
         // Data from PHP
@@ -2005,13 +1492,8 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
         let subjects = <?php echo json_encode($subjects); ?>;
         let sections = <?php echo json_encode($sections); ?>;
         let currentPage = 1;
-        const rowsPerPage = 5;
+        const rowsPerPage = 10;
         let currentView = 'table';
-        let filteredStudents = [];
-        const selectedStudents = new Set();
-        // Global variables - add these at the top with your existing globals
-let allSelectedStudents = new Set(); // This will track all selected students across pages
-let selectAllMode = false; // Track if "select all" mode is active
 
         // DOM Elements
         const studentTableBody = document.querySelector('#tableView tbody');
@@ -2034,8 +1516,8 @@ let selectAllMode = false; // Track if "select all" mode is active
             setupEventListeners();
             document.querySelector('#studentForm').addEventListener('submit', saveStudent);
             document.getElementById('student-id').addEventListener('change', autoFillStudent);
-            document.getElementById('grade-level').addEventListener('change', updateSectionOptions);
-            document.getElementById('section').addEventListener('change', updateSubjectOptions);
+            document.getElementById('grade-level').addEventListener('change', updateSubjectAndSectionOptions);
+            document.getElementById('class').addEventListener('change', updateSectionOptions);
         });
 
         // Auto fill student on LRN change
@@ -2043,15 +1525,7 @@ let selectAllMode = false; // Track if "select all" mode is active
             const lrn = this.value;
             if (lrn.length === 12) {
                 fetch(`?lrn=${lrn}`)
-                    .then(res => {
-                        if (!res.ok) {
-                            return res.text().then(text => {
-                                console.error('Non-JSON response:', text);
-                                throw new Error(`HTTP error! Status: ${res.status}`);
-                            });
-                        }
-                        return res.json();
-                    })
+                    .then(res => res.json())
                     .then(data => {
                         if (data.success) {
                             const student = data.student;
@@ -2064,11 +1538,10 @@ let selectAllMode = false; // Track if "select all" mode is active
                             document.getElementById('address').value = student.address || '';
                             document.getElementById('parent-name').value = student.parent_name || '';
                             document.getElementById('emergency-contact').value = student.emergency_contact || '';
-                            document.getElementById('grade-level').value = student.grade_level || '';
-                            document.getElementById('grade-level').dispatchEvent(new Event('change'));
                             document.getElementById('student-photo-preview').src = student.photo ?
                                 'uploads/' + student.photo :
-                                'uploads/no-icon.png';
+                                'https://via.placeholder.com/100';
+
                         } else {
                             document.getElementById('first-name').value = '';
                             document.getElementById('middle-name').value = '';
@@ -2079,35 +1552,19 @@ let selectAllMode = false; // Track if "select all" mode is active
                             document.getElementById('address').value = '';
                             document.getElementById('parent-name').value = '';
                             document.getElementById('emergency-contact').value = '';
-                            document.getElementById('student-photo-preview').src = 'uploads/no-icon.png';
+                            document.getElementById('student-photo-preview').src = student.photo ?
+                                'uploads/' + student.photo :
+                                'https://via.placeholder.com/100';
+
                         }
-                    })
-                    .catch(error => {
-                        console.error('Fetch error in autoFillStudent:', error);
                     });
             }
         }
 
-        // Update section options based on grade
-        function updateSectionOptions() {
+        // Update subject and section options based on grade
+        function updateSubjectAndSectionOptions() {
             const grade = document.getElementById('grade-level').value;
-            const availableSections = [...new Set(classes.filter(c => c.grade_level === grade).map(c => c.section_name))];
-            const sectionSelect = document.getElementById('section');
-            sectionSelect.innerHTML = '<option value="">Select Section</option>';
-            availableSections.forEach(sec => {
-                const option = document.createElement('option');
-                option.value = sec;
-                option.textContent = sec;
-                sectionSelect.appendChild(option);
-            });
-            document.getElementById('class').innerHTML = '<option value="">Select Subject</option>';
-        }
-
-        // Update subject options based on grade and section
-        function updateSubjectOptions() {
-            const grade = document.getElementById('grade-level').value;
-            const section = document.getElementById('section').value;
-            const availableSubjects = [...new Set(classes.filter(c => c.grade_level === grade && c.section_name === section).map(c => c.subject_name))];
+            const availableSubjects = [...new Set(classes.filter(c => c.grade_level === grade).map(c => c.subject_name))];
             const subjectSelect = document.getElementById('class');
             subjectSelect.innerHTML = '<option value="">Select Subject</option>';
             availableSubjects.forEach(sub => {
@@ -2116,12 +1573,28 @@ let selectAllMode = false; // Track if "select all" mode is active
                 option.textContent = sub;
                 subjectSelect.appendChild(option);
             });
+            updateSectionOptions();
+        }
+
+        // Update section options based on grade and subject
+        function updateSectionOptions() {
+            const grade = document.getElementById('grade-level').value;
+            const subject = document.getElementById('class').value;
+            const availableSections = classes.filter(c => c.grade_level === grade && c.subject_name === subject).map(c => c.section_name);
+            const sectionSelect = document.getElementById('section');
+            sectionSelect.innerHTML = '<option value="">Select Section</option>';
+            availableSections.forEach(sec => {
+                const option = document.createElement('option');
+                option.value = sec;
+                option.textContent = sec;
+                sectionSelect.appendChild(option);
+            });
         }
 
         // Update stats for cards
         function updateStats() {
             const totalStudents = students.length;
-            const activeStudents = students.filter(s => s.status === 'active').length; // Assumes status field exists
+            const activeStudents = students.filter(s => s.status === 'active').length; // Assume status if added
             const classesEnrolled = [...new Set(students.map(s => `${s.class}-${s.section}`))].length;
             document.getElementById('total-students').textContent = totalStudents;
             document.getElementById('active-students').textContent = activeStudents;
@@ -2163,48 +1636,30 @@ let selectAllMode = false; // Track if "select all" mode is active
             sortSelect.addEventListener('change', applyFilters);
         }
 
-
-// Modified apply filters function to maintain selections when filtering
-function applyFilters() {
-    const searchTerm = searchInput.value.toLowerCase();
-    const gender = genderFilter.value;
-    const gradeLevel = gradeLevelFilter.value;
-    const className = classFilter.value;
-    const section = sectionFilter.value;
-    
-    filteredStudents = students.filter(student => {
-        const matchesSearch = student.fullName.toLowerCase().includes(searchTerm) ||
-            student.lrn.toString().includes(searchTerm);
-        const matchesGender = gender ? student.gender === gender : true;
-        const matchesGradeLevel = gradeLevel ? student.gradeLevel === gradeLevel : true;
-        const matchesClass = className ? student.class === className : true;
-        const matchesSection = section ? student.section === section : true;
-        return matchesSearch && matchesGender && matchesGradeLevel && matchesClass && matchesSection;
-    });
-    
-    filteredStudents.sort((a, b) => {
-        if (sortSelect.value === 'name-asc') return a.fullName.localeCompare(b.fullName);
-        if (sortSelect.value === 'name-desc') return b.fullName.localeCompare(a.fullName);
-        if (sortSelect.value === 'id') return a.lrn.toString().localeCompare(b.lrn.toString());
-        return 0;
-    });
-    
-    // Clean up selections for students that are no longer in the filtered list
-    const filteredKeys = new Set(filteredStudents.map(s => `${s.lrn}-${s.class_id}`));
-    allSelectedStudents.forEach(key => {
-        if (!filteredKeys.has(key)) {
-            // Only remove if the student is not in the main students array anymore
-            const [lrn, class_id] = key.split('-');
-            const studentExists = students.some(s => s.lrn == lrn && String(s.class_id) === String(class_id));
-            if (!studentExists) {
-                allSelectedStudents.delete(key);
-                selectedStudents.delete(key);
-            }
+        // Apply filters and sorting
+        function applyFilters() {
+            const searchTerm = searchInput.value.toLowerCase();
+            const gender = genderFilter.value;
+            const gradeLevel = gradeLevelFilter.value;
+            const className = classFilter.value;
+            const section = sectionFilter.value;
+            let filteredStudents = students.filter(student => {
+                const matchesSearch = student.fullName.toLowerCase().includes(searchTerm) ||
+                    student.lrn.toString().includes(searchTerm);
+                const matchesGender = gender ? student.gender === gender : true;
+                const matchesGradeLevel = gradeLevel ? student.gradeLevel === gradeLevel : true;
+                const matchesClass = className ? student.class === className : true;
+                const matchesSection = section ? student.section === section : true;
+                return matchesSearch && matchesGender && matchesGradeLevel && matchesClass && matchesSection;
+            });
+            filteredStudents.sort((a, b) => {
+                if (sortSelect.value === 'name-asc') return a.fullName.localeCompare(b.fullName);
+                if (sortSelect.value === 'name-desc') return b.fullName.localeCompare(a.fullName);
+                if (sortSelect.value === 'id') return a.lrn.toString().localeCompare(b.lrn.toString());
+                return 0;
+            });
+            renderViews(filteredStudents);
         }
-    });
-    
-    renderViews(filteredStudents);
-}
 
         // Render views
         function renderViews(data) {
@@ -2239,7 +1694,7 @@ function applyFilters() {
                     </div>
                     <div class="student-info">
                         <p><i class="fas fa-id-card"></i> LRN: ${student.lrn}</p>
-                        <p><i class="fas fa-envelope"></i> ${student.emergency_contact || 'N/A'}</p>
+                        <p><i class="fas fa-envelope"></i> ${student.emergency_contact}</p>
                         <p><i class="fas fa-graduation-cap"></i> ${student.gradeLevel}</p>
                         <p><i class="fas fa-book"></i> ${student.class}</p>
                         <p><i class="fas fa-layer-group"></i> ${student.section}</p>
@@ -2260,73 +1715,41 @@ function applyFilters() {
             });
         }
 
-// Modified render table view function
-function renderTableView(data) {
-    studentTableBody.innerHTML = '';
-    const start = (currentPage - 1) * rowsPerPage;
-    const end = start + rowsPerPage;
-    const paginatedData = data.slice(start, end);
-    
-    paginatedData.forEach(student => {
-        const row = document.createElement('tr');
-        const qrCodeId = `qr-${student.lrn}-${student.class_id}`;
-        row.innerHTML = `
-            <td><input type="checkbox" class="row-checkbox" data-id="${student.lrn}" data-class-id="${student.class_id}"></td>
-            <td><img src="${student.photo ? 'uploads/' + student.photo : 'uploads/no-icon.png'}" alt="${student.fullName}" style="width: 45px; height: 45px; border-radius: 50%;"></td>
-            <td><div id="${qrCodeId}" style="width: 45px; height: 45px;"></div></td>
-            <td>${student.lrn}</td>
-            <td>${student.fullName}</td>
-            <td>${student.gradeLevel}</td>
-            <td>${student.class}</td>
-            <td>${student.section}</td>
-            <td>
-                <div class="actions">
-                    <button class="btn btn-primary btn-sm" onclick="openProfileModal('view', '${student.lrn}')">
-                        <i class="fas fa-eye"></i>
-                    </button>
-                    <button class="btn btn-primary btn-sm" onclick="openProfileModal('edit', '${student.lrn}')">
-                        <i class="fas fa-edit"></i>
-                    </button>
-                    <button class="btn btn-danger btn-sm" onclick="deleteStudent('${student.lrn}', '${student.class_id}')">
-                        <i class="fas fa-trash"></i>
-                    </button>
-                </div>
-            </td>
-        `;
-        studentTableBody.appendChild(row);
-
-        // Generate QR code for this student
-        if (student.qr_code) {
-            document.getElementById(qrCodeId).innerHTML = `<img src="qrcodes/${student.qr_code}" width="45" height="45">`;
-        } else {
-            document.getElementById(qrCodeId).innerHTML = 'No QR';
-        }
-    });
-    
-    // Set checkbox states based on allSelectedStudents set
-    document.querySelectorAll('.row-checkbox').forEach(cb => {
-        const key = `${cb.dataset.id}-${cb.dataset.classId}`;
-        cb.checked = allSelectedStudents.has(key);
-        
-        cb.addEventListener('change', (e) => {
-            const changeKey = `${e.target.dataset.id}-${e.target.dataset.classId}`;
-            selectAllMode = false; // Disable select all mode when manually selecting
-            
-            if (e.target.checked) {
-                allSelectedStudents.add(changeKey);
-                selectedStudents.add(changeKey);
-            } else {
-                allSelectedStudents.delete(changeKey);
-                selectedStudents.delete(changeKey);
-            }
+        // Render table view
+        function renderTableView(data) {
+            studentTableBody.innerHTML = '';
+            const start = (currentPage - 1) * rowsPerPage;
+            const end = start + rowsPerPage;
+            const paginatedData = data.slice(start, end);
+            paginatedData.forEach(student => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td><input type="checkbox" class="row-checkbox" data-id="${student.lrn}" data-class-id="${student.class_id}"></td>
+                    <td><img src="uploads/${student.photo}" alt="${student.fullName}" style="width: 45px; height: 45px; border-radius: 50%;"></td>
+                    <td>${student.lrn}</td>
+                    <td>${student.fullName}</td>
+                    <td>${student.gradeLevel}</td>
+                    <td>${student.class}</td>
+                    <td>${student.section}</td>
+                    <td>
+                        <div class="actions">
+                            <button class="btn btn-primary btn-sm" onclick="openProfileModal('view', '${student.lrn}')">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                            <button class="btn btn-primary btn-sm" onclick="openProfileModal('edit', '${student.lrn}')">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="btn btn-danger btn-sm" onclick="deleteStudent('${student.lrn}', '${student.class_id}')">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </td>
+                `;
+                studentTableBody.appendChild(row);
+            });
             updateBulkActions();
-            updateHeaderCheckboxes();
-        });
-    });
-    
-    updateBulkActions();
-    updateHeaderCheckboxes();
-}
+            document.querySelectorAll('.row-checkbox').forEach(cb => cb.addEventListener('change', updateBulkActions));
+        }
 
         // Render pagination
         function renderPagination(totalRows) {
@@ -2334,7 +1757,7 @@ function renderTableView(data) {
             pagination.innerHTML = `
                 <button class="pagination-btn" onclick="changePage(${currentPage - 1})" ${currentPage === 1 ? 'disabled' : ''}>Previous</button>
                 ${Array.from({ length: pageCount }, (_, i) => `
-                    <button class="pagination-btn ${currentPage === i + 1 ? 'active' : ''}" onclick="changePage(${i + 1})">${i + 1}</button>
+                <button class="pagination-btn ${currentPage === i + 1 ? 'active' : ''}" onclick="changePage(${i + 1})">${i + 1}</button>
                 `).join('')}
                 <button class="pagination-btn" onclick="changePage(${currentPage + 1})" ${currentPage === pageCount ? 'disabled' : ''}>Next</button>
             `;
@@ -2354,312 +1777,110 @@ function renderTableView(data) {
             applyFilters();
         }
 
-        // Modified toggle global select function
-function toggleGlobalSelect() {
-    const isChecked = document.getElementById('selectAll').checked;
-    selectAllMode = isChecked;
-    
-    if (isChecked) {
-        // Select all filtered students across all pages
-        filteredStudents.forEach(student => {
-            const key = `${student.lrn}-${student.class_id}`;
-            allSelectedStudents.add(key);
-        });
-        selectedStudents.clear();
-        filteredStudents.forEach(student => {
-            const key = `${student.lrn}-${student.class_id}`;
-            selectedStudents.add(key);
-        });
-    } else {
-        // Clear all selections
-        allSelectedStudents.clear();
-        selectedStudents.clear();
-    }
-    
-    // Update visible checkboxes
-    document.querySelectorAll('.row-checkbox').forEach(cb => {
-        const key = `${cb.dataset.id}-${cb.dataset.classId}`;
-        cb.checked = allSelectedStudents.has(key);
-    });
-    
-    updateBulkActions();
-    updateHeaderCheckboxes();
-}
-
-
-// Modified toggle page select function
-function togglePageSelect() {
-    const isChecked = document.getElementById('tableSelectAll').checked;
-    selectAllMode = false; // Disable select all mode when manually selecting page
-    
-    document.querySelectorAll('.row-checkbox').forEach(cb => {
-        cb.checked = isChecked;
-        const key = `${cb.dataset.id}-${cb.dataset.classId}`;
-        if (isChecked) {
-            allSelectedStudents.add(key);
-            selectedStudents.add(key);
-        } else {
-            allSelectedStudents.delete(key);
-            selectedStudents.delete(key);
+        // Toggle select all
+        function toggleSelectAll() {
+            const selectAll = document.getElementById('selectAll');
+            const checkboxes = document.querySelectorAll('.row-checkbox');
+            checkboxes.forEach(checkbox => checkbox.checked = selectAll.checked);
+            updateBulkActions();
         }
-    });
-    
-    updateBulkActions();
-    updateHeaderCheckboxes();
-}
 
-// Modified update bulk actions function
-function updateBulkActions() {
-    const totalSelected = allSelectedStudents.size;
-    document.getElementById('selectedCount').textContent = `${totalSelected} selected`;
-    document.querySelectorAll('.bulk-actions .btn').forEach(btn => btn.disabled = totalSelected === 0);
-}
+        // Update bulk actions
+        function updateBulkActions() {
+            const checkboxes = document.querySelectorAll('.row-checkbox:checked');
+            const selectedCount = document.getElementById('selectedCount');
+            const bulkButtons = document.querySelectorAll('.bulk-actions .btn');
+            selectedCount.textContent = `${checkboxes.length} selected`;
+            bulkButtons.forEach(btn => btn.disabled = checkboxes.length === 0);
+        }
 
-// Modified update header checkboxes function
-function updateHeaderCheckboxes() {
-    // Global checkbox - check if ALL filtered students are selected
-    const allFilteredSelected = filteredStudents.length > 0 && 
-        filteredStudents.every(s => allSelectedStudents.has(`${s.lrn}-${s.class_id}`));
-    const someFilteredSelected = filteredStudents.some(s => allSelectedStudents.has(`${s.lrn}-${s.class_id}`));
-    
-    document.getElementById('selectAll').checked = allFilteredSelected;
-    document.getElementById('selectAll').indeterminate = !allFilteredSelected && someFilteredSelected;
-
-    // Page checkbox - check if all VISIBLE students are selected
-    const currentCheckboxes = document.querySelectorAll('.row-checkbox');
-    const pageAllSelected = currentCheckboxes.length > 0 && 
-        Array.from(currentCheckboxes).every(cb => cb.checked);
-    const pageSomeSelected = Array.from(currentCheckboxes).some(cb => cb.checked);
-    
-    document.getElementById('tableSelectAll').checked = pageAllSelected;
-    document.getElementById('tableSelectAll').indeterminate = !pageAllSelected && pageSomeSelected;
-}
-
-// Modified bulk export function
-function bulkExport() {
-    if (allSelectedStudents.size === 0) {
-        alert('No students selected for export.');
-        return;
-    }
-
-    // Get LRNs from allSelectedStudents instead of visible checkboxes
-    const selectedLRNs = Array.from(allSelectedStudents).map(key => key.split('-')[0]);
-    
-    console.log('Exporting students:', selectedLRNs); // Debug log
-    
-    // Show loading state
-    const exportBtn = document.getElementById('bulkExportBtn');
-    const originalText = exportBtn.innerHTML;
-    exportBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating...';
-    exportBtn.disabled = true;
-
-    fetch('', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/x-www-form-urlencoded'
-        },
-        body: `action=exportExcel&lrns=${encodeURIComponent(JSON.stringify(selectedLRNs))}`
-    })
-    .then(res => {
-        if (!res.ok) {
-            return res.text().then(text => {
-                console.error('Non-JSON response:', text);
-                throw new Error(`HTTP error! Status: ${res.status}`);
+        // Bulk export
+        function bulkExport() {
+            const checkboxes = document.querySelectorAll('.row-checkbox:checked');
+            const selectedStudents = Array.from(checkboxes).map(cb =>
+                students.find(s => s.lrn == cb.dataset.id)
+            );
+            const csv = [
+                'LRN,Last Name,First Name,Middle Name,Email,Gender,Grade Level,Subject,Section,Address,Emergency Contact',
+                ...selectedStudents.map(s =>
+                    `${s.lrn},${s.last_name},${s.first_name},${s.middle_name},${s.email},${s.gender},${s.gradeLevel},${s.class},${s.section},${s.address},${s.emergency_contact}`
+                )
+            ].join('\n');
+            const blob = new Blob([csv], {
+                type: 'text/csv'
             });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'selected_students.csv';
+            a.click();
+            URL.revokeObjectURL(url);
         }
-        return res.json();
-    })
-    .then(data => {
-        if (data.success) {
-            // Create download link
-            const downloadLink = document.createElement('a');
-            downloadLink.href = `exports/${data.filename}`;
-            downloadLink.download = data.filename;
-            downloadLink.style.display = 'none';
-            document.body.appendChild(downloadLink);
-            downloadLink.click();
-            document.body.removeChild(downloadLink);
-            
-            // Show success message
-            alert(`Excel file generated successfully! Exported ${selectedLRNs.length} students.`);
-        } else {
-            alert(data.message || 'Failed to generate Excel file');
-        }
-    })
-    .catch(error => {
-        console.error('Export error:', error);
-        alert('An error occurred while generating the Excel file. Please check the console for details.');
-    })
-    .finally(() => {
-        // Reset button state
-        exportBtn.innerHTML = originalText;
-        exportBtn.disabled = false;
-    });
-}
 
-
-// Modified bulk delete function
-function bulkDelete() {
-    if (allSelectedStudents.size === 0) {
-        alert('No students selected.');
-        return;
-    }
-
-    const selected = Array.from(allSelectedStudents).map(key => {
-        const [lrn, class_id] = key.split('-');
-        return { lrn, class_id };
-    });
-
-    // Populate bulk delete modal
-    const tableBody = document.getElementById('bulk-delete-table');
-    tableBody.innerHTML = '';
-    selected.forEach(({ lrn, class_id }) => {
-        const student = students.find(s => s.lrn == lrn && String(s.class_id) === String(class_id));
-        if (student) {
-            const row = document.createElement('tr');
-            row.innerHTML = `
-                <td><img src="${student.photo ? 'uploads/' + student.photo : 'uploads/no-icon.png'}" alt="${student.fullName}" style="width: 60px; height: 60px; border-radius: 50%; object-fit: cover;"></td>
-                <td>${student.lrn}</td>
-                <td>${student.fullName}</td>
-                <td>${student.gradeLevel}</td>
-                <td>${student.class}</td>
-                <td>${student.section}</td>
-                <td>
-                    <button class="btn btn-danger btn-sm" onclick="removeFromBulkSelection('${student.lrn}', '${student.class_id}')">
-                        <i class="fas fa-times"></i> Remove
-                    </button>
-                </td>
-            `;
-            tableBody.appendChild(row);
-        }
-    });
-
-    document.getElementById('delete-modal-title').textContent = 'Confirm Bulk Removal';
-    document.getElementById('single-delete-content').classList.add('hidden');
-    document.getElementById('bulk-delete-content').classList.remove('hidden');
-    document.getElementById('confirm-delete-btn').dataset.lrns = JSON.stringify(selected);
-    document.getElementById('confirm-delete-btn').dataset.mode = 'bulk';
-    document.getElementById('delete-modal').classList.add('show');
-}
-
-// Modified remove from bulk selection function
-function removeFromBulkSelection(lrn, class_id) {
-    const key = `${lrn}-${class_id}`;
-    allSelectedStudents.delete(key);
-    selectedStudents.delete(key);
-    selectAllMode = false;
-    updateBulkActions();
-    updateHeaderCheckboxes();
-    bulkDelete(); // Refresh the modal
-}
-        // Modified confirm delete function
-function confirmDelete() {
-    const confirmBtn = document.getElementById('confirm-delete-btn');
-    const mode = confirmBtn.dataset.mode;
-
-    if (mode === 'single') {
-        const lrn = confirmBtn.dataset.lrn;
-        const class_id = confirmBtn.dataset.classId;
-        fetch(`?delete_lrn=${lrn}&class_id=${class_id}`)
-            .then(res => {
-                if (!res.ok) {
-                    return res.text().then(text => {
-                        console.error('Non-JSON response:', text);
-                        throw new Error(`HTTP error! Status: ${res.status}`);
-                    });
-                }
-                return res.json();
-            })
-            .then(data => {
-                if (data.success) {
-                    const key = `${lrn}-${class_id}`;
-                    allSelectedStudents.delete(key);
-                    selectedStudents.delete(key);
-                    students = students.filter(s => s.lrn != lrn || String(s.class_id) !== String(class_id));
-                    applyFilters();
-                    closeModal('delete');
-                } else {
-                    alert(data.message || 'Error removing student from class.');
-                }
-            })
-            .catch(error => {
-                console.error('Fetch error in confirmDelete (single):', error);
-                alert('An error occurred while removing the student. Please check the console for details.');
-            });
-    } else if (mode === 'bulk') {
-        const lrns = JSON.parse(confirmBtn.dataset.lrns);
-        const groupedByClass = lrns.reduce((acc, { lrn, class_id }) => {
-            acc[class_id] = acc[class_id] || [];
-            acc[class_id].push(lrn);
-            return acc;
-        }, {});
-
-        const deletePromises = Object.entries(groupedByClass).map(([class_id, lrns]) => {
-            return fetch('', {
+        // Bulk delete
+        function bulkDelete() {
+            const gradeLevel = gradeLevelFilter.value;
+            const className = classFilter.value;
+            const section = sectionFilter.value;
+            if (!gradeLevel || !className || !section) {
+                alert('Please select Grade Level, Subject, and Section to remove students from a class.');
+                return;
+            }
+            if (!confirm('Are you sure you want to remove selected students from the selected class?')) return;
+            const checkboxes = document.querySelectorAll('.row-checkbox:checked');
+            const lrns = Array.from(checkboxes).map(cb => cb.dataset.id);
+            const class_id = students.find(s =>
+                s.gradeLevel === gradeLevel &&
+                s.class === className &&
+                s.section === section
+            )?.class_id;
+            if (!class_id) {
+                alert('Invalid class selection.');
+                return;
+            }
+            fetch('', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/x-www-form-urlencoded'
                     },
                     body: `bulk_delete=true&lrns=${encodeURIComponent(JSON.stringify(lrns))}&class_id=${class_id}`
                 })
-                .then(res => {
-                    if (!res.ok) {
-                        return res.text().then(text => {
-                            console.error('Non-JSON response:', text);
-                            throw new Error(`HTTP error! Status: ${res.status}`);
-                        });
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        students = students.filter(s => !lrns.includes(s.lrn.toString()) || s.class_id != class_id);
+                        applyFilters();
+                    } else {
+                        alert('Error removing students from class.');
                     }
-                    return res.json();
                 });
-        });
-
-        Promise.all(deletePromises)
-            .then(results => {
-                const allSuccessful = results.every(data => data.success);
-                if (allSuccessful) {
-                    students = students.filter(s => !allSelectedStudents.has(`${s.lrn}-${s.class_id}`));
-                    allSelectedStudents.clear();
-                    selectedStudents.clear();
-                    selectAllMode = false;
-                    applyFilters();
-                    closeModal('delete');
-                } else {
-                    const errorMessage = results.find(data => !data.success)?.message || 'Error removing some students from class.';
-                    alert(errorMessage);
-                }
-            })
-            .catch(error => {
-                console.error('Fetch error in confirmDelete (bulk):', error);
-                alert('An error occurred while removing students. Please check the console for details.');
-            });
-    }
-}
+        }
 
         // Delete student from class
         function deleteStudent(lrn, class_id) {
-            const student = students.find(s => s.lrn == lrn && String(s.class_id) === String(class_id));
-            if (!student) {
-                alert('Student not found.');
+            const gradeLevel = gradeLevelFilter.value;
+            const className = classFilter.value;
+            const section = sectionFilter.value;
+            if (!gradeLevel || !className || !section) {
+                alert('Please select Grade Level, Subject, and Section to remove the student from a class.');
                 return;
             }
-
-            // Populate single delete modal
-            document.getElementById('delete-modal-title').textContent = 'Confirm Student Removal';
-            document.getElementById('delete-student-photo').src = student.photo ? 'uploads/' + student.photo : 'uploads/no-icon.png';
-            document.getElementById('delete-student-lrn').textContent = student.lrn;
-            document.getElementById('delete-student-name').textContent = student.fullName;
-            document.getElementById('delete-student-grade').textContent = student.gradeLevel;
-            document.getElementById('delete-student-subject').textContent = student.class;
-            document.getElementById('delete-student-section').textContent = student.section;
-            document.getElementById('single-delete-content').classList.remove('hidden');
-            document.getElementById('bulk-delete-content').classList.add('hidden');
-            document.getElementById('confirm-delete-btn').dataset.lrn = lrn;
-            document.getElementById('confirm-delete-btn').dataset.classId = class_id;
-            document.getElementById('confirm-delete-btn').dataset.mode = 'single';
-            document.getElementById('delete-modal').classList.add('show');
+            if (!confirm('Are you sure you want to remove this student from the selected class?')) return;
+            fetch(`?delete_lrn=${lrn}&class_id=${class_id}`)
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        students = students.filter(s => s.lrn != lrn || s.class_id != class_id);
+                        applyFilters();
+                    } else {
+                        alert('Error removing student from class.');
+                    }
+                });
         }
+
         // Open profile modal
-        function openProfileModal(mode, lrn = null) {
+        // Open profile modal
+function openProfileModal(mode, lrn = null) {
     const form = {
         studentId: document.getElementById('student-id'),
         firstName: document.getElementById('first-name'),
@@ -2669,36 +1890,25 @@ function confirmDelete() {
         gender: document.getElementById('gender'),
         dob: document.getElementById('dob'),
         gradeLevel: document.getElementById('grade-level'),
-        section: document.getElementById('section'),
         class: document.getElementById('class'),
+        section: document.getElementById('section'),
         address: document.getElementById('address'),
         parentName: document.getElementById('parent-name'),
         emergencyContact: document.getElementById('emergency-contact'),
-        photoPreview: document.getElementById('student-photo-preview'),
-        photoInput: document.getElementById('student-photo')
+        photoPreview: document.getElementById('student-photo-preview')
     };
     Object.values(form).forEach(input => {
-        if (input.tagName === 'IMG') input.src = 'uploads/no-icon.png';
+        if (input.tagName === 'IMG') input.src = 'https://via.placeholder.com/100';
         else if (input.tagName === 'SELECT') input.value = '';
-        else if (input.type === 'file') input.value = '';
         else input.value = '';
     });
     const qrContainer = document.getElementById('qr-container');
     const qrCodeDiv = document.getElementById('qr-code');
     qrCodeDiv.innerHTML = '';
-    qrContainer.style.display = 'none';
-    const changePhotoBtn = document.getElementById('change-photo-btn');
-    changePhotoBtn.style.display = mode === 'view' ? 'none' : 'inline-flex';
-    document.getElementById('qr_code_input').value = '';
+    qrContainer.style.display = 'none'; // Keep QR code hidden in all modes
 
     if (mode !== 'add' && lrn) {
         const student = students.find(s => s.lrn == lrn);
-        if (!student) {
-            console.error(`No student found for LRN: ${lrn}`);
-            alert('Student not found.');
-            return;
-        }
-        console.log('Student:', student);
         document.getElementById('profile-modal-title').textContent = `${student.fullName}'s Profile`;
         form.studentId.value = student.lrn;
         form.firstName.value = student.first_name;
@@ -2711,62 +1921,47 @@ function confirmDelete() {
         form.parentName.value = student.parent_name || '';
         form.emergencyContact.value = student.emergency_contact || '';
         form.photoPreview.src = student.photo ?
-            'uploads/' + student.photo :
-            'uploads/no-icon.png';
-
-        // Display QR code in view and edit modes
-        if (student.qr_code) {
-            qrContainer.style.display = 'block';
-            qrCodeDiv.innerHTML = `<img src="qrcodes/${student.qr_code}" width="100" height="100">`;
-        } else {
-            qrContainer.style.display = 'block';
-            qrCodeDiv.innerHTML = '<p>No QR Code available</p>';
-        }
+            'Uploads/' + student.photo :
+            'https://via.placeholder.com/100';
 
         // Find the class details based on class_id
-        const studentClass = classes.find(c => String(c.class_id) === String(student.class_id));
-        console.log('Student Class:', studentClass);
+        const studentClass = classes.find(c => c.class_id == student.class_id);
         if (studentClass) {
-            form.gradeLevel.value = studentClass.grade_level;
-            console.log('Setting gradeLevel to:', studentClass.grade_level);
-            updateSectionOptions();
-            form.section.value = studentClass.section_name;
-            updateSubjectOptions();
-            form.class.value = studentClass.subject_name;
+            form.gradeLevel.value = studentClass.grade_level; // Set grade level based on class_id
+            updateSubjectAndSectionOptions(); // Update subject options based on grade level
+            form.class.value = studentClass.subject_name; // Set subject
+            updateSectionOptions(); // Update section options based on grade and subject
+            form.section.value = studentClass.section_name; // Set section
         } else {
-            console.warn(`No class found for class_id: ${student.class_id}, using fallback`);
-            form.gradeLevel.value = student.gradeLevel || '';
+            // Fallback to student's gradeLevel if class_id not found
+            form.gradeLevel.value = student.gradeLevel;
+            updateSubjectAndSectionOptions();
+            form.class.value = student.class;
             updateSectionOptions();
-            form.section.value = student.section || '';
-            updateSubjectOptions();
-            form.class.value = student.class || '';
+            form.section.value = student.section;
         }
     } else {
         document.getElementById('profile-modal-title').textContent = 'Add New Student';
-        document.getElementById('section').innerHTML = '<option value="">Select Section</option>';
         document.getElementById('class').innerHTML = '<option value="">Select Subject</option>';
-        qrContainer.style.display = 'none';
+        document.getElementById('section').innerHTML = '<option value="">Select Section</option>';
     }
 
     Object.values(form).forEach(input => {
-        if (input.tagName !== 'IMG' && input.type !== 'file') input.disabled = mode === 'view';
+        if (input.tagName !== 'IMG') input.disabled = mode === 'view';
     });
-    form.photoInput.disabled = mode === 'view';
+    document.querySelector('.photo-upload .btn').style.display = mode === 'view' ? 'none' : 'inline-flex';
     document.querySelector('.form-actions .btn-primary').style.display = mode === 'view' ? 'none' : 'inline-flex';
     profileModal.classList.add('show');
 }
         // Preview photo
         function previewPhoto(event) {
             const file = event.target.files[0];
-            const photoPreview = document.getElementById('student-photo-preview');
             if (file) {
                 const reader = new FileReader();
                 reader.onload = e => {
-                    photoPreview.src = e.target.result;
+                    document.getElementById('student-photo-preview').src = e.target.result;
                 };
                 reader.readAsDataURL(file);
-            } else {
-                photoPreview.src = 'uploads/no-icon.png';
             }
         }
 
@@ -2778,82 +1973,38 @@ function confirmDelete() {
                     method: 'POST',
                     body: formData
                 })
-                .then(res => {
-                    console.log('Response Status:', res.status);
-                    console.log('Response Headers:', [...res.headers.entries()]);
-                    if (!res.ok) {
-                        return res.text().then(text => {
-                            console.error('Non-JSON response:', text);
-                            throw new Error(`HTTP error! Status: ${res.status}`);
-                        });
-                    }
-                    return res.json();
-                })
+                .then(res => res.json())
                 .then(data => {
                     if (data.success) {
-                        alert(data.message || 'Student saved successfully');
-                        document.getElementById('studentForm').reset();
-                        closeModal('profile');
                         location.reload();
                     } else {
-                        alert(data.message || 'Error saving student');
+                        alert('Error saving student.');
                     }
-                })
-                .catch(error => {
-                    console.error('Fetch error in saveStudent:', error);
-                    alert('An error occurred while saving the student. Please check the console for details.');
                 });
         }
 
-        // Add a function to clear all selections
-function clearAllSelections() {
-    allSelectedStudents.clear();
-    selectedStudents.clear();
-    selectAllMode = false;
-    document.querySelectorAll('.row-checkbox').forEach(cb => cb.checked = false);
-    document.getElementById('selectAll').checked = false;
-    document.getElementById('selectAll').indeterminate = false;
-    document.getElementById('tableSelectAll').checked = false;
-    document.getElementById('tableSelectAll').indeterminate = false;
-    updateBulkActions();
-}
+        // Clear filters
+        function clearFilters() {
+            searchInput.value = '';
+            genderFilter.value = '';
+            gradeLevelFilter.value = '';
+            classFilter.value = '';
+            sectionFilter.value = '';
+            sortSelect.value = 'name-asc';
+            applyFilters();
+        }
 
-        // Modified clear filters to also show selection status
-function clearFilters() {
-    searchInput.value = '';
-    genderFilter.value = '';
-    gradeLevelFilter.value = '';
-    classFilter.value = '';
-    sectionFilter.value = '';
-    sortSelect.value = 'name-asc';
-    applyFilters();
-    
-    // Show info about maintained selections if any
-    if (allSelectedStudents.size > 0) {
-        console.log(`Maintained ${allSelectedStudents.size} selections after clearing filters`);
-    }
-}
-
-        // Update closeModal to handle delete modal
+        // Close modal
         function closeModal(type) {
             if (type === 'profile') {
                 profileModal.classList.remove('show');
-            } else if (type === 'delete') {
-                document.getElementById('delete-modal').classList.remove('show');
-                document.getElementById('single-delete-content').classList.add('hidden');
-                document.getElementById('bulk-delete-content').classList.add('hidden');
-                document.getElementById('bulk-delete-table').innerHTML = '';
-                document.getElementById('confirm-delete-btn').removeAttribute('data-lrn');
-                document.getElementById('confirm-delete-btn').removeAttribute('data-classId');
-                document.getElementById('confirm-delete-btn').removeAttribute('data-lrns');
-                document.getElementById('confirm-delete-btn').removeAttribute('data-mode');
             }
         }
 
         // Print QR code
         function printQRCode() {
-            const qrImg = document.querySelector('#qr-code img');
-            if (!qrImg) return;
+            const qrCanvas = document.querySelector('#qr-code canvas');
+            if (!qrCanvas) return;
             const printWindow = window.open('', '_blank');
             printWindow.document.write(`
                 <html>
@@ -2865,7 +2016,7 @@ function clearFilters() {
                     </style>
                 </head>
                 <body>
-                    <img src="${qrImg.src}" alt="QR Code">
+                    <img src="${qrCanvas.toDataURL('image/png')}" alt="QR Code">
                 </body>
                 </html>
             `);
@@ -2873,57 +2024,6 @@ function clearFilters() {
             printWindow.focus();
             printWindow.print();
         }
-    </script>
-    <script>
-        // QR Generation Logic
-        document.addEventListener('DOMContentLoaded', () => {
-            const lrnInput = document.getElementById('student-id');
-            const firstNameInput = document.getElementById('first-name');
-            const middleNameInput = document.getElementById('middle-name');
-            const lastNameInput = document.getElementById('last-name');
-            const qrContainer = document.getElementById('qr-container');
-            const qrCodeDiv = document.getElementById('qr-code');
-            const qrCodeHidden = document.getElementById('qr_code_input') || (function() {
-                const hidden = document.createElement('input');
-                hidden.type = 'hidden';
-                hidden.name = 'qr_code';
-                hidden.id = 'qr_code_input';
-                document.getElementById('studentForm').appendChild(hidden);
-                return hidden;
-            })();
-
-            function generateQR() {
-                const lrn = lrnInput.value.trim();
-                const first_name = firstNameInput.value.trim();
-                const middle_name = middleNameInput.value.trim();
-                const last_name = lastNameInput.value.trim();
-
-                if (lrn.length === 12 && first_name && last_name) {
-                    fetch('', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                        body: `action=generateQR&lrn=${encodeURIComponent(lrn)}&first_name=${encodeURIComponent(first_name)}&middle_name=${encodeURIComponent(middle_name)}&last_name=${encodeURIComponent(last_name)}`
-                    })
-                    .then(res => res.json())
-                    .then(data => {
-                        if (data.success) {
-                            const filename = data.filename;
-                            qrCodeDiv.innerHTML = `<img src="qrcodes/${filename}" width="100" height="100">`;
-                            qrContainer.style.display = 'block';
-                            qrCodeHidden.value = filename;
-                        } else {
-                            console.error('QR generation failed:', data.message);
-                        }
-                    })
-                    .catch(err => console.error('Error generating QR:', err));
-                }
-            }
-
-            lrnInput.addEventListener('change', generateQR);
-            firstNameInput.addEventListener('change', generateQR);
-            middleNameInput.addEventListener('change', generateQR);
-            lastNameInput.addEventListener('change', generateQR);
-        });
     </script>
 </body>
 

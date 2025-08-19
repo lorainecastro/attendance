@@ -2009,9 +2009,6 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
         let currentView = 'table';
         let filteredStudents = [];
         const selectedStudents = new Set();
-        // Global variables - add these at the top with your existing globals
-let allSelectedStudents = new Set(); // This will track all selected students across pages
-let selectAllMode = false; // Track if "select all" mode is active
 
         // DOM Elements
         const studentTableBody = document.querySelector('#tableView tbody');
@@ -2163,48 +2160,30 @@ let selectAllMode = false; // Track if "select all" mode is active
             sortSelect.addEventListener('change', applyFilters);
         }
 
-
-// Modified apply filters function to maintain selections when filtering
-function applyFilters() {
-    const searchTerm = searchInput.value.toLowerCase();
-    const gender = genderFilter.value;
-    const gradeLevel = gradeLevelFilter.value;
-    const className = classFilter.value;
-    const section = sectionFilter.value;
-    
-    filteredStudents = students.filter(student => {
-        const matchesSearch = student.fullName.toLowerCase().includes(searchTerm) ||
-            student.lrn.toString().includes(searchTerm);
-        const matchesGender = gender ? student.gender === gender : true;
-        const matchesGradeLevel = gradeLevel ? student.gradeLevel === gradeLevel : true;
-        const matchesClass = className ? student.class === className : true;
-        const matchesSection = section ? student.section === section : true;
-        return matchesSearch && matchesGender && matchesGradeLevel && matchesClass && matchesSection;
-    });
-    
-    filteredStudents.sort((a, b) => {
-        if (sortSelect.value === 'name-asc') return a.fullName.localeCompare(b.fullName);
-        if (sortSelect.value === 'name-desc') return b.fullName.localeCompare(a.fullName);
-        if (sortSelect.value === 'id') return a.lrn.toString().localeCompare(b.lrn.toString());
-        return 0;
-    });
-    
-    // Clean up selections for students that are no longer in the filtered list
-    const filteredKeys = new Set(filteredStudents.map(s => `${s.lrn}-${s.class_id}`));
-    allSelectedStudents.forEach(key => {
-        if (!filteredKeys.has(key)) {
-            // Only remove if the student is not in the main students array anymore
-            const [lrn, class_id] = key.split('-');
-            const studentExists = students.some(s => s.lrn == lrn && String(s.class_id) === String(class_id));
-            if (!studentExists) {
-                allSelectedStudents.delete(key);
-                selectedStudents.delete(key);
-            }
+        // Apply filters and sorting
+        function applyFilters() {
+            const searchTerm = searchInput.value.toLowerCase();
+            const gender = genderFilter.value;
+            const gradeLevel = gradeLevelFilter.value;
+            const className = classFilter.value;
+            const section = sectionFilter.value;
+            filteredStudents = students.filter(student => {
+                const matchesSearch = student.fullName.toLowerCase().includes(searchTerm) ||
+                    student.lrn.toString().includes(searchTerm);
+                const matchesGender = gender ? student.gender === gender : true;
+                const matchesGradeLevel = gradeLevel ? student.gradeLevel === gradeLevel : true;
+                const matchesClass = className ? student.class === className : true;
+                const matchesSection = section ? student.section === section : true;
+                return matchesSearch && matchesGender && matchesGradeLevel && matchesClass && matchesSection;
+            });
+            filteredStudents.sort((a, b) => {
+                if (sortSelect.value === 'name-asc') return a.fullName.localeCompare(b.fullName);
+                if (sortSelect.value === 'name-desc') return b.fullName.localeCompare(a.fullName);
+                if (sortSelect.value === 'id') return a.lrn.toString().localeCompare(b.lrn.toString());
+                return 0;
+            });
+            renderViews(filteredStudents);
         }
-    });
-    
-    renderViews(filteredStudents);
-}
 
         // Render views
         function renderViews(data) {
@@ -2260,13 +2239,12 @@ function applyFilters() {
             });
         }
 
-// Modified render table view function
-function renderTableView(data) {
+        // Render table view
+        function renderTableView(data) {
     studentTableBody.innerHTML = '';
     const start = (currentPage - 1) * rowsPerPage;
     const end = start + rowsPerPage;
     const paginatedData = data.slice(start, end);
-    
     paginatedData.forEach(student => {
         const row = document.createElement('tr');
         const qrCodeId = `qr-${student.lrn}-${student.class_id}`;
@@ -2302,28 +2280,21 @@ function renderTableView(data) {
             document.getElementById(qrCodeId).innerHTML = 'No QR';
         }
     });
-    
-    // Set checkbox states based on allSelectedStudents set
+    // Set checkbox states based on selectedStudents set
     document.querySelectorAll('.row-checkbox').forEach(cb => {
         const key = `${cb.dataset.id}-${cb.dataset.classId}`;
-        cb.checked = allSelectedStudents.has(key);
-        
+        cb.checked = selectedStudents.has(key);
         cb.addEventListener('change', (e) => {
             const changeKey = `${e.target.dataset.id}-${e.target.dataset.classId}`;
-            selectAllMode = false; // Disable select all mode when manually selecting
-            
             if (e.target.checked) {
-                allSelectedStudents.add(changeKey);
                 selectedStudents.add(changeKey);
             } else {
-                allSelectedStudents.delete(changeKey);
                 selectedStudents.delete(changeKey);
             }
             updateBulkActions();
             updateHeaderCheckboxes();
         });
     });
-    
     updateBulkActions();
     updateHeaderCheckboxes();
 }
@@ -2354,98 +2325,71 @@ function renderTableView(data) {
             applyFilters();
         }
 
-        // Modified toggle global select function
-function toggleGlobalSelect() {
-    const isChecked = document.getElementById('selectAll').checked;
-    selectAllMode = isChecked;
-    
-    if (isChecked) {
-        // Select all filtered students across all pages
-        filteredStudents.forEach(student => {
-            const key = `${student.lrn}-${student.class_id}`;
-            allSelectedStudents.add(key);
-        });
-        selectedStudents.clear();
-        filteredStudents.forEach(student => {
-            const key = `${student.lrn}-${student.class_id}`;
-            selectedStudents.add(key);
-        });
-    } else {
-        // Clear all selections
-        allSelectedStudents.clear();
-        selectedStudents.clear();
-    }
-    
-    // Update visible checkboxes
-    document.querySelectorAll('.row-checkbox').forEach(cb => {
-        const key = `${cb.dataset.id}-${cb.dataset.classId}`;
-        cb.checked = allSelectedStudents.has(key);
-    });
-    
-    updateBulkActions();
-    updateHeaderCheckboxes();
-}
-
-
-// Modified toggle page select function
-function togglePageSelect() {
-    const isChecked = document.getElementById('tableSelectAll').checked;
-    selectAllMode = false; // Disable select all mode when manually selecting page
-    
-    document.querySelectorAll('.row-checkbox').forEach(cb => {
-        cb.checked = isChecked;
-        const key = `${cb.dataset.id}-${cb.dataset.classId}`;
-        if (isChecked) {
-            allSelectedStudents.add(key);
-            selectedStudents.add(key);
-        } else {
-            allSelectedStudents.delete(key);
-            selectedStudents.delete(key);
+        // Toggle global select
+        function toggleGlobalSelect() {
+            const isChecked = document.getElementById('selectAll').checked;
+            if (isChecked) {
+                filteredStudents.forEach(student => {
+                    const key = `${student.lrn}-${student.class_id}`;
+                    selectedStudents.add(key);
+                });
+            } else {
+                selectedStudents.clear();
+            }
+            document.querySelectorAll('.row-checkbox').forEach(cb => {
+                cb.checked = isChecked;
+            });
+            updateBulkActions();
+            updateHeaderCheckboxes();
         }
-    });
-    
-    updateBulkActions();
-    updateHeaderCheckboxes();
-}
 
-// Modified update bulk actions function
-function updateBulkActions() {
-    const totalSelected = allSelectedStudents.size;
-    document.getElementById('selectedCount').textContent = `${totalSelected} selected`;
-    document.querySelectorAll('.bulk-actions .btn').forEach(btn => btn.disabled = totalSelected === 0);
-}
+        // Toggle page select
+        function togglePageSelect() {
+            const isChecked = document.getElementById('tableSelectAll').checked;
+            document.querySelectorAll('.row-checkbox').forEach(cb => {
+                cb.checked = isChecked;
+                const key = `${cb.dataset.id}-${cb.dataset.classId}`;
+                if (isChecked) {
+                    selectedStudents.add(key);
+                } else {
+                    selectedStudents.delete(key);
+                }
+            });
+            updateBulkActions();
+            updateHeaderCheckboxes();
+        }
 
-// Modified update header checkboxes function
-function updateHeaderCheckboxes() {
-    // Global checkbox - check if ALL filtered students are selected
-    const allFilteredSelected = filteredStudents.length > 0 && 
-        filteredStudents.every(s => allSelectedStudents.has(`${s.lrn}-${s.class_id}`));
-    const someFilteredSelected = filteredStudents.some(s => allSelectedStudents.has(`${s.lrn}-${s.class_id}`));
-    
-    document.getElementById('selectAll').checked = allFilteredSelected;
-    document.getElementById('selectAll').indeterminate = !allFilteredSelected && someFilteredSelected;
+        // Update bulk actions
+        function updateBulkActions() {
+            document.getElementById('selectedCount').textContent = `${selectedStudents.size} selected`;
+            document.querySelectorAll('.bulk-actions .btn').forEach(btn => btn.disabled = selectedStudents.size === 0);
+        }
 
-    // Page checkbox - check if all VISIBLE students are selected
-    const currentCheckboxes = document.querySelectorAll('.row-checkbox');
-    const pageAllSelected = currentCheckboxes.length > 0 && 
-        Array.from(currentCheckboxes).every(cb => cb.checked);
-    const pageSomeSelected = Array.from(currentCheckboxes).some(cb => cb.checked);
-    
-    document.getElementById('tableSelectAll').checked = pageAllSelected;
-    document.getElementById('tableSelectAll').indeterminate = !pageAllSelected && pageSomeSelected;
-}
+        // Update header checkboxes
+        function updateHeaderCheckboxes() {
+            // Global
+            const allSelected = filteredStudents.length > 0 && filteredStudents.every(s => selectedStudents.has(`${s.lrn}-${s.class_id}`));
+            const someSelected = filteredStudents.some(s => selectedStudents.has(`${s.lrn}-${s.class_id}`));
+            document.getElementById('selectAll').checked = allSelected;
+            document.getElementById('selectAll').indeterminate = !allSelected && someSelected;
 
-// Modified bulk export function
+            // Page
+            const currentCheckboxes = document.querySelectorAll('.row-checkbox');
+            const pageAllSelected = currentCheckboxes.length > 0 && Array.from(currentCheckboxes).every(cb => cb.checked);
+            const pageSomeSelected = Array.from(currentCheckboxes).some(cb => cb.checked);
+            document.getElementById('tableSelectAll').checked = pageAllSelected;
+            document.getElementById('tableSelectAll').indeterminate = !pageAllSelected && pageSomeSelected;
+        }
+
+        // Modified JavaScript function for bulk export
 function bulkExport() {
-    if (allSelectedStudents.size === 0) {
+    const checkboxes = document.querySelectorAll('.row-checkbox:checked');
+    if (checkboxes.length === 0) {
         alert('No students selected for export.');
         return;
     }
 
-    // Get LRNs from allSelectedStudents instead of visible checkboxes
-    const selectedLRNs = Array.from(allSelectedStudents).map(key => key.split('-')[0]);
-    
-    console.log('Exporting students:', selectedLRNs); // Debug log
+    const selectedLRNs = Array.from(checkboxes).map(cb => cb.dataset.id);
     
     // Show loading state
     const exportBtn = document.getElementById('bulkExportBtn');
@@ -2481,7 +2425,7 @@ function bulkExport() {
             document.body.removeChild(downloadLink);
             
             // Show success message
-            alert(`Excel file generated successfully! Exported ${selectedLRNs.length} students.`);
+            alert('Excel file generated successfully!');
         } else {
             alert(data.message || 'Failed to generate Excel file');
         }
@@ -2498,26 +2442,26 @@ function bulkExport() {
 }
 
 
-// Modified bulk delete function
-function bulkDelete() {
-    if (allSelectedStudents.size === 0) {
-        alert('No students selected.');
-        return;
-    }
+        // Bulk delete
+        function bulkDelete() {
+            if (selectedStudents.size === 0) {
+                alert('No students selected.');
+                return;
+            }
 
-    const selected = Array.from(allSelectedStudents).map(key => {
-        const [lrn, class_id] = key.split('-');
-        return { lrn, class_id };
-    });
+            const selected = Array.from(selectedStudents).map(key => {
+                const [lrn, class_id] = key.split('-');
+                return { lrn, class_id };
+            });
 
-    // Populate bulk delete modal
-    const tableBody = document.getElementById('bulk-delete-table');
-    tableBody.innerHTML = '';
-    selected.forEach(({ lrn, class_id }) => {
-        const student = students.find(s => s.lrn == lrn && String(s.class_id) === String(class_id));
-        if (student) {
-            const row = document.createElement('tr');
-            row.innerHTML = `
+            // Populate bulk delete modal
+            const tableBody = document.getElementById('bulk-delete-table');
+            tableBody.innerHTML = '';
+            selected.forEach(({ lrn, class_id }) => {
+                const student = students.find(s => s.lrn == lrn && String(s.class_id) === String(class_id));
+                if (student) {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
                 <td><img src="${student.photo ? 'uploads/' + student.photo : 'uploads/no-icon.png'}" alt="${student.fullName}" style="width: 60px; height: 60px; border-radius: 50%; object-fit: cover;"></td>
                 <td>${student.lrn}</td>
                 <td>${student.fullName}</td>
@@ -2530,111 +2474,109 @@ function bulkDelete() {
                     </button>
                 </td>
             `;
-            tableBody.appendChild(row);
+                    tableBody.appendChild(row);
+                }
+            });
+
+            document.getElementById('delete-modal-title').textContent = 'Confirm Bulk Removal';
+            document.getElementById('single-delete-content').classList.add('hidden');
+            document.getElementById('bulk-delete-content').classList.remove('hidden');
+            document.getElementById('confirm-delete-btn').dataset.lrns = JSON.stringify(selected);
+            document.getElementById('confirm-delete-btn').dataset.mode = 'bulk';
+            document.getElementById('delete-modal').classList.add('show');
         }
-    });
 
-    document.getElementById('delete-modal-title').textContent = 'Confirm Bulk Removal';
-    document.getElementById('single-delete-content').classList.add('hidden');
-    document.getElementById('bulk-delete-content').classList.remove('hidden');
-    document.getElementById('confirm-delete-btn').dataset.lrns = JSON.stringify(selected);
-    document.getElementById('confirm-delete-btn').dataset.mode = 'bulk';
-    document.getElementById('delete-modal').classList.add('show');
-}
+        // Remove student from bulk selection
+        function removeFromBulkSelection(lrn, class_id) {
+            const key = `${lrn}-${class_id}`;
+            selectedStudents.delete(key);
+            updateBulkActions();
+            updateHeaderCheckboxes();
+            bulkDelete(); // Refresh the modal
+        }
 
-// Modified remove from bulk selection function
-function removeFromBulkSelection(lrn, class_id) {
-    const key = `${lrn}-${class_id}`;
-    allSelectedStudents.delete(key);
-    selectedStudents.delete(key);
-    selectAllMode = false;
-    updateBulkActions();
-    updateHeaderCheckboxes();
-    bulkDelete(); // Refresh the modal
-}
-        // Modified confirm delete function
-function confirmDelete() {
-    const confirmBtn = document.getElementById('confirm-delete-btn');
-    const mode = confirmBtn.dataset.mode;
+        // Confirm deletion
+        function confirmDelete() {
+            const confirmBtn = document.getElementById('confirm-delete-btn');
+            const mode = confirmBtn.dataset.mode;
 
-    if (mode === 'single') {
-        const lrn = confirmBtn.dataset.lrn;
-        const class_id = confirmBtn.dataset.classId;
-        fetch(`?delete_lrn=${lrn}&class_id=${class_id}`)
-            .then(res => {
-                if (!res.ok) {
-                    return res.text().then(text => {
-                        console.error('Non-JSON response:', text);
-                        throw new Error(`HTTP error! Status: ${res.status}`);
+            if (mode === 'single') {
+                const lrn = confirmBtn.dataset.lrn;
+                const class_id = confirmBtn.dataset.classId;
+                fetch(`?delete_lrn=${lrn}&class_id=${class_id}`)
+                    .then(res => {
+                        if (!res.ok) {
+                            return res.text().then(text => {
+                                console.error('Non-JSON response:', text);
+                                throw new Error(`HTTP error! Status: ${res.status}`);
+                            });
+                        }
+                        return res.json();
+                    })
+                    .then(data => {
+                        if (data.success) {
+                            const key = `${lrn}-${class_id}`;
+                            selectedStudents.delete(key);
+                            students = students.filter(s => s.lrn != lrn || String(s.class_id) !== String(class_id));
+                            applyFilters();
+                            closeModal('delete');
+                        } else {
+                            alert(data.message || 'Error removing student from class.');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Fetch error in confirmDelete (single):', error);
+                        alert('An error occurred while removing the student. Please check the console for details.');
                     });
-                }
-                return res.json();
-            })
-            .then(data => {
-                if (data.success) {
-                    const key = `${lrn}-${class_id}`;
-                    allSelectedStudents.delete(key);
-                    selectedStudents.delete(key);
-                    students = students.filter(s => s.lrn != lrn || String(s.class_id) !== String(class_id));
-                    applyFilters();
-                    closeModal('delete');
-                } else {
-                    alert(data.message || 'Error removing student from class.');
-                }
-            })
-            .catch(error => {
-                console.error('Fetch error in confirmDelete (single):', error);
-                alert('An error occurred while removing the student. Please check the console for details.');
-            });
-    } else if (mode === 'bulk') {
-        const lrns = JSON.parse(confirmBtn.dataset.lrns);
-        const groupedByClass = lrns.reduce((acc, { lrn, class_id }) => {
-            acc[class_id] = acc[class_id] || [];
-            acc[class_id].push(lrn);
-            return acc;
-        }, {});
+            } else if (mode === 'bulk') {
+                const lrns = JSON.parse(confirmBtn.dataset.lrns);
+                const groupedByClass = lrns.reduce((acc, {
+                    lrn,
+                    class_id
+                }) => {
+                    acc[class_id] = acc[class_id] || [];
+                    acc[class_id].push(lrn);
+                    return acc;
+                }, {});
 
-        const deletePromises = Object.entries(groupedByClass).map(([class_id, lrns]) => {
-            return fetch('', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded'
-                    },
-                    body: `bulk_delete=true&lrns=${encodeURIComponent(JSON.stringify(lrns))}&class_id=${class_id}`
-                })
-                .then(res => {
-                    if (!res.ok) {
-                        return res.text().then(text => {
-                            console.error('Non-JSON response:', text);
-                            throw new Error(`HTTP error! Status: ${res.status}`);
+                const deletePromises = Object.entries(groupedByClass).map(([class_id, lrns]) => {
+                    return fetch('', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/x-www-form-urlencoded'
+                            },
+                            body: `bulk_delete=true&lrns=${encodeURIComponent(JSON.stringify(lrns))}&class_id=${class_id}`
+                        })
+                        .then(res => {
+                            if (!res.ok) {
+                                return res.text().then(text => {
+                                    console.error('Non-JSON response:', text);
+                                    throw new Error(`HTTP error! Status: ${res.status}`);
+                                });
+                            }
+                            return res.json();
                         });
-                    }
-                    return res.json();
                 });
-        });
 
-        Promise.all(deletePromises)
-            .then(results => {
-                const allSuccessful = results.every(data => data.success);
-                if (allSuccessful) {
-                    students = students.filter(s => !allSelectedStudents.has(`${s.lrn}-${s.class_id}`));
-                    allSelectedStudents.clear();
-                    selectedStudents.clear();
-                    selectAllMode = false;
-                    applyFilters();
-                    closeModal('delete');
-                } else {
-                    const errorMessage = results.find(data => !data.success)?.message || 'Error removing some students from class.';
-                    alert(errorMessage);
-                }
-            })
-            .catch(error => {
-                console.error('Fetch error in confirmDelete (bulk):', error);
-                alert('An error occurred while removing students. Please check the console for details.');
-            });
-    }
-}
-
+                Promise.all(deletePromises)
+                    .then(results => {
+                        const allSuccessful = results.every(data => data.success);
+                        if (allSuccessful) {
+                            students = students.filter(s => !selectedStudents.has(`${s.lrn}-${s.class_id}`));
+                            selectedStudents.clear();
+                            applyFilters();
+                            closeModal('delete');
+                        } else {
+                            const errorMessage = results.find(data => !data.success)?.message || 'Error removing some students from class.';
+                            alert(errorMessage);
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Fetch error in confirmDelete (bulk):', error);
+                        alert('An error occurred while removing students. Please check the console for details.');
+                    });
+            }
+        }
         // Delete student from class
         function deleteStudent(lrn, class_id) {
             const student = students.find(s => s.lrn == lrn && String(s.class_id) === String(class_id));
@@ -2805,34 +2747,16 @@ function confirmDelete() {
                 });
         }
 
-        // Add a function to clear all selections
-function clearAllSelections() {
-    allSelectedStudents.clear();
-    selectedStudents.clear();
-    selectAllMode = false;
-    document.querySelectorAll('.row-checkbox').forEach(cb => cb.checked = false);
-    document.getElementById('selectAll').checked = false;
-    document.getElementById('selectAll').indeterminate = false;
-    document.getElementById('tableSelectAll').checked = false;
-    document.getElementById('tableSelectAll').indeterminate = false;
-    updateBulkActions();
-}
-
-        // Modified clear filters to also show selection status
-function clearFilters() {
-    searchInput.value = '';
-    genderFilter.value = '';
-    gradeLevelFilter.value = '';
-    classFilter.value = '';
-    sectionFilter.value = '';
-    sortSelect.value = 'name-asc';
-    applyFilters();
-    
-    // Show info about maintained selections if any
-    if (allSelectedStudents.size > 0) {
-        console.log(`Maintained ${allSelectedStudents.size} selections after clearing filters`);
-    }
-}
+        // Clear filters
+        function clearFilters() {
+            searchInput.value = '';
+            genderFilter.value = '';
+            gradeLevelFilter.value = '';
+            classFilter.value = '';
+            sectionFilter.value = '';
+            sortSelect.value = 'name-asc';
+            applyFilters();
+        }
 
         // Update closeModal to handle delete modal
         function closeModal(type) {
@@ -2924,6 +2848,308 @@ function clearFilters() {
             middleNameInput.addEventListener('change', generateQR);
             lastNameInput.addEventListener('change', generateQR);
         });
+    </script>
+    <script>
+        // Modified JavaScript functions to fix select all and export across all pages
+
+// Global variables - add these at the top with your existing globals
+let allSelectedStudents = new Set(); // This will track all selected students across pages
+let selectAllMode = false; // Track if "select all" mode is active
+
+
+
+
+
+// Modified update header checkboxes function
+function updateHeaderCheckboxes() {
+    // Global checkbox - check if ALL filtered students are selected
+    const allFilteredSelected = filteredStudents.length > 0 && 
+        filteredStudents.every(s => allSelectedStudents.has(`${s.lrn}-${s.class_id}`));
+    const someFilteredSelected = filteredStudents.some(s => allSelectedStudents.has(`${s.lrn}-${s.class_id}`));
+    
+    document.getElementById('selectAll').checked = allFilteredSelected;
+    document.getElementById('selectAll').indeterminate = !allFilteredSelected && someFilteredSelected;
+
+    // Page checkbox - check if all VISIBLE students are selected
+    const currentCheckboxes = document.querySelectorAll('.row-checkbox');
+    const pageAllSelected = currentCheckboxes.length > 0 && 
+        Array.from(currentCheckboxes).every(cb => cb.checked);
+    const pageSomeSelected = Array.from(currentCheckboxes).some(cb => cb.checked);
+    
+    document.getElementById('tableSelectAll').checked = pageAllSelected;
+    document.getElementById('tableSelectAll').indeterminate = !pageAllSelected && pageSomeSelected;
+}
+
+// Modified bulk export function
+function bulkExport() {
+    if (allSelectedStudents.size === 0) {
+        alert('No students selected for export.');
+        return;
+    }
+
+    // Get LRNs from allSelectedStudents instead of visible checkboxes
+    const selectedLRNs = Array.from(allSelectedStudents).map(key => key.split('-')[0]);
+    
+    console.log('Exporting students:', selectedLRNs); // Debug log
+    
+    // Show loading state
+    const exportBtn = document.getElementById('bulkExportBtn');
+    const originalText = exportBtn.innerHTML;
+    exportBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating...';
+    exportBtn.disabled = true;
+
+    fetch('', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded'
+        },
+        body: `action=exportExcel&lrns=${encodeURIComponent(JSON.stringify(selectedLRNs))}`
+    })
+    .then(res => {
+        if (!res.ok) {
+            return res.text().then(text => {
+                console.error('Non-JSON response:', text);
+                throw new Error(`HTTP error! Status: ${res.status}`);
+            });
+        }
+        return res.json();
+    })
+    .then(data => {
+        if (data.success) {
+            // Create download link
+            const downloadLink = document.createElement('a');
+            downloadLink.href = `exports/${data.filename}`;
+            downloadLink.download = data.filename;
+            downloadLink.style.display = 'none';
+            document.body.appendChild(downloadLink);
+            downloadLink.click();
+            document.body.removeChild(downloadLink);
+            
+            // Show success message
+            alert(`Excel file generated successfully! Exported ${selectedLRNs.length} students.`);
+        } else {
+            alert(data.message || 'Failed to generate Excel file');
+        }
+    })
+    .catch(error => {
+        console.error('Export error:', error);
+        alert('An error occurred while generating the Excel file. Please check the console for details.');
+    })
+    .finally(() => {
+        // Reset button state
+        exportBtn.innerHTML = originalText;
+        exportBtn.disabled = false;
+    });
+}
+
+// Modified bulk delete function
+function bulkDelete() {
+    if (allSelectedStudents.size === 0) {
+        alert('No students selected.');
+        return;
+    }
+
+    const selected = Array.from(allSelectedStudents).map(key => {
+        const [lrn, class_id] = key.split('-');
+        return { lrn, class_id };
+    });
+
+    // Populate bulk delete modal
+    const tableBody = document.getElementById('bulk-delete-table');
+    tableBody.innerHTML = '';
+    selected.forEach(({ lrn, class_id }) => {
+        const student = students.find(s => s.lrn == lrn && String(s.class_id) === String(class_id));
+        if (student) {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td><img src="${student.photo ? 'uploads/' + student.photo : 'uploads/no-icon.png'}" alt="${student.fullName}" style="width: 60px; height: 60px; border-radius: 50%; object-fit: cover;"></td>
+                <td>${student.lrn}</td>
+                <td>${student.fullName}</td>
+                <td>${student.gradeLevel}</td>
+                <td>${student.class}</td>
+                <td>${student.section}</td>
+                <td>
+                    <button class="btn btn-danger btn-sm" onclick="removeFromBulkSelection('${student.lrn}', '${student.class_id}')">
+                        <i class="fas fa-times"></i> Remove
+                    </button>
+                </td>
+            `;
+            tableBody.appendChild(row);
+        }
+    });
+
+    document.getElementById('delete-modal-title').textContent = 'Confirm Bulk Removal';
+    document.getElementById('single-delete-content').classList.add('hidden');
+    document.getElementById('bulk-delete-content').classList.remove('hidden');
+    document.getElementById('confirm-delete-btn').dataset.lrns = JSON.stringify(selected);
+    document.getElementById('confirm-delete-btn').dataset.mode = 'bulk';
+    document.getElementById('delete-modal').classList.add('show');
+}
+
+// Modified remove from bulk selection function
+function removeFromBulkSelection(lrn, class_id) {
+    const key = `${lrn}-${class_id}`;
+    allSelectedStudents.delete(key);
+    selectedStudents.delete(key);
+    selectAllMode = false;
+    updateBulkActions();
+    updateHeaderCheckboxes();
+    bulkDelete(); // Refresh the modal
+}
+
+// Modified confirm delete function
+function confirmDelete() {
+    const confirmBtn = document.getElementById('confirm-delete-btn');
+    const mode = confirmBtn.dataset.mode;
+
+    if (mode === 'single') {
+        const lrn = confirmBtn.dataset.lrn;
+        const class_id = confirmBtn.dataset.classId;
+        fetch(`?delete_lrn=${lrn}&class_id=${class_id}`)
+            .then(res => {
+                if (!res.ok) {
+                    return res.text().then(text => {
+                        console.error('Non-JSON response:', text);
+                        throw new Error(`HTTP error! Status: ${res.status}`);
+                    });
+                }
+                return res.json();
+            })
+            .then(data => {
+                if (data.success) {
+                    const key = `${lrn}-${class_id}`;
+                    allSelectedStudents.delete(key);
+                    selectedStudents.delete(key);
+                    students = students.filter(s => s.lrn != lrn || String(s.class_id) !== String(class_id));
+                    applyFilters();
+                    closeModal('delete');
+                } else {
+                    alert(data.message || 'Error removing student from class.');
+                }
+            })
+            .catch(error => {
+                console.error('Fetch error in confirmDelete (single):', error);
+                alert('An error occurred while removing the student. Please check the console for details.');
+            });
+    } else if (mode === 'bulk') {
+        const lrns = JSON.parse(confirmBtn.dataset.lrns);
+        const groupedByClass = lrns.reduce((acc, { lrn, class_id }) => {
+            acc[class_id] = acc[class_id] || [];
+            acc[class_id].push(lrn);
+            return acc;
+        }, {});
+
+        const deletePromises = Object.entries(groupedByClass).map(([class_id, lrns]) => {
+            return fetch('', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded'
+                    },
+                    body: `bulk_delete=true&lrns=${encodeURIComponent(JSON.stringify(lrns))}&class_id=${class_id}`
+                })
+                .then(res => {
+                    if (!res.ok) {
+                        return res.text().then(text => {
+                            console.error('Non-JSON response:', text);
+                            throw new Error(`HTTP error! Status: ${res.status}`);
+                        });
+                    }
+                    return res.json();
+                });
+        });
+
+        Promise.all(deletePromises)
+            .then(results => {
+                const allSuccessful = results.every(data => data.success);
+                if (allSuccessful) {
+                    students = students.filter(s => !allSelectedStudents.has(`${s.lrn}-${s.class_id}`));
+                    allSelectedStudents.clear();
+                    selectedStudents.clear();
+                    selectAllMode = false;
+                    applyFilters();
+                    closeModal('delete');
+                } else {
+                    const errorMessage = results.find(data => !data.success)?.message || 'Error removing some students from class.';
+                    alert(errorMessage);
+                }
+            })
+            .catch(error => {
+                console.error('Fetch error in confirmDelete (bulk):', error);
+                alert('An error occurred while removing students. Please check the console for details.');
+            });
+    }
+}
+
+// Modified apply filters function to maintain selections when filtering
+function applyFilters() {
+    const searchTerm = searchInput.value.toLowerCase();
+    const gender = genderFilter.value;
+    const gradeLevel = gradeLevelFilter.value;
+    const className = classFilter.value;
+    const section = sectionFilter.value;
+    
+    filteredStudents = students.filter(student => {
+        const matchesSearch = student.fullName.toLowerCase().includes(searchTerm) ||
+            student.lrn.toString().includes(searchTerm);
+        const matchesGender = gender ? student.gender === gender : true;
+        const matchesGradeLevel = gradeLevel ? student.gradeLevel === gradeLevel : true;
+        const matchesClass = className ? student.class === className : true;
+        const matchesSection = section ? student.section === section : true;
+        return matchesSearch && matchesGender && matchesGradeLevel && matchesClass && matchesSection;
+    });
+    
+    filteredStudents.sort((a, b) => {
+        if (sortSelect.value === 'name-asc') return a.fullName.localeCompare(b.fullName);
+        if (sortSelect.value === 'name-desc') return b.fullName.localeCompare(a.fullName);
+        if (sortSelect.value === 'id') return a.lrn.toString().localeCompare(b.lrn.toString());
+        return 0;
+    });
+    
+    // Clean up selections for students that are no longer in the filtered list
+    const filteredKeys = new Set(filteredStudents.map(s => `${s.lrn}-${s.class_id}`));
+    allSelectedStudents.forEach(key => {
+        if (!filteredKeys.has(key)) {
+            // Only remove if the student is not in the main students array anymore
+            const [lrn, class_id] = key.split('-');
+            const studentExists = students.some(s => s.lrn == lrn && String(s.class_id) === String(class_id));
+            if (!studentExists) {
+                allSelectedStudents.delete(key);
+                selectedStudents.delete(key);
+            }
+        }
+    });
+    
+    renderViews(filteredStudents);
+}
+
+// Add a function to clear all selections
+function clearAllSelections() {
+    allSelectedStudents.clear();
+    selectedStudents.clear();
+    selectAllMode = false;
+    document.querySelectorAll('.row-checkbox').forEach(cb => cb.checked = false);
+    document.getElementById('selectAll').checked = false;
+    document.getElementById('selectAll').indeterminate = false;
+    document.getElementById('tableSelectAll').checked = false;
+    document.getElementById('tableSelectAll').indeterminate = false;
+    updateBulkActions();
+}
+
+// Modified clear filters to also show selection status
+function clearFilters() {
+    searchInput.value = '';
+    genderFilter.value = '';
+    gradeLevelFilter.value = '';
+    classFilter.value = '';
+    sectionFilter.value = '';
+    sortSelect.value = 'name-asc';
+    applyFilters();
+    
+    // Show info about maintained selections if any
+    if (allSelectedStudents.size > 0) {
+        console.log(`Maintained ${allSelectedStudents.size} selections after clearing filters`);
+    }
+}
     </script>
 </body>
 

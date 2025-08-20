@@ -1780,11 +1780,12 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
                 <select class="form-select filter-select" id="gradeLevelFilter">
                     <option value="">All Grade Levels</option>
                 </select>
-                <select class="form-select filter-select" id="classFilter">
-                    <option value="">All Subjects</option>
-                </select>
+
                 <select class="form-select filter-select" id="sectionFilter">
                     <option value="">All Sections</option>
+                </select>
+                <select class="form-select filter-select" id="classFilter">
+                    <option value="">All Subjects</option>
                 </select>
                 <select class="form-select filter-select" id="sortSelect">
                     <option value="name-asc">Name (A-Z)</option>

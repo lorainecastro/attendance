@@ -2335,9 +2335,12 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
             const pageCount = Math.ceil(totalRows / rowsPerPage);
             pagination.innerHTML = `
                 <button class="pagination-btn" onclick="changePage(${currentPage - 1})" ${currentPage === 1 ? 'disabled' : ''}>Previous</button>
-                ${Array.from({ length: pageCount }, (_, i) => `
-                    <button class="pagination-btn ${currentPage === i + 1 ? 'active' : ''}" onclick="changePage(${i + 1})">${i + 1}</button>
-                `).join('')}
+                ${Array.from({ length: pageCount }, (_, i) => ` <
+                button class = "pagination-btn ${currentPage === i + 1 ? 'active' : ''}"
+            onclick = "changePage(${i + 1})" > $ {
+                i + 1
+            } < /button>
+            `).join('')}
                 <button class="pagination-btn" onclick="changePage(${currentPage + 1})" ${currentPage === pageCount ? 'disabled' : ''}>Next</button>
             `;
         }
@@ -2671,105 +2674,105 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
         }
         // Open profile modal
         function openProfileModal(mode, lrn = null) {
-    const form = {
-        studentId: document.getElementById('student-id'),
-        firstName: document.getElementById('first-name'),
-        middleName: document.getElementById('middle-name'),
-        lastName: document.getElementById('last-name'),
-        email: document.getElementById('email'),
-        gender: document.getElementById('gender'),
-        dob: document.getElementById('dob'),
-        gradeLevel: document.getElementById('grade-level'),
-        section: document.getElementById('section'),
-        class: document.getElementById('class'),
-        address: document.getElementById('address'),
-        parentName: document.getElementById('parent-name'),
-        emergencyContact: document.getElementById('emergency-contact'),
-        photoPreview: document.getElementById('student-photo-preview'),
-        photoInput: document.getElementById('student-photo')
-    };
-    Object.values(form).forEach(input => {
-        if (input.tagName === 'IMG') input.src = 'Uploads/no-icon.png';
-        else if (input.tagName === 'SELECT') input.value = '';
-        else if (input.type === 'file') input.value = '';
-        else input.value = '';
-    });
-    const qrContainer = document.getElementById('qr-container');
-    const qrCodeDiv = document.getElementById('qr-code');
-    const printQrBtn = document.getElementById('print-qr-btn');
-    qrCodeDiv.innerHTML = '';
-    qrContainer.style.display = 'none';
-    const changePhotoBtn = document.getElementById('change-photo-btn');
-    changePhotoBtn.style.display = mode === 'view' ? 'none' : 'inline-flex';
-    document.getElementById('qr_code_input').value = '';
+            const form = {
+                studentId: document.getElementById('student-id'),
+                firstName: document.getElementById('first-name'),
+                middleName: document.getElementById('middle-name'),
+                lastName: document.getElementById('last-name'),
+                email: document.getElementById('email'),
+                gender: document.getElementById('gender'),
+                dob: document.getElementById('dob'),
+                gradeLevel: document.getElementById('grade-level'),
+                section: document.getElementById('section'),
+                class: document.getElementById('class'),
+                address: document.getElementById('address'),
+                parentName: document.getElementById('parent-name'),
+                emergencyContact: document.getElementById('emergency-contact'),
+                photoPreview: document.getElementById('student-photo-preview'),
+                photoInput: document.getElementById('student-photo')
+            };
+            Object.values(form).forEach(input => {
+                if (input.tagName === 'IMG') input.src = 'Uploads/no-icon.png';
+                else if (input.tagName === 'SELECT') input.value = '';
+                else if (input.type === 'file') input.value = '';
+                else input.value = '';
+            });
+            const qrContainer = document.getElementById('qr-container');
+            const qrCodeDiv = document.getElementById('qr-code');
+            const printQrBtn = document.getElementById('print-qr-btn');
+            qrCodeDiv.innerHTML = '';
+            qrContainer.style.display = 'none';
+            const changePhotoBtn = document.getElementById('change-photo-btn');
+            changePhotoBtn.style.display = mode === 'view' ? 'none' : 'inline-flex';
+            document.getElementById('qr_code_input').value = '';
 
-    if (mode !== 'add' && lrn) {
-        const student = students.find(s => s.lrn == lrn);
-        if (!student) {
-            console.error(`No student found for LRN: ${lrn}`);
-            alert('Student not found.');
-            return;
+            if (mode !== 'add' && lrn) {
+                const student = students.find(s => s.lrn == lrn);
+                if (!student) {
+                    console.error(`No student found for LRN: ${lrn}`);
+                    alert('Student not found.');
+                    return;
+                }
+                console.log('Student:', student);
+                document.getElementById('profile-modal-title').textContent = `${student.fullName}'s Profile`;
+                form.studentId.value = student.lrn;
+                form.firstName.value = student.first_name;
+                form.middleName.value = student.middle_name;
+                form.lastName.value = student.last_name;
+                form.email.value = student.email || '';
+                form.gender.value = student.gender || 'Male';
+                form.dob.value = student.dob || '';
+                form.address.value = student.address || '';
+                form.parentName.value = student.parent_name || '';
+                form.emergencyContact.value = student.emergency_contact || '';
+                form.photoPreview.src = student.photo ?
+                    'Uploads/' + student.photo :
+                    'Uploads/no-icon.png';
+
+                // Display QR code in view and edit modes
+                if (student.qr_code) {
+                    qrContainer.style.display = 'block';
+                    qrCodeDiv.innerHTML = `<img src="qrcodes/${student.qr_code}" width="100" height="100">`;
+                    printQrBtn.style.display = 'inline-flex'; // Show Print button in view/edit mode
+                } else {
+                    qrContainer.style.display = 'block';
+                    qrCodeDiv.innerHTML = '<p>No QR Code available</p>';
+                    printQrBtn.style.display = 'none'; // Hide Print button if no QR code
+                }
+
+                // Find the class details based on class_id
+                const studentClass = classes.find(c => String(c.class_id) === String(student.class_id));
+                console.log('Student Class:', studentClass);
+                if (studentClass) {
+                    form.gradeLevel.value = studentClass.grade_level;
+                    console.log('Setting gradeLevel to:', studentClass.grade_level);
+                    updateSectionOptions();
+                    form.section.value = studentClass.section_name;
+                    updateSubjectOptions();
+                    form.class.value = studentClass.subject_name;
+                } else {
+                    console.warn(`No class found for class_id: ${student.class_id}, using fallback`);
+                    form.gradeLevel.value = student.gradeLevel || '';
+                    updateSectionOptions();
+                    form.section.value = student.section || '';
+                    updateSubjectOptions();
+                    form.class.value = student.class || '';
+                }
+            } else {
+                document.getElementById('profile-modal-title').textContent = 'Add New Student';
+                document.getElementById('section').innerHTML = '<option value="">Select Section</option>';
+                document.getElementById('class').innerHTML = '<option value="">Select Subject</option>';
+                qrContainer.style.display = 'none';
+                printQrBtn.style.display = 'none'; // Hide Print button in add mode
+            }
+
+            Object.values(form).forEach(input => {
+                if (input.tagName !== 'IMG' && input.type !== 'file') input.disabled = mode === 'view';
+            });
+            form.photoInput.disabled = mode === 'view';
+            document.querySelector('.form-actions .btn-primary').style.display = mode === 'view' ? 'none' : 'inline-flex';
+            profileModal.classList.add('show');
         }
-        console.log('Student:', student);
-        document.getElementById('profile-modal-title').textContent = `${student.fullName}'s Profile`;
-        form.studentId.value = student.lrn;
-        form.firstName.value = student.first_name;
-        form.middleName.value = student.middle_name;
-        form.lastName.value = student.last_name;
-        form.email.value = student.email || '';
-        form.gender.value = student.gender || 'Male';
-        form.dob.value = student.dob || '';
-        form.address.value = student.address || '';
-        form.parentName.value = student.parent_name || '';
-        form.emergencyContact.value = student.emergency_contact || '';
-        form.photoPreview.src = student.photo ?
-            'Uploads/' + student.photo :
-            'Uploads/no-icon.png';
-
-        // Display QR code in view and edit modes
-        if (student.qr_code) {
-            qrContainer.style.display = 'block';
-            qrCodeDiv.innerHTML = `<img src="qrcodes/${student.qr_code}" width="100" height="100">`;
-            printQrBtn.style.display = 'inline-flex'; // Show Print button in view/edit mode
-        } else {
-            qrContainer.style.display = 'block';
-            qrCodeDiv.innerHTML = '<p>No QR Code available</p>';
-            printQrBtn.style.display = 'none'; // Hide Print button if no QR code
-        }
-
-        // Find the class details based on class_id
-        const studentClass = classes.find(c => String(c.class_id) === String(student.class_id));
-        console.log('Student Class:', studentClass);
-        if (studentClass) {
-            form.gradeLevel.value = studentClass.grade_level;
-            console.log('Setting gradeLevel to:', studentClass.grade_level);
-            updateSectionOptions();
-            form.section.value = studentClass.section_name;
-            updateSubjectOptions();
-            form.class.value = studentClass.subject_name;
-        } else {
-            console.warn(`No class found for class_id: ${student.class_id}, using fallback`);
-            form.gradeLevel.value = student.gradeLevel || '';
-            updateSectionOptions();
-            form.section.value = student.section || '';
-            updateSubjectOptions();
-            form.class.value = student.class || '';
-        }
-    } else {
-        document.getElementById('profile-modal-title').textContent = 'Add New Student';
-        document.getElementById('section').innerHTML = '<option value="">Select Section</option>';
-        document.getElementById('class').innerHTML = '<option value="">Select Subject</option>';
-        qrContainer.style.display = 'none';
-        printQrBtn.style.display = 'none'; // Hide Print button in add mode
-    }
-
-    Object.values(form).forEach(input => {
-        if (input.tagName !== 'IMG' && input.type !== 'file') input.disabled = mode === 'view';
-    });
-    form.photoInput.disabled = mode === 'view';
-    document.querySelector('.form-actions .btn-primary').style.display = mode === 'view' ? 'none' : 'inline-flex';
-    profileModal.classList.add('show');
-}
         // Preview photo
         function previewPhoto(event) {
             const file = event.target.files[0];

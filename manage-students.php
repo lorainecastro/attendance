@@ -1818,6 +1818,9 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
             <button class="btn btn-primary" id="bulkExportBtn" disabled onclick="bulkExport()">
                 <i class="fas fa-file-export"></i> Export Selected
             </button>
+            <button class="btn btn-primary" id="bulkPrintQRBtn" disabled onclick="bulkPrintQR()">
+                <i class="fas fa-print"></i> Print QR Codes
+            </button>
             <button class="btn btn-danger" id="bulkDeleteBtn" disabled onclick="bulkDelete()">
                 <i class="fas fa-trash"></i> Remove Selected from Class
             </button>

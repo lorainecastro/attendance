@@ -141,7 +141,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action']) && $_POST['a
     ob_clean();
 
     $lrns = json_decode($_POST['lrns'], true);
-    
+
     if (empty($lrns) || !is_array($lrns)) {
         echo json_encode(['success' => false, 'message' => 'No students selected for export']);
         exit();
@@ -150,7 +150,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action']) && $_POST['a
     try {
         $pdo = getDBConnection();
         $teacher_id = $user['teacher_id'];
-        
+
         // Prepare the query to fetch selected students
         $placeholders = str_repeat('?,', count($lrns) - 1) . '?';
         $stmt = $pdo->prepare("
@@ -163,7 +163,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action']) && $_POST['a
             WHERE c.teacher_id = ? AND s.lrn IN ($placeholders)
             ORDER BY s.last_name, s.first_name
         ");
-        
+
         $params = array_merge([$teacher_id], $lrns);
         $stmt->execute($params);
         $students = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -182,7 +182,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action']) && $_POST['a
         $headers = [
             'A1' => 'LRN',
             'B1' => 'Last Name',
-            'C1' => 'First Name', 
+            'C1' => 'First Name',
             'D1' => 'Middle Name',
             'E1' => 'Email',
             'F1' => 'Gender',
@@ -258,7 +258,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action']) && $_POST['a
             $sheet->setCellValue('L' . $row, $student['photo'] ?: 'no-icon.png');
             $sheet->setCellValue('M' . $row, $student['qr_code'] ?: 'No QR Code');
             $sheet->setCellValue('N' . $row, $student['date_added'] ? date('Y-m-d', strtotime($student['date_added'])) : 'N/A');
-            
+
             $row++;
         }
 
@@ -293,7 +293,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action']) && $_POST['a
         $timestamp = date('Y-m-d_H-i-s');
         $filename = "students_export_{$timestamp}.xlsx";
         $exportDir = 'exports';
-        
+
         // Create exports directory if it doesn't exist
         if (!file_exists($exportDir)) {
             mkdir($exportDir, 0777, true);
@@ -312,15 +312,14 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action']) && $_POST['a
         unset($spreadsheet);
 
         echo json_encode([
-            'success' => true, 
+            'success' => true,
             'filename' => $filename,
             'message' => 'Excel file generated successfully'
         ]);
-
     } catch (Exception $e) {
         error_log("Excel export error: " . $e->getMessage());
         echo json_encode([
-            'success' => false, 
+            'success' => false,
             'message' => 'Failed to generate Excel file: ' . $e->getMessage()
         ]);
     }
@@ -1679,13 +1678,15 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
             margin-bottom: var(--spacing-lg);
         }
 
-        .photo-upload, .qr-container {
+        .photo-upload,
+        .qr-container {
             display: flex;
             flex-direction: column;
             align-items: flex-start;
         }
 
-        .photo-upload img, .qr-container img {
+        .photo-upload img,
+        .qr-container img {
             width: 100px;
             height: 100px;
             border-radius: var(--radius-md);
@@ -1693,7 +1694,8 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
             border: 1px solid var(--border-color);
         }
 
-        .photo-upload button, .qr-container button {
+        .photo-upload button,
+        .qr-container button {
             width: 100px;
             justify-content: center;
         }
@@ -1823,21 +1825,21 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
         <div id="gridView" class="student-grid hidden"></div>
         <div id="tableView" class="table-container">
             <table class="table">
-    <thead>
-        <tr>
-            <th><input type="checkbox" id="tableSelectAll" onchange="togglePageSelect()"></th>
-            <th>Photo</th>
-            <th>QR Code</th>
-            <th>LRN</th>
-            <th>Full Name</th>
-            <th>Grade Level</th>
-            <th>Subject</th>
-            <th>Section</th>
-            <th>Actions</th>
-        </tr>
-    </thead>
-    <tbody></tbody>
-</table>
+                <thead>
+                    <tr>
+                        <th><input type="checkbox" id="tableSelectAll" onchange="togglePageSelect()"></th>
+                        <th>Photo</th>
+                        <th>QR Code</th>
+                        <th>LRN</th>
+                        <th>Full Name</th>
+                        <th>Grade Level</th>
+                        <th>Subject</th>
+                        <th>Section</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
         </div>
         <div class="pagination" id="pagination"></div>
         <!-- Student Profile Modal -->
@@ -1853,10 +1855,10 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
                             <label class="form-label">LRN</label>
                             <input type="text" class="form-input" id="student-id" name="lrn" maxlength="12" onkeypress="return (event.charCode !=8 && event.charCode ==0 || (event.charCode >= 48 && event.charCode <= 57))" pattern="[0-9]{12}" title="Please enter exactly 12 digits" required>
                         </div>
-                                                <div class="form-group photo-qr-container">
+                        <div class="form-group photo-qr-container">
                             <div class="photo-upload">
                                 <label class="form-label">Photo</label>
-                                <img id="student-photo-preview" src="Uploads/no-icon.png" alt="Student Photo">
+                                <img id="student-photo-preview" src="uploads/no-icon.png" alt="Student Photo">
                                 <input type="file" id="student-photo" name="photo" accept="image/*" onchange="previewPhoto(event)">
                                 <button type="button" class="btn btn-primary" id="change-photo-btn" onclick="document.getElementById('student-photo').click()">Change</button>
                             </div>
@@ -2010,8 +2012,8 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
         let filteredStudents = [];
         const selectedStudents = new Set();
         // Global variables - add these at the top with your existing globals
-let allSelectedStudents = new Set(); // This will track all selected students across pages
-let selectAllMode = false; // Track if "select all" mode is active
+        let allSelectedStudents = new Set(); // This will track all selected students across pages
+        let selectAllMode = false; // Track if "select all" mode is active
 
         // DOM Elements
         const studentTableBody = document.querySelector('#tableView tbody');
@@ -2164,47 +2166,47 @@ let selectAllMode = false; // Track if "select all" mode is active
         }
 
 
-// Modified apply filters function to maintain selections when filtering
-function applyFilters() {
-    const searchTerm = searchInput.value.toLowerCase();
-    const gender = genderFilter.value;
-    const gradeLevel = gradeLevelFilter.value;
-    const className = classFilter.value;
-    const section = sectionFilter.value;
-    
-    filteredStudents = students.filter(student => {
-        const matchesSearch = student.fullName.toLowerCase().includes(searchTerm) ||
-            student.lrn.toString().includes(searchTerm);
-        const matchesGender = gender ? student.gender === gender : true;
-        const matchesGradeLevel = gradeLevel ? student.gradeLevel === gradeLevel : true;
-        const matchesClass = className ? student.class === className : true;
-        const matchesSection = section ? student.section === section : true;
-        return matchesSearch && matchesGender && matchesGradeLevel && matchesClass && matchesSection;
-    });
-    
-    filteredStudents.sort((a, b) => {
-        if (sortSelect.value === 'name-asc') return a.fullName.localeCompare(b.fullName);
-        if (sortSelect.value === 'name-desc') return b.fullName.localeCompare(a.fullName);
-        if (sortSelect.value === 'id') return a.lrn.toString().localeCompare(b.lrn.toString());
-        return 0;
-    });
-    
-    // Clean up selections for students that are no longer in the filtered list
-    const filteredKeys = new Set(filteredStudents.map(s => `${s.lrn}-${s.class_id}`));
-    allSelectedStudents.forEach(key => {
-        if (!filteredKeys.has(key)) {
-            // Only remove if the student is not in the main students array anymore
-            const [lrn, class_id] = key.split('-');
-            const studentExists = students.some(s => s.lrn == lrn && String(s.class_id) === String(class_id));
-            if (!studentExists) {
-                allSelectedStudents.delete(key);
-                selectedStudents.delete(key);
-            }
+        // Modified apply filters function to maintain selections when filtering
+        function applyFilters() {
+            const searchTerm = searchInput.value.toLowerCase();
+            const gender = genderFilter.value;
+            const gradeLevel = gradeLevelFilter.value;
+            const className = classFilter.value;
+            const section = sectionFilter.value;
+
+            filteredStudents = students.filter(student => {
+                const matchesSearch = student.fullName.toLowerCase().includes(searchTerm) ||
+                    student.lrn.toString().includes(searchTerm);
+                const matchesGender = gender ? student.gender === gender : true;
+                const matchesGradeLevel = gradeLevel ? student.gradeLevel === gradeLevel : true;
+                const matchesClass = className ? student.class === className : true;
+                const matchesSection = section ? student.section === section : true;
+                return matchesSearch && matchesGender && matchesGradeLevel && matchesClass && matchesSection;
+            });
+
+            filteredStudents.sort((a, b) => {
+                if (sortSelect.value === 'name-asc') return a.fullName.localeCompare(b.fullName);
+                if (sortSelect.value === 'name-desc') return b.fullName.localeCompare(a.fullName);
+                if (sortSelect.value === 'id') return a.lrn.toString().localeCompare(b.lrn.toString());
+                return 0;
+            });
+
+            // Clean up selections for students that are no longer in the filtered list
+            const filteredKeys = new Set(filteredStudents.map(s => `${s.lrn}-${s.class_id}`));
+            allSelectedStudents.forEach(key => {
+                if (!filteredKeys.has(key)) {
+                    // Only remove if the student is not in the main students array anymore
+                    const [lrn, class_id] = key.split('-');
+                    const studentExists = students.some(s => s.lrn == lrn && String(s.class_id) === String(class_id));
+                    if (!studentExists) {
+                        allSelectedStudents.delete(key);
+                        selectedStudents.delete(key);
+                    }
+                }
+            });
+
+            renderViews(filteredStudents);
         }
-    });
-    
-    renderViews(filteredStudents);
-}
 
         // Render views
         function renderViews(data) {
@@ -2260,17 +2262,17 @@ function applyFilters() {
             });
         }
 
-// Modified render table view function
-function renderTableView(data) {
-    studentTableBody.innerHTML = '';
-    const start = (currentPage - 1) * rowsPerPage;
-    const end = start + rowsPerPage;
-    const paginatedData = data.slice(start, end);
-    
-    paginatedData.forEach(student => {
-        const row = document.createElement('tr');
-        const qrCodeId = `qr-${student.lrn}-${student.class_id}`;
-        row.innerHTML = `
+        // Modified render table view function
+        function renderTableView(data) {
+            studentTableBody.innerHTML = '';
+            const start = (currentPage - 1) * rowsPerPage;
+            const end = start + rowsPerPage;
+            const paginatedData = data.slice(start, end);
+
+            paginatedData.forEach(student => {
+                const row = document.createElement('tr');
+                const qrCodeId = `qr-${student.lrn}-${student.class_id}`;
+                row.innerHTML = `
             <td><input type="checkbox" class="row-checkbox" data-id="${student.lrn}" data-class-id="${student.class_id}"></td>
             <td><img src="${student.photo ? 'uploads/' + student.photo : 'uploads/no-icon.png'}" alt="${student.fullName}" style="width: 45px; height: 45px; border-radius: 50%;"></td>
             <td><div id="${qrCodeId}" style="width: 45px; height: 45px;"></div></td>
@@ -2293,40 +2295,40 @@ function renderTableView(data) {
                 </div>
             </td>
         `;
-        studentTableBody.appendChild(row);
+                studentTableBody.appendChild(row);
 
-        // Generate QR code for this student
-        if (student.qr_code) {
-            document.getElementById(qrCodeId).innerHTML = `<img src="qrcodes/${student.qr_code}" width="45" height="45">`;
-        } else {
-            document.getElementById(qrCodeId).innerHTML = 'No QR';
-        }
-    });
-    
-    // Set checkbox states based on allSelectedStudents set
-    document.querySelectorAll('.row-checkbox').forEach(cb => {
-        const key = `${cb.dataset.id}-${cb.dataset.classId}`;
-        cb.checked = allSelectedStudents.has(key);
-        
-        cb.addEventListener('change', (e) => {
-            const changeKey = `${e.target.dataset.id}-${e.target.dataset.classId}`;
-            selectAllMode = false; // Disable select all mode when manually selecting
-            
-            if (e.target.checked) {
-                allSelectedStudents.add(changeKey);
-                selectedStudents.add(changeKey);
-            } else {
-                allSelectedStudents.delete(changeKey);
-                selectedStudents.delete(changeKey);
-            }
+                // Generate QR code for this student
+                if (student.qr_code) {
+                    document.getElementById(qrCodeId).innerHTML = `<img src="qrcodes/${student.qr_code}" width="45" height="45">`;
+                } else {
+                    document.getElementById(qrCodeId).innerHTML = 'No QR';
+                }
+            });
+
+            // Set checkbox states based on allSelectedStudents set
+            document.querySelectorAll('.row-checkbox').forEach(cb => {
+                const key = `${cb.dataset.id}-${cb.dataset.classId}`;
+                cb.checked = allSelectedStudents.has(key);
+
+                cb.addEventListener('change', (e) => {
+                    const changeKey = `${e.target.dataset.id}-${e.target.dataset.classId}`;
+                    selectAllMode = false; // Disable select all mode when manually selecting
+
+                    if (e.target.checked) {
+                        allSelectedStudents.add(changeKey);
+                        selectedStudents.add(changeKey);
+                    } else {
+                        allSelectedStudents.delete(changeKey);
+                        selectedStudents.delete(changeKey);
+                    }
+                    updateBulkActions();
+                    updateHeaderCheckboxes();
+                });
+            });
+
             updateBulkActions();
             updateHeaderCheckboxes();
-        });
-    });
-    
-    updateBulkActions();
-    updateHeaderCheckboxes();
-}
+        }
 
         // Render pagination
         function renderPagination(totalRows) {
@@ -2355,169 +2357,175 @@ function renderTableView(data) {
         }
 
         // Modified toggle global select function
-function toggleGlobalSelect() {
-    const isChecked = document.getElementById('selectAll').checked;
-    selectAllMode = isChecked;
-    
-    if (isChecked) {
-        // Select all filtered students across all pages
-        filteredStudents.forEach(student => {
-            const key = `${student.lrn}-${student.class_id}`;
-            allSelectedStudents.add(key);
-        });
-        selectedStudents.clear();
-        filteredStudents.forEach(student => {
-            const key = `${student.lrn}-${student.class_id}`;
-            selectedStudents.add(key);
-        });
-    } else {
-        // Clear all selections
-        allSelectedStudents.clear();
-        selectedStudents.clear();
-    }
-    
-    // Update visible checkboxes
-    document.querySelectorAll('.row-checkbox').forEach(cb => {
-        const key = `${cb.dataset.id}-${cb.dataset.classId}`;
-        cb.checked = allSelectedStudents.has(key);
-    });
-    
-    updateBulkActions();
-    updateHeaderCheckboxes();
-}
+        function toggleGlobalSelect() {
+            const isChecked = document.getElementById('selectAll').checked;
+            selectAllMode = isChecked;
 
+            if (isChecked) {
+                // Select all filtered students across all pages
+                filteredStudents.forEach(student => {
+                    const key = `${student.lrn}-${student.class_id}`;
+                    allSelectedStudents.add(key);
+                });
+                selectedStudents.clear();
+                filteredStudents.forEach(student => {
+                    const key = `${student.lrn}-${student.class_id}`;
+                    selectedStudents.add(key);
+                });
+            } else {
+                // Clear all selections
+                allSelectedStudents.clear();
+                selectedStudents.clear();
+            }
 
-// Modified toggle page select function
-function togglePageSelect() {
-    const isChecked = document.getElementById('tableSelectAll').checked;
-    selectAllMode = false; // Disable select all mode when manually selecting page
-    
-    document.querySelectorAll('.row-checkbox').forEach(cb => {
-        cb.checked = isChecked;
-        const key = `${cb.dataset.id}-${cb.dataset.classId}`;
-        if (isChecked) {
-            allSelectedStudents.add(key);
-            selectedStudents.add(key);
-        } else {
-            allSelectedStudents.delete(key);
-            selectedStudents.delete(key);
-        }
-    });
-    
-    updateBulkActions();
-    updateHeaderCheckboxes();
-}
-
-// Modified update bulk actions function
-function updateBulkActions() {
-    const totalSelected = allSelectedStudents.size;
-    document.getElementById('selectedCount').textContent = `${totalSelected} selected`;
-    document.querySelectorAll('.bulk-actions .btn').forEach(btn => btn.disabled = totalSelected === 0);
-}
-
-// Modified update header checkboxes function
-function updateHeaderCheckboxes() {
-    // Global checkbox - check if ALL filtered students are selected
-    const allFilteredSelected = filteredStudents.length > 0 && 
-        filteredStudents.every(s => allSelectedStudents.has(`${s.lrn}-${s.class_id}`));
-    const someFilteredSelected = filteredStudents.some(s => allSelectedStudents.has(`${s.lrn}-${s.class_id}`));
-    
-    document.getElementById('selectAll').checked = allFilteredSelected;
-    document.getElementById('selectAll').indeterminate = !allFilteredSelected && someFilteredSelected;
-
-    // Page checkbox - check if all VISIBLE students are selected
-    const currentCheckboxes = document.querySelectorAll('.row-checkbox');
-    const pageAllSelected = currentCheckboxes.length > 0 && 
-        Array.from(currentCheckboxes).every(cb => cb.checked);
-    const pageSomeSelected = Array.from(currentCheckboxes).some(cb => cb.checked);
-    
-    document.getElementById('tableSelectAll').checked = pageAllSelected;
-    document.getElementById('tableSelectAll').indeterminate = !pageAllSelected && pageSomeSelected;
-}
-
-// Modified bulk export function
-function bulkExport() {
-    if (allSelectedStudents.size === 0) {
-        alert('No students selected for export.');
-        return;
-    }
-
-    // Get LRNs from allSelectedStudents instead of visible checkboxes
-    const selectedLRNs = Array.from(allSelectedStudents).map(key => key.split('-')[0]);
-    
-    console.log('Exporting students:', selectedLRNs); // Debug log
-    
-    // Show loading state
-    const exportBtn = document.getElementById('bulkExportBtn');
-    const originalText = exportBtn.innerHTML;
-    exportBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating...';
-    exportBtn.disabled = true;
-
-    fetch('', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/x-www-form-urlencoded'
-        },
-        body: `action=exportExcel&lrns=${encodeURIComponent(JSON.stringify(selectedLRNs))}`
-    })
-    .then(res => {
-        if (!res.ok) {
-            return res.text().then(text => {
-                console.error('Non-JSON response:', text);
-                throw new Error(`HTTP error! Status: ${res.status}`);
+            // Update visible checkboxes
+            document.querySelectorAll('.row-checkbox').forEach(cb => {
+                const key = `${cb.dataset.id}-${cb.dataset.classId}`;
+                cb.checked = allSelectedStudents.has(key);
             });
+
+            updateBulkActions();
+            updateHeaderCheckboxes();
         }
-        return res.json();
-    })
-    .then(data => {
-        if (data.success) {
-            // Create download link
-            const downloadLink = document.createElement('a');
-            downloadLink.href = `exports/${data.filename}`;
-            downloadLink.download = data.filename;
-            downloadLink.style.display = 'none';
-            document.body.appendChild(downloadLink);
-            downloadLink.click();
-            document.body.removeChild(downloadLink);
-            
-            // Show success message
-            alert(`Excel file generated successfully! Exported ${selectedLRNs.length} students.`);
-        } else {
-            alert(data.message || 'Failed to generate Excel file');
+
+
+        // Modified toggle page select function
+        function togglePageSelect() {
+            const isChecked = document.getElementById('tableSelectAll').checked;
+            selectAllMode = false; // Disable select all mode when manually selecting page
+
+            document.querySelectorAll('.row-checkbox').forEach(cb => {
+                cb.checked = isChecked;
+                const key = `${cb.dataset.id}-${cb.dataset.classId}`;
+                if (isChecked) {
+                    allSelectedStudents.add(key);
+                    selectedStudents.add(key);
+                } else {
+                    allSelectedStudents.delete(key);
+                    selectedStudents.delete(key);
+                }
+            });
+
+            updateBulkActions();
+            updateHeaderCheckboxes();
         }
-    })
-    .catch(error => {
-        console.error('Export error:', error);
-        alert('An error occurred while generating the Excel file. Please check the console for details.');
-    })
-    .finally(() => {
-        // Reset button state
-        exportBtn.innerHTML = originalText;
-        exportBtn.disabled = false;
-    });
-}
+
+        // Modified update bulk actions function
+        function updateBulkActions() {
+            const totalSelected = allSelectedStudents.size;
+            document.getElementById('selectedCount').textContent = `${totalSelected} selected`;
+            document.querySelectorAll('.bulk-actions .btn').forEach(btn => btn.disabled = totalSelected === 0);
+        }
+
+        // Modified update header checkboxes function
+        function updateHeaderCheckboxes() {
+            // Global checkbox - check if ALL filtered students are selected
+            const allFilteredSelected = filteredStudents.length > 0 &&
+                filteredStudents.every(s => allSelectedStudents.has(`${s.lrn}-${s.class_id}`));
+            const someFilteredSelected = filteredStudents.some(s => allSelectedStudents.has(`${s.lrn}-${s.class_id}`));
+
+            document.getElementById('selectAll').checked = allFilteredSelected;
+            document.getElementById('selectAll').indeterminate = !allFilteredSelected && someFilteredSelected;
+
+            // Page checkbox - check if all VISIBLE students are selected
+            const currentCheckboxes = document.querySelectorAll('.row-checkbox');
+            const pageAllSelected = currentCheckboxes.length > 0 &&
+                Array.from(currentCheckboxes).every(cb => cb.checked);
+            const pageSomeSelected = Array.from(currentCheckboxes).some(cb => cb.checked);
+
+            document.getElementById('tableSelectAll').checked = pageAllSelected;
+            document.getElementById('tableSelectAll').indeterminate = !pageAllSelected && pageSomeSelected;
+        }
+
+        // Modified bulk export function
+        function bulkExport() {
+            if (allSelectedStudents.size === 0) {
+                alert('No students selected for export.');
+                return;
+            }
+
+            // Get LRNs from allSelectedStudents instead of visible checkboxes
+            const selectedLRNs = Array.from(allSelectedStudents).map(key => key.split('-')[0]);
+
+            console.log('Exporting students:', selectedLRNs); // Debug log
+
+            // Show loading state
+            const exportBtn = document.getElementById('bulkExportBtn');
+            const originalText = exportBtn.innerHTML;
+            exportBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating...';
+            exportBtn.disabled = true;
+
+            fetch('', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded'
+                    },
+                    body: `action=exportExcel&lrns=${encodeURIComponent(JSON.stringify(selectedLRNs))}`
+                })
+                .then(res => {
+                    if (!res.ok) {
+                        return res.text().then(text => {
+                            console.error('Non-JSON response:', text);
+                            throw new Error(`HTTP error! Status: ${res.status}`);
+                        });
+                    }
+                    return res.json();
+                })
+                .then(data => {
+                    if (data.success) {
+                        // Create download link
+                        const downloadLink = document.createElement('a');
+                        downloadLink.href = `exports/${data.filename}`;
+                        downloadLink.download = data.filename;
+                        downloadLink.style.display = 'none';
+                        document.body.appendChild(downloadLink);
+                        downloadLink.click();
+                        document.body.removeChild(downloadLink);
+
+                        // Show success message
+                        alert(`Excel file generated successfully! Exported ${selectedLRNs.length} students.`);
+                    } else {
+                        alert(data.message || 'Failed to generate Excel file');
+                    }
+                })
+                .catch(error => {
+                    console.error('Export error:', error);
+                    alert('An error occurred while generating the Excel file. Please check the console for details.');
+                })
+                .finally(() => {
+                    // Reset button state
+                    exportBtn.innerHTML = originalText;
+                    exportBtn.disabled = false;
+                });
+        }
 
 
-// Modified bulk delete function
-function bulkDelete() {
-    if (allSelectedStudents.size === 0) {
-        alert('No students selected.');
-        return;
-    }
+        // Modified bulk delete function
+        function bulkDelete() {
+            if (allSelectedStudents.size === 0) {
+                alert('No students selected.');
+                return;
+            }
 
-    const selected = Array.from(allSelectedStudents).map(key => {
-        const [lrn, class_id] = key.split('-');
-        return { lrn, class_id };
-    });
+            const selected = Array.from(allSelectedStudents).map(key => {
+                const [lrn, class_id] = key.split('-');
+                return {
+                    lrn,
+                    class_id
+                };
+            });
 
-    // Populate bulk delete modal
-    const tableBody = document.getElementById('bulk-delete-table');
-    tableBody.innerHTML = '';
-    selected.forEach(({ lrn, class_id }) => {
-        const student = students.find(s => s.lrn == lrn && String(s.class_id) === String(class_id));
-        if (student) {
-            const row = document.createElement('tr');
-            row.innerHTML = `
+            // Populate bulk delete modal
+            const tableBody = document.getElementById('bulk-delete-table');
+            tableBody.innerHTML = '';
+            selected.forEach(({
+                lrn,
+                class_id
+            }) => {
+                const student = students.find(s => s.lrn == lrn && String(s.class_id) === String(class_id));
+                if (student) {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
                 <td><img src="${student.photo ? 'uploads/' + student.photo : 'uploads/no-icon.png'}" alt="${student.fullName}" style="width: 60px; height: 60px; border-radius: 50%; object-fit: cover;"></td>
                 <td>${student.lrn}</td>
                 <td>${student.fullName}</td>
@@ -2530,110 +2538,113 @@ function bulkDelete() {
                     </button>
                 </td>
             `;
-            tableBody.appendChild(row);
+                    tableBody.appendChild(row);
+                }
+            });
+
+            document.getElementById('delete-modal-title').textContent = 'Confirm Bulk Removal';
+            document.getElementById('single-delete-content').classList.add('hidden');
+            document.getElementById('bulk-delete-content').classList.remove('hidden');
+            document.getElementById('confirm-delete-btn').dataset.lrns = JSON.stringify(selected);
+            document.getElementById('confirm-delete-btn').dataset.mode = 'bulk';
+            document.getElementById('delete-modal').classList.add('show');
         }
-    });
 
-    document.getElementById('delete-modal-title').textContent = 'Confirm Bulk Removal';
-    document.getElementById('single-delete-content').classList.add('hidden');
-    document.getElementById('bulk-delete-content').classList.remove('hidden');
-    document.getElementById('confirm-delete-btn').dataset.lrns = JSON.stringify(selected);
-    document.getElementById('confirm-delete-btn').dataset.mode = 'bulk';
-    document.getElementById('delete-modal').classList.add('show');
-}
-
-// Modified remove from bulk selection function
-function removeFromBulkSelection(lrn, class_id) {
-    const key = `${lrn}-${class_id}`;
-    allSelectedStudents.delete(key);
-    selectedStudents.delete(key);
-    selectAllMode = false;
-    updateBulkActions();
-    updateHeaderCheckboxes();
-    bulkDelete(); // Refresh the modal
-}
+        // Modified remove from bulk selection function
+        function removeFromBulkSelection(lrn, class_id) {
+            const key = `${lrn}-${class_id}`;
+            allSelectedStudents.delete(key);
+            selectedStudents.delete(key);
+            selectAllMode = false;
+            updateBulkActions();
+            updateHeaderCheckboxes();
+            bulkDelete(); // Refresh the modal
+        }
         // Modified confirm delete function
-function confirmDelete() {
-    const confirmBtn = document.getElementById('confirm-delete-btn');
-    const mode = confirmBtn.dataset.mode;
+        function confirmDelete() {
+            const confirmBtn = document.getElementById('confirm-delete-btn');
+            const mode = confirmBtn.dataset.mode;
 
-    if (mode === 'single') {
-        const lrn = confirmBtn.dataset.lrn;
-        const class_id = confirmBtn.dataset.classId;
-        fetch(`?delete_lrn=${lrn}&class_id=${class_id}`)
-            .then(res => {
-                if (!res.ok) {
-                    return res.text().then(text => {
-                        console.error('Non-JSON response:', text);
-                        throw new Error(`HTTP error! Status: ${res.status}`);
+            if (mode === 'single') {
+                const lrn = confirmBtn.dataset.lrn;
+                const class_id = confirmBtn.dataset.classId;
+                fetch(`?delete_lrn=${lrn}&class_id=${class_id}`)
+                    .then(res => {
+                        if (!res.ok) {
+                            return res.text().then(text => {
+                                console.error('Non-JSON response:', text);
+                                throw new Error(`HTTP error! Status: ${res.status}`);
+                            });
+                        }
+                        return res.json();
+                    })
+                    .then(data => {
+                        if (data.success) {
+                            const key = `${lrn}-${class_id}`;
+                            allSelectedStudents.delete(key);
+                            selectedStudents.delete(key);
+                            students = students.filter(s => s.lrn != lrn || String(s.class_id) !== String(class_id));
+                            applyFilters();
+                            closeModal('delete');
+                        } else {
+                            alert(data.message || 'Error removing student from class.');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Fetch error in confirmDelete (single):', error);
+                        alert('An error occurred while removing the student. Please check the console for details.');
                     });
-                }
-                return res.json();
-            })
-            .then(data => {
-                if (data.success) {
-                    const key = `${lrn}-${class_id}`;
-                    allSelectedStudents.delete(key);
-                    selectedStudents.delete(key);
-                    students = students.filter(s => s.lrn != lrn || String(s.class_id) !== String(class_id));
-                    applyFilters();
-                    closeModal('delete');
-                } else {
-                    alert(data.message || 'Error removing student from class.');
-                }
-            })
-            .catch(error => {
-                console.error('Fetch error in confirmDelete (single):', error);
-                alert('An error occurred while removing the student. Please check the console for details.');
-            });
-    } else if (mode === 'bulk') {
-        const lrns = JSON.parse(confirmBtn.dataset.lrns);
-        const groupedByClass = lrns.reduce((acc, { lrn, class_id }) => {
-            acc[class_id] = acc[class_id] || [];
-            acc[class_id].push(lrn);
-            return acc;
-        }, {});
+            } else if (mode === 'bulk') {
+                const lrns = JSON.parse(confirmBtn.dataset.lrns);
+                const groupedByClass = lrns.reduce((acc, {
+                    lrn,
+                    class_id
+                }) => {
+                    acc[class_id] = acc[class_id] || [];
+                    acc[class_id].push(lrn);
+                    return acc;
+                }, {});
 
-        const deletePromises = Object.entries(groupedByClass).map(([class_id, lrns]) => {
-            return fetch('', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded'
-                    },
-                    body: `bulk_delete=true&lrns=${encodeURIComponent(JSON.stringify(lrns))}&class_id=${class_id}`
-                })
-                .then(res => {
-                    if (!res.ok) {
-                        return res.text().then(text => {
-                            console.error('Non-JSON response:', text);
-                            throw new Error(`HTTP error! Status: ${res.status}`);
+                const deletePromises = Object.entries(groupedByClass).map(([class_id, lrns]) => {
+                    return fetch('', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/x-www-form-urlencoded'
+                            },
+                            body: `bulk_delete=true&lrns=${encodeURIComponent(JSON.stringify(lrns))}&class_id=${class_id}`
+                        })
+                        .then(res => {
+                            if (!res.ok) {
+                                return res.text().then(text => {
+                                    console.error('Non-JSON response:', text);
+                                    throw new Error(`HTTP error! Status: ${res.status}`);
+                                });
+                            }
+                            return res.json();
                         });
-                    }
-                    return res.json();
                 });
-        });
 
-        Promise.all(deletePromises)
-            .then(results => {
-                const allSuccessful = results.every(data => data.success);
-                if (allSuccessful) {
-                    students = students.filter(s => !allSelectedStudents.has(`${s.lrn}-${s.class_id}`));
-                    allSelectedStudents.clear();
-                    selectedStudents.clear();
-                    selectAllMode = false;
-                    applyFilters();
-                    closeModal('delete');
-                } else {
-                    const errorMessage = results.find(data => !data.success)?.message || 'Error removing some students from class.';
-                    alert(errorMessage);
-                }
-            })
-            .catch(error => {
-                console.error('Fetch error in confirmDelete (bulk):', error);
-                alert('An error occurred while removing students. Please check the console for details.');
-            });
-    }
-}
+                Promise.all(deletePromises)
+                    .then(results => {
+                        const allSuccessful = results.every(data => data.success);
+                        if (allSuccessful) {
+                            students = students.filter(s => !allSelectedStudents.has(`${s.lrn}-${s.class_id}`));
+                            allSelectedStudents.clear();
+                            selectedStudents.clear();
+                            selectAllMode = false;
+                            applyFilters();
+                            closeModal('delete');
+                        } else {
+                            const errorMessage = results.find(data => !data.success)?.message || 'Error removing some students from class.';
+                            alert(errorMessage);
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Fetch error in confirmDelete (bulk):', error);
+                        alert('An error occurred while removing students. Please check the console for details.');
+                    });
+            }
+        }
 
         // Delete student from class
         function deleteStudent(lrn, class_id) {
@@ -2660,101 +2671,101 @@ function confirmDelete() {
         }
         // Open profile modal
         function openProfileModal(mode, lrn = null) {
-    const form = {
-        studentId: document.getElementById('student-id'),
-        firstName: document.getElementById('first-name'),
-        middleName: document.getElementById('middle-name'),
-        lastName: document.getElementById('last-name'),
-        email: document.getElementById('email'),
-        gender: document.getElementById('gender'),
-        dob: document.getElementById('dob'),
-        gradeLevel: document.getElementById('grade-level'),
-        section: document.getElementById('section'),
-        class: document.getElementById('class'),
-        address: document.getElementById('address'),
-        parentName: document.getElementById('parent-name'),
-        emergencyContact: document.getElementById('emergency-contact'),
-        photoPreview: document.getElementById('student-photo-preview'),
-        photoInput: document.getElementById('student-photo')
-    };
-    Object.values(form).forEach(input => {
-        if (input.tagName === 'IMG') input.src = 'uploads/no-icon.png';
-        else if (input.tagName === 'SELECT') input.value = '';
-        else if (input.type === 'file') input.value = '';
-        else input.value = '';
-    });
-    const qrContainer = document.getElementById('qr-container');
-    const qrCodeDiv = document.getElementById('qr-code');
-    qrCodeDiv.innerHTML = '';
-    qrContainer.style.display = 'none';
-    const changePhotoBtn = document.getElementById('change-photo-btn');
-    changePhotoBtn.style.display = mode === 'view' ? 'none' : 'inline-flex';
-    document.getElementById('qr_code_input').value = '';
+            const form = {
+                studentId: document.getElementById('student-id'),
+                firstName: document.getElementById('first-name'),
+                middleName: document.getElementById('middle-name'),
+                lastName: document.getElementById('last-name'),
+                email: document.getElementById('email'),
+                gender: document.getElementById('gender'),
+                dob: document.getElementById('dob'),
+                gradeLevel: document.getElementById('grade-level'),
+                section: document.getElementById('section'),
+                class: document.getElementById('class'),
+                address: document.getElementById('address'),
+                parentName: document.getElementById('parent-name'),
+                emergencyContact: document.getElementById('emergency-contact'),
+                photoPreview: document.getElementById('student-photo-preview'),
+                photoInput: document.getElementById('student-photo')
+            };
+            Object.values(form).forEach(input => {
+                if (input.tagName === 'IMG') input.src = 'uploads/no-icon.png';
+                else if (input.tagName === 'SELECT') input.value = '';
+                else if (input.type === 'file') input.value = '';
+                else input.value = '';
+            });
+            const qrContainer = document.getElementById('qr-container');
+            const qrCodeDiv = document.getElementById('qr-code');
+            qrCodeDiv.innerHTML = '';
+            qrContainer.style.display = 'none';
+            const changePhotoBtn = document.getElementById('change-photo-btn');
+            changePhotoBtn.style.display = mode === 'view' ? 'none' : 'inline-flex';
+            document.getElementById('qr_code_input').value = '';
 
-    if (mode !== 'add' && lrn) {
-        const student = students.find(s => s.lrn == lrn);
-        if (!student) {
-            console.error(`No student found for LRN: ${lrn}`);
-            alert('Student not found.');
-            return;
+            if (mode !== 'add' && lrn) {
+                const student = students.find(s => s.lrn == lrn);
+                if (!student) {
+                    console.error(`No student found for LRN: ${lrn}`);
+                    alert('Student not found.');
+                    return;
+                }
+                console.log('Student:', student);
+                document.getElementById('profile-modal-title').textContent = `${student.fullName}'s Profile`;
+                form.studentId.value = student.lrn;
+                form.firstName.value = student.first_name;
+                form.middleName.value = student.middle_name;
+                form.lastName.value = student.last_name;
+                form.email.value = student.email || '';
+                form.gender.value = student.gender || 'Male';
+                form.dob.value = student.dob || '';
+                form.address.value = student.address || '';
+                form.parentName.value = student.parent_name || '';
+                form.emergencyContact.value = student.emergency_contact || '';
+                form.photoPreview.src = student.photo ?
+                    'uploads/' + student.photo :
+                    'uploads/no-icon.png';
+
+                // Display QR code in view and edit modes
+                if (student.qr_code) {
+                    qrContainer.style.display = 'block';
+                    qrCodeDiv.innerHTML = `<img src="qrcodes/${student.qr_code}" width="100" height="100">`;
+                } else {
+                    qrContainer.style.display = 'block';
+                    qrCodeDiv.innerHTML = '<p>No QR Code available</p>';
+                }
+
+                // Find the class details based on class_id
+                const studentClass = classes.find(c => String(c.class_id) === String(student.class_id));
+                console.log('Student Class:', studentClass);
+                if (studentClass) {
+                    form.gradeLevel.value = studentClass.grade_level;
+                    console.log('Setting gradeLevel to:', studentClass.grade_level);
+                    updateSectionOptions();
+                    form.section.value = studentClass.section_name;
+                    updateSubjectOptions();
+                    form.class.value = studentClass.subject_name;
+                } else {
+                    console.warn(`No class found for class_id: ${student.class_id}, using fallback`);
+                    form.gradeLevel.value = student.gradeLevel || '';
+                    updateSectionOptions();
+                    form.section.value = student.section || '';
+                    updateSubjectOptions();
+                    form.class.value = student.class || '';
+                }
+            } else {
+                document.getElementById('profile-modal-title').textContent = 'Add New Student';
+                document.getElementById('section').innerHTML = '<option value="">Select Section</option>';
+                document.getElementById('class').innerHTML = '<option value="">Select Subject</option>';
+                qrContainer.style.display = 'none';
+            }
+
+            Object.values(form).forEach(input => {
+                if (input.tagName !== 'IMG' && input.type !== 'file') input.disabled = mode === 'view';
+            });
+            form.photoInput.disabled = mode === 'view';
+            document.querySelector('.form-actions .btn-primary').style.display = mode === 'view' ? 'none' : 'inline-flex';
+            profileModal.classList.add('show');
         }
-        console.log('Student:', student);
-        document.getElementById('profile-modal-title').textContent = `${student.fullName}'s Profile`;
-        form.studentId.value = student.lrn;
-        form.firstName.value = student.first_name;
-        form.middleName.value = student.middle_name;
-        form.lastName.value = student.last_name;
-        form.email.value = student.email || '';
-        form.gender.value = student.gender || 'Male';
-        form.dob.value = student.dob || '';
-        form.address.value = student.address || '';
-        form.parentName.value = student.parent_name || '';
-        form.emergencyContact.value = student.emergency_contact || '';
-        form.photoPreview.src = student.photo ?
-            'uploads/' + student.photo :
-            'uploads/no-icon.png';
-
-        // Display QR code in view and edit modes
-        if (student.qr_code) {
-            qrContainer.style.display = 'block';
-            qrCodeDiv.innerHTML = `<img src="qrcodes/${student.qr_code}" width="100" height="100">`;
-        } else {
-            qrContainer.style.display = 'block';
-            qrCodeDiv.innerHTML = '<p>No QR Code available</p>';
-        }
-
-        // Find the class details based on class_id
-        const studentClass = classes.find(c => String(c.class_id) === String(student.class_id));
-        console.log('Student Class:', studentClass);
-        if (studentClass) {
-            form.gradeLevel.value = studentClass.grade_level;
-            console.log('Setting gradeLevel to:', studentClass.grade_level);
-            updateSectionOptions();
-            form.section.value = studentClass.section_name;
-            updateSubjectOptions();
-            form.class.value = studentClass.subject_name;
-        } else {
-            console.warn(`No class found for class_id: ${student.class_id}, using fallback`);
-            form.gradeLevel.value = student.gradeLevel || '';
-            updateSectionOptions();
-            form.section.value = student.section || '';
-            updateSubjectOptions();
-            form.class.value = student.class || '';
-        }
-    } else {
-        document.getElementById('profile-modal-title').textContent = 'Add New Student';
-        document.getElementById('section').innerHTML = '<option value="">Select Section</option>';
-        document.getElementById('class').innerHTML = '<option value="">Select Subject</option>';
-        qrContainer.style.display = 'none';
-    }
-
-    Object.values(form).forEach(input => {
-        if (input.tagName !== 'IMG' && input.type !== 'file') input.disabled = mode === 'view';
-    });
-    form.photoInput.disabled = mode === 'view';
-    document.querySelector('.form-actions .btn-primary').style.display = mode === 'view' ? 'none' : 'inline-flex';
-    profileModal.classList.add('show');
-}
         // Preview photo
         function previewPhoto(event) {
             const file = event.target.files[0];
@@ -2806,33 +2817,33 @@ function confirmDelete() {
         }
 
         // Add a function to clear all selections
-function clearAllSelections() {
-    allSelectedStudents.clear();
-    selectedStudents.clear();
-    selectAllMode = false;
-    document.querySelectorAll('.row-checkbox').forEach(cb => cb.checked = false);
-    document.getElementById('selectAll').checked = false;
-    document.getElementById('selectAll').indeterminate = false;
-    document.getElementById('tableSelectAll').checked = false;
-    document.getElementById('tableSelectAll').indeterminate = false;
-    updateBulkActions();
-}
+        function clearAllSelections() {
+            allSelectedStudents.clear();
+            selectedStudents.clear();
+            selectAllMode = false;
+            document.querySelectorAll('.row-checkbox').forEach(cb => cb.checked = false);
+            document.getElementById('selectAll').checked = false;
+            document.getElementById('selectAll').indeterminate = false;
+            document.getElementById('tableSelectAll').checked = false;
+            document.getElementById('tableSelectAll').indeterminate = false;
+            updateBulkActions();
+        }
 
         // Modified clear filters to also show selection status
-function clearFilters() {
-    searchInput.value = '';
-    genderFilter.value = '';
-    gradeLevelFilter.value = '';
-    classFilter.value = '';
-    sectionFilter.value = '';
-    sortSelect.value = 'name-asc';
-    applyFilters();
-    
-    // Show info about maintained selections if any
-    if (allSelectedStudents.size > 0) {
-        console.log(`Maintained ${allSelectedStudents.size} selections after clearing filters`);
-    }
-}
+        function clearFilters() {
+            searchInput.value = '';
+            genderFilter.value = '';
+            gradeLevelFilter.value = '';
+            classFilter.value = '';
+            sectionFilter.value = '';
+            sortSelect.value = 'name-asc';
+            applyFilters();
+
+            // Show info about maintained selections if any
+            if (allSelectedStudents.size > 0) {
+                console.log(`Maintained ${allSelectedStudents.size} selections after clearing filters`);
+            }
+        }
 
         // Update closeModal to handle delete modal
         function closeModal(type) {
@@ -2900,22 +2911,24 @@ function clearFilters() {
 
                 if (lrn.length === 12 && first_name && last_name) {
                     fetch('', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                        body: `action=generateQR&lrn=${encodeURIComponent(lrn)}&first_name=${encodeURIComponent(first_name)}&middle_name=${encodeURIComponent(middle_name)}&last_name=${encodeURIComponent(last_name)}`
-                    })
-                    .then(res => res.json())
-                    .then(data => {
-                        if (data.success) {
-                            const filename = data.filename;
-                            qrCodeDiv.innerHTML = `<img src="qrcodes/${filename}" width="100" height="100">`;
-                            qrContainer.style.display = 'block';
-                            qrCodeHidden.value = filename;
-                        } else {
-                            console.error('QR generation failed:', data.message);
-                        }
-                    })
-                    .catch(err => console.error('Error generating QR:', err));
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/x-www-form-urlencoded'
+                            },
+                            body: `action=generateQR&lrn=${encodeURIComponent(lrn)}&first_name=${encodeURIComponent(first_name)}&middle_name=${encodeURIComponent(middle_name)}&last_name=${encodeURIComponent(last_name)}`
+                        })
+                        .then(res => res.json())
+                        .then(data => {
+                            if (data.success) {
+                                const filename = data.filename;
+                                qrCodeDiv.innerHTML = `<img src="qrcodes/${filename}" width="100" height="100">`;
+                                qrContainer.style.display = 'block';
+                                qrCodeHidden.value = filename;
+                            } else {
+                                console.error('QR generation failed:', data.message);
+                            }
+                        })
+                        .catch(err => console.error('Error generating QR:', err));
                 }
             }
 

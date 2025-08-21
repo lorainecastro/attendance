@@ -1,14 +1,11 @@
 <?php
+ini_set('display_errors', '0');
+ini_set('display_startup_errors', '0');
 error_reporting(E_ALL);
-ini_set('display_errors', '0'); // Disable displaying errors to the output
-ini_set('display_startup_errors', '1');
-ini_set('log_errors', '1'); // Enable error logging
-ini_set('error_log', __DIR__ . '/logs/php_errors.log'); // Specify error log file
 ob_start();
 
 require 'config.php';
 require 'vendor/autoload.php'; // Add this for Endroid
-require_once 'vendor/tecnickcom/tcpdf/tcpdf.php'; // Add this for TCPDF
 
 use Endroid\QrCode\QrCode;
 use Endroid\QrCode\Writer\PngWriter;
@@ -134,200 +131,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action']) && $_POST['a
     } catch (Exception $e) {
         error_log("QR Code generation error: " . $e->getMessage());
         echo json_encode(['success' => false, 'message' => 'Failed to generate QR code: ' . $e->getMessage()]);
-    }
-    exit();
-}
-if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action']) && $_POST['action'] == 'bulkPrintQR') {
-    header('Content-Type: application/json; charset=utf-8');
-    ob_clean();
-
-    $students_data = json_decode($_POST['students'], true);
-
-    if (empty($students_data) || !is_array($students_data)) {
-        echo json_encode(['success' => false, 'message' => 'No students selected for printing']);
-        exit();
-    }
-
-    try {
-        $pdo = getDBConnection();
-        $students = [];
-        foreach ($students_data as $data) {
-            $lrn = $data['lrn'] ?? '';
-            $qr_code = $data['qr_code'] ?? $lrn . '.png';
-            $stmt = $pdo->prepare("SELECT lrn, first_name, middle_name, last_name FROM students WHERE lrn = ?");
-            $stmt->execute([$lrn]);
-            $student = $stmt->fetch(PDO::FETCH_ASSOC);
-            if ($student) {
-                $qr_path = 'qrcodes/' . $qr_code;
-                if (file_exists($qr_path)) {
-                    $student['qr_code'] = $qr_code;
-                    $students[] = $student;
-                }
-            }
-        }
-
-        if (empty($students)) {
-            echo json_encode(['success' => false, 'message' => 'No valid QR codes found for selected students']);
-            exit();
-        }
-
-        $pdf = new TCPDF('P', 'mm', 'LETTER', true, 'UTF-8', false);
-        $pdf->SetCreator(PDF_CREATOR);
-        $pdf->SetAuthor('Your App');
-        $pdf->SetTitle('Student QR ID Cards');
-        $pdf->SetMargins(0, 0, 0);
-        $pdf->SetAutoPageBreak(false);
-
-        $card_width = 53.975; // 2.125 inches in mm (215.9mm / 4 = 53.975mm)
-        $card_height = 85.725; // 3.375 inches in mm (257.175mm / 3 ≈ 85.725mm)
-        $cards_per_row = 4;
-        $cards_per_col = 3;
-        $card_count = 0;
-
-        $x_start = 0;
-        $y_start = 0;
-        $x_spacing = 0; // No gap between cards
-        $y_spacing = 0; // No gap between cards
-
-        $pdf->AddPage();
-        foreach ($students as $index => $student) {
-            if ($index % ($cards_per_row * $cards_per_col) === 0 && $index !== 0) {
-                $pdf->AddPage();
-            }
-
-            $row = floor(($index % ($cards_per_row * $cards_per_col)) / $cards_per_row);
-            $col = $index % $cards_per_row;
-
-            $x = $x_start + $col * ($card_width + $x_spacing);
-            $y = $y_start + $row * ($card_height + $y_spacing);
-
-            // Card Background (Gradient)
-            $pdf->LinearGradient($x, $y, $card_width, $card_height, 
-                array(248, 249, 250), // #f8f9fa
-                array(233, 236, 239), // #e9ecef
-                array(0, 0, $card_width, $card_height)
-            );
-
-            // Outer Border
-            $pdf->SetLineStyle(array('width' => 0.5, 'color' => array(0, 0, 0)));
-            $pdf->Rect($x + 0.5, $y + 0.5, $card_width - 1, $card_height - 1, 'D');
-
-            // Inner Shadow Effect
-            $pdf->SetLineStyle(array('width' => 0.2, 'color' => array(189, 195, 199))); // #bdc3c7
-            $pdf->Rect($x + 1, $y + 1, $card_width - 2, $card_height - 2, 'D');
-
-            // Header Section
-            $header_height = 10;
-            $pdf->LinearGradient($x + 0.5, $y + 0.5, $card_width - 1, $header_height, 
-                array(52, 152, 219), // #3498db
-                array(41, 128, 185), // #2980b9
-                array(0, 0, 0, $header_height)
-            );
-            $pdf->SetFont('helvetica', 'B', 12);
-            $pdf->SetTextColor(255, 255, 255);
-            $pdf->SetXY($x, $y + 2.5);
-            $pdf->Cell($card_width, 6, 'SAMS', 0, 1, 'C');
-
-            // QR Code
-            $qr_padding = 2;
-            $qr_size = $card_width - 5 - ($qr_padding * 2); // Adjusted for padding
-            $qr_x = $x + 2.5 + $qr_padding;
-            $qr_y = $y + $header_height + 2.5;
-
-            // QR Code Shadow
-            $pdf->SetFillColor(0, 0, 0, 10); // 10% black for shadow
-            $pdf->Rect($qr_x - 1, $qr_y - 1, $qr_size + 2, $qr_size + 2, 'F');
-
-            // QR Code White Background
-            $pdf->SetFillColor(255, 255, 255);
-            $pdf->Rect($qr_x, $qr_y, $qr_size, $qr_size, 'F');
-            $pdf->Image('qrcodes/' . $student['qr_code'], $qr_x, $qr_y, $qr_size, $qr_size, 'PNG');
-
-            // Decorative Line
-            $line_y = $qr_y + $qr_size + 2.5;
-            $pdf->LinearGradient($x + 2.5, $line_y, $card_width - 5, $line_y, 
-                array(255, 255, 255), // Transparent
-                array(52, 152, 219), // #3498db
-                array(0, 0, $card_width - 5, 0)
-            );
-            $pdf->SetLineStyle(array('width' => 0.3, 'color' => array(52, 152, 219)));
-            $pdf->Line($x + 2.5, $line_y, $x + $card_width - 2.5, $line_y);
-
-            // LRN
-            $lrn_y = $line_y + 2.5;
-            $pdf->SetFont('helvetica', 'B', 10);
-            $pdf->SetTextColor(0, 0, 0);
-            $pdf->SetXY($x, $lrn_y);
-            $pdf->Cell($card_width, 6, 'LRN: ' . $student['lrn'], 0, 1, 'C');
-
-            // Full Name
-            $full_name = $student['last_name'] . ', ' . $student['first_name'] . ' ' . ($student['middle_name'] ?: '');
-            $name_length = strlen($full_name);
-            $font_size = $name_length > 30 ? 8 : ($name_length > 25 ? 9 : ($name_length > 20 ? 10 : 11));
-            $pdf->SetFont('helvetica', 'B', $font_size);
-
-            // Handle long names by splitting into lines
-            $words = explode(' ', $full_name);
-            $max_width = $card_width - 5; // Adjusted for padding
-            $line = '';
-            $lines = [];
-            foreach ($words as $word) {
-                $test_line = $line . $word . ' ';
-                $text_width = $pdf->GetStringWidth($test_line, 'helvetica', 'B', $font_size);
-                if ($text_width > $max_width && $line !== '') {
-                    $lines[] = trim($line);
-                    $line = $word . ' ';
-                } else {
-                    $line = $test_line;
-                }
-            }
-            $lines[] = trim($line);
-
-            // Draw Full Name
-            $name_y = $lrn_y + 5;
-            foreach ($lines as $index => $line) {
-                $pdf->SetXY($x, $name_y + ($index * ($font_size / 2)));
-                $pdf->Cell($card_width, $font_size / 2, $line, 0, 1, 'C');
-            }
-
-            // Footer Decoration
-            $footer_y = $y + $card_height - 5;
-            $pdf->SetLineStyle(array('width' => 0.2, 'color' => array(189, 195, 199))); // #bdc3c7
-            $pdf->Line($x + 2.5, $footer_y, $x + $card_width - 2.5, $footer_y);
-
-            // Decorative Dots
-            $pdf->SetFillColor(52, 152, 219); // #3498db
-            for ($i = 0; $i < 5; $i++) {
-                $dot_x = $x + ($card_width / 6) * ($i + 1);
-                $pdf->Circle($dot_x, $footer_y + 1.5, 0.5, 0, 360, 'F');
-            }
-
-            $card_count++;
-        }
-
-        // Ensure export directory exists
-        $export_dir = 'exports';
-        if (!file_exists($export_dir)) {
-            mkdir($export_dir, 0777, true);
-            chmod($export_dir, 0777);
-        }
-
-        $filename = 'qr_id_cards_' . date('YmdHis') . '.pdf';
-        $pdf->Output(__DIR__ . '/exports/' . $filename, 'F');
-        chmod(__DIR__ . '/exports/' . $filename, 0644);
-
-        echo json_encode([
-            'success' => true,
-            'filename' => $filename,
-            'cards_count' => $card_count,
-            'message' => 'PDF generated successfully'
-        ]);
-    } catch (Exception $e) {
-        error_log("Bulk QR Print error: " . $e->getMessage());
-        echo json_encode([
-            'success' => false,
-            'message' => 'Failed to generate QR ID Cards PDF: ' . $e->getMessage()
-        ]);
     }
     exit();
 }
@@ -518,98 +321,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action']) && $_POST['a
         echo json_encode([
             'success' => false,
             'message' => 'Failed to generate Excel file: ' . $e->getMessage()
-        ]);
-    }
-    exit();
-}
-
-if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action']) && $_POST['action'] == 'checkQR') {
-    header('Content-Type: application/json; charset=utf-8');
-    ob_clean();
-
-    $lrn = $_POST['lrn'] ?? '';
-    if (empty($lrn)) {
-        echo json_encode(['exists' => false]);
-        exit();
-    }
-
-    try {
-        $pdo = getDBConnection();
-        $stmt = $pdo->prepare("SELECT qr_code FROM students WHERE lrn = ?");
-        $stmt->execute([$lrn]);
-        $student = $stmt->fetch(PDO::FETCH_ASSOC);
-        $qr_code = $student['qr_code'] ?: $lrn . '.png';
-        $qr_path = 'qrcodes/' . $qr_code;
-
-        echo json_encode(['exists' => file_exists($qr_path)]);
-    } catch (Exception $e) {
-        error_log("Check QR error: " . $e->getMessage());
-        echo json_encode(['exists' => false]);
-    }
-    exit();
-}
-
-if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action']) && $_POST['action'] == 'printSingleQR') {
-    header('Content-Type: application/json; charset=utf-8');
-    ob_clean();
-
-    $lrn = $_POST['lrn'] ?? '';
-    $qr_code = $_POST['qr_code'] ?? $lrn . '.png';
-    if (empty($lrn)) {
-        echo json_encode(['success' => false, 'message' => 'No LRN provided']);
-        exit();
-    }
-
-    try {
-        $pdo = getDBConnection();
-        $stmt = $pdo->prepare("SELECT lrn, first_name, middle_name, last_name FROM students WHERE lrn = ?");
-        $stmt->execute([$lrn]);
-        $student = $stmt->fetch(PDO::FETCH_ASSOC);
-        if (!$student) {
-            echo json_encode(['success' => false, 'message' => 'Student not found']);
-            exit();
-        }
-
-        $qr_path = 'qrcodes/' . $qr_code;
-        if (!file_exists($qr_path)) {
-            echo json_encode(['success' => false, 'message' => 'QR code file not found']);
-            exit();
-        }
-
-        require_once 'tcpdf/tcpdf.php';
-        $pdf = new TCPDF('P', 'mm', 'LETTER', true, 'UTF-8', false);
-        $pdf->SetCreator(PDF_CREATOR);
-        $pdf->SetAuthor('Your App');
-        $pdf->SetTitle('Student QR ID Card');
-        $pdf->SetMargins(10, 10, 10);
-        $pdf->SetAutoPageBreak(false);
-
-        $pdf->AddPage();
-        $card_width = 54; // 2.125 inches in mm
-        $card_height = 86; // 3.375 inches in mm
-        $x = ($pdf->getPageWidth() - $card_width) / 2;
-        $y = 20;
-
-        $pdf->SetXY($x, $y);
-        $pdf->SetFont('helvetica', '', 10);
-        $pdf->Cell($card_width, 6, $student['last_name'] . ', ' . $student['first_name'] . ' ' . ($student['middle_name'] ?: ''), 0, 1, 'C');
-        $pdf->SetXY($x, $y + 6);
-        $pdf->Cell($card_width, 6, 'LRN: ' . $student['lrn'], 0, 1, 'C');
-        $pdf->Image($qr_path, $x + ($card_width - 40) / 2, $y + 12, 40, 40, 'PNG');
-
-        $filename = 'qr_id_card_' . $lrn . '_' . date('YmdHis') . '.pdf';
-        $pdf->Output(__DIR__ . '/exports/' . $filename, 'F');
-
-        echo json_encode([
-            'success' => true,
-            'filename' => $filename,
-            'message' => 'Single QR ID Card generated successfully'
-        ]);
-    } catch (Exception $e) {
-        error_log("Single QR Print error: " . $e->getMessage());
-        echo json_encode([
-            'success' => false,
-            'message' => 'Failed to generate QR ID Card: ' . $e->getMessage()
         ]);
     }
     exit();
@@ -2562,10 +2273,7 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
             const end = start + rowsPerPage;
             const paginatedData = data.slice(start, end);
 
-            console.log('Rendering table with paginated data:', paginatedData.map(s => ({ lrn: s.lrn, class_id: s.class_id })));
-
             paginatedData.forEach(student => {
-                console.log('Rendering student:', { lrn: student.lrn, class_id: student.class_id });
                 const row = document.createElement('tr');
                 const qrCodeId = `qr-${student.lrn}-${student.class_id}`;
                 row.innerHTML = `
@@ -2593,38 +2301,21 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
         `;
                 studentTableBody.appendChild(row);
 
-                const qrFile = student.qr_code || `${student.lrn}.png`;
-                fetch('', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded'
-                    },
-                    body: `action=checkQR&lrn=${encodeURIComponent(student.lrn)}`
-                })
-                .then(res => res.json())
-                .then(data => {
-                    document.getElementById(qrCodeId).innerHTML = data.exists 
-                        ? `<img src="qrcodes/${qrFile}" width="45" height="45">` 
-                        : 'No QR';
-                })
-                .catch(error => {
-                    console.error('Check QR error:', error);
-                    document.getElementById(qrCodeId).innerHTML = 'Error';
-                });
+                // Generate QR code for this student
+                if (student.qr_code) {
+                    document.getElementById(qrCodeId).innerHTML = `<img src="qrcodes/${student.qr_code}" width="45" height="45">`;
+                } else {
+                    document.getElementById(qrCodeId).innerHTML = 'No QR';
+                }
             });
 
             // Set checkbox states based on allSelectedStudents set
-
-            const checkboxes = document.querySelectorAll('.row-checkbox');
-            console.log('Found row checkboxes:', checkboxes.length);
-            checkboxes.forEach(cb => {
+            document.querySelectorAll('.row-checkbox').forEach(cb => {
                 const key = `${cb.dataset.id}-${cb.dataset.classId}`;
                 cb.checked = allSelectedStudents.has(key);
-                console.log('Checkbox initialized:', key, 'Checked:', cb.checked);
 
                 cb.addEventListener('change', (e) => {
                     const changeKey = `${e.target.dataset.id}-${e.target.dataset.classId}`;
-                    console.log('Checkbox changed:', changeKey, 'Checked:', e.target.checked);
                     selectAllMode = false; // Disable select all mode when manually selecting
 
                     if (e.target.checked) {
@@ -2634,7 +2325,6 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
                         allSelectedStudents.delete(changeKey);
                         selectedStudents.delete(changeKey);
                     }
-                    console.log('allSelectedStudents:', Array.from(allSelectedStudents));
                     updateBulkActions();
                     updateHeaderCheckboxes();
                 });
@@ -2643,74 +2333,7 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
             updateBulkActions();
             updateHeaderCheckboxes();
         }
-        
-        function bulkPrintQR() {
-            console.log('allSelectedStudents:', Array.from(allSelectedStudents));
-            if (allSelectedStudents.size === 0) {
-                console.log('No students selected for QR printing.');
-                alert('No students selected for QR printing.');
-                return;
-            }
 
-            const selectedLRNs = Array.from(allSelectedStudents).map(key => String(key.split('-')[0]));
-            console.log('selectedLRNs:', selectedLRNs);
-            const studentsToPrint = students.filter(s => selectedLRNs.includes(String(s.lrn))).map(student => {
-                const qrFile = student.qr_code || `${student.lrn}.png`;
-                return { lrn: student.lrn, qr_code: qrFile };
-            });
-            console.log('studentsToPrint:', studentsToPrint);
-
-            const printBtn = document.getElementById('bulkPrintQRBtn');
-            const originalText = printBtn.innerHTML;
-            printBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating PDF...';
-            printBtn.disabled = true;
-
-            fetch('', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded'
-                },
-                body: `action=bulkPrintQR&students=${encodeURIComponent(JSON.stringify(studentsToPrint))}`
-            })
-            .then(res => {
-                if (!res.ok) {
-                    return res.text().then(text => {
-                        console.error('Non-JSON response:', text);
-                        throw new Error(`HTTP error! Status: ${res.status}`);
-                    });
-                }
-                return res.json();
-            })
-            .then(data => {
-                console.log('Server response:', data);
-                if (data.success) {
-                    const downloadLink = document.createElement('a');
-                    downloadLink.href = `exports/${data.filename}`;
-                    downloadLink.download = data.filename;
-                    downloadLink.style.display = 'none';
-                    document.body.appendChild(downloadLink);
-                    downloadLink.click();
-                    document.body.removeChild(downloadLink);
-
-                    alert(`✅ QR ID Cards PDF generated successfully!\n` +
-                        `📄 Generated ${data.cards_count} ID cards\n` +
-                        `📁 File: ${data.filename}\n\n` +
-                        `📏 Layout: 4×3 cards per US Letter page (12 cards/page)\n` +
-                        `📐 Card size: 2.125" × 3.375" (standard ID card size)`);
-                } else {
-                    alert('❌ ' + (data.message || 'Failed to generate QR ID Cards PDF'));
-                }
-            })
-            .catch(error => {
-                console.error('QR Print error:', error);
-                alert('❌ An error occurred while generating the QR ID Cards PDF. Please check the console for details.');
-            })
-            .finally(() => {
-                printBtn.innerHTML = originalText;
-                printBtn.disabled = allSelectedStudents.size === 0;
-            });
-        }
-        
         // Render pagination
         function renderPagination(totalRows) {
             const pageCount = Math.ceil(totalRows / rowsPerPage);
@@ -2740,14 +2363,12 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
         // Modified toggle global select function
         function toggleGlobalSelect() {
             const isChecked = document.getElementById('selectAll').checked;
-            console.log('Select All toggled:', isChecked, 'Filtered students count:', filteredStudents.length);
             selectAllMode = isChecked;
 
             if (isChecked) {
                 // Select all filtered students across all pages
                 filteredStudents.forEach(student => {
                     const key = `${student.lrn}-${student.class_id}`;
-                    console.log('Adding key:', key);
                     allSelectedStudents.add(key);
                 });
                 selectedStudents.clear();
@@ -2757,33 +2378,29 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
                 });
             } else {
                 // Clear all selections
-                console.log('Clearing all selections');
                 allSelectedStudents.clear();
                 selectedStudents.clear();
             }
-            console.log('allSelectedStudents:', Array.from(allSelectedStudents));
 
             // Update visible checkboxes
             document.querySelectorAll('.row-checkbox').forEach(cb => {
                 const key = `${cb.dataset.id}-${cb.dataset.classId}`;
                 cb.checked = allSelectedStudents.has(key);
-                console.log('Updating checkbox:', key, 'Checked:', cb.checked);
             });
 
             updateBulkActions();
             updateHeaderCheckboxes();
         }
 
+
         // Modified toggle page select function
         function togglePageSelect() {
             const isChecked = document.getElementById('tableSelectAll').checked;
-            console.log('Table Select All toggled:', isChecked);
             selectAllMode = false; // Disable select all mode when manually selecting page
 
             document.querySelectorAll('.row-checkbox').forEach(cb => {
                 cb.checked = isChecked;
                 const key = `${cb.dataset.id}-${cb.dataset.classId}`;
-                console.log('Processing checkbox:', key, 'Checked:', isChecked);
                 if (isChecked) {
                     allSelectedStudents.add(key);
                     selectedStudents.add(key);
@@ -2792,7 +2409,7 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
                     selectedStudents.delete(key);
                 }
             });
-            console.log('allSelectedStudents:', Array.from(allSelectedStudents));
+
             updateBulkActions();
             updateHeaderCheckboxes();
         }
@@ -3504,3 +3121,13 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
 </body>
 
 </html>
+
+<!-- Do the function for the bulk button "<button class="btn btn-primary" id="bulkPrintQRBtn" disabled onclick="bulkPrintQR()">
+                <i class="fas fa-print"></i> Print QR Codes
+            </button>" in the <div class="bulk-actions" id="bulkActions"> to print the qr code of selected students also in pdf. On US Letter (8.5in × 11in):
+Width-wise: 8.5 / 2.125 ≈ 4 cards
+Height-wise: 11 / 3.375 ≈ 3 cards
+✅ You can fit 4 × 3 = 12 cards per US Letter page, tightly packed., do the same design of the card like in the printQRCode.
+
+use tecnickcom
+Just give me the changes -->

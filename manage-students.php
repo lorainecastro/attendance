@@ -2629,7 +2629,7 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
                         console.error('Check QR error:', error);
                         document.getElementById(qrCodeId).innerHTML = 'Error';
                     });
-                });
+            });
 
             // Set checkbox states based on allSelectedStudents set
 
@@ -2905,7 +2905,7 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
                     exportBtn.innerHTML = originalText;
                     exportBtn.disabled = false;
                 });
-            }
+        }
 
 
         // Modified bulk delete function

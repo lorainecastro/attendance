@@ -83,3 +83,15 @@ CREATE TABLE class_students (
     FOREIGN KEY (class_id) REFERENCES classes(class_id),
     FOREIGN KEY (lrn) REFERENCES students(lrn)
 );
+
+CREATE TABLE Attendance (
+    attendance_id INT PRIMARY KEY AUTO_INCREMENT,
+    class_id INT NOT NULL,
+    lrn BIGINT NOT NULL,
+    attendance_date DATE NOT NULL,
+    attendance_status  ENUM('Present', 'Absent', 'Late') NULL,
+    reason ENUM('Health Issue', 'Household Income', 'Transportation', 'Family Structure', 'No Reason', 'Other') NULL,
+    time_checked DATETIME,
+    FOREIGN KEY (lrn) REFERENCES students(lrn),
+    FOREIGN KEY (class_id) REFERENCES classes(class_id)
+);

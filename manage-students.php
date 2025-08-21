@@ -3097,7 +3097,7 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
                 photoInput: document.getElementById('student-photo')
             };
             Object.values(form).forEach(input => {
-                if (input.tagName === 'IMG') input.src = 'Uploads/no-icon.png';
+                if (input.tagName === 'IMG') input.src = 'uploads/no-icon.png';
                 else if (input.tagName === 'SELECT') input.value = '';
                 else if (input.type === 'file') input.value = '';
                 else input.value = '';
@@ -3131,8 +3131,8 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
                 form.parentName.value = student.parent_name || '';
                 form.emergencyContact.value = student.emergency_contact || '';
                 form.photoPreview.src = student.photo ?
-                    'Uploads/' + student.photo :
-                    'Uploads/no-icon.png';
+                    'uploads/' + student.photo :
+                    'uploads/no-icon.png';
 
                 // Display QR code in view and edit modes
                 if (student.qr_code) {

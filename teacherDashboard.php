@@ -736,7 +736,7 @@ $profileName = htmlspecialchars($currentUser['firstname'] . ' ' . $currentUser['
                 </div>
 
                 <div class="nav-item">
-                    <a href="#" class="nav-link menu-item active">
+                    <a href="#" class="nav-link menu-item">
                         <i class="fas fa-users nav-icon"></i>
                         <span class="nav-text">Manage Students</span>
                         <span class="nav-tooltip">Manage Students</span>
@@ -744,7 +744,7 @@ $profileName = htmlspecialchars($currentUser['firstname'] . ' ' . $currentUser['
                 </div>
 
                 <div class="nav-item">
-                    <a href="#" class="nav-link menu-item">
+                    <a href="#" class="nav-link menu-item active">
                         <i class="fas fa-user-check nav-icon"></i>
                         <span class="nav-text">Attendance Tracking</span>
                         <span class="nav-tooltip">Attendance Tracking</span>
@@ -1108,7 +1108,7 @@ $profileName = htmlspecialchars($currentUser['firstname'] . ' ' . $currentUser['
             }
 
             // Load default page
-            loadPage('manage-students.php');
+            loadPage('attendance.php');
         });
 
         // Load page into iframe

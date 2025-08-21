@@ -416,7 +416,6 @@
     </div>
 
     <div class="action-buttons">
-        <button class="btn btn-secondary save-btn" onclick="saveDraft()">Save Draft</button>
         <button class="btn btn-primary submit-btn" onclick="submitAttendance()">Submit Attendance</button>
     </div>
 
@@ -708,11 +707,6 @@
                 attendanceData[today][studentId].attendanceRate = 90;
             });
             renderTable();
-        }
-
-        function saveDraft() {
-            localStorage.setItem('attendanceDraft', JSON.stringify(attendanceData));
-            showNotification('Attendance draft saved locally.', 'success');
         }
 
         function submitAttendance() {

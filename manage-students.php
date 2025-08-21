@@ -2713,18 +2713,18 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
                         downloadLink.click();
                         document.body.removeChild(downloadLink);
 
-                        alert(`✅ QR ID Cards PDF generated successfully!\n` +
-                            `📄 Generated ${data.cards_count} ID cards\n` +
-                            `📁 File: ${data.filename}\n\n` +
-                            `📏 Layout: 4×3 cards per US Letter page (12 cards/page)\n` +
-                            `📐 Card size: 2.125" × 3.375" (standard ID card size)`);
+                        alert(`QR ID Cards PDF generated successfully!\n` +
+                            `Generated ${data.cards_count} ID cards\n` +
+                            `File: ${data.filename}\n\n` +
+                            `Layout: 4×3 cards per US Letter page (12 cards/page)\n` +
+                            `Card size: 2.125" × 3.375" (standard ID card size)`);
                     } else {
-                        alert('❌ ' + (data.message || 'Failed to generate QR ID Cards PDF'));
+                        alert((data.message || 'Failed to generate QR ID Cards PDF'));
                     }
                 })
                 .catch(error => {
                     console.error('QR Print error:', error);
-                    alert('❌ An error occurred while generating the QR ID Cards PDF. Please check the console for details.');
+                    alert('An error occurred while generating the QR ID Cards PDF. Please check the console for details.');
                 })
                 .finally(() => {
                     printBtn.innerHTML = originalText;

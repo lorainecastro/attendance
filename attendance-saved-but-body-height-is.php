@@ -59,7 +59,7 @@ $students_by_class = [];
 foreach ($classes_fetch as $class) {
     $class_id = $class['class_id'];
     $stmt = $pdo->prepare("
-        SELECT s.lrn, CONCAT(s.last_name, ', ', s.first_name, ' ', s.middle_name) AS name, s.photo 
+        SELECT s.lrn, CONCAT(s.first_name, ' ', s.last_name) AS name, s.photo 
         FROM students s 
         JOIN class_students cs ON s.lrn = cs.lrn 
         WHERE cs.class_id = ?
@@ -151,19 +151,7 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
         }
 
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: var(--font-family); }
-        /* body { background-color: var(--card-bg); color: var(--blackfont-color); padding: 20px; } */
-        html, body {
-    height: 100%;
-    margin: 0;
-}
-
-body {
-    background-color: var(--card-bg); color: var(--blackfont-color); padding: 20px;
-}
-
-.attendance-grid, .stats-grid, .controls {
-    flex-grow: 1; 
-}
+        body { background-color: var(--card-bg); color: var(--blackfont-color); padding: 20px; }
         h1 { font-size: 24px; margin-bottom: 20px; color: var(--blackfont-color); position: relative; padding-bottom: 10px; }
         h1:after { content: ''; position: absolute; left: 0; bottom: 0; height: 4px; width: 80px; background: var(--primary-gradient); border-radius: var(--radius-sm); }
         .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 20px; }
@@ -330,7 +318,7 @@ body {
         th { font-weight: 600; color: var(--grayfont-color); font-size: 14px; background: var(--inputfield-color); }
         tbody tr { transition: var(--transition-normal); }
         tbody tr:hover { background-color: var(--inputfieldhover-color); }
-        .student-photo { width: 45px; height: 45px; border-radius: 50%; object-fit: cover; }
+        .student-photo { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; }
         .status-select, .notes-select { padding: 8px 12px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 14px; transition: var(--transition-normal); width: 100%; }
         .status-select:focus, .notes-select:focus { outline: none; border-color: var(--primary-blue); background: var(--inputfieldhover-color); }
         .status-select option[value="Present"] { background-color: var(--status-present-bg); }
@@ -355,38 +343,6 @@ body {
         .notification { position: fixed; top: 20px; right: 20px; padding: 10px 20px; border-radius: 8px; color: var(--whitefont-color); z-index: 1000; transition: opacity var(--transition-normal); }
         .notification.success { background: var(--success-green); }
         .notification.error { background: var(--danger-red); }
-        .pagination {
-            display: flex;
-            justify-content: center;
-            gap: 10px;
-            margin-top: 20px;
-        }
-        .pagination button {
-            padding: 8px 16px;
-            border: 1px solid var(--border-color);
-            border-radius: var(--radius-sm);
-            background: var(--inputfield-color);
-            cursor: pointer;
-            transition: var(--transition-normal);
-        }
-        .pagination button:hover {
-            background: var(--inputfieldhover-color);
-        }
-        .pagination button.disabled {
-            cursor: not-allowed;
-            opacity: 0.5;
-        }
-        .pagination button.active {
-            background: var(--primary-blue);
-            color: var(--whitefont-color);
-            border-color: var(--primary-blue);
-        }
-        .no-students-message {
-            text-align: center;
-            padding: 20px;
-            color: var(--grayfont-color);
-            font-size: var(--font-size-lg);
-        }
 
         @media (max-width: 1024px) {
             .controls {
@@ -491,13 +447,16 @@ body {
             </div>
             <input type="date" class="selector-input" id="date-selector" value="<?php echo date('Y-m-d'); ?>" max="<?php echo date('Y-m-d'); ?>">
             <select class="selector-select" id="gradeLevelSelector">
+                <option value="">All Grade Levels</option>
             </select>
             <select class="selector-select" id="sectionSelector">
+                <option value="">All Sections</option>
             </select>
             <select class="selector-select" id="classSelector">
+                <option value="">All Subjects</option>
             </select>
             <select class="selector-select" id="statusSelector">
-                <option value="">All Status</option>
+                <option value="">All Statuses</option>
                 <option value="Present">Present</option>
                 <option value="Absent">Absent</option>
                 <option value="Late">Late</option>
@@ -547,7 +506,6 @@ body {
                 </thead>
                 <tbody></tbody>
             </table>
-            <div class="pagination" id="pagination"></div>
         </div>
     </div>
 
@@ -564,8 +522,6 @@ body {
         let videoStream = null;
         let scannedStudents = new Set();
         let current_class_id = null;
-        let currentPage = 1;
-        const rowsPerPage = 5;
 
         function showNotification(message, type) {
             const notification = document.createElement('div');
@@ -578,54 +534,40 @@ body {
             }, 3000);
         }
 
-        function populateGradeLevels() {
+        function populateDropdowns() {
             const gradeLevelSelector = document.getElementById('gradeLevelSelector');
-            gradeLevelSelector.innerHTML = '';
+            const classSelector = document.getElementById('classSelector');
+            const sectionSelector = document.getElementById('sectionSelector');
+
             const gradeLevels = [...new Set(classes.map(c => c.grade_level))].sort();
+            gradeLevelSelector.innerHTML = '<option value="">All Grade Levels</option>';
             gradeLevels.forEach(grade => {
                 const option = document.createElement('option');
                 option.value = grade;
                 option.textContent = grade;
                 gradeLevelSelector.appendChild(option);
             });
-            if (gradeLevels.length > 0) {
-                gradeLevelSelector.value = gradeLevels[0];
-                populateSections(gradeLevels[0]);
-            }
-        }
 
-        function populateSections(gradeLevel) {
-            const sectionSelector = document.getElementById('sectionSelector');
-            sectionSelector.innerHTML = '';
-            const sections = [...new Set(classes.filter(c => c.grade_level === gradeLevel).map(c => c.section_name))].sort();
-            sections.forEach(section => {
-                const option = document.createElement('option');
-                option.value = section;
-                option.textContent = section;
-                sectionSelector.appendChild(option);
-            });
-            if (sections.length > 0) {
-                sectionSelector.value = sections[0];
-                populateSubjects(gradeLevel, sections[0]);
-            }
-        }
-
-        function populateSubjects(gradeLevel, section) {
-            const classSelector = document.getElementById('classSelector');
-            classSelector.innerHTML = '';
-            const subjects = [...new Set(classes.filter(c => c.grade_level === gradeLevel && c.section_name === section).map(c => c.subject_name))].sort();
+            const subjects = [...new Set(classes.map(c => c.subject_name))].sort();
+            classSelector.innerHTML = '<option value="">All Subjects</option>';
             subjects.forEach(subject => {
                 const option = document.createElement('option');
                 option.value = subject;
                 option.textContent = subject;
                 classSelector.appendChild(option);
             });
-            if (subjects.length > 0) {
-                classSelector.value = subjects[0];
-            }
+
+            const sections = [...new Set(classes.map(c => c.section_name))].sort();
+            sectionSelector.innerHTML = '<option value="">All Sections</option>';
+            sections.forEach(section => {
+                const option = document.createElement('option');
+                option.value = section;
+                option.textContent = section;
+                sectionSelector.appendChild(option);
+            });
         }
 
-        function updateStats(filteredStudents) {
+        function updateStats(filteredStudents, current_class_id) {
             const total = filteredStudents.length;
             const present = filteredStudents.filter(s => attendanceData[today]?.[current_class_id]?.[s.lrn]?.status === 'Present').length;
             const absent = filteredStudents.filter(s => attendanceData[today]?.[current_class_id]?.[s.lrn]?.status === 'Absent').length;
@@ -650,28 +592,21 @@ body {
             return date.toLocaleString('en-US', options).replace(',', '');
         }
 
-        function renderTable(isPagination = false) {
-            if (!isPagination) currentPage = 1;
-            const tableBody = document.querySelector('#attendance-table tbody');
+        function renderTable() {
             tableBody.innerHTML = '';
             const gradeLevelFilter = gradeLevelSelector.value;
             const sectionFilter = sectionSelector.value;
             const subjectFilter = classSelector.value;
 
-            if (!gradeLevelFilter || !sectionFilter || !subjectFilter) {
-                updateStats([]);
-                current_class_id = null;
-                return;
-            }
-
             const matchingClasses = classes.filter(c => 
-                c.grade_level === gradeLevelFilter &&
-                c.section_name === sectionFilter &&
-                c.subject_name === subjectFilter
+                (!gradeLevelFilter || c.grade_level === gradeLevelFilter) &&
+                (!sectionFilter || c.section_name === sectionFilter) &&
+                (!subjectFilter || c.subject_name === subjectFilter)
             );
 
             if (matchingClasses.length !== 1) {
-                updateStats([]);
+                tableBody.innerHTML = '<tr><td colspan="8">Please select Grade Level, Section, and Subject to view a specific class.</td></tr>';
+                updateStats([], null);
                 current_class_id = null;
                 return;
             }
@@ -679,13 +614,6 @@ body {
             const currentClass = matchingClasses[0];
             current_class_id = currentClass.class_id;
             const current_students = students_by_class[current_class_id] || [];
-
-            if (current_students.length === 0) {
-                tableBody.innerHTML = '<tr><td colspan="8" class="no-students-message">No students for this class</td></tr>';
-                updateStats([]);
-                document.getElementById('pagination').innerHTML = '';
-                return;
-            }
 
             if (!attendanceData[today]) attendanceData[today] = {};
             if (!attendanceData[today][current_class_id]) attendanceData[today][current_class_id] = {};
@@ -706,25 +634,14 @@ body {
                 return matchesStatus && matchesSearch;
             });
 
-            if (filteredStudents.length === 0) {
-                tableBody.innerHTML = '<tr><td colspan="8" class="no-students-message">No students match the current filters</td></tr>';
-                updateStats([]);
-                document.getElementById('pagination').innerHTML = '';
-                return;
-            }
-
-            const start = (currentPage - 1) * rowsPerPage;
-            const end = start + rowsPerPage;
-            const paginatedStudents = filteredStudents.slice(start, end);
-
-            paginatedStudents.forEach(student => {
+            filteredStudents.forEach(student => {
                 const att = attendanceData[today][current_class_id][student.lrn];
                 const isNotesDisabled = att.status === 'Present';
                 const statusClass = att.status ? att.status.toLowerCase() : 'none';
                 const row = document.createElement('tr');
                 row.innerHTML = `
                     <td><input type="checkbox" class="select-student" data-id="${student.lrn}"></td>
-                    <td><img src="uploads/${student.photo || 'uploads/no-icon.png'}" class="student-photo" alt="${student.name}"></td>
+                    <td><img src="${student.photo || 'Uploads/no-icon.png'}" class="student-photo" alt="${student.name}"></td>
                     <td>${student.lrn}</td>
                     <td>${student.name}</td>
                     <td>
@@ -777,8 +694,8 @@ body {
                     }
                     select.classList.remove('present', 'absent', 'late', 'none');
                     select.classList.add(newStatus ? newStatus.toLowerCase() : 'none');
-                    updateStats(filteredStudents);
-                    renderTable(true);
+                    updateStats(filteredStudents, current_class_id);
+                    renderTable();
                 });
             });
 
@@ -792,51 +709,11 @@ body {
                     } else {
                         attendanceData[today][current_class_id][studentId].timeChecked = '';
                     }
-                    renderTable(true);
+                    renderTable();
                 });
             });
 
-            updateStats(filteredStudents);
-
-            // Pagination
-            const pagination = document.getElementById('pagination');
-            pagination.innerHTML = '';
-            const pageCount = Math.ceil(filteredStudents.length / rowsPerPage);
-
-            const prevButton = document.createElement('button');
-            prevButton.textContent = 'Previous';
-            prevButton.classList.add('disabled');
-            if (currentPage > 1) prevButton.classList.remove('disabled');
-            prevButton.onclick = () => {
-                if (currentPage > 1) {
-                    currentPage--;
-                    renderTable(true);
-                }
-            };
-            pagination.appendChild(prevButton);
-
-            for (let i = 1; i <= pageCount; i++) {
-                const pageButton = document.createElement('button');
-                pageButton.textContent = i;
-                if (i === currentPage) pageButton.classList.add('active');
-                pageButton.onclick = () => {
-                    currentPage = i;
-                    renderTable(true);
-                };
-                pagination.appendChild(pageButton);
-            }
-
-            const nextButton = document.createElement('button');
-            nextButton.textContent = 'Next';
-            nextButton.classList.add('disabled');
-            if (currentPage < pageCount) nextButton.classList.remove('disabled');
-            nextButton.onclick = () => {
-                if (currentPage < pageCount) {
-                    currentPage++;
-                    renderTable(true);
-                }
-            };
-            pagination.appendChild(nextButton);
+            updateStats(filteredStudents, current_class_id);
         }
 
         function toggleSelectAll() {
@@ -889,7 +766,10 @@ body {
         }
 
         function submitAttendance() {
-            if (!current_class_id) return;
+            if (!current_class_id) {
+                showNotification('Please select a class first.', 'error');
+                return;
+            }
             const data = attendanceData[today][current_class_id];
             const hasInvalidEntries = Object.values(data).some(att => (att.status === 'Absent' || att.status === 'Late') && !att.notes);
             if (hasInvalidEntries) {
@@ -912,7 +792,10 @@ body {
         }
 
         function startQRScanner() {
-            if (!current_class_id) return;
+            if (!current_class_id) {
+                showNotification('Please select a class first.', 'error');
+                return;
+            }
             const qrScanner = document.getElementById('qr-scanner');
             const video = document.getElementById('qr-video');
             const canvasElement = document.getElementById('qr-canvas');
@@ -955,7 +838,7 @@ body {
                                 attendanceData[today][current_class_id][lrn].timeChecked = formatDateTime(new Date());
                                 scannedStudents.add(lrn);
                                 showNotification(`Student ${student.name} marked as Present.`, 'success');
-                                renderTable(true);
+                                renderTable();
                             }
                         } else {
                             showNotification('Invalid LRN for this class.', 'error');
@@ -979,7 +862,10 @@ body {
         function clearFilters() {
             document.getElementById('searchInput').value = '';
             document.getElementById('date-selector').value = '<?php echo date('Y-m-d'); ?>';
-            populateGradeLevels();
+            document.getElementById('gradeLevelSelector').value = '';
+            document.getElementById('classSelector').value = '';
+            document.getElementById('sectionSelector').value = '';
+            document.getElementById('statusSelector').value = '';
             today = '<?php echo date('Y-m-d'); ?>';
             renderTable();
         }
@@ -993,29 +879,18 @@ body {
         const selectAllCheckbox = document.getElementById('select-all');
         const searchInput = document.getElementById('searchInput');
 
-        gradeLevelSelector.addEventListener('change', () => {
-            const gradeLevel = gradeLevelSelector.value;
-            populateSections(gradeLevel);
-            renderTable();
-        });
-
-        sectionSelector.addEventListener('change', () => {
-            const gradeLevel = gradeLevelSelector.value;
-            const section = sectionSelector.value;
-            populateSubjects(gradeLevel, section);
-            renderTable();
-        });
-
-        classSelector.addEventListener('change', renderTable);
-        statusSelector.addEventListener('change', renderTable);
-        searchInput.addEventListener('input', renderTable);
         dateSelector.addEventListener('change', () => {
             today = dateSelector.value;
             renderTable();
         });
+        gradeLevelSelector.addEventListener('change', renderTable);
+        classSelector.addEventListener('change', renderTable);
+        sectionSelector.addEventListener('change', renderTable);
+        statusSelector.addEventListener('change', renderTable);
+        searchInput.addEventListener('input', renderTable);
 
         document.addEventListener('DOMContentLoaded', () => {
-            populateGradeLevels();
+            populateDropdowns();
             renderTable();
         });
     </script>

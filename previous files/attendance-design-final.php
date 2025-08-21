@@ -10,86 +10,6 @@ if (!$user) {
     header("Location: index.php");
     exit();
 }
-
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $input = json_decode(file_get_contents('php://input'), true);
-    if (isset($input['class_id']) && isset($input['date']) && isset($input['attendance'])) {
-        $class_id = $input['class_id'];
-        $date = $input['date'];
-        $attendance = $input['attendance'];
-        $pdo = getDBConnection();
-        foreach ($attendance as $lrn => $att) {
-            $status = $att['status'] ?: null;
-            $reason = $att['notes'] ?: null;
-            $time_checked = $att['timeChecked'] ? date('Y-m-d H:i:s', strtotime($att['timeChecked'])) : null;
-            // Check if exists
-            $stmt = $pdo->prepare("SELECT attendance_id FROM attendance_tracking WHERE class_id = ? AND lrn = ? AND attendance_date = ?");
-            $stmt->execute([$class_id, $lrn, $date]);
-            if ($stmt->fetch()) {
-                // Update
-                $stmt = $pdo->prepare("UPDATE attendance_tracking SET attendance_status = ?, reason = ?, time_checked = ? WHERE class_id = ? AND lrn = ? AND attendance_date = ?");
-                $stmt->execute([$status, $reason, $time_checked, $class_id, $lrn, $date]);
-            } else if ($status) {
-                // Insert
-                $stmt = $pdo->prepare("INSERT INTO attendance_tracking (class_id, lrn, attendance_date, attendance_status, reason, time_checked, logged_by) VALUES (?, ?, ?, ?, ?, ?, 'Teacher')");
-                $stmt->execute([$class_id, $lrn, $date, $status, $reason, $time_checked]);
-            }
-        }
-        echo json_encode(['success' => true]);
-        exit();
-    }
-    echo json_encode(['success' => false]);
-    exit();
-}
-
-$pdo = getDBConnection();
-
-// Fetch classes for the teacher
-$stmt = $pdo->prepare("
-    SELECT c.class_id, c.section_name, s.subject_name, c.grade_level 
-    FROM classes c 
-    JOIN subjects s ON c.subject_id = s.subject_id 
-    WHERE c.teacher_id = ?
-");
-$stmt->execute([$user['teacher_id']]);
-$classes_fetch = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-// Fetch students by class
-$students_by_class = [];
-foreach ($classes_fetch as $class) {
-    $class_id = $class['class_id'];
-    $stmt = $pdo->prepare("
-        SELECT s.lrn, CONCAT(s.last_name, ', ', s.first_name, ' ', s.middle_name) AS name, s.photo 
-        FROM students s 
-        JOIN class_students cs ON s.lrn = cs.lrn 
-        WHERE cs.class_id = ?
-    ");
-    $stmt->execute([$class_id]);
-    $students_by_class[$class_id] = $stmt->fetchAll(PDO::FETCH_ASSOC);
-}
-
-// Fetch existing attendance
-$attendance_arr = [];
-$stmt = $pdo->prepare("
-    SELECT a.class_id, a.attendance_date, a.lrn, a.attendance_status, a.reason, a.time_checked 
-    FROM attendance_tracking a 
-    JOIN classes c ON a.class_id = c.class_id 
-    WHERE c.teacher_id = ?
-");
-$stmt->execute([$user['teacher_id']]);
-while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
-    $date = $row['attendance_date'];
-    $class_id = $row['class_id'];
-    $lrn = $row['lrn'];
-    if (!isset($attendance_arr[$date])) $attendance_arr[$date] = [];
-    if (!isset($attendance_arr[$date][$class_id])) $attendance_arr[$date][$class_id] = [];
-    $time_checked = $row['time_checked'] ? (new DateTime($row['time_checked']))->format('M d Y h:i:s A') : '';
-    $attendance_arr[$date][$class_id][$lrn] = [
-        'status' => $row['attendance_status'] ?: '',
-        'notes' => $row['reason'] ?: '',
-        'timeChecked' => $time_checked
-    ];
-}
 ?>
 
 <!DOCTYPE html>
@@ -151,19 +71,7 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
         }
 
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: var(--font-family); }
-        /* body { background-color: var(--card-bg); color: var(--blackfont-color); padding: 20px; } */
-        html, body {
-    height: 100%;
-    margin: 0;
-}
-
-body {
-    background-color: var(--card-bg); color: var(--blackfont-color); padding: 20px;
-}
-
-.attendance-grid, .stats-grid, .controls {
-    flex-grow: 1; 
-}
+        body { background-color: var(--card-bg); color: var(--blackfont-color); padding: 20px; }
         h1 { font-size: 24px; margin-bottom: 20px; color: var(--blackfont-color); position: relative; padding-bottom: 10px; }
         h1:after { content: ''; position: absolute; left: 0; bottom: 0; height: 4px; width: 80px; background: var(--primary-gradient); border-radius: var(--radius-sm); }
         .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 20px; }
@@ -330,7 +238,7 @@ body {
         th { font-weight: 600; color: var(--grayfont-color); font-size: 14px; background: var(--inputfield-color); }
         tbody tr { transition: var(--transition-normal); }
         tbody tr:hover { background-color: var(--inputfieldhover-color); }
-        .student-photo { width: 45px; height: 45px; border-radius: 50%; object-fit: cover; }
+        .student-photo { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; }
         .status-select, .notes-select { padding: 8px 12px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 14px; transition: var(--transition-normal); width: 100%; }
         .status-select:focus, .notes-select:focus { outline: none; border-color: var(--primary-blue); background: var(--inputfieldhover-color); }
         .status-select option[value="Present"] { background-color: var(--status-present-bg); }
@@ -355,38 +263,6 @@ body {
         .notification { position: fixed; top: 20px; right: 20px; padding: 10px 20px; border-radius: 8px; color: var(--whitefont-color); z-index: 1000; transition: opacity var(--transition-normal); }
         .notification.success { background: var(--success-green); }
         .notification.error { background: var(--danger-red); }
-        .pagination {
-            display: flex;
-            justify-content: center;
-            gap: 10px;
-            margin-top: 20px;
-        }
-        .pagination button {
-            padding: 8px 16px;
-            border: 1px solid var(--border-color);
-            border-radius: var(--radius-sm);
-            background: var(--inputfield-color);
-            cursor: pointer;
-            transition: var(--transition-normal);
-        }
-        .pagination button:hover {
-            background: var(--inputfieldhover-color);
-        }
-        .pagination button.disabled {
-            cursor: not-allowed;
-            opacity: 0.5;
-        }
-        .pagination button.active {
-            background: var(--primary-blue);
-            color: var(--whitefont-color);
-            border-color: var(--primary-blue);
-        }
-        .no-students-message {
-            text-align: center;
-            padding: 20px;
-            color: var(--grayfont-color);
-            font-size: var(--font-size-lg);
-        }
 
         @media (max-width: 1024px) {
             .controls {
@@ -489,15 +365,18 @@ body {
                 <input type="text" class="form-input search-input" id="searchInput" placeholder="Search by LRN or Name">
                 <i class="fas fa-search search-icon"></i>
             </div>
-            <input type="date" class="selector-input" id="date-selector" value="<?php echo date('Y-m-d'); ?>" max="<?php echo date('Y-m-d'); ?>">
+            <input type="date" class="selector-input" id="date-selector" value="2025-08-21" max="2025-08-21">
             <select class="selector-select" id="gradeLevelSelector">
+                <option value="">All Grade Levels</option>
             </select>
             <select class="selector-select" id="sectionSelector">
+                <option value="">All Sections</option>
             </select>
             <select class="selector-select" id="classSelector">
+                <option value="">All Subjects</option>
             </select>
             <select class="selector-select" id="statusSelector">
-                <option value="">All Status</option>
+                <option value="">All Statuses</option>
                 <option value="Present">Present</option>
                 <option value="Absent">Absent</option>
                 <option value="Late">Late</option>
@@ -547,7 +426,6 @@ body {
                 </thead>
                 <tbody></tbody>
             </table>
-            <div class="pagination" id="pagination"></div>
         </div>
     </div>
 
@@ -557,15 +435,91 @@ body {
 
     <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
     <script>
-        const classes = <?php echo json_encode($classes_fetch); ?>;
-        const students_by_class = <?php echo json_encode($students_by_class); ?>;
-        const attendanceData = <?php echo json_encode($attendance_arr); ?> || {};
-        let today = document.getElementById('date-selector').value;
+        const classes = [
+            {
+                id: 1,
+                code: 'MATH-101-A',
+                sectionName: 'Diamond Section',
+                subject: 'Mathematics',
+                gradeLevel: 'Grade 7',
+                room: 'Room 201',
+                attendancePercentage: 10,
+                schedule: {
+                    monday: { start: '08:00', end: '09:30' },
+                    wednesday: { start: '08:00', end: '09:30' },
+                    friday: { start: '08:00', end: '09:30' }
+                },
+                status: 'active',
+                students: [
+                    { id: 1, firstName: 'John', lastName: 'Doe', email: 'john.doe@email.com' },
+                    { id: 2, firstName: 'Jane', lastName: 'Smith', email: 'jane.smith@email.com' },
+                    { id: 3, firstName: 'Mike', lastName: 'Johnson', email: 'mike.johnson@email.com' }
+                ]
+            },
+            {
+                id: 2,
+                code: 'SCI-201-B',
+                sectionName: 'Einstein Section',
+                subject: 'Science',
+                gradeLevel: 'Grade 10',
+                room: 'Lab 1',
+                attendancePercentage: 15,
+                schedule: {
+                    tuesday: { start: '10:00', end: '11:30' },
+                    thursday: { start: '10:00', end: '11:30' }
+                },
+                status: 'active',
+                students: [
+                    { id: 4, firstName: 'Alice', lastName: 'Brown', email: 'alice.brown@email.com' },
+                    { id: 5, firstName: 'Bob', lastName: 'Wilson', email: 'bob.wilson@email.com' }
+                ]
+            },
+            {
+                id: 3,
+                code: 'ENG-301-C',
+                sectionName: 'Shakespeare Section',
+                subject: 'English Literature',
+                gradeLevel: 'Grade 12',
+                room: 'Room 305',
+                attendancePercentage: 20,
+                schedule: {
+                    monday: { start: '14:00', end: '15:30' },
+                    wednesday: { start: '14:00', end: '15:30' }
+                },
+                status: 'inactive',
+                students: [
+                    { id: 6, firstName: 'Carol', lastName: 'Davis', email: 'carol.davis@email.com' },
+                    { id: 7, firstName: 'David', lastName: 'Miller', email: 'david.miller@email.com' },
+                    { id: 8, firstName: 'Emma', lastName: 'Garcia', email: 'emma.garcia@email.com' },
+                    { id: 9, firstName: 'Frank', lastName: 'Rodriguez', email: 'frank.rodriguez@email.com' }
+                ]
+            }
+        ];
+
+        const students = classes.flatMap(cls => cls.students.map(student => ({
+            id: student.id,
+            name: `${student.firstName} ${student.lastName}`,
+            class: cls.subject,
+            photo: student.photo || 'Uploads/no-icon.png',
+            status: '',
+            notes: '',
+            gradeLevel: cls.gradeLevel,
+            subject: cls.subject,
+            section: cls.sectionName,
+            attendanceRate: 90
+        })));
+
+        let attendanceData = {};
+        let today = '2025-08-21';
         let videoStream = null;
         let scannedStudents = new Set();
-        let current_class_id = null;
-        let currentPage = 1;
-        const rowsPerPage = 5;
+
+        if (!attendanceData[today]) {
+            attendanceData[today] = {};
+            students.forEach(student => {
+                attendanceData[today][student.id] = { status: '', notes: '', timeChecked: '', attendanceRate: 90 };
+            });
+        }
 
         function showNotification(message, type) {
             const notification = document.createElement('div');
@@ -578,57 +532,43 @@ body {
             }, 3000);
         }
 
-        function populateGradeLevels() {
+        function populateDropdowns() {
             const gradeLevelSelector = document.getElementById('gradeLevelSelector');
-            gradeLevelSelector.innerHTML = '';
-            const gradeLevels = [...new Set(classes.map(c => c.grade_level))].sort();
+            const classSelector = document.getElementById('classSelector');
+            const sectionSelector = document.getElementById('sectionSelector');
+
+            const gradeLevels = [...new Set(classes.map(c => c.gradeLevel))];
+            gradeLevelSelector.innerHTML = '<option value="">All Grade Levels</option>';
             gradeLevels.forEach(grade => {
                 const option = document.createElement('option');
                 option.value = grade;
                 option.textContent = grade;
                 gradeLevelSelector.appendChild(option);
             });
-            if (gradeLevels.length > 0) {
-                gradeLevelSelector.value = gradeLevels[0];
-                populateSections(gradeLevels[0]);
-            }
-        }
 
-        function populateSections(gradeLevel) {
-            const sectionSelector = document.getElementById('sectionSelector');
-            sectionSelector.innerHTML = '';
-            const sections = [...new Set(classes.filter(c => c.grade_level === gradeLevel).map(c => c.section_name))].sort();
-            sections.forEach(section => {
-                const option = document.createElement('option');
-                option.value = section;
-                option.textContent = section;
-                sectionSelector.appendChild(option);
-            });
-            if (sections.length > 0) {
-                sectionSelector.value = sections[0];
-                populateSubjects(gradeLevel, sections[0]);
-            }
-        }
-
-        function populateSubjects(gradeLevel, section) {
-            const classSelector = document.getElementById('classSelector');
-            classSelector.innerHTML = '';
-            const subjects = [...new Set(classes.filter(c => c.grade_level === gradeLevel && c.section_name === section).map(c => c.subject_name))].sort();
+            const subjects = [...new Set(classes.map(c => c.subject))];
+            classSelector.innerHTML = '<option value="">All Subjects</option>';
             subjects.forEach(subject => {
                 const option = document.createElement('option');
                 option.value = subject;
                 option.textContent = subject;
                 classSelector.appendChild(option);
             });
-            if (subjects.length > 0) {
-                classSelector.value = subjects[0];
-            }
+
+            const sections = [...new Set(classes.map(c => c.sectionName))];
+            sectionSelector.innerHTML = '<option value="">All Sections</option>';
+            sections.forEach(section => {
+                const option = document.createElement('option');
+                option.value = section;
+                option.textContent = section;
+                sectionSelector.appendChild(option);
+            });
         }
 
         function updateStats(filteredStudents) {
             const total = filteredStudents.length;
-            const present = filteredStudents.filter(s => attendanceData[today]?.[current_class_id]?.[s.lrn]?.status === 'Present').length;
-            const absent = filteredStudents.filter(s => attendanceData[today]?.[current_class_id]?.[s.lrn]?.status === 'Absent').length;
+            const present = filteredStudents.filter(s => attendanceData[today][s.id].status === 'Present').length;
+            const absent = filteredStudents.filter(s => attendanceData[today][s.id].status === 'Absent').length;
             const percentage = total ? ((present / total) * 100).toFixed(1) : 0;
 
             document.getElementById('total-students').textContent = total;
@@ -650,104 +590,54 @@ body {
             return date.toLocaleString('en-US', options).replace(',', '');
         }
 
-        function renderTable(isPagination = false) {
-            if (!isPagination) currentPage = 1;
-            const tableBody = document.querySelector('#attendance-table tbody');
+        function renderTable() {
             tableBody.innerHTML = '';
             const gradeLevelFilter = gradeLevelSelector.value;
+            const classFilter = classSelector.value;
             const sectionFilter = sectionSelector.value;
-            const subjectFilter = classSelector.value;
-
-            if (!gradeLevelFilter || !sectionFilter || !subjectFilter) {
-                updateStats([]);
-                current_class_id = null;
-                return;
-            }
-
-            const matchingClasses = classes.filter(c => 
-                c.grade_level === gradeLevelFilter &&
-                c.section_name === sectionFilter &&
-                c.subject_name === subjectFilter
-            );
-
-            if (matchingClasses.length !== 1) {
-                updateStats([]);
-                current_class_id = null;
-                return;
-            }
-
-            const currentClass = matchingClasses[0];
-            current_class_id = currentClass.class_id;
-            const current_students = students_by_class[current_class_id] || [];
-
-            if (current_students.length === 0) {
-                tableBody.innerHTML = '<tr><td colspan="8" class="no-students-message">No students for this class</td></tr>';
-                updateStats([]);
-                document.getElementById('pagination').innerHTML = '';
-                return;
-            }
-
-            if (!attendanceData[today]) attendanceData[today] = {};
-            if (!attendanceData[today][current_class_id]) attendanceData[today][current_class_id] = {};
-            current_students.forEach(student => {
-                if (!attendanceData[today][current_class_id][student.lrn]) {
-                    attendanceData[today][current_class_id][student.lrn] = { status: '', notes: '', timeChecked: '' };
-                }
-            });
-
             const statusFilter = statusSelector.value;
             const searchQuery = searchInput.value.toLowerCase();
-            const filteredStudents = current_students.filter(s => {
-                const att = attendanceData[today][current_class_id][s.lrn] || {status: ''};
-                const matchesStatus = statusFilter ? att.status === statusFilter : true;
+            const filteredStudents = students.filter(s => {
+                const matchesGradeLevel = gradeLevelFilter ? s.gradeLevel === gradeLevelFilter : true;
+                const matchesClass = classFilter ? s.subject === classFilter : true;
+                const matchesSection = sectionFilter ? s.section === sectionFilter : true;
+                const matchesStatus = statusFilter ? attendanceData[today][s.id].status === statusFilter : true;
                 const matchesSearch = searchQuery ? 
-                    s.lrn.toString().includes(searchQuery) || 
+                    s.id.toString().includes(searchQuery) || 
                     s.name.toLowerCase().includes(searchQuery) : true;
-                return matchesStatus && matchesSearch;
+                return matchesGradeLevel && matchesClass && matchesSection && matchesStatus && matchesSearch;
             });
 
-            if (filteredStudents.length === 0) {
-                tableBody.innerHTML = '<tr><td colspan="8" class="no-students-message">No students match the current filters</td></tr>';
-                updateStats([]);
-                document.getElementById('pagination').innerHTML = '';
-                return;
-            }
-
-            const start = (currentPage - 1) * rowsPerPage;
-            const end = start + rowsPerPage;
-            const paginatedStudents = filteredStudents.slice(start, end);
-
-            paginatedStudents.forEach(student => {
-                const att = attendanceData[today][current_class_id][student.lrn];
-                const isNotesDisabled = att.status === 'Present';
-                const statusClass = att.status ? att.status.toLowerCase() : 'none';
+            filteredStudents.forEach(student => {
+                const isNotesDisabled = attendanceData[today][student.id].status === 'Present';
+                const statusClass = attendanceData[today][student.id].status ? attendanceData[today][student.id].status.toLowerCase() : 'none';
                 const row = document.createElement('tr');
                 row.innerHTML = `
-                    <td><input type="checkbox" class="select-student" data-id="${student.lrn}"></td>
-                    <td><img src="uploads/${student.photo || 'uploads/no-icon.png'}" class="student-photo" alt="${student.name}"></td>
-                    <td>${student.lrn}</td>
+                    <td><input type="checkbox" class="select-student" data-id="${student.id}"></td>
+                    <td><img src="${student.photo}" class="student-photo" alt="${student.name}"></td>
+                    <td>${student.id}</td>
                     <td>${student.name}</td>
                     <td>
-                        <select class="status-select ${statusClass}" data-id="${student.lrn}">
-                            <option value="" ${att.status === '' ? 'selected' : ''}>Select Status</option>
-                            <option value="Present" ${att.status === 'Present' ? 'selected' : ''}>Present</option>
-                            <option value="Absent" ${att.status === 'Absent' ? 'selected' : ''}>Absent</option>
-                            <option value="Late" ${att.status === 'Late' ? 'selected' : ''}>Late</option>
+                        <select class="status-select ${statusClass}" data-id="${student.id}">
+                            <option value="" ${attendanceData[today][student.id].status === '' ? 'selected' : ''}>Select Status</option>
+                            <option value="Present" ${attendanceData[today][student.id].status === 'Present' ? 'selected' : ''}>Present</option>
+                            <option value="Absent" ${attendanceData[today][student.id].status === 'Absent' ? 'selected' : ''}>Absent</option>
+                            <option value="Late" ${attendanceData[today][student.id].status === 'Late' ? 'selected' : ''}>Late</option>
                         </select>
                     </td>
                     <td>
-                        <select class="notes-select" data-id="${student.lrn}" ${isNotesDisabled ? 'disabled' : ''}>
-                            <option value="" ${att.notes === '' ? 'selected' : ''}>Select Reason</option>
-                            <option value="Health Issue" ${att.notes === 'Health Issue' ? 'selected' : ''}>Health Issue</option>
-                            <option value="Household Income" ${att.notes === 'Household Income' ? 'selected' : ''}>Household Income</option>
-                            <option value="Transportation" ${att.notes === 'Transportation' ? 'selected' : ''}>Transportation</option>
-                            <option value="Family Structure" ${att.notes === 'Family Structure' ? 'selected' : ''}>Family Structure</option>
-                            <option value="No Reason" ${att.notes === 'No Reason' ? 'selected' : ''}>No Reason</option>
-                            <option value="Other" ${att.notes === 'Other' ? 'selected' : ''}>Other</option>
+                        <select class="notes-select" data-id="${student.id}" ${isNotesDisabled ? 'disabled' : ''}>
+                            <option value="" ${attendanceData[today][student.id].notes === '' ? 'selected' : ''}>Select Reason</option>
+                            <option value="Health Issue" ${attendanceData[today][student.id].notes === 'Health Issue' ? 'selected' : ''}>Health Issue</option>
+                            <option value="Household Income" ${attendanceData[today][student.id].notes === 'Household Income' ? 'selected' : ''}>Household Income</option>
+                            <option value="Transportation" ${attendanceData[today][student.id].notes === 'Transportation' ? 'selected' : ''}>Transportation</option>
+                            <option value="Family Structure" ${attendanceData[today][student.id].notes === 'Family Structure' ? 'selected' : ''}>Family Structure</option>
+                            <option value="No Reason" ${attendanceData[today][student.id].notes === 'No Reason' ? 'selected' : ''}>No Reason</option>
+                            <option value="Other" ${attendanceData[today][student.id].notes === 'Other' ? 'selected' : ''}>Other</option>
                         </select>
                     </td>
-                    <td>${att.timeChecked || '-'}</td>
-                    <td class="attendance-rate">90%</td>
+                    <td>${attendanceData[today][student.id].timeChecked || '-'}</td>
+                    <td class="attendance-rate">${student.attendanceRate}%</td>
                 `;
                 tableBody.appendChild(row);
             });
@@ -757,28 +647,28 @@ body {
                     const studentId = select.dataset.id;
                     const newStatus = select.value;
                     const notesSelect = tableBody.querySelector(`.notes-select[data-id="${studentId}"]`);
-                    attendanceData[today][current_class_id][studentId].status = newStatus;
+                    attendanceData[today][studentId].status = newStatus;
                     notesSelect.disabled = newStatus === 'Present';
                     if (newStatus === 'Present') {
-                        attendanceData[today][current_class_id][studentId].notes = '';
-                        attendanceData[today][current_class_id][studentId].timeChecked = formatDateTime(new Date());
+                        attendanceData[today][studentId].notes = '';
+                        attendanceData[today][studentId].timeChecked = formatDateTime(new Date());
                         notesSelect.value = '';
                     } else if (newStatus === 'Absent' || newStatus === 'Late') {
-                        if (!attendanceData[today][current_class_id][studentId].notes) {
+                        if (!attendanceData[today][studentId].notes) {
                             showNotification('Please select a reason for Absent or Late status.', 'error');
-                            attendanceData[today][current_class_id][studentId].timeChecked = '';
+                            attendanceData[today][studentId].timeChecked = '';
                         } else {
-                            attendanceData[today][current_class_id][studentId].timeChecked = formatDateTime(new Date());
+                            attendanceData[today][studentId].timeChecked = formatDateTime(new Date());
                         }
                     } else {
-                        attendanceData[today][current_class_id][studentId].notes = '';
-                        attendanceData[today][current_class_id][studentId].timeChecked = '';
+                        attendanceData[today][studentId].notes = '';
+                        attendanceData[today][studentId].timeChecked = '';
                         notesSelect.value = '';
                     }
                     select.classList.remove('present', 'absent', 'late', 'none');
                     select.classList.add(newStatus ? newStatus.toLowerCase() : 'none');
                     updateStats(filteredStudents);
-                    renderTable(true);
+                    renderTable();
                 });
             });
 
@@ -786,57 +676,17 @@ body {
                 select.addEventListener('change', () => {
                     const studentId = select.dataset.id;
                     const newNotes = select.value;
-                    attendanceData[today][current_class_id][studentId].notes = newNotes;
-                    if ((attendanceData[today][current_class_id][studentId].status === 'Absent' || attendanceData[today][current_class_id][studentId].status === 'Late') && newNotes) {
-                        attendanceData[today][current_class_id][studentId].timeChecked = formatDateTime(new Date());
+                    attendanceData[today][studentId].notes = newNotes;
+                    if ((attendanceData[today][studentId].status === 'Absent' || attendanceData[today][studentId].status === 'Late') && newNotes) {
+                        attendanceData[today][studentId].timeChecked = formatDateTime(new Date());
                     } else {
-                        attendanceData[today][current_class_id][studentId].timeChecked = '';
+                        attendanceData[today][studentId].timeChecked = '';
                     }
-                    renderTable(true);
+                    renderTable();
                 });
             });
 
             updateStats(filteredStudents);
-
-            // Pagination
-            const pagination = document.getElementById('pagination');
-            pagination.innerHTML = '';
-            const pageCount = Math.ceil(filteredStudents.length / rowsPerPage);
-
-            const prevButton = document.createElement('button');
-            prevButton.textContent = 'Previous';
-            prevButton.classList.add('disabled');
-            if (currentPage > 1) prevButton.classList.remove('disabled');
-            prevButton.onclick = () => {
-                if (currentPage > 1) {
-                    currentPage--;
-                    renderTable(true);
-                }
-            };
-            pagination.appendChild(prevButton);
-
-            for (let i = 1; i <= pageCount; i++) {
-                const pageButton = document.createElement('button');
-                pageButton.textContent = i;
-                if (i === currentPage) pageButton.classList.add('active');
-                pageButton.onclick = () => {
-                    currentPage = i;
-                    renderTable(true);
-                };
-                pagination.appendChild(pageButton);
-            }
-
-            const nextButton = document.createElement('button');
-            nextButton.textContent = 'Next';
-            nextButton.classList.add('disabled');
-            if (currentPage < pageCount) nextButton.classList.remove('disabled');
-            nextButton.onclick = () => {
-                if (currentPage < pageCount) {
-                    currentPage++;
-                    renderTable(true);
-                }
-            };
-            pagination.appendChild(nextButton);
         }
 
         function toggleSelectAll() {
@@ -847,28 +697,32 @@ body {
         }
 
         function markAllPresent() {
-            if (!current_class_id) return;
+            const gradeLevelFilter = gradeLevelSelector.value;
+            const classFilter = classSelector.value;
+            const sectionFilter = sectionSelector.value;
             const statusFilter = statusSelector.value;
             const searchQuery = searchInput.value.toLowerCase();
-            const filteredStudents = (students_by_class[current_class_id] || []).filter(s => {
-                const att = attendanceData[today][current_class_id][s.lrn] || {status: ''};
-                const matchesStatus = statusFilter ? att.status === statusFilter : true;
+            const filteredStudents = students.filter(s => {
+                const matchesGradeLevel = gradeLevelFilter ? s.gradeLevel === gradeLevelFilter : true;
+                const matchesClass = classFilter ? s.subject === classFilter : true;
+                const matchesSection = sectionFilter ? s.section === sectionFilter : true;
+                const matchesStatus = statusFilter ? attendanceData[today][s.id].status === statusFilter : true;
                 const matchesSearch = searchQuery ? 
-                    s.lrn.toString().includes(searchQuery) || 
+                    s.id.toString().includes(searchQuery) || 
                     s.name.toLowerCase().includes(searchQuery) : true;
-                return matchesStatus && matchesSearch;
+                return matchesGradeLevel && matchesClass && matchesSection && matchesStatus && matchesSearch;
             });
 
             filteredStudents.forEach(student => {
-                attendanceData[today][current_class_id][student.lrn].status = 'Present';
-                attendanceData[today][current_class_id][student.lrn].notes = '';
-                attendanceData[today][current_class_id][student.lrn].timeChecked = formatDateTime(new Date());
+                attendanceData[today][student.id].status = 'Present';
+                attendanceData[today][student.id].notes = '';
+                attendanceData[today][student.id].timeChecked = formatDateTime(new Date());
+                attendanceData[today][student.id].attendanceRate = 90;
             });
             renderTable();
         }
 
         function applyBulkAction() {
-            if (!current_class_id) return;
             const action = document.getElementById('bulk-action-select').value;
             if (!action) {
                 showNotification('Please select a bulk action.', 'error');
@@ -881,38 +735,28 @@ body {
             }
             selected.forEach(checkbox => {
                 const studentId = checkbox.dataset.id;
-                attendanceData[today][current_class_id][studentId].status = action;
-                attendanceData[today][current_class_id][studentId].notes = (action === 'Present') ? '' : attendanceData[today][current_class_id][studentId].notes;
-                attendanceData[today][current_class_id][studentId].timeChecked = (action === 'Present') ? formatDateTime(new Date()) : '';
+                attendanceData[today][studentId].status = action;
+                attendanceData[today][studentId].notes = (action === 'Present') ? '' : '';
+                attendanceData[today][studentId].timeChecked = (action === 'Present') ? formatDateTime(new Date()) : '';
+                attendanceData[today][studentId].attendanceRate = 90;
             });
             renderTable();
         }
 
         function submitAttendance() {
-            if (!current_class_id) return;
-            const data = attendanceData[today][current_class_id];
-            const hasInvalidEntries = Object.values(data).some(att => (att.status === 'Absent' || att.status === 'Late') && !att.notes);
+            const hasInvalidEntries = Object.keys(attendanceData[today]).some(studentId => {
+                const { status, notes } = attendanceData[today][studentId];
+                return (status === 'Absent' || status === 'Late') && !notes;
+            });
             if (hasInvalidEntries) {
                 showNotification('Please provide a reason for all Absent or Late statuses before submitting.', 'error');
                 return;
             }
-            fetch('', {  // Post to self
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({class_id: current_class_id, date: today, attendance: data})
-            }).then(res => res.json()).then(result => {
-                if (result.success) {
-                    showNotification('Attendance submitted successfully.', 'success');
-                } else {
-                    showNotification('Failed to submit attendance.', 'error');
-                }
-            }).catch(err => {
-                showNotification('Error: ' + err.message, 'error');
-            });
+            console.log('Submitted Attendance:', attendanceData[today]);
+            showNotification('Attendance submitted successfully.', 'success');
         }
 
         function startQRScanner() {
-            if (!current_class_id) return;
             const qrScanner = document.getElementById('qr-scanner');
             const video = document.getElementById('qr-video');
             const canvasElement = document.getElementById('qr-canvas');
@@ -945,20 +789,21 @@ body {
 
                     if (code) {
                         const lrn = code.data;
-                        const student = (students_by_class[current_class_id] || []).find(s => s.lrn.toString() === lrn);
+                        const student = students.find(s => s.id.toString() === lrn);
                         if (student) {
                             if (scannedStudents.has(lrn)) {
                                 showNotification(`Student ${student.name} already scanned today.`, 'error');
                             } else {
-                                attendanceData[today][current_class_id][lrn].status = 'Present';
-                                attendanceData[today][current_class_id][lrn].notes = '';
-                                attendanceData[today][current_class_id][lrn].timeChecked = formatDateTime(new Date());
+                                attendanceData[today][lrn].status = 'Present';
+                                attendanceData[today][lrn].notes = '';
+                                attendanceData[today][lrn].timeChecked = formatDateTime(new Date());
+                                attendanceData[today][lrn].attendanceRate = 90;
                                 scannedStudents.add(lrn);
                                 showNotification(`Student ${student.name} marked as Present.`, 'success');
-                                renderTable(true);
+                                renderTable();
                             }
                         } else {
-                            showNotification('Invalid LRN for this class.', 'error');
+                            showNotification('Invalid LRN.', 'error');
                         }
                     }
                 }
@@ -978,9 +823,12 @@ body {
 
         function clearFilters() {
             document.getElementById('searchInput').value = '';
-            document.getElementById('date-selector').value = '<?php echo date('Y-m-d'); ?>';
-            populateGradeLevels();
-            today = '<?php echo date('Y-m-d'); ?>';
+            document.getElementById('date-selector').value = '2025-08-21';
+            document.getElementById('gradeLevelSelector').value = '';
+            document.getElementById('classSelector').value = '';
+            document.getElementById('sectionSelector').value = '';
+            document.getElementById('statusSelector').value = '';
+            today = '2025-08-21';
             renderTable();
         }
 
@@ -993,29 +841,24 @@ body {
         const selectAllCheckbox = document.getElementById('select-all');
         const searchInput = document.getElementById('searchInput');
 
-        gradeLevelSelector.addEventListener('change', () => {
-            const gradeLevel = gradeLevelSelector.value;
-            populateSections(gradeLevel);
-            renderTable();
-        });
-
-        sectionSelector.addEventListener('change', () => {
-            const gradeLevel = gradeLevelSelector.value;
-            const section = sectionSelector.value;
-            populateSubjects(gradeLevel, section);
-            renderTable();
-        });
-
-        classSelector.addEventListener('change', renderTable);
-        statusSelector.addEventListener('change', renderTable);
-        searchInput.addEventListener('input', renderTable);
         dateSelector.addEventListener('change', () => {
             today = dateSelector.value;
+            if (!attendanceData[today]) {
+                attendanceData[today] = {};
+                students.forEach(student => {
+                    attendanceData[today][student.id] = { status: '', notes: '', timeChecked: '', attendanceRate: 90 };
+                });
+            }
             renderTable();
         });
+        gradeLevelSelector.addEventListener('change', renderTable);
+        classSelector.addEventListener('change', renderTable);
+        sectionSelector.addEventListener('change', renderTable);
+        statusSelector.addEventListener('change', renderTable);
+        searchInput.addEventListener('input', renderTable);
 
         document.addEventListener('DOMContentLoaded', () => {
-            populateGradeLevels();
+            populateDropdowns();
             renderTable();
         });
     </script>

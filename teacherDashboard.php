@@ -494,8 +494,25 @@ $profileName = htmlspecialchars($currentUser['firstname'] . ' ' . $currentUser['
             width: 100%;
             height: 100%;
             border: none;
-            overflow: hidden;
+            /* overflow: hidden; */
         }
+
+
+@media (max-width: 1023px) {
+    .main-content {
+        margin-left: 0;
+    }
+}
+
+@media (max-width: 767px) {
+    .main-content {
+        padding: 0;
+    }
+
+    .dashboard-body, #dashboard-frame {
+        height: 100%;
+    }
+}
 
         /* Notification Modal */
         .notification-modal {
@@ -1276,8 +1293,9 @@ $profileName = htmlspecialchars($currentUser['firstname'] . ' ' . $currentUser['
         const iframe = document.getElementById('dashboard-frame');
         if (iframe) {
             iframe.onload = () => {
-                iframe.style.height = iframe.contentWindow.document.body.scrollHeight + 'px';
-            };
+    const contentHeight = iframe.contentWindow.document.body.scrollHeight;
+    iframe.style.height = Math.max(contentHeight, window.innerHeight - 70) + 'px';
+};
         }
     </script>
 </body>

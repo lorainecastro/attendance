@@ -202,7 +202,11 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action']) && $_POST['a
             $y = $y_start + $row * ($card_height + $y_spacing);
 
             // Card Background (Gradient)
-            $pdf->LinearGradient($x, $y, $card_width, $card_height, 
+            $pdf->LinearGradient(
+                $x,
+                $y,
+                $card_width,
+                $card_height,
                 array(248, 249, 250), // #f8f9fa
                 array(233, 236, 239), // #e9ecef
                 array(0, 0, $card_width, $card_height)
@@ -218,7 +222,11 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action']) && $_POST['a
 
             // Header Section
             $header_height = 10;
-            $pdf->LinearGradient($x + 0.5, $y + 0.5, $card_width - 1, $header_height, 
+            $pdf->LinearGradient(
+                $x + 0.5,
+                $y + 0.5,
+                $card_width - 1,
+                $header_height,
                 array(52, 152, 219), // #3498db
                 array(41, 128, 185), // #2980b9
                 array(0, 0, 0, $header_height)
@@ -245,7 +253,11 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action']) && $_POST['a
 
             // Decorative Line
             $line_y = $qr_y + $qr_size + 2.5;
-            $pdf->LinearGradient($x + 2.5, $line_y, $card_width - 5, $line_y, 
+            $pdf->LinearGradient(
+                $x + 2.5,
+                $line_y,
+                $card_width - 5,
+                $line_y,
                 array(255, 255, 255), // Transparent
                 array(52, 152, 219), // #3498db
                 array(0, 0, $card_width - 5, 0)
@@ -2562,56 +2574,62 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
             const end = start + rowsPerPage;
             const paginatedData = data.slice(start, end);
 
-            console.log('Rendering table with paginated data:', paginatedData.map(s => ({ lrn: s.lrn, class_id: s.class_id })));
+            console.log('Rendering table with paginated data:', paginatedData.map(s => ({
+                lrn: s.lrn,
+                class_id: s.class_id
+            })));
 
             paginatedData.forEach(student => {
-                console.log('Rendering student:', { lrn: student.lrn, class_id: student.class_id });
+                console.log('Rendering student:', {
+                    lrn: student.lrn,
+                    class_id: student.class_id
+                });
                 const row = document.createElement('tr');
                 const qrCodeId = `qr-${student.lrn}-${student.class_id}`;
                 row.innerHTML = `
-            <td><input type="checkbox" class="row-checkbox" data-id="${student.lrn}" data-class-id="${student.class_id}"></td>
-            <td><img src="${student.photo ? 'uploads/' + student.photo : 'uploads/no-icon.png'}" alt="${student.fullName}" style="width: 45px; height: 45px; border-radius: 50%;"></td>
-            <td><div id="${qrCodeId}" style="width: 45px; height: 45px;"></div></td>
-            <td>${student.lrn}</td>
-            <td>${student.fullName}</td>
-            <td>${student.gradeLevel}</td>
-            <td>${student.class}</td>
-            <td>${student.section}</td>
-            <td>
-                <div class="actions">
-                    <button class="btn btn-primary btn-sm" onclick="openProfileModal('view', '${student.lrn}')">
-                        <i class="fas fa-eye"></i>
-                    </button>
-                    <button class="btn btn-primary btn-sm" onclick="openProfileModal('edit', '${student.lrn}')">
-                        <i class="fas fa-edit"></i>
-                    </button>
-                    <button class="btn btn-danger btn-sm" onclick="deleteStudent('${student.lrn}', '${student.class_id}')">
-                        <i class="fas fa-trash"></i>
-                    </button>
-                </div>
-            </td>
-        `;
+                    <td><input type="checkbox" class="row-checkbox" data-id="${student.lrn}" data-class-id="${student.class_id}"></td>
+                    <td><img src="${student.photo ? 'uploads/' + student.photo : 'uploads/no-icon.png'}" alt="${student.fullName}" style="width: 45px; height: 45px; border-radius: 50%;"></td>
+                    <td><div id="${qrCodeId}" style="width: 45px; height: 45px;"></div></td>
+                    <td>${student.lrn}</td>
+                    <td>${student.fullName}</td>
+                    <td>${student.gradeLevel}</td>
+                    <td>${student.class}</td>
+                    <td>${student.section}</td>
+                    <td>
+                        <div class="actions">
+                            <button class="btn btn-primary btn-sm" onclick="openProfileModal('view', '${student.lrn}')">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                            <button class="btn btn-primary btn-sm" onclick="openProfileModal('edit', '${student.lrn}')">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="btn btn-danger btn-sm" onclick="deleteStudent('${student.lrn}', '${student.class_id}')">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </td>
+                `;
                 studentTableBody.appendChild(row);
 
                 const qrFile = student.qr_code || `${student.lrn}.png`;
                 fetch('', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded'
-                    },
-                    body: `action=checkQR&lrn=${encodeURIComponent(student.lrn)}`
-                })
-                .then(res => res.json())
-                .then(data => {
-                    document.getElementById(qrCodeId).innerHTML = data.exists 
-                        ? `<img src="qrcodes/${qrFile}" width="45" height="45">` 
-                        : 'No QR';
-                })
-                .catch(error => {
-                    console.error('Check QR error:', error);
-                    document.getElementById(qrCodeId).innerHTML = 'Error';
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded'
+                        },
+                        body: `action=checkQR&lrn=${encodeURIComponent(student.lrn)}`
+                    })
+                    .then(res => res.json())
+                    .then(data => {
+                        document.getElementById(qrCodeId).innerHTML = data.exists ?
+                            `<img src="qrcodes/${qrFile}" width="45" height="45">` :
+                            'No QR';
+                    })
+                    .catch(error => {
+                        console.error('Check QR error:', error);
+                        document.getElementById(qrCodeId).innerHTML = 'Error';
+                    });
                 });
-            });
 
             // Set checkbox states based on allSelectedStudents set
 
@@ -2643,7 +2661,7 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
             updateBulkActions();
             updateHeaderCheckboxes();
         }
-        
+
         function bulkPrintQR() {
             console.log('allSelectedStudents:', Array.from(allSelectedStudents));
             if (allSelectedStudents.size === 0) {
@@ -2656,7 +2674,10 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
             console.log('selectedLRNs:', selectedLRNs);
             const studentsToPrint = students.filter(s => selectedLRNs.includes(String(s.lrn))).map(student => {
                 const qrFile = student.qr_code || `${student.lrn}.png`;
-                return { lrn: student.lrn, qr_code: qrFile };
+                return {
+                    lrn: student.lrn,
+                    qr_code: qrFile
+                };
             });
             console.log('studentsToPrint:', studentsToPrint);
 
@@ -2666,51 +2687,51 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
             printBtn.disabled = true;
 
             fetch('', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded'
-                },
-                body: `action=bulkPrintQR&students=${encodeURIComponent(JSON.stringify(studentsToPrint))}`
-            })
-            .then(res => {
-                if (!res.ok) {
-                    return res.text().then(text => {
-                        console.error('Non-JSON response:', text);
-                        throw new Error(`HTTP error! Status: ${res.status}`);
-                    });
-                }
-                return res.json();
-            })
-            .then(data => {
-                console.log('Server response:', data);
-                if (data.success) {
-                    const downloadLink = document.createElement('a');
-                    downloadLink.href = `exports/${data.filename}`;
-                    downloadLink.download = data.filename;
-                    downloadLink.style.display = 'none';
-                    document.body.appendChild(downloadLink);
-                    downloadLink.click();
-                    document.body.removeChild(downloadLink);
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded'
+                    },
+                    body: `action=bulkPrintQR&students=${encodeURIComponent(JSON.stringify(studentsToPrint))}`
+                })
+                .then(res => {
+                    if (!res.ok) {
+                        return res.text().then(text => {
+                            console.error('Non-JSON response:', text);
+                            throw new Error(`HTTP error! Status: ${res.status}`);
+                        });
+                    }
+                    return res.json();
+                })
+                .then(data => {
+                    console.log('Server response:', data);
+                    if (data.success) {
+                        const downloadLink = document.createElement('a');
+                        downloadLink.href = `exports/${data.filename}`;
+                        downloadLink.download = data.filename;
+                        downloadLink.style.display = 'none';
+                        document.body.appendChild(downloadLink);
+                        downloadLink.click();
+                        document.body.removeChild(downloadLink);
 
-                    alert(`✅ QR ID Cards PDF generated successfully!\n` +
-                        `📄 Generated ${data.cards_count} ID cards\n` +
-                        `📁 File: ${data.filename}\n\n` +
-                        `📏 Layout: 4×3 cards per US Letter page (12 cards/page)\n` +
-                        `📐 Card size: 2.125" × 3.375" (standard ID card size)`);
-                } else {
-                    alert('❌ ' + (data.message || 'Failed to generate QR ID Cards PDF'));
-                }
-            })
-            .catch(error => {
-                console.error('QR Print error:', error);
-                alert('❌ An error occurred while generating the QR ID Cards PDF. Please check the console for details.');
-            })
-            .finally(() => {
-                printBtn.innerHTML = originalText;
-                printBtn.disabled = allSelectedStudents.size === 0;
-            });
+                        alert(`✅ QR ID Cards PDF generated successfully!\n` +
+                            `📄 Generated ${data.cards_count} ID cards\n` +
+                            `📁 File: ${data.filename}\n\n` +
+                            `📏 Layout: 4×3 cards per US Letter page (12 cards/page)\n` +
+                            `📐 Card size: 2.125" × 3.375" (standard ID card size)`);
+                    } else {
+                        alert('❌ ' + (data.message || 'Failed to generate QR ID Cards PDF'));
+                    }
+                })
+                .catch(error => {
+                    console.error('QR Print error:', error);
+                    alert('❌ An error occurred while generating the QR ID Cards PDF. Please check the console for details.');
+                })
+                .finally(() => {
+                    printBtn.innerHTML = originalText;
+                    printBtn.disabled = allSelectedStudents.size === 0;
+                });
         }
-        
+
         // Render pagination
         function renderPagination(totalRows) {
             const pageCount = Math.ceil(totalRows / rowsPerPage);
@@ -2884,7 +2905,7 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
                     exportBtn.innerHTML = originalText;
                     exportBtn.disabled = false;
                 });
-        }
+            }
 
 
         // Modified bulk delete function
@@ -3255,28 +3276,28 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
         function printQRCode() {
             const qrImg = document.querySelector('#qr-code img');
             if (!qrImg) return;
-            
+
             // Get student data from the form
             const lrn = document.getElementById('student-id').value;
             const firstName = document.getElementById('first-name').value;
             const middleName = document.getElementById('middle-name').value;
             const lastName = document.getElementById('last-name').value;
             const fullName = `${lastName}, ${firstName} ${middleName}`;
-            
+
             // Create a canvas to generate the ID card image
             const canvas = document.createElement('canvas');
             const ctx = canvas.getContext('2d');
-            
+
             // ID card dimensions (portrait - 2.125" x 3.375" at 300 DPI)
-            const cardWidth = 638;   // 2.125 * 300
+            const cardWidth = 638; // 2.125 * 300
             const cardHeight = 1012; // 3.375 * 300
             canvas.width = cardWidth;
             canvas.height = cardHeight;
-            
+
             // Create image object for QR code
             const qrImage = new Image();
             qrImage.crossOrigin = 'anonymous';
-            
+
             qrImage.onload = function() {
                 // Create gradient background
                 const gradient = ctx.createLinearGradient(0, 0, 0, cardHeight);
@@ -3286,17 +3307,17 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
                 gradient.addColorStop(1, '#e9ecef');
                 ctx.fillStyle = gradient;
                 ctx.fillRect(0, 0, cardWidth, cardHeight);
-                
+
                 // Add elegant border with rounded corners effect
                 ctx.strokeStyle = '#000000';
                 ctx.lineWidth = 3;
                 ctx.strokeRect(15, 15, cardWidth - 30, cardHeight - 30);
-                
+
                 // Add inner shadow effect
                 ctx.strokeStyle = '#bdc3c7';
                 ctx.lineWidth = 1;
                 ctx.strokeRect(18, 18, cardWidth - 36, cardHeight - 36);
-                
+
                 // Add header section with subtle background
                 const headerHeight = 80;
                 const headerGradient = ctx.createLinearGradient(0, 20, 0, headerHeight + 20);
@@ -3304,13 +3325,13 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
                 headerGradient.addColorStop(1, '#2980b9');
                 ctx.fillStyle = headerGradient;
                 ctx.fillRect(25, 25, cardWidth - 50, headerHeight);
-                
+
                 // Add header text
                 ctx.fillStyle = '#ffffff';
                 ctx.font = 'bold 28px Arial';
                 ctx.textAlign = 'center';
                 ctx.fillText('SAMS', cardWidth / 2, 75);
-                
+
                 // Calculate QR code size with 10px padding (QR occupies full width minus padding)
                 const cardPadding = 25; // Card border padding
                 const qrPadding = 10; // QR code padding
@@ -3318,18 +3339,18 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
                 const qrSize = availableWidth;
                 const qrX = cardPadding + qrPadding;
                 const qrY = headerHeight + 50;
-                
+
                 // Add QR code background with shadow effect
                 ctx.fillStyle = 'rgba(0, 0, 0, 0.1)';
                 ctx.fillRect(qrX - 5, qrY - 5, qrSize + 10, qrSize + 10);
-                
+
                 // Add white background for QR code
                 ctx.fillStyle = '#ffffff';
                 ctx.fillRect(qrX, qrY, qrSize, qrSize);
-                
+
                 // Draw QR code
                 ctx.drawImage(qrImage, qrX, qrY, qrSize, qrSize);
-                
+
                 // Add decorative line below QR code
                 const lineY = qrY + qrSize + 30;
                 const lineGradient = ctx.createLinearGradient(50, lineY, cardWidth - 50, lineY);
@@ -3343,39 +3364,39 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
                 ctx.moveTo(50, lineY);
                 ctx.lineTo(cardWidth - 50, lineY);
                 ctx.stroke();
-                
+
                 // Set font for LRN with enhanced styling
                 ctx.fillStyle = '#000000';
                 ctx.font = 'bold 32px Arial';
                 ctx.textAlign = 'center';
-                
+
                 // Add LRN with subtle background
                 const lrnText = `LRN: ${lrn}`;
                 const lrnY = lineY + 60;
-                
+
                 // Add text shadow effect for LRN
                 ctx.fillStyle = 'rgba(0, 0, 0, 0.1)';
                 ctx.fillText(lrnText, cardWidth / 2 + 2, lrnY + 2);
                 ctx.fillStyle = '#000000';
                 ctx.fillText(lrnText, cardWidth / 2, lrnY);
-                
+
                 // Set font for Full Name with better styling
                 const nameLength = fullName.length;
                 let fontSize = nameLength > 30 ? 22 : nameLength > 25 ? 26 : nameLength > 20 ? 28 : 30;
                 ctx.font = `bold ${fontSize}px Arial`;
                 ctx.fillStyle = '#000000';
-                
+
                 // Handle long names by wrapping text
                 const maxWidth = cardWidth - 80;
                 const words = fullName.split(' ');
                 let line = '';
                 let lines = [];
-                
+
                 for (let i = 0; i < words.length; i++) {
                     const testLine = line + words[i] + ' ';
                     const metrics = ctx.measureText(testLine);
                     const testWidth = metrics.width;
-                    
+
                     if (testWidth > maxWidth && i > 0) {
                         lines.push(line.trim());
                         line = words[i] + ' ';
@@ -3384,11 +3405,11 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
                     }
                 }
                 lines.push(line.trim());
-                
+
                 // Draw full name with enhanced styling
                 const nameStartY = lrnY + 70;
                 const lineHeight = fontSize + 10;
-                
+
                 lines.forEach((line, index) => {
                     // Add text shadow for name
                     ctx.fillStyle = 'rgba(0, 0, 0, 0.1)';
@@ -3396,7 +3417,7 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
                     ctx.fillStyle = '#000000';
                     ctx.fillText(line, cardWidth / 2, nameStartY + (index * lineHeight));
                 });
-                
+
                 // Add footer decoration
                 const footerY = cardHeight - 60;
                 ctx.strokeStyle = '#bdc3c7';
@@ -3405,7 +3426,7 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
                 ctx.moveTo(80, footerY);
                 ctx.lineTo(cardWidth - 80, footerY);
                 ctx.stroke();
-                
+
                 // Add small decorative elements (dots)
                 ctx.fillStyle = '#3498db';
                 for (let i = 0; i < 5; i++) {
@@ -3414,36 +3435,36 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
                     ctx.arc(dotX, footerY + 15, 3, 0, Math.PI * 2);
                     ctx.fill();
                 }
-                
+
                 // Convert canvas to blob and automatically download
                 canvas.toBlob(function(blob) {
                     // Create download link
                     const downloadLink = document.createElement('a');
                     const url = URL.createObjectURL(blob);
-                    
+
                     // Set download attributes
                     downloadLink.href = url;
                     downloadLink.download = `QR_ID_${lrn}_${lastName}_${firstName}_${middleName}.png`;
                     downloadLink.style.display = 'none';
-                    
+
                     // Append to body, click, and remove
                     document.body.appendChild(downloadLink);
                     downloadLink.click();
                     document.body.removeChild(downloadLink);
-                    
+
                     // Clean up the URL object
                     URL.revokeObjectURL(url);
-                    
+
                     // Show success message with enhanced styling
                     const successMsg = `✅ QR ID card generated successfully!\nFile: QR_ID_${lrn}_${lastName}_${firstName}_${middleName}.png`;
                     alert(successMsg);
                 }, 'image/png', 1.0);
             };
-            
+
             qrImage.onerror = function() {
                 alert('❌ Error loading QR code image. Please make sure the QR code is generated first.');
             };
-            
+
             // Load the QR image
             qrImage.src = qrImg.src;
         }

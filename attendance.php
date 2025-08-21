@@ -351,15 +351,15 @@
                 <input type="text" class="form-input search-input" id="searchInput" placeholder="Search by LRN or Name">
                 <i class="fas fa-search search-icon"></i>
             </div>
-            <input type="date" class="selector-input" id="date-selector" value="2025-07-23" min="2025-06-01" max="2025-07-23">
+            <input type="date" class="selector-input" id="date-selector" value="2025-08-21" max="2025-08-21">
             <select class="selector-select" id="gradeLevelSelector">
                 <option value="">All Grade Levels</option>
             </select>
-            <select class="selector-select" id="classSelector">
-                <option value="">All Subjects</option>
-            </select>
             <select class="selector-select" id="sectionSelector">
                 <option value="">All Sections</option>
+            </select>
+            <select class="selector-select" id="classSelector">
+                <option value="">All Subjects</option>
             </select>
             <select class="selector-select" id="statusSelector">
                 <option value="">All Statuses</option>
@@ -496,7 +496,7 @@
         })));
 
         let attendanceData = {};
-        let today = '2025-07-23';
+        let today = '2025-08-21';
         let videoStream = null;
         let scannedStudents = new Set();
 
@@ -632,12 +632,23 @@
                 select.addEventListener('change', () => {
                     const studentId = select.dataset.id;
                     const newStatus = select.value;
-                    attendanceData[today][studentId].status = newStatus;
-                    attendanceData[today][studentId].timeChecked = newStatus ? formatDateTime(new Date()) : '';
                     const notesSelect = tableBody.querySelector(`.notes-select[data-id="${studentId}"]`);
+                    attendanceData[today][studentId].status = newStatus;
                     notesSelect.disabled = newStatus === 'Present';
                     if (newStatus === 'Present') {
                         attendanceData[today][studentId].notes = '';
+                        attendanceData[today][studentId].timeChecked = formatDateTime(new Date());
+                        notesSelect.value = '';
+                    } else if (newStatus === 'Absent' || newStatus === 'Late') {
+                        if (!attendanceData[today][studentId].notes) {
+                            showNotification('Please select a reason for Absent or Late status.', 'error');
+                            attendanceData[today][studentId].timeChecked = '';
+                        } else {
+                            attendanceData[today][studentId].timeChecked = formatDateTime(new Date());
+                        }
+                    } else {
+                        attendanceData[today][studentId].notes = '';
+                        attendanceData[today][studentId].timeChecked = '';
                         notesSelect.value = '';
                     }
                     select.classList.remove('present', 'absent', 'late', 'none');
@@ -650,8 +661,13 @@
             document.querySelectorAll('.notes-select').forEach(select => {
                 select.addEventListener('change', () => {
                     const studentId = select.dataset.id;
-                    attendanceData[today][studentId].notes = select.value;
-                    attendanceData[today][studentId].timeChecked = formatDateTime(new Date());
+                    const newNotes = select.value;
+                    attendanceData[today][studentId].notes = newNotes;
+                    if ((attendanceData[today][studentId].status === 'Absent' || attendanceData[today][studentId].status === 'Late') && newNotes) {
+                        attendanceData[today][studentId].timeChecked = formatDateTime(new Date());
+                    } else {
+                        attendanceData[today][studentId].timeChecked = '';
+                    }
                     renderTable();
                 });
             });
@@ -699,17 +715,29 @@
                 return;
             }
             const selected = document.querySelectorAll('.select-student:checked');
+            if ((action === 'Absent' || action === 'Late') && selected.length > 0) {
+                showNotification('Please select a reason for each student marked as Absent or Late.', 'error');
+                return;
+            }
             selected.forEach(checkbox => {
                 const studentId = checkbox.dataset.id;
                 attendanceData[today][studentId].status = action;
-                attendanceData[today][studentId].notes = (action === 'Present') ? '' : 'No Reason';
-                attendanceData[today][studentId].timeChecked = formatDateTime(new Date());
+                attendanceData[today][studentId].notes = (action === 'Present') ? '' : '';
+                attendanceData[today][studentId].timeChecked = (action === 'Present') ? formatDateTime(new Date()) : '';
                 attendanceData[today][studentId].attendanceRate = 90;
             });
             renderTable();
         }
 
         function submitAttendance() {
+            const hasInvalidEntries = Object.keys(attendanceData[today]).some(studentId => {
+                const { status, notes } = attendanceData[today][studentId];
+                return (status === 'Absent' || status === 'Late') && !notes;
+            });
+            if (hasInvalidEntries) {
+                showNotification('Please provide a reason for all Absent or Late statuses before submitting.', 'error');
+                return;
+            }
             console.log('Submitted Attendance:', attendanceData[today]);
             showNotification('Attendance submitted successfully.', 'success');
         }
@@ -781,12 +809,12 @@
 
         function clearFilters() {
             document.getElementById('searchInput').value = '';
-            document.getElementById('date-selector').value = '2025-07-23';
+            document.getElementById('date-selector').value = '2025-08-21';
             document.getElementById('gradeLevelSelector').value = '';
             document.getElementById('classSelector').value = '';
             document.getElementById('sectionSelector').value = '';
             document.getElementById('statusSelector').value = '';
-            today = '2025-07-23';
+            today = '2025-08-21';
             renderTable();
         }
 

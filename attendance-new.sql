@@ -92,6 +92,7 @@ CREATE TABLE Attendance (
     attendance_status  ENUM('Present', 'Absent', 'Late') NULL,
     reason ENUM('Health Issue', 'Household Income', 'Transportation', 'Family Structure', 'No Reason', 'Other') NULL,
     time_checked DATETIME,
+    logged_by ENUM('Teacher', 'QR') NULL,
     FOREIGN KEY (lrn) REFERENCES students(lrn),
     FOREIGN KEY (class_id) REFERENCES classes(class_id)
 );

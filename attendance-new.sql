@@ -84,7 +84,7 @@ CREATE TABLE class_students (
     FOREIGN KEY (lrn) REFERENCES students(lrn)
 );
 
-CREATE TABLE Attendance (
+CREATE TABLE attendance_tracking (
     attendance_id INT PRIMARY KEY AUTO_INCREMENT,
     class_id INT NOT NULL,
     lrn BIGINT NOT NULL,

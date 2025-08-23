@@ -706,6 +706,9 @@ body {
                 return matchesStatus && matchesSearch;
             });
 
+            // Sort students by name (which is in "Lastname, Firstname Middlename" format)
+            filteredStudents.sort((a, b) => a.name.localeCompare(b.name));
+
             if (filteredStudents.length === 0) {
                 tableBody.innerHTML = '<tr><td colspan="8" class="no-students-message">No students match the current filters</td></tr>';
                 updateStats([]);

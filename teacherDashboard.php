@@ -1096,7 +1096,7 @@ $profileName = htmlspecialchars($currentUser['firstname'] . ' ' . $currentUser['
                             pageFile = 'profile.php';
                             break;
                         case 8:
-                            pageFile = 'support.php';
+                            pageFile = 'help-support.php';
                             break;
                         case 9:
                             if (confirm('Are you sure you want to log out?')) {

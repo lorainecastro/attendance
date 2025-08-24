@@ -561,6 +561,7 @@ body {
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+    
     <script>
         const classes = <?php echo json_encode($classes_fetch); ?>;
         const students_by_class = <?php echo json_encode($students_by_class); ?>;
@@ -661,6 +662,10 @@ body {
         }
 
         function renderTable(isPagination = false) {
+            // Preserve bulk action selection
+            const bulkActionSelect = document.getElementById('bulk-action-select');
+            const selectedBulkAction = bulkActionSelect.value;
+
             if (!isPagination) currentPage = 1;
             const tableBody = document.querySelector('#attendance-table tbody');
             tableBody.innerHTML = '';
@@ -764,6 +769,9 @@ body {
                 `;
                 tableBody.appendChild(row);
             });
+
+            // Restore bulk action selection
+            bulkActionSelect.value = selectedBulkAction;
 
             document.querySelectorAll('.status-select').forEach(select => {
                 select.addEventListener('change', () => {
@@ -888,8 +896,8 @@ body {
                 return;
             }
             const selected = document.querySelectorAll('.select-student:checked');
-            if ((action === 'Absent' || action === 'Late') && selected.length > 0) {
-                showNotification('Please select a reason for each student marked as Absent or Late.', 'error');
+            if (selected.length === 0) {
+                showNotification('Please select at least one student.', 'error');
                 return;
             }
             selected.forEach(checkbox => {
@@ -898,7 +906,10 @@ body {
                 attendanceData[today][current_class_id][studentId].notes = (action === 'Present') ? '' : attendanceData[today][current_class_id][studentId].notes;
                 attendanceData[today][current_class_id][studentId].timeChecked = (action === 'Present') ? formatDateTime(new Date()) : '';
             });
-            renderTable();
+            if (action === 'Absent' || action === 'Late') {
+                showNotification('Please select a reason for each student marked as Absent or Late.', 'error');
+            }
+            renderTable(true);
         }
 
         function submitAttendance() {
@@ -909,7 +920,7 @@ body {
                 showNotification('Please provide a reason for all Absent or Late statuses before submitting.', 'error');
                 return;
             }
-            fetch('', {  // Post to self
+            fetch('', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({class_id: current_class_id, date: today, attendance: data})

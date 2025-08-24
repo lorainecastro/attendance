@@ -569,6 +569,7 @@ body {
         let today = document.getElementById('date-selector').value;
         let videoStream = null;
         let scannedStudents = new Set();
+        let selectedStudents = new Set(); // Track selected student LRNs as strings
         let current_class_id = null;
         let currentPage = 1;
         const rowsPerPage = 5;
@@ -661,6 +662,44 @@ body {
             return date.toLocaleString('en-US', options).replace(',', '');
         }
 
+        // Get all filtered students (used for select all functionality)
+        function getAllFilteredStudents() {
+            const gradeLevelFilter = gradeLevelSelector.value;
+            const sectionFilter = sectionSelector.value;
+            const subjectFilter = classSelector.value;
+
+            if (!gradeLevelFilter || !sectionFilter || !subjectFilter || !current_class_id) {
+                return [];
+            }
+
+            const current_students = students_by_class[current_class_id] || [];
+            const statusFilter = statusSelector.value;
+            const searchQuery = searchInput.value.toLowerCase();
+            
+            return current_students.filter(s => {
+                const att = attendanceData[today][current_class_id][s.lrn] || {status: ''};
+                const matchesStatus = statusFilter ? att.status === statusFilter : true;
+                const matchesSearch = searchQuery ? 
+                    s.lrn.toString().includes(searchQuery) || 
+                    s.name.toLowerCase().includes(searchQuery) : true;
+                return matchesStatus && matchesSearch;
+            }).sort((a, b) => a.name.localeCompare(b.name));
+        }
+
+        // Update the select-all checkbox state based on all filtered students
+        function updateSelectAllState() {
+            const allFilteredStudents = getAllFilteredStudents();
+            const allSelected = allFilteredStudents.length > 0 && 
+                allFilteredStudents.every(student => selectedStudents.has(student.lrn.toString()));
+            
+            const selectAllCheckbox = document.getElementById('select-all');
+            selectAllCheckbox.checked = allSelected;
+            
+            // Set indeterminate state if some but not all are selected
+            const someSelected = allFilteredStudents.some(student => selectedStudents.has(student.lrn.toString()));
+            selectAllCheckbox.indeterminate = someSelected && !allSelected;
+        }
+
         function renderTable(isPagination = false) {
             // Preserve bulk action selection
             const bulkActionSelect = document.getElementById('bulk-action-select');
@@ -676,6 +715,9 @@ body {
             if (!gradeLevelFilter || !sectionFilter || !subjectFilter) {
                 updateStats([]);
                 current_class_id = null;
+                selectedStudents.clear();
+                document.getElementById('select-all').checked = false;
+                document.getElementById('select-all').indeterminate = false;
                 return;
             }
 
@@ -688,6 +730,9 @@ body {
             if (matchingClasses.length !== 1) {
                 updateStats([]);
                 current_class_id = null;
+                selectedStudents.clear();
+                document.getElementById('select-all').checked = false;
+                document.getElementById('select-all').indeterminate = false;
                 return;
             }
 
@@ -699,6 +744,9 @@ body {
                 tableBody.innerHTML = '<tr><td colspan="8" class="no-students-message">No students for this class</td></tr>';
                 updateStats([]);
                 document.getElementById('pagination').innerHTML = '';
+                selectedStudents.clear();
+                document.getElementById('select-all').checked = false;
+                document.getElementById('select-all').indeterminate = false;
                 return;
             }
 
@@ -710,24 +758,14 @@ body {
                 }
             });
 
-            const statusFilter = statusSelector.value;
-            const searchQuery = searchInput.value.toLowerCase();
-            const filteredStudents = current_students.filter(s => {
-                const att = attendanceData[today][current_class_id][s.lrn] || {status: ''};
-                const matchesStatus = statusFilter ? att.status === statusFilter : true;
-                const matchesSearch = searchQuery ? 
-                    s.lrn.toString().includes(searchQuery) || 
-                    s.name.toLowerCase().includes(searchQuery) : true;
-                return matchesStatus && matchesSearch;
-            });
-
-            // Sort students by name (which is in "Lastname, Firstname Middlename" format)
-            filteredStudents.sort((a, b) => a.name.localeCompare(b.name));
+            const filteredStudents = getAllFilteredStudents();
 
             if (filteredStudents.length === 0) {
                 tableBody.innerHTML = '<tr><td colspan="8" class="no-students-message">No students match the current filters</td></tr>';
                 updateStats([]);
                 document.getElementById('pagination').innerHTML = '';
+                document.getElementById('select-all').checked = false;
+                document.getElementById('select-all').indeterminate = false;
                 return;
             }
 
@@ -739,9 +777,10 @@ body {
                 const att = attendanceData[today][current_class_id][student.lrn];
                 const isNotesDisabled = att.status === 'Present';
                 const statusClass = att.status ? att.status.toLowerCase() : 'none';
+                const isChecked = selectedStudents.has(student.lrn.toString()) ? 'checked' : '';
                 const row = document.createElement('tr');
                 row.innerHTML = `
-                    <td><input type="checkbox" class="select-student" data-id="${student.lrn}"></td>
+                    <td><input type="checkbox" class="select-student" data-id="${student.lrn}" ${isChecked}></td>
                     <td><img src="uploads/${student.photo || 'uploads/no-icon.png'}" class="student-photo" alt="${student.name}"></td>
                     <td>${student.lrn}</td>
                     <td>${student.name}</td>
@@ -773,9 +812,26 @@ body {
             // Restore bulk action selection
             bulkActionSelect.value = selectedBulkAction;
 
+            // Update select-all checkbox state based on all filtered students
+            updateSelectAllState();
+
+            // Add event listeners for checkboxes
+            document.querySelectorAll('.select-student').forEach(checkbox => {
+                checkbox.addEventListener('change', () => {
+                    const studentId = checkbox.dataset.id.toString();
+                    if (checkbox.checked) {
+                        selectedStudents.add(studentId);
+                    } else {
+                        selectedStudents.delete(studentId);
+                    }
+                    updateSelectAllState();
+                    console.log('Updated selectedStudents:', Array.from(selectedStudents));
+                });
+            });
+
             document.querySelectorAll('.status-select').forEach(select => {
                 select.addEventListener('change', () => {
-                    const studentId = select.dataset.id;
+                    const studentId = select.dataset.id.toString();
                     const newStatus = select.value;
                     const notesSelect = tableBody.querySelector(`.notes-select[data-id="${studentId}"]`);
                     attendanceData[today][current_class_id][studentId].status = newStatus;
@@ -805,7 +861,7 @@ body {
 
             document.querySelectorAll('.notes-select').forEach(select => {
                 select.addEventListener('change', () => {
-                    const studentId = select.dataset.id;
+                    const studentId = select.dataset.id.toString();
                     const newNotes = select.value;
                     attendanceData[today][current_class_id][studentId].notes = newNotes;
                     if ((attendanceData[today][current_class_id][studentId].status === 'Absent' || attendanceData[today][current_class_id][studentId].status === 'Late') && newNotes) {
@@ -824,10 +880,12 @@ body {
             pagination.innerHTML = '';
             const pageCount = Math.ceil(filteredStudents.length / rowsPerPage);
 
+            if (pageCount <= 1) return; // Don't show pagination if only one page
+
             const prevButton = document.createElement('button');
             prevButton.textContent = 'Previous';
-            prevButton.classList.add('disabled');
-            if (currentPage > 1) prevButton.classList.remove('disabled');
+            prevButton.classList.add('pagination-btn');
+            if (currentPage <= 1) prevButton.classList.add('disabled');
             prevButton.onclick = () => {
                 if (currentPage > 1) {
                     currentPage--;
@@ -836,9 +894,37 @@ body {
             };
             pagination.appendChild(prevButton);
 
-            for (let i = 1; i <= pageCount; i++) {
+            // Show page numbers (with ellipsis for large page counts)
+            const maxVisiblePages = 5;
+            let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
+            let endPage = Math.min(pageCount, startPage + maxVisiblePages - 1);
+            
+            if (endPage - startPage + 1 < maxVisiblePages) {
+                startPage = Math.max(1, endPage - maxVisiblePages + 1);
+            }
+
+            if (startPage > 1) {
+                const firstPageBtn = document.createElement('button');
+                firstPageBtn.textContent = '1';
+                firstPageBtn.classList.add('pagination-btn');
+                firstPageBtn.onclick = () => {
+                    currentPage = 1;
+                    renderTable(true);
+                };
+                pagination.appendChild(firstPageBtn);
+                
+                if (startPage > 2) {
+                    const ellipsis = document.createElement('span');
+                    ellipsis.textContent = '...';
+                    ellipsis.classList.add('pagination-ellipsis');
+                    pagination.appendChild(ellipsis);
+                }
+            }
+
+            for (let i = startPage; i <= endPage; i++) {
                 const pageButton = document.createElement('button');
                 pageButton.textContent = i;
+                pageButton.classList.add('pagination-btn');
                 if (i === currentPage) pageButton.classList.add('active');
                 pageButton.onclick = () => {
                     currentPage = i;
@@ -847,10 +933,28 @@ body {
                 pagination.appendChild(pageButton);
             }
 
+            if (endPage < pageCount) {
+                if (endPage < pageCount - 1) {
+                    const ellipsis = document.createElement('span');
+                    ellipsis.textContent = '...';
+                    ellipsis.classList.add('pagination-ellipsis');
+                    pagination.appendChild(ellipsis);
+                }
+                
+                const lastPageBtn = document.createElement('button');
+                lastPageBtn.textContent = pageCount;
+                lastPageBtn.classList.add('pagination-btn');
+                lastPageBtn.onclick = () => {
+                    currentPage = pageCount;
+                    renderTable(true);
+                };
+                pagination.appendChild(lastPageBtn);
+            }
+
             const nextButton = document.createElement('button');
             nextButton.textContent = 'Next';
-            nextButton.classList.add('disabled');
-            if (currentPage < pageCount) nextButton.classList.remove('disabled');
+            nextButton.classList.add('pagination-btn');
+            if (currentPage >= pageCount) nextButton.classList.add('disabled');
             nextButton.onclick = () => {
                 if (currentPage < pageCount) {
                     currentPage++;
@@ -861,31 +965,41 @@ body {
         }
 
         function toggleSelectAll() {
-            const checkboxes = document.querySelectorAll('.select-student');
-            checkboxes.forEach(checkbox => {
-                checkbox.checked = selectAllCheckbox.checked;
+            const allFilteredStudents = getAllFilteredStudents();
+            const selectAllCheckbox = document.getElementById('select-all');
+            
+            if (selectAllCheckbox.checked) {
+                // Select all filtered students
+                allFilteredStudents.forEach(student => {
+                    selectedStudents.add(student.lrn.toString());
+                });
+            } else {
+                // Deselect all filtered students
+                allFilteredStudents.forEach(student => {
+                    selectedStudents.delete(student.lrn.toString());
+                });
+            }
+            
+            // Update checkboxes on current page
+            document.querySelectorAll('.select-student').forEach(checkbox => {
+                const studentId = checkbox.dataset.id.toString();
+                checkbox.checked = selectedStudents.has(studentId);
             });
+            
+            selectAllCheckbox.indeterminate = false;
+            console.log('After toggleSelectAll, selectedStudents:', Array.from(selectedStudents));
         }
 
         function markAllPresent() {
             if (!current_class_id) return;
-            const statusFilter = statusSelector.value;
-            const searchQuery = searchInput.value.toLowerCase();
-            const filteredStudents = (students_by_class[current_class_id] || []).filter(s => {
-                const att = attendanceData[today][current_class_id][s.lrn] || {status: ''};
-                const matchesStatus = statusFilter ? att.status === statusFilter : true;
-                const matchesSearch = searchQuery ? 
-                    s.lrn.toString().includes(searchQuery) || 
-                    s.name.toLowerCase().includes(searchQuery) : true;
-                return matchesStatus && matchesSearch;
-            });
+            const filteredStudents = getAllFilteredStudents();
 
             filteredStudents.forEach(student => {
                 attendanceData[today][current_class_id][student.lrn].status = 'Present';
                 attendanceData[today][current_class_id][student.lrn].notes = '';
                 attendanceData[today][current_class_id][student.lrn].timeChecked = formatDateTime(new Date());
             });
-            renderTable();
+            renderTable(true);
         }
 
         function applyBulkAction() {
@@ -895,13 +1009,16 @@ body {
                 showNotification('Please select a bulk action.', 'error');
                 return;
             }
-            const selected = document.querySelectorAll('.select-student:checked');
+            const selected = Array.from(selectedStudents).filter(lrn => 
+                (students_by_class[current_class_id] || []).some(s => s.lrn.toString() === lrn)
+            );
+            console.log('applyBulkAction - selectedStudents:', Array.from(selectedStudents));
+            console.log('applyBulkAction - filtered selected:', selected);
             if (selected.length === 0) {
                 showNotification('Please select at least one student.', 'error');
                 return;
             }
-            selected.forEach(checkbox => {
-                const studentId = checkbox.dataset.id;
+            selected.forEach(studentId => {
                 attendanceData[today][current_class_id][studentId].status = action;
                 attendanceData[today][current_class_id][studentId].notes = (action === 'Present') ? '' : attendanceData[today][current_class_id][studentId].notes;
                 attendanceData[today][current_class_id][studentId].timeChecked = (action === 'Present') ? formatDateTime(new Date()) : '';
@@ -1003,6 +1120,9 @@ body {
         function clearFilters() {
             document.getElementById('searchInput').value = '';
             document.getElementById('date-selector').value = '<?php echo date('Y-m-d'); ?>';
+            selectedStudents.clear();
+            document.getElementById('select-all').checked = false;
+            document.getElementById('select-all').indeterminate = false;
             populateGradeLevels();
             today = '<?php echo date('Y-m-d'); ?>';
             renderTable();
@@ -1020,6 +1140,9 @@ body {
         gradeLevelSelector.addEventListener('change', () => {
             const gradeLevel = gradeLevelSelector.value;
             populateSections(gradeLevel);
+            selectedStudents.clear();
+            selectAllCheckbox.checked = false;
+            selectAllCheckbox.indeterminate = false;
             renderTable();
         });
 
@@ -1027,16 +1150,40 @@ body {
             const gradeLevel = gradeLevelSelector.value;
             const section = sectionSelector.value;
             populateSubjects(gradeLevel, section);
+            selectedStudents.clear();
+            selectAllCheckbox.checked = false;
+            selectAllCheckbox.indeterminate = false;
             renderTable();
         });
 
-        classSelector.addEventListener('change', renderTable);
-        statusSelector.addEventListener('change', renderTable);
-        searchInput.addEventListener('input', renderTable);
-        dateSelector.addEventListener('change', () => {
-            today = dateSelector.value;
+        classSelector.addEventListener('change', () => {
+            selectedStudents.clear();
+            selectAllCheckbox.checked = false;
+            selectAllCheckbox.indeterminate = false;
             renderTable();
         });
+
+        statusSelector.addEventListener('change', () => {
+            // Don't clear selections when filtering by status
+            updateSelectAllState();
+            renderTable(true);
+        });
+
+        searchInput.addEventListener('input', () => {
+            // Don't clear selections when searching
+            updateSelectAllState();
+            renderTable();
+        });
+
+        dateSelector.addEventListener('change', () => {
+            today = dateSelector.value;
+            selectedStudents.clear();
+            selectAllCheckbox.checked = false;
+            selectAllCheckbox.indeterminate = false;
+            renderTable();
+        });
+
+        selectAllCheckbox.addEventListener('change', toggleSelectAll);
 
         document.addEventListener('DOMContentLoaded', () => {
             populateGradeLevels();

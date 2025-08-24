@@ -54,7 +54,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     // Handle real-time validation or resend OTP
     if ($action === 'check_login' || $action === 'resend_verification') {
         ob_start(); // Start output buffering
-        $loginInput = filter_input(INPUT_POST, 'login', FILTER_SANITIZE_STRING);
+        // Sanitize input by trimming and escaping special characters
+        $loginInput = trim($_POST['login'] ?? '');
+        $loginInput = htmlspecialchars($loginInput, ENT_QUOTES, 'UTF-8');
         $isEmail = filter_var($loginInput, FILTER_VALIDATE_EMAIL);
         $field = $isEmail ? 'email' : 'username';
 

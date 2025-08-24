@@ -2833,7 +2833,7 @@ ob_end_flush();
             if (subjectFilter) subjectFilter.addEventListener('change', handleFilter);
             if (sectionFilter) sectionFilter.addEventListener('change', handleFilter);
             if (classForm) classForm.addEventListener('submit', handleFormSubmit);
-            if (classCodeInput) classCodeInput.addEventListener('blur', checkSubjectCode);
+            // if (classCodeInput) classCodeInput.addEventListener('blur', checkSubjectCode);
 
             const scheduleCheckboxes = document.querySelectorAll('input[name="scheduleDays"]');
             scheduleCheckboxes.forEach(checkbox => {
@@ -2850,51 +2850,51 @@ ob_end_flush();
             });
         }
 
-        function checkSubjectCode() {
-            const classCodeInput = document.getElementById('classCode');
-            const subjectInput = document.getElementById('subject');
-            if (!classCodeInput || !subjectInput) return;
+        // function checkSubjectCode() {
+        //     const classCodeInput = document.getElementById('classCode');
+        //     const subjectInput = document.getElementById('subject');
+        //     if (!classCodeInput || !subjectInput) return;
 
-            const subjectCode = classCodeInput.value.trim();
-            if (!subjectCode) {
-                subjectInput.disabled = false;
-                subjectInput.value = '';
-                return;
-            }
+        //     const subjectCode = classCodeInput.value.trim();
+        //     if (!subjectCode) {
+        //         subjectInput.disabled = false;
+        //         subjectInput.value = '';
+        //         return;
+        //     }
 
-            fetch('manage-classes.php', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded',
-                        'X-Requested-With': 'XMLHttpRequest'
-                    },
-                    body: `action=checkSubject&subjectCode=${encodeURIComponent(subjectCode)}`
-                })
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error('Network response was not ok: ' + response.statusText);
-                    }
-                    return response.json();
-                })
-                .then(data => {
-                    if (data.success) {
-                        if (data.exists && data.subject_name) {
-                            subjectInput.value = data.subject_name;
-                            subjectInput.disabled = true;
-                        } else {
-                            subjectInput.value = '';
-                            subjectInput.disabled = false;
-                        }
-                    } else {
-                        console.error('Error checking subject code:', data.error);
-                        subjectInput.disabled = false;
-                    }
-                })
-                .catch(error => {
-                    console.error('Error checking subject code:', error);
-                    subjectInput.disabled = false;
-                });
-        }
+        //     fetch('manage-classes.php', {
+        //             method: 'POST',
+        //             headers: {
+        //                 'Content-Type': 'application/x-www-form-urlencoded',
+        //                 'X-Requested-With': 'XMLHttpRequest'
+        //             },
+        //             body: `action=checkSubject&subjectCode=${encodeURIComponent(subjectCode)}`
+        //         })
+        //         .then(response => {
+        //             if (!response.ok) {
+        //                 throw new Error('Network response was not ok: ' + response.statusText);
+        //             }
+        //             return response.json();
+        //         })
+        //         .then(data => {
+        //             if (data.success) {
+        //                 if (data.exists && data.subject_name) {
+        //                     subjectInput.value = data.subject_name;
+        //                     subjectInput.disabled = true;
+        //                 } else {
+        //                     subjectInput.value = '';
+        //                     subjectInput.disabled = false;
+        //                 }
+        //             } else {
+        //                 console.error('Error checking subject code:', data.error);
+        //                 subjectInput.disabled = false;
+        //             }
+        //         })
+        //         .catch(error => {
+        //             console.error('Error checking subject code:', error);
+        //             subjectInput.disabled = false;
+        //         });
+        // }
 
         function renderClasses() {
             updateStats();
@@ -3116,7 +3116,7 @@ ob_end_flush();
             if (modalTitle) modalTitle.textContent = 'Add New Class';
             if (classForm) classForm.reset();
             if (subjectInput) {
-                subjectInput.disabled = false;
+                subjectInput.disabled = false; // Always keep subject field enabled
                 subjectInput.value = '';
             }
             clearScheduleInputs();
@@ -3153,7 +3153,7 @@ ob_end_flush();
             });
 
             if (subjectInput) {
-                subjectInput.disabled = true; // Disable subject field initially when editing
+                subjectInput.disabled = false; // Keep subject field enabled for editing
             }
 
             clearScheduleInputs();
@@ -3177,7 +3177,7 @@ ob_end_flush();
             if (classModal) classModal.classList.add('show');
 
             // Trigger subject code check to ensure consistency
-            checkSubjectCode();
+            // checkSubjectCode();
         }
 
         function viewClass(classId) {

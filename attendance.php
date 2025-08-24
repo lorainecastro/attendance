@@ -1,7 +1,9 @@
 <?php
 ob_start();
+// Set timezone to Asia/Manila
+date_default_timezone_set('Asia/Manila');
 require 'config.php';
-session_start(); // Start session at the top
+session_start();
 
 // Validate session
 $user = validateSession();
@@ -15,13 +17,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $input = json_decode(file_get_contents('php://input'), true);
     if (isset($input['class_id']) && isset($input['date']) && isset($input['attendance'])) {
         $class_id = $input['class_id'];
-        $date = $input['date'];
+        $date = $input['date']; // YYYY-MM-DD
         $attendance = $input['attendance'];
         $pdo = getDBConnection();
         foreach ($attendance as $lrn => $att) {
             $status = $att['status'] ?: null;
             $reason = $att['notes'] ?: null;
-            $time_checked = $att['timeChecked'] ? date('Y-m-d H:i:s', strtotime($att['timeChecked'])) : null;
+            // Parse timeChecked in Asia/Manila timezone
+            $time_checked = $att['timeChecked'] ? date('Y-m-d H:i:s', strtotime($att['timeChecked'] . ' Asia/Manila')) : null;
             // Check if exists
             $stmt = $pdo->prepare("SELECT attendance_id FROM attendance_tracking WHERE class_id = ? AND lrn = ? AND attendance_date = ?");
             $stmt->execute([$class_id, $lrn, $date]);
@@ -44,7 +47,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 $pdo = getDBConnection();
 
-// Fetch classes for the teacher
+// Fetch classes for the teacher (unchanged)
 $stmt = $pdo->prepare("
     SELECT c.class_id, c.section_name, s.subject_name, c.grade_level 
     FROM classes c 
@@ -54,7 +57,7 @@ $stmt = $pdo->prepare("
 $stmt->execute([$user['teacher_id']]);
 $classes_fetch = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-// Fetch students by class
+// Fetch students by class (unchanged)
 $students_by_class = [];
 foreach ($classes_fetch as $class) {
     $class_id = $class['class_id'];
@@ -78,12 +81,14 @@ $stmt = $pdo->prepare("
 ");
 $stmt->execute([$user['teacher_id']]);
 while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
-    $date = $row['attendance_date'];
+    $date = $row['attendance_date']; // YYYY-MM-DD
     $class_id = $row['class_id'];
     $lrn = $row['lrn'];
     if (!isset($attendance_arr[$date])) $attendance_arr[$date] = [];
     if (!isset($attendance_arr[$date][$class_id])) $attendance_arr[$date][$class_id] = [];
-    $time_checked = $row['time_checked'] ? (new DateTime($row['time_checked']))->format('M d Y h:i:s A') : '';
+    // Format time_checked in en-US with Asia/Manila timezone
+    $time_checked = $row['time_checked'] ? (new DateTime($row['time_checked'], new DateTimeZone('Asia/Manila')))
+        ->format('M d Y h:i:s A') : '';
     $attendance_arr[$date][$class_id][$lrn] = [
         'status' => $row['attendance_status'] ?: '',
         'notes' => $row['reason'] ?: '',

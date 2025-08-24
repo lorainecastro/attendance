@@ -632,8 +632,13 @@ body {
 
         function updateStats(filteredStudents) {
             const total = filteredStudents.length;
-            const present = filteredStudents.filter(s => attendanceData[today]?.[current_class_id]?.[s.lrn]?.status === 'Present').length;
-            const absent = filteredStudents.filter(s => attendanceData[today]?.[current_class_id]?.[s.lrn]?.status === 'Absent').length;
+            const present = filteredStudents.filter(s => 
+                attendanceData[today]?.[current_class_id]?.[s.lrn]?.status === 'Present' || 
+                attendanceData[today]?.[current_class_id]?.[s.lrn]?.status === 'Late'
+            ).length;
+            const absent = filteredStudents.filter(s => 
+                attendanceData[today]?.[current_class_id]?.[s.lrn]?.status === 'Absent'
+            ).length;
             const percentage = total ? ((present / total) * 100).toFixed(1) : 0;
 
             document.getElementById('total-students').textContent = total;

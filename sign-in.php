@@ -53,6 +53,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
     // Handle real-time validation or resend OTP
     if ($action === 'check_login' || $action === 'resend_verification') {
+        ob_start(); // Start output buffering
         $loginInput = filter_input(INPUT_POST, 'login', FILTER_SANITIZE_STRING);
         $isEmail = filter_var($loginInput, FILTER_VALIDATE_EMAIL);
         $field = $isEmail ? 'email' : 'username';
@@ -95,8 +96,10 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 $response = ['message' => 'Account is valid.', 'type' => 'success'];
             }
         } catch (PDOException $e) {
-            $response = ['message' => 'Database error: ' . $e->getMessage(), 'type' => 'error'];
+            error_log("Check login error: " . $e->getMessage()); // Log the error
+            $response = ['message' => 'Database error occurred. Please try again.', 'type' => 'error'];
         }
+        ob_clean(); // Clear any stray output
         header('Content-Type: application/json');
         echo json_encode($response);
         exit;
@@ -838,18 +841,25 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                             body: formData,
                             headers: { 'X-Requested-With': 'XMLHttpRequest' }
                         })
-                        .then(response => response.json())
+                        .then(response => {
+                            if (!response.ok) {
+                                throw new Error(`HTTP error! Status: ${response.status}`);
+                            }
+                            return response.json();
+                        })
                         .then(data => {
                             if (data.type === 'unverified') {
                                 document.getElementById('unverifiedModal').style.display = 'flex';
                                 sessionStorage.setItem('unverified_email', data.email);
                             } else if (data.type === 'error') {
                                 showNotification(data.message, 'error');
+                            } else if (data.type === 'success') {
+                                showNotification('Account is valid.', 'success'); // Optional: Show success message
                             }
                         })
                         .catch(error => {
+                            console.error('Check login error:', error);
                             showNotification('Error checking login. Please try again.', 'error');
-                            console.error('Error:', error);
                         });
                     }, 800);
                 }

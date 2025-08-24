@@ -1,7 +1,8 @@
 <?php
-ob_start();
+// Set timezone to Asia/Manila
+date_default_timezone_set('Asia/Manila');
 require 'config.php';
-session_start(); // Start session at the top
+session_start();
 
 // Validate session
 $user = validateSession();
@@ -18,60 +19,63 @@ if (!$user) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Overall Attendance - Student Attendance System</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         :root {
-            --primary-blue: #2563eb;
-            --primary-blue-hover: #1d4ed8;
+            --primary-blue: #3b82f6;
+            --primary-blue-hover: #2563eb;
             --primary-blue-light: #dbeafe;
-            --success-green: #16a34a;
-            --warning-yellow: #ca8a04;
-            --danger-red: #dc2626;
-            --info-cyan: #0891b2;
-            --dark-gray: #374151;
+            --success-green: #22c55e;
+            --warning-yellow: #f59e0b;
+            --danger-red: #ef4444;
+            --info-cyan: #06b6d4;
+            --dark-gray: #1f2937;
             --medium-gray: #6b7280;
-            --light-gray: #d1d5db;
+            --light-gray: #e5e7eb;
             --background: #f9fafb;
             --white: #ffffff;
-            --border-color: #e5e7eb;
+            --border-color: #e2e8f0;
             --card-bg: #ffffff;
-            --blackfont-color: #111827;
+            --blackfont-color: #1e293b;
             --whitefont-color: #ffffff;
-            --grayfont-color: #6b7280;
-            --primary-gradient: linear-gradient(135deg, #2563eb, #a855f7);
+            --grayfont-color: #64748b;
+            --primary-gradient: linear-gradient(135deg, #3b82f6, #3b82f6);
             --secondary-gradient: linear-gradient(135deg, #ec4899, #f472b6);
-            --primary-color: #2563eb;
-            --primary-hover: #1d4ed8;
-            --inputfield-color: #f3f4f6;
-            --inputfieldhover-color: #e5e7eb;
-            --font-family: 'Inter', sans-serif;
+            --inputfield-color: #f8fafc;
+            --inputfieldhover-color: #f1f5f9;
+            --font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
             --font-size-sm: 0.875rem;
             --font-size-base: 1rem;
             --font-size-lg: 1.125rem;
             --font-size-xl: 1.25rem;
-            --font-size-2xl: 1.5rem;
-            --spacing-xs: 0.25rem;
-            --spacing-sm: 0.5rem;
+            --font-size-2xl: 1.875rem;
+            --spacing-xs: 0.5rem;
+            --spacing-sm: 0.75rem;
             --spacing-md: 1rem;
             --spacing-lg: 1.5rem;
             --spacing-xl: 2rem;
             --spacing-2xl: 3rem;
-            --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-            --radius-sm: 0.25rem;
+            --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.05);
+            --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08);
+            --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.1);
+            --radius-sm: 0.375rem;
             --radius-md: 0.5rem;
             --radius-lg: 0.75rem;
             --radius-xl: 1rem;
-            --transition-fast: 0.15s ease-in-out;
+            --transition-fast: 0.2s ease-in-out;
             --transition-normal: 0.3s ease-in-out;
             --transition-slow: 0.5s ease-in-out;
+            --status-present-bg: #e6ffed;
+            --status-absent-bg: #ffe6e6;
+            --status-late-bg: #fff8e6;
+            --status-none-bg: #f8fafc;
         }
 
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-            font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+            font-family: var(--font-family);
         }
 
         body {
@@ -93,10 +97,10 @@ if (!$user) {
             position: absolute;
             left: 0;
             bottom: 0;
-            height: 3px;
-            width: 60px;
+            height: 4px;
+            width: 80px;
             background: var(--primary-gradient);
-            border-radius: 2px;
+            border-radius: var(--radius-sm);
         }
 
         .stats-grid {
@@ -154,12 +158,121 @@ if (!$user) {
             color: var(--blackfont-color);
         }
 
+        .controls {
+            background: var(--card-bg);
+            border-radius: var(--radius-md);
+            padding: var(--spacing-md);
+            box-shadow: var(--shadow-md);
+            margin-bottom: var(--spacing-lg);
+            display: flex;
+            flex-wrap: wrap;
+            gap: var(--spacing-sm);
+            align-items: center;
+            border: 1px solid var(--border-color);
+        }
+
+        .controls-left {
+            display: flex;
+            flex-wrap: wrap;
+            gap: var(--spacing-sm);
+            flex: 1;
+            align-items: center;
+        }
+
+        .search-container {
+            position: relative;
+            min-width: 200px;
+            flex: 1;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: var(--spacing-xs) var(--spacing-md) var(--spacing-xs) 2.5rem;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-sm);
+            font-size: var(--font-size-sm);
+            background: var(--inputfield-color);
+            transition: var(--transition-normal);
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: var(--primary-blue);
+            background: var(--white);
+            box-shadow: 0 0 0 4px var(--primary-blue-light);
+        }
+
+        .search-icon {
+            position: absolute;
+            left: var(--spacing-sm);
+            top: 55%;
+            transform: translateY(-50%);
+            color: var(--grayfont-color);
+            font-size: 0.875rem;
+        }
+
+        .selector-input,
+        .selector-select {
+            padding: var(--spacing-xs) var(--spacing-md);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-sm);
+            font-size: var(--font-size-sm);
+            background: var(--inputfield-color);
+            transition: var(--transition-normal);
+            min-width: 180px;
+            height: 38px;
+            box-sizing: border-box;
+        }
+
+        .selector-input:focus,
+        .selector-select:focus {
+            outline: none;
+            border-color: var(--primary-blue);
+            background: var(--white);
+            box-shadow: 0 0 0 4px var(--primary-blue-light);
+        }
+
+        .btn {
+            padding: var(--spacing-xs) var(--spacing-md);
+            border: none;
+            border-radius: var(--radius-md);
+            font-size: var(--font-size-sm);
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition-normal);
+            display: inline-flex;
+            align-items: center;
+            gap: var(--spacing-xs);
+            text-decoration: none;
+        }
+
+        .btn-primary {
+            background: var(--primary-gradient);
+            color: var(--whitefont-color);
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-blue-hover);
+            transform: translateY(-2px);
+        }
+
+        .btn-secondary {
+            background: var(--medium-gray);
+            color: var(--whitefont-color);
+        }
+
+        .btn-secondary:hover {
+            background: #4b5563;
+            transform: translateY(-2px);
+        }
+
         .attendance-grid {
             background: var(--card-bg);
             border-radius: 12px;
             padding: 20px;
             box-shadow: var(--shadow-md);
             margin-bottom: 20px;
+            border: 1px solid var(--border-color);
         }
 
         .table-header {
@@ -168,33 +281,12 @@ if (!$user) {
             align-items: center;
             margin-bottom: 15px;
             flex-wrap: wrap;
-            gap: 10px;
+            gap: var(--spacing-sm);
         }
 
         .table-title {
             font-size: 18px;
             font-weight: 600;
-        }
-
-        .table-controls {
-            display: flex;
-            gap: 10px;
-            flex-wrap: wrap;
-        }
-
-        .selector-input, .selector-select {
-            padding: 8px 12px;
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
-            font-size: 14px;
-            background: var(--inputfield-color);
-            transition: var(--transition-normal);
-        }
-
-        .selector-input:focus, .selector-select:focus {
-            outline: none;
-            border-color: var(--primary-color);
-            background: var(--inputfieldhover-color);
         }
 
         table {
@@ -212,6 +304,7 @@ if (!$user) {
             font-weight: 600;
             color: var(--grayfont-color);
             font-size: 14px;
+            background: var(--inputfield-color);
         }
 
         tbody tr {
@@ -219,12 +312,12 @@ if (!$user) {
         }
 
         tbody tr:hover {
-            background-color: var(--inputfield-color);
+            background-color: var(--inputfieldhover-color);
         }
 
         .student-photo {
-            width: 40px;
-            height: 40px;
+            width: 45px;
+            height: 45px;
             border-radius: 50%;
             object-fit: cover;
         }
@@ -245,10 +338,11 @@ if (!$user) {
         }
 
         .save-btn, .submit-btn {
-            padding: 8px 16px;
+            padding: var(--spacing-xs) var(--spacing-md);
             border: none;
-            border-radius: 8px;
-            font-size: 14px;
+            border-radius: var(--radius-md);
+            font-size: var(--font-size-sm);
+            font-weight: 600;
             cursor: pointer;
             transition: var(--transition-normal);
         }
@@ -263,17 +357,37 @@ if (!$user) {
         }
 
         .submit-btn {
-            background: var(--primary-color);
+            background: var(--primary-blue);
             color: var(--whitefont-color);
         }
 
         .submit-btn:hover {
-            background: var(--primary-hover);
+            background: var(--primary-blue-hover);
         }
 
         @media (max-width: 1024px) {
             .stats-grid {
                 grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            }
+            .controls {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            .controls-left {
+                flex-direction: column;
+                gap: var(--spacing-xs);
+            }
+            .search-container {
+                min-width: auto;
+                width: 100%;
+            }
+            .selector-input, .selector-select {
+                width: 100%;
+                min-width: auto;
+            }
+            .btn {
+                width: 100%;
+                justify-content: center;
             }
         }
 
@@ -281,14 +395,8 @@ if (!$user) {
             th, td {
                 padding: 10px;
             }
-
             .card-value {
                 font-size: 20px;
-            }
-
-            .table-controls {
-                flex-direction: column;
-                align-items: flex-start;
             }
         }
 
@@ -296,7 +404,6 @@ if (!$user) {
             .table-responsive {
                 overflow-x: auto;
             }
-
             .stats-grid {
                 grid-template-columns: 1fr;
             }
@@ -366,26 +473,36 @@ if (!$user) {
         </div>
     </div>
 
+    <div class="controls">
+        <div class="controls-left">
+            <div class="search-container">
+                <input type="text" class="search-input" id="searchInput" placeholder="Search by LRN or Name">
+                <i class="fas fa-search search-icon"></i>
+            </div>
+            <input type="date" class="selector-input" id="date-selector" value="2025-07-21" min="2025-06-01" max="2025-07-21">
+            <select class="selector-select" id="gradeLevelSelector">
+                <option value="">All Grade Levels</option>
+            </select>
+            <select class="selector-select" id="classSelector">
+                <option value="">All Subjects</option>
+            </select>
+            <select class="selector-select" id="sectionSelector">
+                <option value="">All Sections</option>
+            </select>
+            <select class="selector-select" id="statusSelector">
+                <option value="">All Status</option>
+                <option value="Present">Present</option>
+                <option value="Absent">Absent</option>
+            </select>
+            <button class="btn btn-secondary" onclick="clearFilters()">
+                <i class="fas fa-times"></i> Clear Filters
+            </button>
+        </div>
+    </div>
+
     <div class="attendance-grid">
         <div class="table-header">
-            <div class="table-title">Attendance Grid</div>
-            <div class="table-controls">
-                <input type="date" class="selector-input" id="date-selector" value="2025-07-21" min="2025-06-01" max="2025-07-21">
-                <select class="selector-select" id="gradeLevelSelector">
-                    <option value="">All Grade Levels</option>
-                </select>
-                <select class="selector-select" id="classSelector">
-                    <option value="">All Subjects</option>
-                </select>
-                <select class="selector-select" id="sectionSelector">
-                    <option value="">All Sections</option>
-                </select>
-                <select class="selector-select" id="statusSelector">
-                    <option value="">All Status</option>
-                    <option value="Present">Present</option>
-                    <option value="Absent">Absent</option>
-                </select>
-            </div>
+            <div class="table-title">Attendance</div>
         </div>
         <div class="table-responsive">
             <table id="attendance-table">
@@ -403,218 +520,5 @@ if (!$user) {
             </table>
         </div>
     </div>
-
-    <script>
-        const classes = [
-            {
-                id: 1,
-                code: 'MATH-101-A',
-                sectionName: 'Diamond Section',
-                subject: 'Mathematics',
-                gradeLevel: 'Grade 7',
-                room: 'Room 201',
-                attendancePercentage: 10,
-                schedule: {
-                    monday: { start: '08:00', end: '09:30' },
-                    wednesday: { start: '08:00', end: '09:30' },
-                    friday: { start: '08:00', end: '09:30' }
-                },
-                status: 'active',
-                students: [
-                    { id: 1, firstName: 'John', lastName: 'Doe', email: 'john.doe@email.com', lrn: '1', timeChecked: 'Jul 21 2025, 12:26:27 PM' },
-                    { id: 2, firstName: 'Jane', lastName: 'Smith', email: 'jane.smith@email.com', lrn: '2', timeChecked: 'Jul 21 2025, 12:26:27 PM' },
-                    { id: 3, firstName: 'Mike', lastName: 'Johnson', email: 'mike.johnson@email.com', lrn: '3', timeChecked: 'Jul 21 2025, 12:26:27 PM' }
-                ]
-            },
-            {
-                id: 2,
-                code: 'SCI-201-B',
-                sectionName: 'Einstein Section',
-                subject: 'Science',
-                gradeLevel: 'Grade 10',
-                room: 'Lab 1',
-                attendancePercentage: 15,
-                schedule: {
-                    tuesday: { start: '10:00', end: '11:30' },
-                    thursday: { start: '10:00', end: '11:30' }
-                },
-                status: 'active',
-                students: [
-                    { id: 4, firstName: 'Alice', lastName: 'Brown', email: 'alice.brown@email.com', lrn: '4', timeChecked: 'Jul 21 2025, 12:26:27 PM' },
-                    { id: 5, firstName: 'Bob', lastName: 'Wilson', email: 'bob.wilson@email.com', lrn: '5', timeChecked: 'Jul 21 2025, 12:26:27 PM' }
-                ]
-            },
-            {
-                id: 3,
-                code: 'ENG-301-C',
-                sectionName: 'Shakespeare Section',
-                subject: 'English Literature',
-                gradeLevel: 'Grade 12',
-                room: 'Room 305',
-                attendancePercentage: 20,
-                schedule: {
-                    monday: { start: '14:00', end: '15:30' },
-                    wednesday: { start: '14:00', end: '15:30' }
-                },
-                status: 'inactive',
-                students: [
-                    { id: 6, firstName: 'Carol', lastName: 'Davis', email: 'carol.davis@email.com', lrn: '6', timeChecked: 'Jul 21 2025, 12:26:27 PM' },
-                    { id: 7, firstName: 'David', lastName: 'Miller', email: 'david.miller@email.com', lrn: '7', timeChecked: 'Jul 21 2025, 12:26:27 PM' },
-                    { id: 8, firstName: 'Emma', lastName: 'Garcia', email: 'emma.garcia@email.com', lrn: '8', timeChecked: 'Jul 21 2025, 12:26:27 PM' },
-                    { id: 9, firstName: 'Frank', lastName: 'Rodriguez', email: 'frank.rodriguez@email.com', lrn: '9', timeChecked: 'Jul 21 2025, 12:26:27 PM' }
-                ]
-            }
-        ];
-
-        const students = classes.flatMap(cls => cls.students.map(student => ({
-            id: student.id,
-            name: `${student.firstName} ${student.lastName}`,
-            class: cls.subject,
-            photo: student.photo || 'no-icon.png',
-            status: 'Present',
-            gradeLevel: cls.gradeLevel,
-            subject: cls.subject,
-            section: cls.sectionName,
-            lrn: student.lrn,
-            timeChecked: student.timeChecked,
-            attendanceRate: 90
-        })));
-
-        let attendanceData = {};
-        let today = '2025-07-21';
-
-        if (!attendanceData[today]) {
-            attendanceData[today] = {};
-            students.forEach(student => {
-                attendanceData[today][student.id] = { status: student.status, timeChecked: student.timeChecked, attendanceRate: student.attendanceRate };
-            });
-        }
-
-        function populateDropdowns() {
-            const gradeLevelSelector = document.getElementById('gradeLevelSelector');
-            const classSelector = document.getElementById('classSelector');
-            const sectionSelector = document.getElementById('sectionSelector');
-
-            const gradeLevels = [...new Set(classes.map(c => c.gradeLevel))];
-            gradeLevelSelector.innerHTML = '<option value="">All Grade Levels</option>';
-            gradeLevels.forEach(grade => {
-                const option = document.createElement('option');
-                option.value = grade;
-                option.textContent = grade;
-                gradeLevelSelector.appendChild(option);
-            });
-
-            const subjects = [...new Set(classes.map(c => c.subject))];
-            classSelector.innerHTML = '<option value="">All Subjects</option>';
-            subjects.forEach(subject => {
-                const option = document.createElement('option');
-                option.value = subject;
-                option.textContent = subject;
-                classSelector.appendChild(option);
-            });
-
-            const sections = [...new Set(classes.map(c => c.sectionName))];
-            sectionSelector.innerHTML = '<option value="">All Sections</option>';
-            sections.forEach(section => {
-                const option = document.createElement('option');
-                option.value = section;
-                option.textContent = section;
-                sectionSelector.appendChild(option);
-            });
-        }
-
-        function updateStats() {
-            const gradeLevelFilter = gradeLevelSelector.value;
-            const classFilter = classSelector.value;
-            const sectionFilter = sectionSelector.value;
-            const statusFilter = statusSelector.value;
-            const filteredStudents = students.filter(s => {
-                const matchesGradeLevel = gradeLevelFilter ? s.gradeLevel === gradeLevelFilter : true;
-                const matchesClass = classFilter ? s.subject === classFilter : true;
-                const matchesSection = sectionFilter ? s.section === sectionFilter : true;
-                const matchesStatus = statusFilter ? attendanceData[today][s.id].status === statusFilter : true;
-                return matchesGradeLevel && matchesClass && matchesSection && matchesStatus;
-            });
-
-            const total = filteredStudents.length;
-            const present = filteredStudents.filter(s => attendanceData[today][s.id].status === 'Present').length;
-            const absent = filteredStudents.filter(s => attendanceData[today][s.id].status === 'Absent').length;
-            const percentage = total ? ((present / total) * 100).toFixed(1) : 0;
-
-            document.getElementById('total-students').textContent = total;
-            document.getElementById('present-count').textContent = present;
-            document.getElementById('absent-count').textContent = absent;
-            document.getElementById('attendance-percentage').textContent = `${percentage}%`;
-        }
-
-        function renderTable() {
-            tableBody.innerHTML = '';
-            const gradeLevelFilter = gradeLevelSelector.value;
-            const classFilter = classSelector.value;
-            const sectionFilter = sectionSelector.value;
-            const statusFilter = statusSelector.value;
-            const filteredStudents = students.filter(s => {
-                const matchesGradeLevel = gradeLevelFilter ? s.gradeLevel === gradeLevelFilter : true;
-                const matchesClass = classFilter ? s.subject === classFilter : true;
-                const matchesSection = sectionFilter ? s.section === sectionFilter : true;
-                const matchesStatus = statusFilter ? attendanceData[today][s.id].status === statusFilter : true;
-                return matchesGradeLevel && matchesClass && matchesSection && matchesStatus;
-            });
-
-            filteredStudents.forEach(student => {
-                const status = attendanceData[today][student.id].status;
-                const statusClass = status === 'Present' ? 'status-present' : 'status-absent';
-                const row = document.createElement('tr');
-                row.innerHTML = `
-                    <td><img src="${student.photo}" class="student-photo" alt="${student.name}"></td>
-                    <td>${student.lrn}</td>
-                    <td>${student.name}</td>
-                    <td class="${statusClass}">${status}</td>
-                    <td>${student.timeChecked}</td>
-                    <td class="attendance-rate">${student.attendanceRate}%</td>
-                `;
-                tableBody.appendChild(row);
-            });
-
-            updateStats();
-        }
-
-        function saveDraft() {
-            localStorage.setItem('attendanceDraft', JSON.stringify(attendanceData));
-            alert('Attendance draft saved locally.');
-        }
-
-        function submitAttendance() {
-            console.log('Submitted Attendance:', attendanceData[today]);
-            alert('Attendance submitted successfully.');
-        }
-
-        const tableBody = document.querySelector('#attendance-table tbody');
-        const dateSelector = document.getElementById('date-selector');
-        const gradeLevelSelector = document.getElementById('gradeLevelSelector');
-        const classSelector = document.getElementById('classSelector');
-        const sectionSelector = document.getElementById('sectionSelector');
-        const statusSelector = document.getElementById('statusSelector');
-
-        dateSelector.addEventListener('change', () => {
-            today = dateSelector.value;
-            if (!attendanceData[today]) {
-                attendanceData[today] = {};
-                students.forEach(student => {
-                    attendanceData[today][student.id] = { status: 'Present', timeChecked: 'Jul 21 2025, 12:26:27 PM', attendanceRate: 90 };
-                });
-            }
-            renderTable();
-        });
-        gradeLevelSelector.addEventListener('change', renderTable);
-        classSelector.addEventListener('change', renderTable);
-        sectionSelector.addEventListener('change', renderTable);
-        statusSelector.addEventListener('change', renderTable);
-
-        document.addEventListener('DOMContentLoaded', () => {
-            populateDropdowns();
-            renderTable();
-        });
-    </script>
 </body>
 </html>

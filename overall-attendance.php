@@ -11,6 +11,57 @@ if (!$user) {
     header("Location: index.php");
     exit();
 }
+
+$pdo = getDBConnection();
+
+// Fetch classes for the teacher
+$stmt = $pdo->prepare("
+    SELECT c.class_id, c.section_name, s.subject_name, c.grade_level 
+    FROM classes c 
+    JOIN subjects s ON c.subject_id = s.subject_id 
+    WHERE c.teacher_id = ?
+");
+$stmt->execute([$user['teacher_id']]);
+$classes_fetch = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+// Fetch students by class
+$students_by_class = [];
+foreach ($classes_fetch as $class) {
+    $class_id = $class['class_id'];
+    $stmt = $pdo->prepare("
+        SELECT s.lrn, CONCAT(s.last_name, ', ', s.first_name, ' ', s.middle_name) AS name, s.photo 
+        FROM students s 
+        JOIN class_students cs ON s.lrn = cs.lrn 
+        WHERE cs.class_id = ?
+    ");
+    $stmt->execute([$class_id]);
+    $students_by_class[$class_id] = $stmt->fetchAll(PDO::FETCH_ASSOC);
+}
+
+// Fetch existing attendance
+$attendance_arr = [];
+$stmt = $pdo->prepare("
+    SELECT a.class_id, a.attendance_date, a.lrn, a.attendance_status, a.reason, a.time_checked 
+    FROM attendance_tracking a 
+    JOIN classes c ON a.class_id = c.class_id 
+    WHERE c.teacher_id = ?
+");
+$stmt->execute([$user['teacher_id']]);
+while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+    $date = $row['attendance_date']; // YYYY-MM-DD
+    $class_id = $row['class_id'];
+    $lrn = $row['lrn'];
+    if (!isset($attendance_arr[$date])) $attendance_arr[$date] = [];
+    if (!isset($attendance_arr[$date][$class_id])) $attendance_arr[$date][$class_id] = [];
+    // Format time_checked in en-US with Asia/Manila timezone
+    $time_checked = $row['time_checked'] ? (new DateTime($row['time_checked'], new DateTimeZone('Asia/Manila')))
+        ->format('M d Y h:i:s A') : '';
+    $attendance_arr[$date][$class_id][$lrn] = [
+        'status' => $row['attendance_status'] ?: '',
+        'notes' => $row['reason'] ?: '',
+        'timeChecked' => $time_checked
+    ];
+}
 ?>
 
 <!DOCTYPE html>
@@ -65,10 +116,13 @@ if (!$user) {
             --transition-fast: 0.2s ease-in-out;
             --transition-normal: 0.3s ease-in-out;
             --transition-slow: 0.5s ease-in-out;
-            --status-present-bg: #e6ffed;
-            --status-absent-bg: #ffe6e6;
-            --status-late-bg: #fff8e6;
+            --status-present-bg: rgba(16, 185, 129, 0.15);
+            --status-absent-bg: rgba(239, 68, 68, 0.15);
+            --status-late-bg: rgba(245, 158, 11, 0.15);
             --status-none-bg: #f8fafc;
+            --success-color: #10b981;
+            --warning-color: #f59e0b;
+            --danger-color: #ef4444;
         }
 
         * {
@@ -78,10 +132,19 @@ if (!$user) {
             font-family: var(--font-family);
         }
 
+        html, body {
+            height: 100%;
+            margin: 0;
+        }
+
         body {
             background-color: var(--card-bg);
             color: var(--blackfont-color);
             padding: 20px;
+        }
+
+        .attendance-grid, .stats-grid, .controls {
+            flex-grow: 1;
         }
 
         h1 {
@@ -322,14 +385,31 @@ if (!$user) {
             object-fit: cover;
         }
 
+        .status-badge {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: var(--font-size-sm);
+            font-weight: 500;
+        }
+
         .status-present {
-            color: var(--success-green);
-            font-weight: 600;
+            background-color: var(--status-present-bg);
+            color: var(--success-color);
         }
 
         .status-absent {
-            color: var(--danger-red);
-            font-weight: 600;
+            background-color: var(--status-absent-bg);
+            color: var(--danger-color);
+        }
+
+        .status-late {
+            background-color: var(--status-late-bg);
+            color: var(--warning-color);
+        }
+
+        .status-none {
+            background-color: var(--status-none-bg);
+            color: var(--grayfont-color);
         }
 
         .attendance-rate {
@@ -337,32 +417,42 @@ if (!$user) {
             font-weight: 600;
         }
 
-        .save-btn, .submit-btn {
-            padding: var(--spacing-xs) var(--spacing-md);
-            border: none;
-            border-radius: var(--radius-md);
-            font-size: var(--font-size-sm);
-            font-weight: 600;
+        .pagination {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .pagination button {
+            padding: 8px 16px;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-sm);
+            background: var(--inputfield-color);
             cursor: pointer;
             transition: var(--transition-normal);
         }
 
-        .save-btn {
-            background: var(--inputfield-color);
-            color: var(--blackfont-color);
-        }
-
-        .save-btn:hover {
+        .pagination button:hover {
             background: var(--inputfieldhover-color);
         }
 
-        .submit-btn {
-            background: var(--primary-blue);
-            color: var(--whitefont-color);
+        .pagination button.disabled {
+            cursor: not-allowed;
+            opacity: 0.5;
         }
 
-        .submit-btn:hover {
-            background: var(--primary-blue-hover);
+        .pagination button.active {
+            background: var(--primary-blue);
+            color: var(--whitefont-color);
+            border-color: var(--primary-blue);
+        }
+
+        .no-students-message {
+            text-align: center;
+            padding: 20px;
+            color: var(--grayfont-color);
+            font-size: var(--font-size-lg);
         }
 
         @media (max-width: 1024px) {
@@ -392,18 +482,21 @@ if (!$user) {
         }
 
         @media (max-width: 768px) {
+            body {
+                padding: var(--spacing-sm);
+            }
             th, td {
                 padding: 10px;
             }
             .card-value {
                 font-size: 20px;
             }
-        }
-
-        @media (max-width: 576px) {
             .table-responsive {
                 overflow-x: auto;
             }
+        }
+
+        @media (max-width: 576px) {
             .stats-grid {
                 grid-template-columns: 1fr;
             }
@@ -479,20 +572,21 @@ if (!$user) {
                 <input type="text" class="search-input" id="searchInput" placeholder="Search by LRN or Name">
                 <i class="fas fa-search search-icon"></i>
             </div>
-            <input type="date" class="selector-input" id="date-selector" value="2025-07-21" min="2025-06-01" max="2025-07-21">
+            <input type="date" class="selector-input" id="date-selector" value="<?php echo date('Y-m-d'); ?>" max="<?php echo date('Y-m-d'); ?>">
             <select class="selector-select" id="gradeLevelSelector">
                 <option value="">All Grade Levels</option>
             </select>
-            <select class="selector-select" id="classSelector">
-                <option value="">All Subjects</option>
-            </select>
             <select class="selector-select" id="sectionSelector">
                 <option value="">All Sections</option>
+            </select>
+            <select class="selector-select" id="classSelector">
+                <option value="">All Subjects</option>
             </select>
             <select class="selector-select" id="statusSelector">
                 <option value="">All Status</option>
                 <option value="Present">Present</option>
                 <option value="Absent">Absent</option>
+                <option value="Late">Late</option>
             </select>
             <button class="btn btn-secondary" onclick="clearFilters()">
                 <i class="fas fa-times"></i> Clear Filters
@@ -512,13 +606,300 @@ if (!$user) {
                         <th>LRN</th>
                         <th>Student Name</th>
                         <th>Status</th>
+                        <th>Reason</th>
                         <th>Time Checked</th>
                         <th>Attendance Rate</th>
                     </tr>
                 </thead>
                 <tbody></tbody>
             </table>
+            <div class="pagination" id="pagination"></div>
         </div>
     </div>
+
+    <script>
+        const classes = <?php echo json_encode($classes_fetch); ?>;
+        const students_by_class = <?php echo json_encode($students_by_class); ?>;
+        const attendanceData = <?php echo json_encode($attendance_arr); ?> || {};
+        let today = document.getElementById('date-selector').value;
+        let current_class_id = null;
+        let currentPage = 1;
+        const rowsPerPage = 5;
+
+        function updateStats(filteredStudents) {
+            const total = filteredStudents.length;
+            const present = filteredStudents.filter(s => 
+                attendanceData[today]?.[current_class_id]?.[s.lrn]?.status === 'Present' || 
+                attendanceData[today]?.[current_class_id]?.[s.lrn]?.status === 'Late'
+            ).length;
+            const absent = filteredStudents.filter(s => 
+                attendanceData[today]?.[current_class_id]?.[s.lrn]?.status === 'Absent'
+            ).length;
+            const percentage = total ? ((present / total) * 100).toFixed(1) : 0;
+
+            document.getElementById('total-students').textContent = total;
+            document.getElementById('present-count').textContent = present;
+            document.getElementById('absent-count').textContent = absent;
+            document.getElementById('attendance-percentage').textContent = `${percentage}%`;
+        }
+
+        function populateGradeLevels() {
+            const gradeLevelSelector = document.getElementById('gradeLevelSelector');
+            gradeLevelSelector.innerHTML = '<option value="">All Grade Levels</option>';
+            const gradeLevels = [...new Set(classes.map(c => c.grade_level))].sort();
+            gradeLevels.forEach(grade => {
+                const option = document.createElement('option');
+                option.value = grade;
+                option.textContent = grade;
+                gradeLevelSelector.appendChild(option);
+            });
+        }
+
+        function populateSections(gradeLevel) {
+            const sectionSelector = document.getElementById('sectionSelector');
+            sectionSelector.innerHTML = '<option value="">All Sections</option>';
+            const sections = [...new Set(classes.filter(c => !gradeLevel || c.grade_level === gradeLevel).map(c => c.section_name))].sort();
+            sections.forEach(section => {
+                const option = document.createElement('option');
+                option.value = section;
+                option.textContent = section;
+                sectionSelector.appendChild(option);
+            });
+            if (gradeLevel && sections.length > 0) {
+                sectionSelector.value = sections[0];
+                populateSubjects(gradeLevel, sections[0]);
+            }
+        }
+
+        function populateSubjects(gradeLevel, section) {
+            const classSelector = document.getElementById('classSelector');
+            classSelector.innerHTML = '<option value="">All Subjects</option>';
+            const subjects = [...new Set(classes.filter(c => 
+                (!gradeLevel || c.grade_level === gradeLevel) && 
+                (!section || c.section_name === section)
+            ).map(c => c.subject_name))].sort();
+            subjects.forEach(subject => {
+                const option = document.createElement('option');
+                option.value = subject;
+                option.textContent = subject;
+                classSelector.appendChild(option);
+            });
+        }
+
+        function getAllFilteredStudents() {
+            const gradeLevelFilter = document.getElementById('gradeLevelSelector').value;
+            const sectionFilter = document.getElementById('sectionSelector').value;
+            const subjectFilter = document.getElementById('classSelector').value;
+            const statusFilter = document.getElementById('statusSelector').value;
+            const searchQuery = document.getElementById('searchInput').value.toLowerCase();
+
+            let filteredClasses = classes;
+            if (gradeLevelFilter) {
+                filteredClasses = filteredClasses.filter(c => c.grade_level === gradeLevelFilter);
+            }
+            if (sectionFilter) {
+                filteredClasses = filteredClasses.filter(c => c.section_name === sectionFilter);
+            }
+            if (subjectFilter) {
+                filteredClasses = filteredClasses.filter(c => c.subject_name === subjectFilter);
+            }
+
+            let allStudents = [];
+            filteredClasses.forEach(cls => {
+                const students = students_by_class[cls.class_id] || [];
+                students.forEach(student => {
+                    student.class_id = cls.class_id;
+                    allStudents.push(student);
+                });
+            });
+
+            return allStudents.filter(s => {
+                const att = attendanceData[today]?.[s.class_id]?.[s.lrn] || { status: '', notes: '' };
+                const matchesStatus = statusFilter ? att.status === statusFilter : true;
+                const matchesSearch = searchQuery ? 
+                    s.lrn.toString().includes(searchQuery) || 
+                    s.name.toLowerCase().includes(searchQuery) : true;
+                return matchesStatus && matchesSearch;
+            }).sort((a, b) => a.name.localeCompare(b.name));
+        }
+
+        function renderTable(isPagination = false) {
+            if (!isPagination) currentPage = 1;
+            const tableBody = document.querySelector('#attendance-table tbody');
+            tableBody.innerHTML = '';
+
+            const filteredStudents = getAllFilteredStudents();
+
+            if (filteredStudents.length === 0) {
+                tableBody.innerHTML = '<tr><td colspan="7" class="no-students-message">No students match the current filters</td></tr>';
+                updateStats([]);
+                document.getElementById('pagination').innerHTML = '';
+                return;
+            }
+
+            const start = (currentPage - 1) * rowsPerPage;
+            const end = start + rowsPerPage;
+            const paginatedStudents = filteredStudents.slice(start, end);
+
+            paginatedStudents.forEach(student => {
+                const att = attendanceData[today]?.[student.class_id]?.[student.lrn] || { status: '', notes: '', timeChecked: '' };
+                const statusClass = att.status ? att.status.toLowerCase() : 'none';
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td><img src="Uploads/${student.photo || 'no-icon.png'}" class="student-photo" alt="${student.name}"></td>
+                    <td>${student.lrn}</td>
+                    <td>${student.name}</td>
+                    <td><span class="status-badge status-${statusClass}">${att.status || 'None'}</span></td>
+                    <td>${att.notes || '-'}</td>
+                    <td>${att.timeChecked || '-'}</td>
+                    <td class="attendance-rate">90%</td>
+                `;
+                tableBody.appendChild(row);
+            });
+
+            updateStats(filteredStudents);
+
+            // Pagination
+            const pagination = document.getElementById('pagination');
+            pagination.innerHTML = '';
+            const pageCount = Math.ceil(filteredStudents.length / rowsPerPage);
+
+            if (pageCount <= 1) return;
+
+            const prevButton = document.createElement('button');
+            prevButton.textContent = 'Previous';
+            prevButton.classList.add('pagination-btn');
+            if (currentPage <= 1) prevButton.classList.add('disabled');
+            prevButton.onclick = () => {
+                if (currentPage > 1) {
+                    currentPage--;
+                    renderTable(true);
+                }
+            };
+            pagination.appendChild(prevButton);
+
+            const maxVisiblePages = 5;
+            let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
+            let endPage = Math.min(pageCount, startPage + maxVisiblePages - 1);
+
+            if (endPage - startPage + 1 < maxVisiblePages) {
+                startPage = Math.max(1, endPage - maxVisiblePages + 1);
+            }
+
+            if (startPage > 1) {
+                const firstPageBtn = document.createElement('button');
+                firstPageBtn.textContent = '1';
+                firstPageBtn.classList.add('pagination-btn');
+                firstPageBtn.onclick = () => {
+                    currentPage = 1;
+                    renderTable(true);
+                };
+                pagination.appendChild(firstPageBtn);
+
+                if (startPage > 2) {
+                    const ellipsis = document.createElement('span');
+                    ellipsis.textContent = '...';
+                    ellipsis.classList.add('pagination-ellipsis');
+                    pagination.appendChild(ellipsis);
+                }
+            }
+
+            for (let i = startPage; i <= endPage; i++) {
+                const pageButton = document.createElement('button');
+                pageButton.textContent = i;
+                pageButton.classList.add('pagination-btn');
+                if (i === currentPage) pageButton.classList.add('active');
+                pageButton.onclick = () => {
+                    currentPage = i;
+                    renderTable(true);
+                };
+                pagination.appendChild(pageButton);
+            }
+
+            if (endPage < pageCount) {
+                if (endPage < pageCount - 1) {
+                    const ellipsis = document.createElement('span');
+                    ellipsis.textContent = '...';
+                    ellipsis.classList.add('pagination-ellipsis');
+                    pagination.appendChild(ellipsis);
+                }
+
+                const lastPageBtn = document.createElement('button');
+                lastPageBtn.textContent = pageCount;
+                lastPageBtn.classList.add('pagination-btn');
+                lastPageBtn.onclick = () => {
+                    currentPage = pageCount;
+                    renderTable(true);
+                };
+                pagination.appendChild(lastPageBtn);
+            }
+
+            const nextButton = document.createElement('button');
+            nextButton.textContent = 'Next';
+            nextButton.classList.add('pagination-btn');
+            if (currentPage >= pageCount) nextButton.classList.add('disabled');
+            nextButton.onclick = () => {
+                if (currentPage < pageCount) {
+                    currentPage++;
+                    renderTable(true);
+                }
+            };
+            pagination.appendChild(nextButton);
+        }
+
+        function clearFilters() {
+            document.getElementById('searchInput').value = '';
+            document.getElementById('date-selector').value = '<?php echo date('Y-m-d'); ?>';
+            document.getElementById('gradeLevelSelector').value = '';
+            document.getElementById('sectionSelector').value = '';
+            document.getElementById('classSelector').value = '';
+            document.getElementById('statusSelector').value = '';
+            today = '<?php echo date('Y-m-d'); ?>';
+            populateGradeLevels();
+            renderTable();
+        }
+
+        const dateSelector = document.getElementById('date-selector');
+        const gradeLevelSelector = document.getElementById('gradeLevelSelector');
+        const sectionSelector = document.getElementById('sectionSelector');
+        const classSelector = document.getElementById('classSelector');
+        const statusSelector = document.getElementById('statusSelector');
+        const searchInput = document.getElementById('searchInput');
+
+        gradeLevelSelector.addEventListener('change', () => {
+            const gradeLevel = gradeLevelSelector.value;
+            populateSections(gradeLevel);
+            renderTable();
+        });
+
+        sectionSelector.addEventListener('change', () => {
+            const gradeLevel = gradeLevelSelector.value;
+            const section = sectionSelector.value;
+            populateSubjects(gradeLevel, section);
+            renderTable();
+        });
+
+        classSelector.addEventListener('change', () => {
+            renderTable();
+        });
+
+        statusSelector.addEventListener('change', () => {
+            renderTable();
+        });
+
+        searchInput.addEventListener('input', () => {
+            renderTable();
+        });
+
+        dateSelector.addEventListener('change', () => {
+            today = dateSelector.value;
+            renderTable();
+        });
+
+        document.addEventListener('DOMContentLoaded', () => {
+            populateGradeLevels();
+            renderTable();
+        });
+    </script>
 </body>
 </html>

@@ -545,7 +545,7 @@ body {
                         <th>LRN</th>
                         <th>Student Name</th>
                         <th>Status</th>
-                        <th>Notes</th>
+                        <th>Reason</th>
                         <th>Time Checked</th>
                         <th>Attendance Rate</th>
                     </tr>

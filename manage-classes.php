@@ -223,7 +223,7 @@ function fetchStudentsForClass($class_id)
 
         $stmt = $pdo->prepare("
             SELECT s.lrn, s.first_name, s.middle_name, s.last_name, s.email, s.gender, s.dob, s.grade_level, 
-                   s.address, s.parent_name, s.emergency_contact, s.photo, s.qr_code, s.date_added
+                   s.address, s.parent_name, s.parent_email, s.emergency_contact, s.photo, s.qr_code, s.date_added
             FROM class_students cs
             JOIN students s ON cs.lrn = s.lrn
             WHERE cs.class_id = ? AND cs.is_enrolled = 1
@@ -268,9 +268,9 @@ function importStudents($class_id, $filePath)
         // Store QR codes to be generated
         $qrs_to_generate = [];
         foreach ($rows as $index => $row) {
-            if (count($row) >= 11) { // Ensure row has at least 11 columns
+            if (count($row) >= 12) { // Updated to 12 to account for parent_email
                 $lrn = $row[0] ?? null;
-                if ($lrn && (!isset($row[12]) || empty(trim($row[12])))) {
+                if ($lrn && (!isset($row[13]) || empty(trim($row[13])))) {
                     $qrs_to_generate[] = [
                         'lrn' => $lrn,
                         'content' => "$lrn, {$row[1]}, {$row[2]}" . (isset($row[3]) && !empty($row[3]) ? " {$row[3]}" : '')
@@ -299,16 +299,16 @@ function importStudents($class_id, $filePath)
 
         // Insert or update students
         foreach ($rows as $row) {
-            if (count($row) >= 11) { // Ensure row has at least 11 columns
+            if (count($row) >= 12) { // Updated to 12 to account for parent_email
                 $lrn = $row[0] ?? null;
                 if (!$lrn) continue; // Skip if LRN is missing
 
                 // Use generated QR code if available, else use provided or null
-                $qr_code = isset($qr_files[$lrn]) ? $qr_files[$lrn] : (isset($row[12]) && !empty(trim($row[12])) ? trim($row[12]) : null);
+                $qr_code = isset($qr_files[$lrn]) ? $qr_files[$lrn] : (isset($row[13]) && !empty(trim($row[13])) ? trim($row[13]) : null);
 
                 $stmt = $pdo->prepare("
-                    INSERT INTO students (lrn, last_name, first_name, middle_name, email, gender, dob, grade_level, address, parent_name, emergency_contact, photo, qr_code, date_added)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURDATE())
+                    INSERT INTO students (lrn, last_name, first_name, middle_name, email, gender, dob, grade_level, address, parent_name, parent_email, emergency_contact, photo, qr_code, date_added)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURDATE())
                     ON DUPLICATE KEY UPDATE 
                         first_name = VALUES(first_name),
                         last_name = VALUES(last_name),
@@ -319,6 +319,7 @@ function importStudents($class_id, $filePath)
                         grade_level = VALUES(grade_level),
                         address = VALUES(address),
                         parent_name = VALUES(parent_name),
+                        parent_email = VALUES(parent_email),
                         emergency_contact = VALUES(emergency_contact),
                         photo = VALUES(photo),
                         qr_code = VALUES(qr_code)
@@ -334,8 +335,9 @@ function importStudents($class_id, $filePath)
                     $row[7] ?? null,              // grade_level
                     $row[8] ?? null,              // address
                     $row[9] ?? null,              // parent_name
-                    $row[10] ?? null,             // emergency_contact
-                    $row[11] ?? null,             // photo
+                    $row[10] ?? null,             // parent_email (new column)
+                    $row[11] ?? null,             // emergency_contact
+                    $row[12] ?? null,             // photo
                     $qr_code                      // qr_code
                 ]);
 
@@ -2442,6 +2444,107 @@ ob_end_flush();
                 padding: var(--spacing-sm);
             }
         }
+
+        @media (max-width: 1024px) {
+    .preview-table th:nth-child(n+9),
+    .preview-table td:nth-child(n+9),
+    .student-table th:nth-child(n+9),
+    .student-table td:nth-child(n+9) {
+        display: none;
+    }
+
+    .preview-table th,
+    .preview-table td,
+    .student-table th,
+    .student-table td {
+        padding: 0.75rem 1rem;
+        max-width: 120px;
+    }
+}
+
+@media (max-width: 768px) {
+    .preview-table th:nth-child(n+7),
+    .preview-table td:nth-child(n+7),
+    .student-table th:nth-child(n+7),
+    .student-table td:nth-child(n+7) {
+        display: none;
+    }
+
+    .modal-content {
+        width: 98%;
+        max-height: 95vh;
+    }
+
+    .import-section {
+        padding: 0.75rem;
+    }
+
+    .preview-table th,
+    .preview-table td,
+    .student-table th,
+    .student-table td {
+        padding: 0.5rem 0.75rem;
+        max-width: 100px;
+        font-size: 0.875rem;
+    }
+
+    .form-actions {
+        padding: 1rem;
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+}
+
+@media (max-width: 576px) {
+    .preview-table th:nth-child(n+5),
+    .preview-table td:nth-child(n+5),
+    .student-table th:nth-child(n+5),
+    .student-table td:nth-child(n+5) {
+        display: none;
+    }
+
+    .modal-body {
+        padding: 0.75rem;
+    }
+
+    .preview-table-container,
+    .student-table-container {
+        padding: 0.75rem;
+    }
+
+    .preview-table th,
+    .preview-table td,
+    .student-table th,
+    .student-table td {
+        padding: 0.5rem 0.25rem;
+        font-size: 0.75rem;
+        max-width: 80px;
+    }
+
+    .form-actions {
+        padding: 1rem;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    .form-actions .btn {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .import-controls {
+        gap: 0.5rem;
+    }
+
+    .import-note {
+        font-size: 0.65rem;
+    }
+}
+        
+    </style>
+
+    <style>
+         
     </style>
 
 </head>
@@ -2704,8 +2807,9 @@ ob_end_flush();
                         <input type="file" id="importFile" accept=".xlsx, .xls" class="file-input">
                         <button class="btn btn-success" onclick="importStudents()">Import Excel</button>
                     </div>
-                    <small class="import-note">Expected columns: LRN, Last Name, First Name, Middle Name, Email, Gender, DOB, Grade Level, Address, Parent Name, Emergency Contact, Photo, QR Code</small>
+                    <small class="import-note">Expected columns: LRN, Last Name, First Name, Middle Name, Email, Gender, DOB, Grade Level, Address, Parent Name, Parent Email, Emergency Contact, Photo, QR Code</small>
                 </div>
+                <!-- Preview Table -->
                 <div class="preview-table-container" id="previewTableContainer" style="display: none;">
                     <h3 class="preview-title">Preview</h3>
                     <div class="table-wrapper">
@@ -2722,6 +2826,7 @@ ob_end_flush();
                                     <th>Grade Level</th>
                                     <th>Address</th>
                                     <th>Parent Name</th>
+                                    <th>Parent Email</th>
                                     <th>Emergency Contact</th>
                                     <th>Photo</th>
                                     <th>QR Code</th>
@@ -2732,6 +2837,8 @@ ob_end_flush();
                         </table>
                     </div>
                 </div>
+
+                <!-- Student Table -->
                 <div class="student-table-container">
                     <div class="table-wrapper">
                         <table class="student-table" id="studentTable">
@@ -2747,6 +2854,7 @@ ob_end_flush();
                                     <th>Grade Level</th>
                                     <th>Address</th>
                                     <th>Parent Name</th>
+                                    <th>Parent Email</th>
                                     <th>Emergency Contact</th>
                                     <th>Photo</th>
                                     <th>QR Code</th>
@@ -3738,9 +3846,9 @@ ob_end_flush();
                 const lrn = row[0];
 
                 // If QR code is empty or not provided, set the expected filename
-                if (!row[12] || row[12].toString().trim() === '') {
+                if (!row[13] || row[13].toString().trim() === '') {
                     const qrFilename = `${lrn}.png`;
-                    previewData[index][12] = qrFilename;
+                    previewData[index][13] = qrFilename;
                 }
             });
         }
@@ -3841,8 +3949,7 @@ ob_end_flush();
                 const tr = document.createElement('tr');
                 tr.dataset.index = index;
 
-                // Handle photo display - show actual image like in student table
-                const photoValue = row[11] || '';
+                const photoValue = row[12] || '';
                 let photoDisplay = '';
                 if (photoValue && (photoValue.includes('.jpg') || photoValue.includes('.jpeg') || photoValue.includes('.png') || photoValue.includes('.gif'))) {
                     photoDisplay = `<img src="uploads/${photoValue}" alt="Student Photo" style="max-width: 45px; max-height: 45px; border-radius: 50%;" onerror="this.style.display='none'; this.nextSibling.style.display='inline';"><span style="display:none;">${sanitizeHTML(photoValue)}</span>`;
@@ -3852,36 +3959,35 @@ ob_end_flush();
                     photoDisplay = 'Photo To Be Provided';
                 }
 
-                // Handle QR code display - initially show filename, will be updated with image
                 let qrDisplay = '';
-                if (row[12] && row[12].toString().trim() !== '') {
-                    // Try to show existing QR code image
-                    const qrPath = `qrcodes/${row[12]}`;
-                    qrDisplay = `<img src="${qrPath}" alt="QR Code" style="max-width: 50px; max-height: 50px;" onerror="this.style.display='none'; this.nextSibling.style.display='inline';"><span style="display:none;">QR: ${row[12]}</span>`;
+                if (row[13] && row[13].toString().trim() !== '') {
+                    const qrPath = `qrcodes/${row[13]}`;
+                    qrDisplay = `<img src="${qrPath}" alt="QR Code" style="max-width: 50px; max-height: 50px;" onerror="this.style.display='none'; this.nextSibling.style.display='inline';"><span style="display:none;">QR: ${row[13]}</span>`;
                 } else {
                     qrDisplay = 'To be generated';
                 }
 
                 tr.innerHTML = `
-            <td>${sanitizeHTML(row[0] || '')}</td>
-            <td>${sanitizeHTML(row[1] || '')}</td>
-            <td>${sanitizeHTML(row[2] || '')}</td>
-            <td>${sanitizeHTML(row[3] || '')}</td>
-            <td>${sanitizeHTML(row[4] || '')}</td>
-            <td>${sanitizeHTML(row[5] || '')}</td>
-            <td>${sanitizeHTML(row[6] || '')}</td>
-            <td>${sanitizeHTML(row[7] || '')}</td>
-            <td>${sanitizeHTML(row[8] || '')}</td>
-            <td>${sanitizeHTML(row[9] || '')}</td>
-            <td>${sanitizeHTML(row[10] || '')}</td>
-            <td>${photoDisplay}</td>
-            <td>${qrDisplay}</td>
-            <td>
-                <button class="btn btn-sm btn-danger" onclick="removePreviewRow(this)">
-                    <i class="fas fa-trash"></i> Remove
-                </button>
-            </td>
-        `;
+                    <td>${sanitizeHTML(row[0] || '')}</td>
+                    <td>${sanitizeHTML(row[1] || '')}</td>
+                    <td>${sanitizeHTML(row[2] || '')}</td>
+                    <td>${sanitizeHTML(row[3] || '')}</td>
+                    <td>${sanitizeHTML(row[4] || '')}</td>
+                    <td>${sanitizeHTML(row[5] || '')}</td>
+                    <td>${sanitizeHTML(row[6] || '')}</td>
+                    <td>${sanitizeHTML(row[7] || '')}</td>
+                    <td>${sanitizeHTML(row[8] || '')}</td>
+                    <td>${sanitizeHTML(row[9] || '')}</td>
+                    <td>${sanitizeHTML(row[10] || '')}</td>
+                    <td>${sanitizeHTML(row[11] || '')}</td>
+                    <td>${photoDisplay}</td>
+                    <td>${qrDisplay}</td>
+                    <td>
+                        <button class="btn btn-sm btn-danger" onclick="removePreviewRow(this)">
+                            <i class="fas fa-trash"></i> Remove
+                        </button>
+                    </td>
+                `;
                 tbody.appendChild(tr);
             });
         }
@@ -3894,7 +4000,7 @@ ob_end_flush();
             tbody.innerHTML = '';
 
             if (!students || students.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="15" class="no-classes">No students enrolled</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="16" class="no-classes">No students enrolled</td></tr>';
                 return;
             }
 
@@ -3902,7 +4008,6 @@ ob_end_flush();
                 const photoSrc = student.photo ? `uploads/${student.photo}` : '';
                 const qrSrc = student.qr_code ? `qrcodes/${student.qr_code}` : '';
 
-                // Display QR code with filename
                 let qrDisplay = '';
                 if (qrSrc) {
                     qrDisplay = `<img src="${qrSrc}" alt="QR Code" style="max-width: 50px; max-height: 50px;"><br><small>${student.qr_code}</small>`;
@@ -3922,6 +4027,7 @@ ob_end_flush();
             <td>${sanitizeHTML(student.grade_level || 'N/A')}</td>
             <td>${sanitizeHTML(student.address || 'N/A')}</td>
             <td>${sanitizeHTML(student.parent_name || 'N/A')}</td>
+            <td>${sanitizeHTML(student.parent_email || 'N/A')}</td>
             <td>${sanitizeHTML(student.emergency_contact || 'N/A')}</td>
             <td>${photoSrc ? `<img src="${photoSrc}" alt="Student Photo" style="max-width: 45px; max-height: 45px; border-radius:50%;">` : 'Photo To Be Provided'}</td>
             <td>${qrDisplay}</td>

@@ -58,6 +58,7 @@ CREATE TABLE students (
     grade_level VARCHAR(20),
     address VARCHAR(255),
     parent_name VARCHAR(100),
+    parent_email VARCHAR(100),
     emergency_contact VARCHAR(20),
     photo VARCHAR(255) DEFAULT 'no-icon.png',
     qr_code VARCHAR(255) DEFAULT NULL,

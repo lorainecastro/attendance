@@ -399,10 +399,11 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action']) && $_POST['a
             'H1' => 'Grade Level',
             'I1' => 'Address',
             'J1' => 'Parent Name',
-            'K1' => 'Emergency Contact',
-            'L1' => 'Photo',
-            'M1' => 'QR Code',
-            'N1' => 'Date Added'
+            'K1' => 'Parent Email', // Add this line
+            'L1' => 'Emergency Contact',
+            'M1' => 'Photo',
+            'N1' => 'QR Code',
+            'O1' => 'Date Added' // Update this from N1 to O1
         ];
 
         // Apply headers with styling
@@ -445,15 +446,18 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action']) && $_POST['a
         $sheet->getColumnDimension('H')->setWidth(12); // Grade Level
         $sheet->getColumnDimension('I')->setWidth(30); // Address
         $sheet->getColumnDimension('J')->setWidth(25); // Parent Name
-        $sheet->getColumnDimension('K')->setWidth(20); // Emergency Contact
-        $sheet->getColumnDimension('L')->setWidth(15); // Photo
-        $sheet->getColumnDimension('M')->setWidth(15); // QR Code
-        $sheet->getColumnDimension('N')->setWidth(15); // Date Added
-
+        $sheet->getColumnDimension('K')->setWidth(25); // Parent Email
+        $sheet->getColumnDimension('L')->setWidth(20); // Emergency Contact (moved from K)
+        $sheet->getColumnDimension('M')->setWidth(15); // Photo (moved from L)
+        $sheet->getColumnDimension('N')->setWidth(15); // QR Code (moved from M)
+        $sheet->getColumnDimension('O')->setWidth(15); // Date Added (moved from N)
+        $sheet->getRowDimension(1)->setRowHeight(20);
         // Fill data
         $row = 2;
         foreach ($students as $student) {
-            $sheet->setCellValue('A' . $row, $student['lrn']);
+            // $sheet->setCellValue('A' . $row, $student['lrn']);
+            $sheet->setCellValue('A' . $row, (int)$student['lrn']);
+            $sheet->getStyle('A' . $row)->getNumberFormat()->setFormatCode('0');
             $sheet->setCellValue('B' . $row, $student['last_name']);
             $sheet->setCellValue('C' . $row, $student['first_name']);
             $sheet->setCellValue('D' . $row, $student['middle_name']);
@@ -463,16 +467,16 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action']) && $_POST['a
             $sheet->setCellValue('H' . $row, $student['grade_level']);
             $sheet->setCellValue('I' . $row, $student['address'] ?: 'N/A');
             $sheet->setCellValue('J' . $row, $student['parent_name'] ?: 'N/A');
-            $sheet->setCellValue('K' . $row, $student['emergency_contact'] ?: 'N/A');
-            $sheet->setCellValue('L' . $row, $student['photo'] ?: 'no-icon.png');
-            $sheet->setCellValue('M' . $row, $student['qr_code'] ?: 'No QR Code');
-            $sheet->setCellValue('N' . $row, $student['date_added'] ? date('Y-m-d', strtotime($student['date_added'])) : 'N/A');
-
+            $sheet->setCellValue('K' . $row, $student['parent_email'] ?: 'N/A'); // Add this line
+            $sheet->setCellValue('L' . $row, $student['emergency_contact'] ?: 'N/A'); // Update from K to L
+            $sheet->setCellValue('M' . $row, $student['photo'] ?: 'no-icon.png'); // Update from L to M
+            $sheet->setCellValue('N' . $row, $student['qr_code'] ?: 'No QR Code'); // Update from M to N
+            $sheet->setCellValue('O' . $row, $student['date_added'] ? date('Y-m-d', strtotime($student['date_added'])) : 'N/A'); // Update from N to O
             $row++;
         }
 
         // Apply borders to all data
-        $dataRange = 'A1:N' . ($row - 1);
+        $dataRange = 'A1:O' . ($row - 1); // Update from N to O
         $dataStyle = [
             'borders' => [
                 'allBorders' => [
@@ -489,7 +493,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action']) && $_POST['a
         // Alternate row colors
         for ($i = 2; $i < $row; $i++) {
             if ($i % 2 == 0) {
-                $sheet->getStyle('A' . $i . ':N' . $i)->applyFromArray([
+                $sheet->getStyle('A' . $i . ':O' . $i)->applyFromArray([ // Update from N to O
                     'fill' => [
                         'fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID,
                         'startColor' => ['rgb' => 'F8FAFC'],
@@ -642,6 +646,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['lrn']) && !isset($_POS
     $dob = $_POST['dob'] ?? null;
     $address = $_POST['address'] ?? null;
     $parent_name = $_POST['parent_name'] ?? null;
+    $parent_email = $_POST['parent_email'] ?? null;
     $emergency_contact = $_POST['emergency_contact'] ?? null;
     $grade_level = $_POST['grade_level'] ?? null;
     $class = $_POST['class'] ?? null; // subject_name
@@ -702,24 +707,15 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['lrn']) && !isset($_POS
                 UPDATE students SET 
                     last_name = ?, first_name = ?, middle_name = ?, email = ?, 
                     gender = ?, dob = ?, grade_level = ?, address = ?, 
-                    parent_name = ?, emergency_contact = ?, photo = ?,
+                    parent_name = ?, parent_email = ?, emergency_contact = ?, photo = ?,
                     qr_code = ?
                 WHERE lrn = ?
             ");
             $stmt->execute([
-                $last_name,
-                $first_name,
-                $middle_name,
-                $email,
-                $gender,
-                $dob,
-                $grade_level,
-                $address,
-                $parent_name,
-                $emergency_contact,
-                $photo,
-                $qr_code,
-                $lrn
+                $last_name, $first_name, $middle_name, $email,
+                $gender, $dob, $grade_level, $address,
+                $parent_name, $parent_email, $emergency_contact, $photo,
+                $qr_code, $lrn
             ]);
 
             // Get current class_id for the student
@@ -769,24 +765,14 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['lrn']) && !isset($_POS
             $stmt = $pdo->prepare("
                 INSERT INTO students (
                     lrn, last_name, first_name, middle_name, email, gender, 
-                    dob, grade_level, address, parent_name, emergency_contact, 
+                    dob, grade_level, address, parent_name, parent_email, emergency_contact, 
                     photo, qr_code, date_added
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURDATE())
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURDATE())
             ");
             $stmt->execute([
-                $lrn,
-                $last_name,
-                $first_name,
-                $middle_name,
-                $email,
-                $gender,
-                $dob,
-                $grade_level,
-                $address,
-                $parent_name,
-                $emergency_contact,
-                $photo,
-                $qr_code
+                $lrn, $last_name, $first_name, $middle_name, $email, $gender,
+                $dob, $grade_level, $address, $parent_name, $parent_email, $emergency_contact,
+                $photo, $qr_code
             ]);
 
             // Get new class_id
@@ -2232,6 +2218,10 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
                             <input type="text" class="form-input" id="parent-name" name="parent_name">
                         </div>
                         <div class="form-group">
+                            <label class="form-label">Parent/Guardian Email</label>
+                            <input type="email" class="form-input" id="parent-email" name="parent_email">
+                        </div>
+                        <div class="form-group">
                             <label class="form-label">Emergency Contact</label>
                             <input type="text" class="form-input" id="emergency-contact" name="emergency_contact">
                         </div>
@@ -3092,6 +3082,7 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
                 class: document.getElementById('class'),
                 address: document.getElementById('address'),
                 parentName: document.getElementById('parent-name'),
+                parentEmail: document.getElementById('parent-email'), // Add this line
                 emergencyContact: document.getElementById('emergency-contact'),
                 photoPreview: document.getElementById('student-photo-preview'),
                 photoInput: document.getElementById('student-photo')
@@ -3129,6 +3120,7 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
                 form.dob.value = student.dob || '';
                 form.address.value = student.address || '';
                 form.parentName.value = student.parent_name || '';
+                form.parentEmail.value = student.parent_email || ''; // Add this line
                 form.emergencyContact.value = student.emergency_contact || '';
                 form.photoPreview.src = student.photo ?
                     'uploads/' + student.photo :

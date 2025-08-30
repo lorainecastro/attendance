@@ -29,19 +29,58 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         foreach ($attendance as $lrn => $att) {
             $status = $att['status'] ?: null;
             $reason = $att['notes'] ?: null;
+            $is_qr_scanned = isset($att['is_qr_scanned']) ? $att['is_qr_scanned'] : 0;
             // Parse timeChecked in Asia/Manila timezone
             $time_checked = $att['timeChecked'] ? date('Y-m-d H:i:s', strtotime($att['timeChecked'] . ' Asia/Manila')) : null;
             // Check if exists
-            $stmt = $pdo->prepare("SELECT attendance_id FROM attendance_tracking WHERE class_id = ? AND lrn = ? AND attendance_date = ?");
+            $stmt = $pdo->prepare("SELECT attendance_id, is_qr_scanned FROM attendance_tracking WHERE class_id = ? AND lrn = ? AND attendance_date = ?");
             $stmt->execute([$class_id, $lrn, $date]);
-            if ($stmt->fetch()) {
+            $existing = $stmt->fetch();
+            if ($existing) {
+                // Skip update if record was QR-scanned
+                if ($existing['is_qr_scanned']) {
+                    continue;
+                }
                 // Update
-                $stmt = $pdo->prepare("UPDATE attendance_tracking SET attendance_status = ?, reason = ?, time_checked = ? WHERE class_id = ? AND lrn = ? AND attendance_date = ?");
-                $stmt->execute([$status, $reason, $time_checked, $class_id, $lrn, $date]);
+                $stmt = $pdo->prepare("UPDATE attendance_tracking SET attendance_status = ?, reason = ?, time_checked = ?, is_qr_scanned = ?, logged_by = 'Teacher' WHERE class_id = ? AND lrn = ? AND attendance_date = ?");
+                $stmt->execute([$status, $reason, $time_checked, $is_qr_scanned, $class_id, $lrn, $date]);
             } else if ($status) {
                 // Insert
-                $stmt = $pdo->prepare("INSERT INTO attendance_tracking (class_id, lrn, attendance_date, attendance_status, reason, time_checked, logged_by) VALUES (?, ?, ?, ?, ?, ?, 'Teacher')");
-                $stmt->execute([$class_id, $lrn, $date, $status, $reason, $time_checked]);
+                $logged_by = $is_qr_scanned ? 'QR' : 'Teacher';
+                $stmt = $pdo->prepare("INSERT INTO attendance_tracking (class_id, lrn, attendance_date, attendance_status, reason, time_checked, is_qr_scanned, logged_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+                $stmt->execute([$class_id, $lrn, $date, $status, $reason, $time_checked, $is_qr_scanned, $logged_by]);
+            }
+            // Send email if QR-scanned
+            if ($is_qr_scanned && $status === 'Present') {
+                $stmt = $pdo->prepare("SELECT parent_email, CONCAT(first_name, ' ', last_name) AS name FROM students WHERE lrn = ?");
+                $stmt->execute([$lrn]);
+                $student = $stmt->fetch(PDO::FETCH_ASSOC);
+                if ($student && $student['parent_email']) {
+                    try {
+                        $mail = new PHPMailer(true);
+                        $mail->isSMTP();
+                        $mail->Host = 'smtp.gmail.com';
+                        $mail->SMTPAuth = true;
+                        $mail->Username = 'elci.bank@gmail.com';
+                        $mail->Password = 'misxfqnfsovohfwh';
+                        $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
+                        $mail->Port = 587;
+                        $mail->setFrom('elci.bank@gmail.com', 'SAMS');
+                        $mail->addAddress($student['parent_email']);
+                        $mail->isHTML(true);
+                        $mail->Subject = 'Attendance Notification';
+                        $mail->Body = "
+                            <h3>Attendance Notification</h3>
+                            <p>Dear Parent/Guardian,</p>
+                            <p>Your child, {$student['name']}, has been marked Present for the class on {$date} at {$time_checked}.</p>
+                            <p>Thank you,<br>SAMS Team</p>
+                        ";
+                        $mail->send();
+                    } catch (Exception $e) {
+                        // Log error instead of echoing to avoid breaking JSON response
+                        error_log("Email error for LRN $lrn: " . $mail->ErrorInfo);
+                    }
+                }
             }
         }
         echo json_encode(['success' => true]);
@@ -53,7 +92,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 $pdo = getDBConnection();
 
-// Fetch classes for the teacher (unchanged)
+// Fetch classes for the teacher
 $stmt = $pdo->prepare("
     SELECT c.class_id, c.section_name, s.subject_name, c.grade_level 
     FROM classes c 
@@ -63,12 +102,12 @@ $stmt = $pdo->prepare("
 $stmt->execute([$user['teacher_id']]);
 $classes_fetch = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-// Fetch students by class (unchanged)
+// Fetch students by class (include parent_email)
 $students_by_class = [];
 foreach ($classes_fetch as $class) {
     $class_id = $class['class_id'];
     $stmt = $pdo->prepare("
-        SELECT s.lrn, CONCAT(s.last_name, ', ', s.first_name, ' ', s.middle_name) AS name, s.photo 
+        SELECT s.lrn, CONCAT(s.last_name, ', ', s.first_name, ' ', s.middle_name) AS name, s.photo, s.parent_email 
         FROM students s 
         JOIN class_students cs ON s.lrn = cs.lrn 
         WHERE cs.class_id = ?
@@ -80,7 +119,7 @@ foreach ($classes_fetch as $class) {
 // Fetch existing attendance
 $attendance_arr = [];
 $stmt = $pdo->prepare("
-    SELECT a.class_id, a.attendance_date, a.lrn, a.attendance_status, a.reason, a.time_checked 
+    SELECT a.class_id, a.attendance_date, a.lrn, a.attendance_status, a.reason, a.time_checked, a.is_qr_scanned 
     FROM attendance_tracking a 
     JOIN classes c ON a.class_id = c.class_id 
     WHERE c.teacher_id = ?
@@ -98,7 +137,8 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
     $attendance_arr[$date][$class_id][$lrn] = [
         'status' => $row['attendance_status'] ?: '',
         'notes' => $row['reason'] ?: '',
-        'timeChecked' => $time_checked
+        'timeChecked' => $time_checked,
+        'is_qr_scanned' => $row['is_qr_scanned'] ? true : false
     ];
 }
 ?>
@@ -162,32 +202,105 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
         }
 
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: var(--font-family); }
-        /* body { background-color: var(--card-bg); color: var(--blackfont-color); padding: 20px; } */
         html, body {
-    height: 100%;
-    margin: 0;
-}
+            height: 100%;
+            margin: 0;
+        }
 
-body {
-    background-color: var(--card-bg); color: var(--blackfont-color); padding: 20px;
-}
+        body {
+            background-color: var(--card-bg); 
+            color: var(--blackfont-color); 
+            padding: 20px;
+        }
 
-.attendance-grid, .stats-grid, .controls {
-    flex-grow: 1; 
-}
-        h1 { font-size: 24px; margin-bottom: 20px; color: var(--blackfont-color); position: relative; padding-bottom: 10px; }
-        h1:after { content: ''; position: absolute; left: 0; bottom: 0; height: 4px; width: 80px; background: var(--primary-gradient); border-radius: var(--radius-sm); }
-        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 20px; }
-        .card { background: var(--card-bg); border-radius: 12px; padding: 20px; box-shadow: var(--shadow-md); transition: var(--transition-normal); }
-        .card:hover { transform: translateY(-5px); box-shadow: var(--shadow-lg); }
-        .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
-        .card-icon { width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 24px; color: var(--whitefont-color); }
-        .bg-purple { background: var(--primary-gradient); }
-        .bg-pink { background: var(--secondary-gradient); }
-        .bg-blue { background: linear-gradient(135deg, #3b82f6, #60a5fa); }
-        .bg-green { background: linear-gradient(135deg, #10b981, #34d399); }
-        .card-title { font-size: 14px; color: var(--grayfont-color); margin-bottom: 5px; }
-        .card-value { font-size: 24px; font-weight: 700; color: var(--blackfont-color); }
+        .attendance-grid, .stats-grid, .controls {
+            flex-grow: 1; 
+        }
+
+        h1 { 
+            font-size: 24px; 
+            margin-bottom: 20px; 
+            color: var(--blackfont-color); 
+            position: relative; 
+            padding-bottom: 10px; 
+        }
+
+        h1:after { 
+            content: ''; 
+            position: absolute; 
+            left: 0; 
+            bottom: 0; 
+            height: 4px; 
+            width: 80px; 
+            background: var(--primary-gradient); 
+            border-radius: var(--radius-sm); 
+        }
+
+        .stats-grid { 
+            display: grid; 
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); 
+            gap: 20px; 
+            margin-bottom: 20px; 
+        }
+
+        .card { 
+            background: var(--card-bg); 
+            border-radius: 12px; 
+            padding: 20px; 
+            box-shadow: var(--shadow-md); 
+            transition: var(--transition-normal); 
+        }
+
+        .card:hover { 
+            transform: translateY(-5px); 
+            box-shadow: var(--shadow-lg); 
+        }
+
+        .card-header { 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            margin-bottom: 15px; 
+        }
+
+        .card-icon { 
+            width: 48px; 
+            height: 48px; 
+            border-radius: 12px; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            font-size: 24px; 
+            color: var(--whitefont-color); 
+        }
+
+        .bg-purple { 
+            background: var(--primary-gradient); 
+        }
+
+        .bg-pink { 
+            background: var(--secondary-gradient); 
+        }
+
+        .bg-blue { 
+            background: linear-gradient(135deg, #3b82f6, #60a5fa); 
+        }
+
+        .bg-green { 
+            background: linear-gradient(135deg, #10b981, #34d399); 
+        }
+
+        .card-title { 
+            font-size: 14px; 
+            color: var(--grayfont-color); 
+            margin-bottom: 5px; 
+        }
+
+        .card-value { 
+            font-size: 24px; 
+            font-weight: 700; 
+            color: var(--blackfont-color); 
+        }
 
         .controls {
             background: var(--card-bg);
@@ -336,42 +449,171 @@ body {
             background: var(--inputfieldhover-color);
         }
 
-        table { width: 100%; border-collapse: collapse; }
-        th, td { padding: 12px 15px; text-align: left; border-bottom: 1px solid var(--border-color); }
-        th { font-weight: 600; color: var(--grayfont-color); font-size: 14px; background: var(--inputfield-color); }
-        tbody tr { transition: var(--transition-normal); }
-        tbody tr:hover { background-color: var(--inputfieldhover-color); }
-        .student-photo { width: 45px; height: 45px; border-radius: 50%; object-fit: cover; }
-        .status-select, .notes-select { padding: 8px 12px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 14px; transition: var(--transition-normal); width: 100%; }
-        .status-select:focus, .notes-select:focus { outline: none; border-color: var(--primary-blue); background: var(--inputfieldhover-color); }
-        .status-select option[value="Present"] { background-color: var(--status-present-bg); }
-        .status-select option[value="Absent"] { background-color: var(--status-absent-bg); }
-        .status-select option[value="Late"] { background-color: var(--status-late-bg); }
-        .status-select option[value=""] { background-color: var(--status-none-bg); }
-        .status-select.present { background-color: var(--status-present-bg); }
-        .status-select.absent { background-color: var(--status-absent-bg); }
-        .status-select.late { background-color: var(--status-late-bg); }
-        .status-select.none { background-color: var(--status-none-bg); }
-        .notes-select:disabled { background: var(--light-gray); cursor: not-allowed; }
-        .attendance-rate { color: var(--success-green); font-weight: 600; }
-        .action-buttons { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
-        .save-btn, .submit-btn { padding: 8px 16px; border: none; border-radius: 8px; font-size: 14px; cursor: pointer; transition: var(--transition-normal); }
-        .save-btn { background: var(--inputfield-color); color: var(--blackfont-color); }
-        .save-btn:hover { background: var(--inputfieldhover-color); }
-        .submit-btn { background: var(--primary-blue); color: var(--whitefont-color); }
-        .submit-btn:hover { background: var(--primary-blue-hover); }
-        .qr-scanner-container { margin-bottom: 15px; text-align: center; }
-        #qr-video { width: 100%; max-width: 300px; border-radius: 8px; }
-        #qr-canvas { display: none; }
-        .notification { position: fixed; top: 20px; right: 20px; padding: 10px 20px; border-radius: 8px; color: var(--whitefont-color); z-index: 1000; transition: opacity var(--transition-normal); }
-        .notification.success { background: var(--success-green); }
-        .notification.error { background: var(--danger-red); }
+        table { 
+            width: 100%; 
+            border-collapse: collapse; 
+        }
+
+        th, td { 
+            padding: 12px 15px; 
+            text-align: left; 
+            border-bottom: 1px solid var(--border-color); 
+        }
+
+        th { 
+            font-weight: 600; 
+            color: var(--grayfont-color); 
+            font-size: 14px; 
+            background: var(--inputfield-color); 
+        }
+
+        tbody tr { 
+            transition: var(--transition-normal); 
+        }
+
+        tbody tr:hover { 
+            background-color: var(--inputfieldhover-color); 
+        }
+
+        .student-photo { 
+            width: 45px; 
+            height: 45px; 
+            border-radius: 50%; 
+            object-fit: cover; 
+        }
+
+        .status-select, .notes-select { 
+            padding: 8px 12px; 
+            border: 1px solid var(--border-color); 
+            border-radius: 8px; 
+            font-size: 14px; 
+            transition: var(--transition-normal); 
+            width: 100%; 
+        }
+
+        .status-select:focus, .notes-select:focus { 
+            outline: none; 
+            border-color: var(--primary-blue); 
+            background: var(--inputfieldhover-color); 
+        }
+
+        .status-select option[value="Present"] { 
+            background-color: var(--status-present-bg); 
+        }
+
+        .status-select option[value="Absent"] { 
+            background-color: var(--status-absent-bg); 
+        }
+
+        .status-select option[value="Late"] { 
+            background-color: var(--status-late-bg); 
+        }
+
+        .status-select option[value=""] { 
+            background-color: var(--status-none-bg); 
+        }
+
+        .status-select.present { 
+            background-color: var(--status-present-bg); 
+        }
+
+        .status-select.absent { 
+            background-color: var(--status-absent-bg); 
+        }
+
+        .status-select.late { 
+            background-color: var(--status-late-bg); 
+        }
+
+        .status-select.none { 
+            background-color: var(--status-none-bg); 
+        }
+
+        .status-select:disabled, .notes-select:disabled { 
+            background: var(--light-gray); 
+            cursor: not-allowed; 
+        }
+
+        .attendance-rate { 
+            color: var(--success-green); 
+            font-weight: 600; 
+        }
+
+        .action-buttons { 
+            display: flex; 
+            justify-content: flex-end; 
+            gap: 10px; 
+            margin-top: 20px; 
+        }
+
+        .save-btn, .submit-btn { 
+            padding: 8px 16px; 
+            border: none; 
+            border-radius: 8px; 
+            font-size: 14px; 
+            cursor: pointer; 
+            transition: var(--transition-normal); 
+        }
+
+        .save-btn { 
+            background: var(--inputfield-color); 
+            color: var(--blackfont-color); 
+        }
+
+        .save-btn:hover { 
+            background: var(--inputfieldhover-color); 
+        }
+
+        .submit-btn { 
+            background: var(--primary-blue); 
+            color: var(--whitefont-color); 
+        }
+
+        .submit-btn:hover { 
+            background: var(--primary-blue-hover); 
+        }
+
+        .qr-scanner-container { 
+            margin-bottom: 15px; 
+            text-align: center; 
+        }
+
+        #qr-video { 
+            width: 100%; 
+            max-width: 300px; 
+            border-radius: 8px; 
+        }
+
+        #qr-canvas { 
+            display: none; 
+        }
+
+        .notification { 
+            position: fixed; 
+            top: 20px; 
+            right: 20px; 
+            padding: 10px 20px; 
+            border-radius: 8px; 
+            color: var(--whitefont-color); 
+            z-index: 1000; 
+            transition: opacity var(--transition-normal); 
+        }
+
+        .notification.success { 
+            background: var(--success-green); 
+        }
+
+        .notification.error { 
+            background: var(--danger-red); 
+        }
+
         .pagination {
             display: flex;
             justify-content: center;
             gap: 10px;
             margin-top: 20px;
         }
+
         .pagination button {
             padding: 8px 16px;
             border: 1px solid var(--border-color);
@@ -380,18 +622,22 @@ body {
             cursor: pointer;
             transition: var(--transition-normal);
         }
+
         .pagination button:hover {
             background: var(--inputfieldhover-color);
         }
+
         .pagination button.disabled {
             cursor: not-allowed;
             opacity: 0.5;
         }
+
         .pagination button.active {
             background: var(--primary-blue);
             color: var(--whitefont-color);
             border-color: var(--primary-blue);
         }
+
         .no-students-message {
             text-align: center;
             padding: 20px;
@@ -404,30 +650,68 @@ body {
                 flex-direction: column;
                 align-items: stretch;
             }
+
             .action-buttons-container {
                 flex-direction: column;
                 align-items: stretch;
             }
+
             .bulk-actions {
                 flex-direction: column;
             }
-            .stats-grid { grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }
+
+            .stats-grid { 
+                grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); 
+            }
         }
 
         @media (max-width: 768px) {
-            body { padding: var(--spacing-sm); }
-            .controls-left { flex-direction: column; gap: var(--spacing-xs); }
-            .search-container { min-width: auto; width: 100%; }
-            .selector-input, .selector-select { width: 100%; min-width: auto; }
-            .btn { width: 100%; justify-content: center; }
-            .bulk-action-btn { width: 100%; }
-            .table-responsive { overflow-x: auto; }
+            body { 
+                padding: var(--spacing-sm); 
+            }
+
+            .controls-left { 
+                flex-direction: column; 
+                gap: var(--spacing-xs); 
+            }
+
+            .search-container { 
+                min-width: auto; 
+                width: 100%; 
+            }
+
+            .selector-input, 
+            .selector-select { 
+                width: 100%; 
+                min-width: auto; 
+            }
+
+            .btn { 
+                width: 100%; 
+                justify-content: center; 
+            }
+
+            .bulk-action-btn { 
+                width: 100%; 
+            }
+
+            .table-responsive { 
+                overflow-x: auto; 
+            }
         }
 
         @media (max-width: 576px) {
-            .stats-grid { grid-template-columns: 1fr; }
-            .card-value { font-size: 20px; }
-            th, td { padding: 10px; }
+            .stats-grid { 
+                grid-template-columns: 1fr; 
+            }
+
+            .card-value { 
+                font-size: 20px; 
+            }
+
+            th, td { 
+                padding: 10px; 
+            }
         }
     </style>
 </head>
@@ -575,7 +859,7 @@ body {
         let today = document.getElementById('date-selector').value;
         let videoStream = null;
         let scannedStudents = new Set();
-        let selectedStudents = new Set(); // Track selected student LRNs as strings
+        let selectedStudents = new Set();
         let current_class_id = null;
         let currentPage = 1;
         const rowsPerPage = 5;
@@ -668,7 +952,6 @@ body {
             return date.toLocaleString('en-US', options).replace(',', '');
         }
 
-        // Get all filtered students (used for select all functionality)
         function getAllFilteredStudents() {
             const gradeLevelFilter = gradeLevelSelector.value;
             const sectionFilter = sectionSelector.value;
@@ -692,7 +975,6 @@ body {
             }).sort((a, b) => a.name.localeCompare(b.name));
         }
 
-        // Update the select-all checkbox state based on all filtered students
         function updateSelectAllState() {
             const allFilteredStudents = getAllFilteredStudents();
             const allSelected = allFilteredStudents.length > 0 && 
@@ -701,13 +983,11 @@ body {
             const selectAllCheckbox = document.getElementById('select-all');
             selectAllCheckbox.checked = allSelected;
             
-            // Set indeterminate state if some but not all are selected
             const someSelected = allFilteredStudents.some(student => selectedStudents.has(student.lrn.toString()));
             selectAllCheckbox.indeterminate = someSelected && !allSelected;
         }
 
         function renderTable(isPagination = false) {
-            // Preserve bulk action selection
             const bulkActionSelect = document.getElementById('bulk-action-select');
             const selectedBulkAction = bulkActionSelect.value;
 
@@ -760,7 +1040,12 @@ body {
             if (!attendanceData[today][current_class_id]) attendanceData[today][current_class_id] = {};
             current_students.forEach(student => {
                 if (!attendanceData[today][current_class_id][student.lrn]) {
-                    attendanceData[today][current_class_id][student.lrn] = { status: '', notes: '', timeChecked: '' };
+                    attendanceData[today][current_class_id][student.lrn] = {
+                        status: '',
+                        notes: '',
+                        timeChecked: '',
+                        is_qr_scanned: false
+                    };
                 }
             });
 
@@ -781,17 +1066,19 @@ body {
 
             paginatedStudents.forEach(student => {
                 const att = attendanceData[today][current_class_id][student.lrn];
-                const isNotesDisabled = att.status === 'Present';
+                const isQRScanned = att.is_qr_scanned;
+                const isEditable = !isQRScanned;
+                const isNotesDisabled = !isEditable || att.status === 'Present';
                 const statusClass = att.status ? att.status.toLowerCase() : 'none';
-                const isChecked = selectedStudents.has(student.lrn.toString()) ? 'checked' : '';
+                const isChecked = selectedStudents.has(student.lrn.toString()) && isEditable ? 'checked' : '';
                 const row = document.createElement('tr');
                 row.innerHTML = `
-                    <td><input type="checkbox" class="select-student" data-id="${student.lrn}" ${isChecked}></td>
-                    <td><img src="uploads/${student.photo || 'uploads/no-icon.png'}" class="student-photo" alt="${student.name}"></td>
+                    <td><input type="checkbox" class="select-student" data-id="${student.lrn}" ${isChecked} ${isQRScanned ? 'disabled' : ''}></td>
+                    <td><img src="uploads/${student.photo || 'no-icon.png'}" class="student-photo" alt="${student.name}"></td>
                     <td>${student.lrn}</td>
                     <td>${student.name}</td>
                     <td>
-                        <select class="status-select ${statusClass}" data-id="${student.lrn}">
+                        <select class="status-select ${statusClass}" data-id="${student.lrn}" ${isQRScanned ? 'disabled' : ''}>
                             <option value="" ${att.status === '' ? 'selected' : ''}>Select Status</option>
                             <option value="Present" ${att.status === 'Present' ? 'selected' : ''}>Present</option>
                             <option value="Absent" ${att.status === 'Absent' ? 'selected' : ''}>Absent</option>
@@ -815,13 +1102,10 @@ body {
                 tableBody.appendChild(row);
             });
 
-            // Restore bulk action selection
             bulkActionSelect.value = selectedBulkAction;
 
-            // Update select-all checkbox state based on all filtered students
             updateSelectAllState();
 
-            // Add event listeners for checkboxes
             document.querySelectorAll('.select-student').forEach(checkbox => {
                 checkbox.addEventListener('change', () => {
                     const studentId = checkbox.dataset.id.toString();
@@ -831,16 +1115,17 @@ body {
                         selectedStudents.delete(studentId);
                     }
                     updateSelectAllState();
-                    console.log('Updated selectedStudents:', Array.from(selectedStudents));
                 });
             });
 
             document.querySelectorAll('.status-select').forEach(select => {
                 select.addEventListener('change', () => {
+                    if (select.disabled) return;
                     const studentId = select.dataset.id.toString();
                     const newStatus = select.value;
                     const notesSelect = tableBody.querySelector(`.notes-select[data-id="${studentId}"]`);
                     attendanceData[today][current_class_id][studentId].status = newStatus;
+                    attendanceData[today][current_class_id][studentId].is_qr_scanned = false;
                     notesSelect.disabled = newStatus === 'Present';
                     if (newStatus === 'Present') {
                         attendanceData[today][current_class_id][studentId].notes = '';
@@ -867,6 +1152,7 @@ body {
 
             document.querySelectorAll('.notes-select').forEach(select => {
                 select.addEventListener('change', () => {
+                    if (select.disabled) return;
                     const studentId = select.dataset.id.toString();
                     const newNotes = select.value;
                     attendanceData[today][current_class_id][studentId].notes = newNotes;
@@ -881,12 +1167,11 @@ body {
 
             updateStats(filteredStudents);
 
-            // Pagination
             const pagination = document.getElementById('pagination');
             pagination.innerHTML = '';
             const pageCount = Math.ceil(filteredStudents.length / rowsPerPage);
 
-            if (pageCount <= 1) return; // Don't show pagination if only one page
+            if (pageCount <= 1) return;
 
             const prevButton = document.createElement('button');
             prevButton.textContent = 'Previous';
@@ -900,7 +1185,6 @@ body {
             };
             pagination.appendChild(prevButton);
 
-            // Show page numbers (with ellipsis for large page counts)
             const maxVisiblePages = 5;
             let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
             let endPage = Math.min(pageCount, startPage + maxVisiblePages - 1);
@@ -971,39 +1255,42 @@ body {
         }
 
         function toggleSelectAll() {
-            const allFilteredStudents = getAllFilteredStudents();
+            const allFilteredStudents = getAllFilteredStudents().filter(student => 
+                !attendanceData[today][current_class_id][student.lrn].is_qr_scanned
+            );
             const selectAllCheckbox = document.getElementById('select-all');
             
             if (selectAllCheckbox.checked) {
-                // Select all filtered students
                 allFilteredStudents.forEach(student => {
                     selectedStudents.add(student.lrn.toString());
                 });
             } else {
-                // Deselect all filtered students
                 allFilteredStudents.forEach(student => {
                     selectedStudents.delete(student.lrn.toString());
                 });
             }
             
-            // Update checkboxes on current page
             document.querySelectorAll('.select-student').forEach(checkbox => {
                 const studentId = checkbox.dataset.id.toString();
-                checkbox.checked = selectedStudents.has(studentId);
+                if (!attendanceData[today][current_class_id][studentId].is_qr_scanned) {
+                    checkbox.checked = selectedStudents.has(studentId);
+                }
             });
             
             selectAllCheckbox.indeterminate = false;
-            console.log('After toggleSelectAll, selectedStudents:', Array.from(selectedStudents));
         }
 
         function markAllPresent() {
             if (!current_class_id) return;
-            const filteredStudents = getAllFilteredStudents();
+            const filteredStudents = getAllFilteredStudents().filter(student => 
+                !attendanceData[today][current_class_id][student.lrn].is_qr_scanned
+            );
 
             filteredStudents.forEach(student => {
                 attendanceData[today][current_class_id][student.lrn].status = 'Present';
                 attendanceData[today][current_class_id][student.lrn].notes = '';
                 attendanceData[today][current_class_id][student.lrn].timeChecked = formatDateTime(new Date());
+                attendanceData[today][current_class_id][student.lrn].is_qr_scanned = false;
             });
             renderTable(true);
         }
@@ -1016,18 +1303,20 @@ body {
                 return;
             }
             const selected = Array.from(selectedStudents).filter(lrn => 
-                (students_by_class[current_class_id] || []).some(s => s.lrn.toString() === lrn)
+                (students_by_class[current_class_id] || []).some(s => 
+                    s.lrn.toString() === lrn && 
+                    !attendanceData[today][current_class_id][lrn].is_qr_scanned
+                )
             );
-            console.log('applyBulkAction - selectedStudents:', Array.from(selectedStudents));
-            console.log('applyBulkAction - filtered selected:', selected);
             if (selected.length === 0) {
-                showNotification('Please select at least one student.', 'error');
+                showNotification('Please select at least one editable student.', 'error');
                 return;
             }
             selected.forEach(studentId => {
                 attendanceData[today][current_class_id][studentId].status = action;
                 attendanceData[today][current_class_id][studentId].notes = (action === 'Present') ? '' : attendanceData[today][current_class_id][studentId].notes;
                 attendanceData[today][current_class_id][studentId].timeChecked = (action === 'Present') ? formatDateTime(new Date()) : '';
+                attendanceData[today][current_class_id][studentId].is_qr_scanned = false;
             });
             if (action === 'Absent' || action === 'Late') {
                 showNotification('Please select a reason for each student marked as Absent or Late.', 'error');
@@ -1038,7 +1327,9 @@ body {
         function submitAttendance() {
             if (!current_class_id) return;
             const data = attendanceData[today][current_class_id];
-            const hasInvalidEntries = Object.values(data).some(att => (att.status === 'Absent' || att.status === 'Late') && !att.notes);
+            const hasInvalidEntries = Object.values(data).some(att => 
+                (att.status === 'Absent' || att.status === 'Late') && !att.notes
+            );
             if (hasInvalidEntries) {
                 showNotification('Please provide a reason for all Absent or Late statuses before submitting.', 'error');
                 return;
@@ -1091,8 +1382,13 @@ body {
                     });
 
                     if (code) {
-                        const lrn = code.data;
+                        // Extract LRN from QR code data
+                        const qrData = code.data;
+                        console.log('QR Data:', qrData); // Debug: Check raw QR code data
+                        const lrn = qrData.split(',')[0].trim();
+                        console.log('Extracted LRN:', lrn); // Debug: Check extracted LRN
                         const student = (students_by_class[current_class_id] || []).find(s => s.lrn.toString() === lrn);
+                        console.log('Found Student:', student); // Debug: Check if student is found
                         if (student) {
                             if (scannedStudents.has(lrn)) {
                                 showNotification(`Student ${student.name} already scanned today.`, 'error');
@@ -1100,8 +1396,23 @@ body {
                                 attendanceData[today][current_class_id][lrn].status = 'Present';
                                 attendanceData[today][current_class_id][lrn].notes = '';
                                 attendanceData[today][current_class_id][lrn].timeChecked = formatDateTime(new Date());
+                                attendanceData[today][current_class_id][lrn].is_qr_scanned = true;
                                 scannedStudents.add(lrn);
-                                showNotification(`Student ${student.name} marked as Present.`, 'success');
+                                showNotification(`Student ${student.name} marked as Present. Email sent to parent.`, 'success');
+                                // Submit to database immediately
+                                const data = {};
+                                data[lrn] = attendanceData[today][current_class_id][lrn];
+                                fetch('', {
+                                    method: 'POST',
+                                    headers: {'Content-Type': 'application/json'},
+                                    body: JSON.stringify({class_id: current_class_id, date: today, attendance: data})
+                                }).then(res => res.json()).then(result => {
+                                    if (!result.success) {
+                                        showNotification('Failed to save QR attendance.', 'error');
+                                    }
+                                }).catch(err => {
+                                    showNotification('Error: ' + err.message, 'error');
+                                });
                                 renderTable(true);
                             }
                         } else {
@@ -1114,7 +1425,7 @@ body {
                 }
             }
         }
-
+        
         function stopQRScanner() {
             if (videoStream) {
                 videoStream.getTracks().forEach(track => track.stop());
@@ -1170,13 +1481,11 @@ body {
         });
 
         statusSelector.addEventListener('change', () => {
-            // Don't clear selections when filtering by status
             updateSelectAllState();
             renderTable(true);
         });
 
         searchInput.addEventListener('input', () => {
-            // Don't clear selections when searching
             updateSelectAllState();
             renderTable();
         });

@@ -2593,10 +2593,6 @@ ob_end_flush();
                             <option value="Grade 12">Grade 12</option>
                         </select>
                     </div>
-                    <!-- <div class="class-form-group">
-                        <label class="class-form-label" for="classCode">Subject Code</label>
-                        <input type="text" class="class-form-input" id="classCode" required placeholder="e.g., MATH-101-A">
-                    </div> -->
                     <div class="class-form-group">
                         <label class="class-form-label" for="sectionName">Section Name</label>
                         <input type="text" class="class-form-input" id="sectionName" required placeholder="e.g., Section A, Diamond, Einstein">

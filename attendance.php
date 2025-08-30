@@ -5,6 +5,12 @@ date_default_timezone_set('Asia/Manila');
 require 'config.php';
 session_start();
 
+require 'PHPMailer/vendor/autoload.php';
+
+use PHPMailer\PHPMailer\PHPMailer;
+use PHPMailer\PHPMailer\SMTP;
+use PHPMailer\PHPMailer\Exception;
+
 // Validate session
 $user = validateSession();
 if (!$user) {

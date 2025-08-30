@@ -1,0 +1,62 @@
+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
+
+Try out your new API key
+
+curl
+
+curl https://api.openai.com/v1/responses \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer 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" \
+  -d '{
+    "model": "gpt-4o-mini",
+    "input": "write a haiku about ai",
+    "store": true
+  }'
+
+
+
+
+
+
+Try out your new API key
+
+Node
+npm install openai
+
+import OpenAI from "openai";
+
+const openai = new OpenAI({
+  apiKey: "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",
+});
+
+const response = openai.responses.create({
+  model: "gpt-4o-mini",
+  input: "write a haiku about ai",
+  store: true,
+});
+
+response.then((result) => console.log(result.output_text))
+
+
+
+
+Try out your new API key
+
+Python
+
+Install the OpenAI Python SDK and execute the code below to generate a haiku for free using the gpt-4o-mini model via the Responses API.
+pip install openai
+
+from openai import OpenAI
+
+client = OpenAI(
+  api_key="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"
+)
+
+response = client.responses.create(
+  model="gpt-4o-mini",
+  input="write a haiku about ai",
+  store=True,
+)
+
+print(response.output_text);

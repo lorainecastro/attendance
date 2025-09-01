@@ -1071,7 +1071,7 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
                 const isNotesDisabled = !isEditable || att.status === 'Present';
                 const statusClass = att.status ? att.status.toLowerCase() : 'none';
                 const isChecked = selectedStudents.has(student.lrn.toString()) && isEditable ? 'checked' : '';
-                const row = document.createElement('tr');
+                const row = dPocument.createElement('tr');
                 row.innerHTML = `
                     <td><input type="checkbox" class="select-student" data-id="${student.lrn}" ${isChecked} ${isQRScanned ? 'disabled' : ''}></td>
                     <td><img src="uploads/${student.photo || 'no-icon.png'}" class="student-photo" alt="${student.name}"></td>

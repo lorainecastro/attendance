@@ -1390,7 +1390,7 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
                         const student = (students_by_class[current_class_id] || []).find(s => s.lrn.toString() === lrn);
                         console.log('Found Student:', student); // Debug: Check if student is found
                         if (student) {
-                            if (scannedStudents.has(lrn)) {
+                            if (scannedStudents.has(lrn) || attendanceData[today][current_class_id][lrn]?.is_qr_scanned) {
                                 showNotification(`Student ${student.name} already scanned today.`, 'error');
                             } else {
                                 attendanceData[today][current_class_id][lrn].status = 'Present';

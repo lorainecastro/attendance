@@ -69,23 +69,23 @@
             padding: 20px;
         }
 
-        h1 {
-            font-size: 24px;
-            margin-bottom: 20px;
-            color: var(--blackfont-color);
-            position: relative;
-            padding-bottom: 10px;
+        h1 { 
+            font-size: 24px; 
+            margin-bottom: 20px; 
+            color: var(--blackfont-color); 
+            position: relative; 
+            padding-bottom: 10px; 
         }
 
-        h1:after {
-            content: '';
-            position: absolute;
-            left: 0;
-            bottom: 0;
-            height: 3px;
-            width: 60px;
-            background: var(--primary-gradient);
-            border-radius: 2px;
+        h1:after { 
+            content: ''; 
+            position: absolute; 
+            left: 0; 
+            bottom: 0; 
+            height: 4px; 
+            width: 80px; 
+            background: var(--primary-gradient); 
+            border-radius: var(--radius-sm); 
         }
     </style>
 </head>

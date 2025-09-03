@@ -30,7 +30,7 @@
             --blackfont-color: #111827;
             --whitefont-color: #ffffff;
             --grayfont-color: #6b7280;
-            --primary-gradient: linear-gradient(135deg, #2563eb, #a855f7);
+            --primary-gradient: linear-gradient(135deg, #3b82f6, #3b82f6);
             --secondary-gradient: linear-gradient(135deg, #ec4899, #f472b6);
             --primary-color: #2563eb;
             --primary-hover: #1d4ed8;
@@ -85,7 +85,7 @@
 
         h1 {
             font-size: 24px;
-            margin-bottom: 20px;
+            margin-bottom: var(--spacing-lg);
             color: var(--blackfont-color);
             position: relative;
             padding-bottom: 10px;
@@ -96,10 +96,10 @@
             position: absolute;
             left: 0;
             bottom: 0;
-            height: 3px;
-            width: 60px;
+            height: 4px;
+            width: 80px;
             background: var(--primary-gradient);
-            border-radius: 2px;
+            border-radius: var(--radius-sm);
         }
 
         /* Quick Stats */

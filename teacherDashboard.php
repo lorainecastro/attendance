@@ -651,10 +651,6 @@ $profileName = htmlspecialchars($currentUser['firstname'] . ' ' . $currentUser['
                 display: none;
             }
 
-            .main-content {
-                padding: var(--spacing-lg);
-            }
-
             .header-center {
                 display: none;
             }

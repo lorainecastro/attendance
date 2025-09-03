@@ -711,8 +711,7 @@
         const baseAttendanceStatus = [
             { status: 'Present', count: 350 },
             { status: 'Absent', count: 30 },
-            { status: 'Late', count: 15 },
-            { status: 'Excused', count: 10 }
+            { status: 'Late', count: 15 }
         ];
 
         // Sample factors data (for all students)
@@ -862,7 +861,7 @@
                     labels: baseAttendanceStatus.map(s => s.status),
                     datasets: [{
                         data: baseAttendanceStatus.map(s => s.count),
-                        backgroundColor: ['#16a34a', '#dc2626', '#2563eb', '#a855f7']
+                        backgroundColor: ['#16a34a', '#dc2626', '#f59e0b']
                     }]
                 },
                 options: {
@@ -926,8 +925,7 @@
                     filteredData = [
                         { status: 'Present', count: Math.floor(student.attendanceRate * 4) },
                         { status: 'Absent', count: Math.floor((100 - student.attendanceRate) * 0.3) },
-                        { status: 'Late', count: Math.floor((100 - student.attendanceRate) * 0.2) },
-                        { status: 'Excused', count: Math.floor((100 - student.attendanceRate) * 0.1) }
+                        { status: 'Late', count: Math.floor((100 - student.attendanceRate) * 0.2) }
                     ];
                 }
             } else {

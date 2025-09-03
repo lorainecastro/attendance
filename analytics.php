@@ -4,88 +4,77 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Analytics & Predictions - Student Attendance System</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         :root {
-            /* Primary Colors */
-            --primary-blue: #2563eb;
-            --primary-blue-hover: #1d4ed8;
+            --primary-blue: #3b82f6;
+            --primary-blue-hover: #2563eb;
             --primary-blue-light: #dbeafe;
-            
-            /* Status Colors */
-            --success-green: #16a34a;
-            --warning-yellow: #ca8a04;
-            --danger-red: #dc2626;
-            --info-cyan: #0891b2;
-            
-            /* Neutral Colors */
-            --dark-gray: #374151;
+            --success-green: #22c55e;
+            --warning-yellow: #f59e0b;
+            --danger-red: #ef4444;
+            --info-cyan: #06b6d4;
+            --dark-gray: #1f2937;
             --medium-gray: #6b7280;
-            --light-gray: #d1d5db;
+            --light-gray: #e5e7eb;
             --background: #f9fafb;
             --white: #ffffff;
-            --border-color: #e5e7eb;
-    
-            /* Additional Colors */
+            --border-color: #e2e8f0;
             --card-bg: #ffffff;
-            --blackfont-color: #111827;
+            --blackfont-color: #1e293b;
             --whitefont-color: #ffffff;
-            --grayfont-color: #6b7280;
-            --primary-gradient: linear-gradient(135deg, #2563eb, #a855f7);
+            --grayfont-color: #64748b;
+            --primary-gradient: linear-gradient(135deg, #3b82f6, #3b82f6);
             --secondary-gradient: linear-gradient(135deg, #ec4899, #f472b6);
-            --primary-color: #2563eb;
-            --primary-hover: #1d4ed8;
-            --inputfield-color: #f3f4f6;
-            --inputfieldhover-color: #e5e7eb;
-            
-            /* Typography */
-            --font-family: 'Inter', sans-serif;
+            --inputfield-color: #f8fafc;
+            --inputfieldhover-color: #f1f5f9;
+            --font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
             --font-size-sm: 0.875rem;
             --font-size-base: 1rem;
             --font-size-lg: 1.125rem;
             --font-size-xl: 1.25rem;
-            --font-size-2xl: 1.5rem;
-    
-            /* Spacing */
-            --spacing-xs: 0.25rem;
-            --spacing-sm: 0.5rem;
+            --font-size-2xl: 1.875rem;
+            --spacing-xs: 0.5rem;
+            --spacing-sm: 0.75rem;
             --spacing-md: 1rem;
             --spacing-lg: 1.5rem;
             --spacing-xl: 2rem;
             --spacing-2xl: 3rem;
-            
-            /* Shadows */
-            --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-            
-            /* Border Radius */
-            --radius-sm: 0.25rem;
+            --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.05);
+            --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08);
+            --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.1);
+            --radius-sm: 0.375rem;
             --radius-md: 0.5rem;
             --radius-lg: 0.75rem;
             --radius-xl: 1rem;
-    
-            /* Transitions */
-            --transition-fast: 0.15s ease-in-out;
+            --transition-fast: 0.2s ease-in-out;
             --transition-normal: 0.3s ease-in-out;
             --transition-slow: 0.5s ease-in-out;
+            --status-present-bg: rgba(16, 185, 129, 0.15);
+            --status-absent-bg: rgba(239, 68, 68, 0.15);
+            --status-late-bg: rgba(245, 158, 11, 0.15);
+            --status-none-bg: #f8fafc;
+            --success-color: #10b981;
+            --warning-color: #f59e0b;
+            --danger-color: #ef4444;
         }
 
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-            font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            font-family: var(--font-family);
         }
 
         body {
-            background-color: var(--background);
+            background-color: var(--card-bg);
             color: var(--blackfont-color);
             padding: 20px;
         }
 
         h1 {
             font-size: 24px;
-            margin-bottom: 20px;
+            margin-bottom: var(--spacing-lg);
             color: var(--blackfont-color);
             position: relative;
             padding-bottom: 10px;
@@ -96,10 +85,10 @@
             position: absolute;
             left: 0;
             bottom: 0;
-            height: 3px;
-            width: 60px;
+            height: 4px;
+            width: 80px;
             background: var(--primary-gradient);
-            border-radius: 2px;
+            border-radius: var(--radius-sm);
         }
 
         h2 {
@@ -115,60 +104,84 @@
         }
 
         /* Filters */
-        .filters-section {
+        .controls {
             background: var(--card-bg);
-            border-radius: var(--radius-lg);
+            border-radius: var(--radius-md);
             padding: var(--spacing-md);
             box-shadow: var(--shadow-md);
             margin-bottom: var(--spacing-lg);
-        }
-
-        .filters {
             display: flex;
             flex-wrap: wrap;
             gap: var(--spacing-sm);
             align-items: center;
+            border: 1px solid var(--border-color);
+        }
+
+        .controls-left {
+            display: flex;
+            flex-wrap: wrap;
+            gap: var(--spacing-sm);
+            flex: 1;
+            align-items: center;
         }
 
         .selector-select, .date-input {
-            padding: var(--spacing-sm) var(--spacing-md);
+            padding: var(--spacing-xs) var(--spacing-md);
             border: 1px solid var(--border-color);
-            border-radius: var(--radius-md);
+            border-radius: var(--radius-sm);
             font-size: var(--font-size-sm);
             background: var(--inputfield-color);
             transition: var(--transition-normal);
             min-width: 180px;
+            height: 38px;
+            box-sizing: border-box;
         }
 
         .selector-select:focus, .date-input:focus {
             outline: none;
-            border-color: var(--primary-color);
+            border-color: var(--primary-blue);
             background: var(--white);
-            box-shadow: 0 0 0 3px var(--primary-blue-light);
+            box-shadow: 0 0 0 4px var(--primary-blue-light);
         }
 
-        .button {
-            padding: var(--spacing-sm) var(--spacing-md);
+        .btn {
+            padding: var(--spacing-xs) var(--spacing-md);
             border: none;
             border-radius: var(--radius-md);
-            background: var(--primary-color);
-            color: var(--whitefont-color);
             font-size: var(--font-size-sm);
+            font-weight: 600;
             cursor: pointer;
             transition: var(--transition-normal);
             display: inline-flex;
             align-items: center;
             gap: var(--spacing-xs);
+            text-decoration: none;
         }
 
-        .button:hover {
-            background: var(--primary-hover);
+        .btn-primary {
+            background: var(--primary-gradient);
+            color: var(--whitefont-color);
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-blue-hover);
+            transform: translateY(-2px);
+        }
+
+        .btn-secondary {
+            background: var(--medium-gray);
+            color: var(--whitefont-color);
+        }
+
+        .btn-secondary:hover {
+            background: #4b5563;
+            transform: translateY(-2px);
         }
 
         /* KPI Cards */
-        .kpi-grid {
+        .stats-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
             gap: var(--spacing-lg);
             margin-bottom: var(--spacing-lg);
         }
@@ -196,7 +209,7 @@
         .card-icon {
             width: 48px;
             height: 48px;
-            border-radius: var(--radius-md);
+            border-radius: var(--radius-lg);
             display: flex;
             align-items: center;
             justify-content: center;
@@ -216,7 +229,7 @@
         }
 
         .card-value {
-            font-size: var(--font-size-2xl);
+            font-size: 24px;
             font-weight: 700;
             color: var(--blackfont-color);
         }
@@ -228,6 +241,7 @@
             padding: var(--spacing-md);
             box-shadow: var(--shadow-md);
             margin-bottom: var(--spacing-lg);
+            border: 1px solid var(--border-color);
         }
 
         .chart-card {
@@ -236,6 +250,7 @@
             padding: var(--spacing-md);
             box-shadow: var(--shadow-md);
             margin-bottom: var(--spacing-lg);
+            border: 1px solid var(--border-color);
         }
 
         .chart-header {
@@ -258,7 +273,7 @@
         }
 
         .filter-btn {
-            padding: var(--spacing-sm) var(--spacing-md);
+            padding: var(--spacing-xs) var(--spacing-md);
             border: none;
             border-radius: var(--radius-md);
             background: var(--inputfield-color);
@@ -269,7 +284,7 @@
         }
 
         .filter-btn.active {
-            background: var(--primary-color);
+            background: var(--primary-blue);
             color: var(--whitefont-color);
         }
 
@@ -289,6 +304,21 @@
             padding: var(--spacing-md);
             box-shadow: var(--shadow-md);
             margin-bottom: var(--spacing-lg);
+            border: 1px solid var(--border-color);
+        }
+
+        .table-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: var(--spacing-md);
+            flex-wrap: wrap;
+            gap: var(--spacing-sm);
+        }
+
+        .table-title {
+            font-size: var(--font-size-lg);
+            font-weight: 600;
         }
 
         .table-responsive {
@@ -310,6 +340,7 @@
             font-weight: 600;
             color: var(--grayfont-color);
             font-size: var(--font-size-sm);
+            background: var(--inputfield-color);
         }
 
         tbody tr {
@@ -317,12 +348,12 @@
         }
 
         tbody tr:hover {
-            background-color: var(--inputfield-color);
+            background-color: var(--inputfieldhover-color);
         }
 
-        .risk-high { color: var(--danger-red); }
-        .risk-medium { color: var(--warning-yellow); }
-        .risk-low { color: var(--success-green); }
+        .risk-high { color: var(--danger-color); }
+        .risk-medium { color: var(--warning-color); }
+        .risk-low { color: var(--success-color); }
 
         /* Prediction Card */
         .prediction-card {
@@ -331,13 +362,16 @@
             padding: var(--spacing-md);
             box-shadow: var(--shadow-md);
             margin-bottom: var(--spacing-lg);
+            border: 1px solid var(--border-color);
         }
+
         .prediction-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
             margin-bottom: var(--spacing-md);
         }
+
         .prediction-details {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -360,40 +394,44 @@
 
         /* Responsive Adjustments */
         @media (max-width: 1024px) {
-            .kpi-grid {
+            .stats-grid {
                 grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
             }
-
-            .filters {
-                grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            .controls {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            .controls-left {
+                flex-direction: column;
+                gap: var(--spacing-xs);
+            }
+            .selector-select, .date-input {
+                width: 100%;
+                min-width: auto;
+            }
+            .btn {
+                width: 100%;
+                justify-content: center;
             }
         }
 
         @media (max-width: 768px) {
+            body {
+                padding: var(--spacing-sm);
+            }
             th, td {
                 padding: var(--spacing-xs);
             }
-
             .card-value {
                 font-size: var(--font-size-xl);
             }
-
-            .filters {
-                flex-direction: column;
-                align-items: stretch;
-            }
-
-            .selector-select, .date-input {
-                min-width: 100%;
+            .table-responsive {
+                overflow-x: auto;
             }
         }
 
         @media (max-width: 576px) {
-            .table-responsive, .chart-container {
-                overflow-x: auto;
-            }
-
-            .kpi-grid {
+            .stats-grid {
                 grid-template-columns: 1fr;
             }
         }
@@ -403,8 +441,8 @@
     <h1>Analytics & Predictions</h1>
 
     <!-- Filters -->
-    <div class="filters-section">
-        <div class="filters">
+    <div class="controls">
+        <div class="controls-left">
             <select class="selector-select" id="grade-level-filter">
                 <option value="">All Grade Levels</option>
             </select>
@@ -425,13 +463,14 @@
             </select>
             <input type="date" class="date-input" id="start-date" placeholder="Start Date">
             <input type="date" class="date-input" id="end-date" placeholder="End Date">
-            <button class="button" id="refresh-data"><i class="fas fa-sync"></i> Refresh</button>
-            <button class="button" id="export-chart"><i class="fas fa-download"></i> Export Chart</button>
+            <button class="btn btn-primary" id="refresh-data"><i class="fas fa-sync"></i> Refresh</button>
+            <button class="btn btn-primary" id="export-chart"><i class="fas fa-download"></i> Export Chart</button>
+            <button class="btn btn-secondary" id="clear-filters"><i class="fas fa-times"></i> Clear Filters</button>
         </div>
     </div>
 
     <!-- KPI Cards -->
-    <div class="kpi-grid">
+    <div class="stats-grid">
         <div class="card">
             <div class="card-header">
                 <div>
@@ -503,13 +542,17 @@
 
     <!-- Attendance Status Distribution -->
     <div class="chart-container">
-        <h2>Attendance Status Distribution</h2>
+        <div class="table-header">
+            <div class="table-title">Attendance Status Distribution</div>
+        </div>
         <canvas id="attendance-status"></canvas>
     </div>
 
     <!-- Historical Analysis -->
     <div class="pattern-table">
-        <h2>Historical Analysis</h2>
+        <div class="table-header">
+            <div class="table-title">Historical Analysis</div>
+        </div>
         <h3>Student Behavior Patterns</h3>
         <div class="table-responsive">
             <table>
@@ -528,7 +571,7 @@
     <!-- Individual Student Predictions -->
     <div class="prediction-card" id="prediction-card" style="display: none;">
         <div class="prediction-header">
-            <h2>Individual Student Predictions</h2>
+            <div class="table-title">Individual Student Predictions</div>
         </div>
         <div class="prediction-details" id="prediction-details"></div>
         <div class="prediction-details" id="at-risk-status"></div>
@@ -551,13 +594,17 @@
 
     <!-- Risk Analysis -->
     <div class="chart-container">
-        <h2>Risk Analysis</h2>
+        <div class="table-header">
+            <div class="table-title">Risk Analysis</div>
+        </div>
         <canvas id="risk-analysis-chart"></canvas>
     </div>
 
     <!-- Predictive Analytics Dashboard -->
     <div class="pattern-table">
-        <h2>Predictive Analytics Dashboard</h2>
+        <div class="table-header">
+            <div class="table-title">Predictive Analytics Dashboard</div>
+        </div>
         <h3>Early Warning System</h3>
         <div class="table-responsive">
             <table>
@@ -576,7 +623,9 @@
     </div>
 
     <div class="pattern-table">
-        <h3>Subject-Specific Patterns</h3>
+        <div class="table-header">
+            <div class="table-title">Subject-Specific Patterns</div>
+        </div>
         <div class="table-responsive">
             <table>
                 <thead>
@@ -833,8 +882,8 @@
                     datasets: [{
                         label: 'Percentage Impact',
                         data: factorsData.absent.values,
-                        backgroundColor: '#2563eb',
-                        borderColor: '#2563eb',
+                        backgroundColor: '#3b82f6',
+                        borderColor: '#3b82f6',
                         borderWidth: 1
                     }]
                 },
@@ -861,7 +910,7 @@
                     labels: baseAttendanceStatus.map(s => s.status),
                     datasets: [{
                         data: baseAttendanceStatus.map(s => s.count),
-                        backgroundColor: ['#16a34a', '#dc2626', '#f59e0b']
+                        backgroundColor: ['#22c55e', '#ef4444', '#f59e0b']
                     }]
                 },
                 options: {
@@ -880,7 +929,7 @@
                     labels: ['Low Risk', 'Medium Risk', 'High Risk'],
                     datasets: [{
                         data: [60, 25, 15],
-                        backgroundColor: ['#16a34a', '#ca8a04', '#dc2626']
+                        backgroundColor: ['#22c55e', '#f59e0b', '#ef4444']
                     }]
                 },
                 options: {
@@ -901,7 +950,6 @@
                 const student = students.find(s => s.id == selectedStudentId);
                 data = student ? student.factors[period] : factorsData[period];
             } else {
-                // Aggregate factors for filtered students
                 const avgValues = factorsData[period].labels.map((label, i) => {
                     const total = filteredStudents.reduce((sum, s) => sum + (s.factors[period].values[i] || 0), 0);
                     return total / (filteredStudents.length || 1);
@@ -929,7 +977,6 @@
                     ];
                 }
             } else {
-                // Aggregate attendance status for filtered students
                 filteredData = baseAttendanceStatus.map(item => {
                     const avgCount = filteredStudents.reduce((sum, s) => {
                         const rate = s.attendanceRate;
@@ -943,7 +990,6 @@
             }
 
             if (startDateValue && endDateValue) {
-                // Mock date range adjustment
                 filteredData = filteredData.map(item => ({
                     ...item,
                     count: Math.floor(item.count * (Math.random() * 0.2 + 0.8))
@@ -983,7 +1029,6 @@
                     };
                 }
             } else {
-                // Aggregate risk data for filtered students
                 const riskCounts = { low: 0, medium: 0, high: 0 };
                 filteredStudents.forEach(s => {
                     if (s.attendanceRate < 85) riskCounts.high++;
@@ -1035,7 +1080,6 @@
                 predAccuracy = filteredStudents.length ? (filteredStudents.filter(s => s.attendanceRate >= 85).length / filteredStudents.length * 90).toFixed(1) : 85;
             }
 
-            // Apply time/date filters
             if (startDateValue && endDateValue) {
                 avgAttendance *= (Math.random() * 0.1 + 0.95);
                 predAccuracy *= (Math.random() * 0.05 + 0.95);
@@ -1086,7 +1130,6 @@
                 studentAnalytics.innerHTML = '';
             }
 
-            // Apply date filters
             if (startDateValue && endDateValue) {
                 const dateStart = new Date(startDateValue);
                 const dateEnd = new Date(endDateValue);
@@ -1094,7 +1137,6 @@
                     alert('Start date must be before end date.');
                     return;
                 }
-                // Mock: Adjust attendance rates
                 filteredStudents = filteredStudents.map(s => ({
                     ...s,
                     attendanceRate: s.attendanceRate * (Math.random() * 0.1 + 0.95)
@@ -1107,10 +1149,8 @@
                 }));
             }
 
-            // Update KPI Cards
             updateKPICards(selectedStudentId, filteredStudents, selectedTime, startDateValue, endDateValue);
 
-            // Update Behavior Patterns Table
             behaviorPatterns.innerHTML = '';
             const behaviorData = filteredStudents.map(s => ({
                 student: s.fullName,
@@ -1123,7 +1163,6 @@
                 behaviorPatterns.appendChild(row);
             });
 
-            // Update Early Warning System Table
             earlyWarning.innerHTML = '';
             const earlyWarningData = filteredStudents.map(s => {
                 const riskLevel = s.attendanceRate < 85 ? 'High' : s.attendanceRate < 90 ? 'Medium' : 'Low';
@@ -1149,7 +1188,6 @@
                 earlyWarning.appendChild(row);
             });
 
-            // Update Subject Patterns Table
             subjectPatterns.innerHTML = '';
             const subjectData = filteredClasses.map(c => ({
                 name: c.subject,
@@ -1166,8 +1204,7 @@
                 subjectPatterns.appendChild(row);
             });
 
-            // Update Charts
-            const activePeriod = document.querySelector('.filter-btn.active[data-period]').dataset.period || 'absent';
+            const activePeriod = document.querySelector('.filter-btn.active[data-period]')?.dataset.period || 'absent';
             updateFactorsChart(activePeriod, selectedStudentId, filteredStudents);
             updateAttendanceStatusChart(selectedTime, startDateValue, endDateValue, selectedStudentId, filteredStudents);
             updateRiskAnalysisChart(selectedStudentId, filteredStudents);
@@ -1190,7 +1227,7 @@
                     <strong>Student Name:</strong> ${student.fullName}
                 </div>
                 <div class="detail-item">
-                    <strong>Current Attendance:</strong> ${student.attendanceRate}%
+                    <strong>Current Attendance Rate:</strong> ${student.attendanceRate}%
                 </div>
                 <div class="detail-item">
                     <strong>Predicted Next Month:</strong> ${predictedAttendance.toFixed(1)}%
@@ -1205,21 +1242,20 @@
                     <strong>Primary Absence Reason:</strong> ${student.absences[0]?.reason || 'N/A'}
                 </div>
                 <div class="detail-item">
-                    <strong>Probability of Being Present Tomorrow:</strong> ${probabilityPresentTomorrow.toFixed(1)}%
-                </div>
-                <div class="detail-item">
                     <strong>Chronic Absenteeism:</strong> ${chronicAbsenteeism}%
                 </div>
+                <div class="detail-item">
+                    <strong>Probability of Being Present Tomorrow:</strong> ${probabilityPresentTomorrow.toFixed(1)}%
+                </div>
+                
             `;
 
-            // Add At Risk status if Risk Level is High
             atRiskStatus.innerHTML = riskLevel === 'High' ? `
                 <div class="detail-item risk-high">
                     <strong>Status:</strong> At Risk
                 </div>
             ` : '';
 
-            // Update Analytics & Recommendations Table
             studentAnalytics.innerHTML = '';
             const analyticsData = [
                 {
@@ -1254,6 +1290,19 @@
             });
         }
 
+        // Clear Filters
+        function clearFilters() {
+            gradeLevelFilter.value = '';
+            subjectFilter.value = '';
+            sectionFilter.value = '';
+            studentFilter.value = '';
+            timeFilter.value = '';
+            startDate.value = '';
+            endDate.value = '';
+            updateStudentFilter();
+            updateData();
+        }
+
         // Event Listeners
         gradeLevelFilter.addEventListener('change', () => {
             updateStudentFilter();
@@ -1271,6 +1320,7 @@
         timeFilter.addEventListener('change', updateData);
         startDate.addEventListener('change', updateData);
         endDate.addEventListener('change', updateData);
+        document.getElementById('clear-filters').addEventListener('change', clearFilters);
 
         document.querySelectorAll('.filter-btn[data-chart="factors"]').forEach(btn => {
             btn.addEventListener('click', function() {
@@ -1294,6 +1344,8 @@
             link.href = canvas.toDataURL();
             link.click();
         });
+
+        document.getElementById('clear-filters').addEventListener('click', clearFilters);
 
         // Initialize
         document.addEventListener('DOMContentLoaded', () => {

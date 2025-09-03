@@ -863,6 +863,7 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
         let current_class_id = null;
         let currentPage = 1;
         const rowsPerPage = 5;
+        let isProcessingScan = false; // Debounce flag
 
         function showNotification(message, type) {
             const notification = document.createElement('div');
@@ -1358,6 +1359,7 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
 
             qrScanner.style.display = 'block';
             scannedStudents.clear();
+            isProcessingScan = false; // Reset debounce flag
 
             navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
                 .then(stream => {
@@ -1372,7 +1374,7 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
                 });
 
             function tick() {
-                if (video.readyState === video.HAVE_ENOUGH_DATA) {
+                if (video.readyState === video.HAVE_ENOUGH_DATA && !isProcessingScan) {
                     canvasElement.height = video.videoHeight;
                     canvasElement.width = video.videoWidth;
                     canvas.drawImage(video, 0, 0, canvasElement.width, canvasElement.height);
@@ -1382,6 +1384,7 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
                     });
 
                     if (code) {
+                        isProcessingScan = true; // Set debounce flag
                         // Extract LRN from QR code data
                         const qrData = code.data;
                         console.log('QR Data:', qrData); // Debug: Check raw QR code data
@@ -1392,6 +1395,7 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
                         if (student) {
                             if (scannedStudents.has(lrn) || attendanceData[today][current_class_id][lrn]?.is_qr_scanned) {
                                 showNotification(`Student ${student.name} already scanned today.`, 'error');
+                                setTimeout(() => { isProcessingScan = false; }, 1000); // Reset after 1 second
                             } else {
                                 attendanceData[today][current_class_id][lrn].status = 'Present';
                                 attendanceData[today][current_class_id][lrn].notes = '';
@@ -1410,13 +1414,16 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
                                     if (!result.success) {
                                         showNotification('Failed to save QR attendance.', 'error');
                                     }
+                                    setTimeout(() => { isProcessingScan = false; }, 1000); // Reset after 1 second
                                 }).catch(err => {
                                     showNotification('Error: ' + err.message, 'error');
+                                    setTimeout(() => { isProcessingScan = false; }, 1000); // Reset after 1 second
                                 });
                                 renderTable(true);
                             }
                         } else {
                             showNotification('Invalid LRN for this class.', 'error');
+                            setTimeout(() => { isProcessingScan = false; }, 1000); // Reset after 1 second
                         }
                     }
                 }
@@ -1432,6 +1439,7 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
                 videoStream = null;
             }
             document.getElementById('qr-scanner').style.display = 'none';
+            isProcessingScan = false; // Reset debounce flag
         }
 
         function clearFilters() {

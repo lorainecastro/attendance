@@ -41,11 +41,11 @@ function sendOtpEmail($email, $otp) {
         $mail->isSMTP();
         $mail->Host = 'smtp.gmail.com';
         $mail->SMTPAuth = true;
-        $mail->Username = 'elci.bank@gmail.com';
-        $mail->Password = 'misxfqnfsovohfwh';
+        $mail->Username = 'student.attendance.monitoring.sys@gmail.com';
+        $mail->Password = 'cajlpvkqvphqchro';
         $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
         $mail->Port = 587;
-        $mail->setFrom('elci.bank@gmail.com', 'SAMS');
+        $mail->setFrom('student.attendance.monitoring.sys@gmail.com', 'SAMS');
         $mail->addAddress($email);
         $mail->isHTML(true);
         $mail->Subject = 'Verify Your SAMS Account';

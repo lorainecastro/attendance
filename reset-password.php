@@ -57,12 +57,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             $mail->isSMTP();
             $mail->Host = 'smtp.gmail.com';
             $mail->SMTPAuth = true;
-            $mail->Username = 'elci.bank@gmail.com'; // Replace with your email
-            $mail->Password = 'misxfqnfsovohfwh'; // Replace with your App Password
+            $mail->Username = 'student.attendance.monitoring.sys@gmail.com';
+            $mail->Password = 'cajlpvkqvphqchro';
             $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
             $mail->Port = 587;
 
-            $mail->setFrom('elci.bank@gmail.com', 'SAMS');
+            $mail->setFrom('student.attendance.monitoring.sys@gmail.com', 'SAMS');
             $mail->addAddress($email);
             $mail->isHTML(true);
             $mail->Subject = 'SAMS Password Reset OTP';

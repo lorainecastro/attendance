@@ -38,12 +38,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $mail->isSMTP();
                 $mail->Host = 'smtp.gmail.com';
                 $mail->SMTPAuth = true;
-                $mail->Username = 'your-email@gmail.com'; // Replace with your SMTP email
-                $mail->Password = 'your-app-password'; // Replace with your SMTP app password
+                $mail->Username = 'student.attendance.monitoring.sys@gmail.com';
+                $mail->Password = 'cajlpvkqvphqchro';
                 $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
                 $mail->Port = 587;
 
-                $mail->setFrom('your-email@gmail.com', 'SAMS');
+                $mail->setFrom('student.attendance.monitoring.sys@gmail.com', 'SAMS');
                 $mail->addAddress($email);
 
                 $mail->isHTML(true);

@@ -34,14 +34,15 @@ function checkSubjectByCode($subject_code)
     }
 }
 
-// Function to check for duplicate class
-function isDuplicateClass($pdo, $section_name, $subject_id, $teacher_id, $grade_level, $class_id = null)
+// Updated function to check for duplicate class - now includes subject_code
+function isDuplicateClass($pdo, $section_name, $subject_code, $teacher_id, $grade_level, $class_id = null)
 {
-    $query = "SELECT COUNT(*) FROM classes WHERE section_name = ? AND subject_id = ? AND teacher_id = ? AND grade_level = ?";
-    $params = [$section_name, $subject_id, $teacher_id, $grade_level];
+    // Check for duplicate based on section_name, subject_code (not subject_id), teacher_id, and grade_level
+    $query = "SELECT COUNT(*) FROM classes c JOIN subjects s ON c.subject_id = s.subject_id WHERE c.section_name = ? AND s.subject_code = ? AND c.teacher_id = ? AND c.grade_level = ?";
+    $params = [$section_name, $subject_code, $teacher_id, $grade_level];
 
     if ($class_id) {
-        $query .= " AND class_id != ?";
+        $query .= " AND c.class_id != ?";
         $params[] = $class_id;
     }
 
@@ -50,7 +51,7 @@ function isDuplicateClass($pdo, $section_name, $subject_id, $teacher_id, $grade_
     return $stmt->fetchColumn() > 0;
 }
 
-// Function to add or update a class
+// Updated addClass function
 function addClass($classData, $scheduleData, $class_id = null)
 {
     $pdo = getDBConnection();
@@ -58,22 +59,59 @@ function addClass($classData, $scheduleData, $class_id = null)
     try {
         $pdo->beginTransaction();
 
-        // Insert or update subject
-        $stmt = $pdo->prepare("
-            INSERT INTO subjects (subject_code, subject_name)
-            VALUES (?, ?)
-            ON DUPLICATE KEY UPDATE 
-                subject_code = VALUES(subject_code),
-                subject_name = VALUES(subject_name),
-                subject_id = LAST_INSERT_ID(subject_id)
-        ");
-        $stmt->execute([$classData['code'], $classData['subject']]);
-        $subject_id = $pdo->lastInsertId();
+        // For new subjects or updating subject names, we need to handle this differently
+        if ($class_id) {
+            // For updates, check if we need to create a new subject or update existing
+            $stmt = $pdo->prepare("
+                SELECT s.subject_id, s.subject_code, s.subject_name 
+                FROM classes c 
+                JOIN subjects s ON c.subject_id = s.subject_id 
+                WHERE c.class_id = ?
+            ");
+            $stmt->execute([$class_id]);
+            $currentSubject = $stmt->fetch(PDO::FETCH_ASSOC);
 
-        // Check for duplicate class
-        if (isDuplicateClass($pdo, $classData['sectionName'], $subject_id, $_SESSION['teacher_id'], $classData['gradeLevel'], $class_id)) {
+            // If subject code or name changed, we need to handle the subject
+            if (!$currentSubject || 
+                $currentSubject['subject_code'] !== $classData['code'] || 
+                $currentSubject['subject_name'] !== $classData['subject']) {
+                
+                // Check if the new subject code already exists
+                $stmt = $pdo->prepare("SELECT subject_id FROM subjects WHERE subject_code = ?");
+                $stmt->execute([$classData['code']]);
+                $existingSubject = $stmt->fetch(PDO::FETCH_ASSOC);
+                
+                if ($existingSubject) {
+                    // Update existing subject name if different
+                    $stmt = $pdo->prepare("UPDATE subjects SET subject_name = ? WHERE subject_id = ?");
+                    $stmt->execute([$classData['subject'], $existingSubject['subject_id']]);
+                    $subject_id = $existingSubject['subject_id'];
+                } else {
+                    // Create new subject
+                    $stmt = $pdo->prepare("INSERT INTO subjects (subject_code, subject_name) VALUES (?, ?)");
+                    $stmt->execute([$classData['code'], $classData['subject']]);
+                    $subject_id = $pdo->lastInsertId();
+                }
+            } else {
+                $subject_id = $currentSubject['subject_id'];
+            }
+        } else {
+            // For new classes, insert or get subject
+            $stmt = $pdo->prepare("
+                INSERT INTO subjects (subject_code, subject_name)
+                VALUES (?, ?)
+                ON DUPLICATE KEY UPDATE 
+                    subject_name = VALUES(subject_name),
+                    subject_id = LAST_INSERT_ID(subject_id)
+            ");
+            $stmt->execute([$classData['code'], $classData['subject']]);
+            $subject_id = $pdo->lastInsertId();
+        }
+
+        // Check for duplicate class using the updated function
+        if (isDuplicateClass($pdo, $classData['sectionName'], $classData['code'], $_SESSION['teacher_id'], $classData['gradeLevel'], $class_id)) {
             $pdo->rollBack();
-            return ['success' => false, 'error' => 'This class already exists for this teacher, section, and grade level.'];
+            return ['success' => false, 'error' => 'A class with this section name, subject code, and grade level already exists for this teacher.'];
         }
 
         if ($class_id) {
@@ -135,7 +173,6 @@ function addClass($classData, $scheduleData, $class_id = null)
         return ['success' => false, 'error' => 'Failed to ' . ($class_id ? 'update' : 'add') . ' class: ' . $e->getMessage()];
     }
 }
-
 // Function to delete a class
 function deleteClass($class_id)
 {
@@ -2627,11 +2664,11 @@ ob_end_flush();
                     <option value="active">Active</option>
                     <option value="inactive">Inactive</option>
                 </select>
-                <select class="form-select filter-select" id="subjectFilter">
-                    <option value="">All Subjects</option>
-                </select>
                 <select class="form-select filter-select" id="sectionFilter">
                     <option value="">All Sections</option>
+                </select>
+                <select class="form-select filter-select" id="subjectFilter">
+                    <option value="">All Subjects</option>
                 </select>
             </div>
             <div class="controls-right">

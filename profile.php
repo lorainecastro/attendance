@@ -176,10 +176,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             --white: #ffffff;
             --border-color: #e5e7eb;
             --card-bg: #ffffff;
-            --blackfont-color: #111827;
+            --blackfont-color: #1e293b;
             --whitefont-color: #ffffff;
             --grayfont-color: #6b7280;
-            --primary-gradient: linear-gradient(135deg, #2563eb, #a855f7);
+            --primary-gradient: linear-gradient(135deg, #3b82f6, #3b82f6);
             --secondary-gradient: linear-gradient(135deg, #ec4899, #f472b6);
             --primary-color: #2563eb;
             --primary-hover: #1d4ed8;
@@ -200,7 +200,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
             --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
             --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-            --radius-sm: 0.25rem;
+            --radius-sm: 0.375rem;
             --radius-md: 0.5rem;
             --radius-lg: 0.75rem;
             --radius-xl: 1rem;
@@ -235,10 +235,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             position: absolute;
             left: 0;
             bottom: 0;
-            height: 3px;
-            width: 60px;
+            height: 4px;
+            width: 80px;
             background: var(--primary-gradient);
-            border-radius: 2px;
+            border-radius: var(--radius-sm);
         }
 
         .container {

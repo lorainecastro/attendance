@@ -452,7 +452,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         }
 
         $file = $_FILES['file'];
-        $filePath = 'Uploads/' . uniqid() . '_' . $file['name'];
+        $filePath = 'uploads/' . uniqid() . '_' . $file['name'];
         if (move_uploaded_file($file['tmp_name'], $filePath)) {
             $result = importStudents($class_id, $filePath);
             unlink($filePath);
@@ -3573,7 +3573,7 @@ ob_end_flush();
             previewData.forEach((row, index) => {
                 const photoValue = row[12] || '';
                 let photoDisplay = photoValue && (photoValue.includes('.jpg') || photoValue.includes('.jpeg') || photoValue.includes('.png') || photoValue.includes('.gif')) ?
-                    `<img src="Uploads/${photoValue}" alt="Student Photo" style="max-width: 45px; max-height: 45px; border-radius: 50%;" onerror="this.style.display='none'; this.nextSibling.style.display='inline';"><span style="display:none;">${sanitizeHTML(photoValue)}</span>` :
+                    `<img src="uploads/${photoValue}" alt="Student Photo" style="max-width: 45px; max-height: 45px; border-radius: 50%;" onerror="this.style.display='none'; this.nextSibling.style.display='inline';"><span style="display:none;">${sanitizeHTML(photoValue)}</span>` :
                     photoValue ? sanitizeHTML(photoValue) : 'Photo To Be Provided';
 
                 let qrDisplay = row[13] && row[13].toString().trim() !== '' ?

@@ -35,10 +35,20 @@ function checkSubjectByCode($subject_code)
 }
 
 // Updated function to check for duplicate class
-function isDuplicateClass($pdo, $section_name, $subject_code, $teacher_id, $grade_level, $class_id = null)
+function isDuplicateClass($pdo, $section_name, $subject_code, $subject_name, $teacher_id, $grade_level, $class_id = null)
 {
-    $query = "SELECT COUNT(*) FROM classes c JOIN subjects s ON c.subject_id = s.subject_id WHERE c.section_name = ? AND s.subject_code = ? AND c.teacher_id = ? AND c.grade_level = ?";
-    $params = [$section_name, $subject_code, $teacher_id, $grade_level];
+    $query = "SELECT COUNT(*) FROM classes c WHERE c.section_name = ? AND c.teacher_id = ? AND c.grade_level = ?";
+    $params = [$section_name, $teacher_id, $grade_level];
+
+    if ($subject_code) {
+        $query .= " AND EXISTS (SELECT 1 FROM subjects s WHERE s.subject_id = c.subject_id AND s.subject_code = ?)";
+        $params[] = $subject_code;
+    } else if ($subject_name) {
+        $query .= " AND EXISTS (SELECT 1 FROM subjects s WHERE s.subject_id = c.subject_id AND s.subject_name = ? AND s.subject_code IS NULL)";
+        $params[] = $subject_name;
+    } else {
+        $query .= " AND c.subject_id = 0";
+    }
 
     if ($class_id) {
         $query .= " AND c.class_id != ?";
@@ -58,53 +68,123 @@ function addClass($classData, $scheduleData, $class_id = null)
     try {
         $pdo->beginTransaction();
 
-        // For new subjects or updating subject names
-        if ($class_id) {
-            $stmt = $pdo->prepare("
-                SELECT s.subject_id, s.subject_code, s.subject_name 
-                FROM classes c 
-                JOIN subjects s ON c.subject_id = s.subject_id 
-                WHERE c.class_id = ?
-            ");
-            $stmt->execute([$class_id]);
-            $currentSubject = $stmt->fetch(PDO::FETCH_ASSOC);
+        $lowerGrades = ['Kindergarten', 'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6'];
+        $isLowerGrade = in_array($classData['gradeLevel'], $lowerGrades);
 
-            if (!$currentSubject || 
-                $currentSubject['subject_code'] !== $classData['code'] || 
-                $currentSubject['subject_name'] !== $classData['subject']) {
-                
-                $stmt = $pdo->prepare("SELECT subject_id FROM subjects WHERE subject_code = ?");
-                $stmt->execute([$classData['code']]);
-                $existingSubject = $stmt->fetch(PDO::FETCH_ASSOC);
-                
-                if ($existingSubject) {
-                    $stmt = $pdo->prepare("UPDATE subjects SET subject_name = ? WHERE subject_id = ?");
-                    $stmt->execute([$classData['subject'], $existingSubject['subject_id']]);
-                    $subject_id = $existingSubject['subject_id'];
+        // Ensure subject_id = 0 exists in subjects table
+        $stmt = $pdo->prepare("SELECT subject_id FROM subjects WHERE subject_id = 0");
+        $stmt->execute();
+        if (!$stmt->fetch()) {
+            // Temporarily allow subject_id = 0
+            $pdo->exec("SET SESSION sql_mode = 'NO_AUTO_VALUE_ON_ZERO'");
+            $stmt = $pdo->prepare("INSERT INTO subjects (subject_id, subject_code, subject_name) VALUES (0, 'NONE', 'No Subject')");
+            $stmt->execute();
+            $pdo->exec("SET SESSION sql_mode = ''"); // Reset SQL mode
+        }
+
+        if ($isLowerGrade) {
+            $subject_id = 0; // Set subject_id to 0 for Kindergarten to Grade 6
+        } else {
+            // For Grade 7 and above, subject is required
+            if (empty($classData['subject'])) {
+                $pdo->rollBack();
+                return ['success' => false, 'error' => 'Subject is required for Grade 7 and above.'];
+            }
+
+            $subject_code = empty($classData['code']) ? null : $classData['code'];
+
+            if ($class_id) {
+                // Editing existing class
+                $stmt = $pdo->prepare("
+                    SELECT s.subject_id, s.subject_code, s.subject_name 
+                    FROM classes c 
+                    JOIN subjects s ON c.subject_id = s.subject_id 
+                    WHERE c.class_id = ?
+                ");
+                $stmt->execute([$class_id]);
+                $currentSubject = $stmt->fetch(PDO::FETCH_ASSOC);
+
+                $needsUpdate = !$currentSubject || 
+                    ($currentSubject['subject_code'] ?? null) !== $subject_code || 
+                    $currentSubject['subject_name'] !== $classData['subject'];
+
+                if ($needsUpdate) {
+                    // Find or create new subject, ensuring subject_id = 0 is not modified
+                    if ($subject_code !== null) {
+                        $stmt = $pdo->prepare("SELECT subject_id, subject_name FROM subjects WHERE subject_code = ? AND subject_id != 0");
+                        $stmt->execute([$subject_code]);
+                        $existingSubject = $stmt->fetch(PDO::FETCH_ASSOC);
+
+                        if ($existingSubject) {
+                            if ($existingSubject['subject_name'] !== $classData['subject']) {
+                                $stmt = $pdo->prepare("UPDATE subjects SET subject_name = ? WHERE subject_id = ?");
+                                $stmt->execute([$classData['subject'], $existingSubject['subject_id']]);
+                            }
+                            $subject_id = $existingSubject['subject_id'];
+                        } else {
+                            $stmt = $pdo->prepare("INSERT INTO subjects (subject_code, subject_name) VALUES (?, ?)");
+                            $stmt->execute([$subject_code, $classData['subject']]);
+                            $subject_id = $pdo->lastInsertId();
+                        }
+                    } else {
+                        // Null code, search by name, exclude subject_id = 0
+                        $stmt = $pdo->prepare("SELECT subject_id FROM subjects WHERE subject_name = ? AND subject_code IS NULL AND subject_id != 0");
+                        $stmt->execute([$classData['subject']]);
+                        $existingSubject = $stmt->fetch(PDO::FETCH_ASSOC);
+
+                        if ($existingSubject) {
+                            $subject_id = $existingSubject['subject_id'];
+                        } else {
+                            $stmt = $pdo->prepare("INSERT INTO subjects (subject_code, subject_name) VALUES (NULL, ?)");
+                            $stmt->execute([$classData['subject']]);
+                            $subject_id = $pdo->lastInsertId();
+                        }
+                    }
                 } else {
-                    $stmt = $pdo->prepare("INSERT INTO subjects (subject_code, subject_name) VALUES (?, ?)");
-                    $stmt->execute([$classData['code'], $classData['subject']]);
-                    $subject_id = $pdo->lastInsertId();
+                    $subject_id = $currentSubject['subject_id'];
                 }
             } else {
-                $subject_id = $currentSubject['subject_id'];
+                // Adding new class
+                if ($subject_code !== null) {
+                    $stmt = $pdo->prepare("
+                        SELECT subject_id, subject_name FROM subjects 
+                        WHERE subject_code = ? AND subject_id != 0
+                    ");
+                    $stmt->execute([$subject_code]);
+                    $existingSubject = $stmt->fetch(PDO::FETCH_ASSOC);
+
+                    if ($existingSubject) {
+                        if ($existingSubject['subject_name'] !== $classData['subject']) {
+                            $stmt = $pdo->prepare("UPDATE subjects SET subject_name = ? WHERE subject_id = ?");
+                            $stmt->execute([$classData['subject'], $existingSubject['subject_id']]);
+                        }
+                        $subject_id = $existingSubject['subject_id'];
+                    } else {
+                        $stmt = $pdo->prepare("INSERT INTO subjects (subject_code, subject_name) VALUES (?, ?)");
+                        $stmt->execute([$subject_code, $classData['subject']]);
+                        $subject_id = $pdo->lastInsertId();
+                    }
+                } else {
+                    // Null code, search by name, exclude subject_id = 0
+                    $stmt = $pdo->prepare("SELECT subject_id FROM subjects WHERE subject_name = ? AND subject_code IS NULL AND subject_id != 0");
+                    $stmt->execute([$classData['subject']]);
+                    $existingSubject = $stmt->fetch(PDO::FETCH_ASSOC);
+
+                    if ($existingSubject) {
+                        $subject_id = $existingSubject['subject_id'];
+                    } else {
+                        $stmt = $pdo->prepare("INSERT INTO subjects (subject_code, subject_name) VALUES (NULL, ?)");
+                        $stmt->execute([$classData['subject']]);
+                        $subject_id = $pdo->lastInsertId();
+                    }
+                }
             }
-        } else {
-            $stmt = $pdo->prepare("
-                INSERT INTO subjects (subject_code, subject_name)
-                VALUES (?, ?)
-                ON DUPLICATE KEY UPDATE 
-                    subject_name = VALUES(subject_name),
-                    subject_id = LAST_INSERT_ID(subject_id)
-            ");
-            $stmt->execute([$classData['code'], $classData['subject']]);
-            $subject_id = $pdo->lastInsertId();
         }
 
         // Check for duplicate class
-        if (isDuplicateClass($pdo, $classData['sectionName'], $classData['code'], $_SESSION['teacher_id'], $classData['gradeLevel'], $class_id)) {
+        if (isDuplicateClass($pdo, $classData['sectionName'], $classData['code'], $classData['subject'], $_SESSION['teacher_id'], $classData['gradeLevel'], $class_id)) {
             $pdo->rollBack();
-            return ['success' => false, 'error' => 'A class with this section name, subject code, and grade level already exists for this teacher.'];
+            return ['success' => false, 'error' => 'A class with this section name, subject code/name, and grade level already exists for this teacher.'];
         }
 
         if ($class_id) {
@@ -201,10 +281,10 @@ function fetchClassesForTeacher()
     try {
         $stmt = $pdo->prepare("
             SELECT c.class_id, c.section_name, c.grade_level, c.room, c.attendance_percentage,
-                   s.subject_code, s.subject_name,
+                   COALESCE(s.subject_code, '') as subject_code, COALESCE(s.subject_name, '') as subject_name,
                    (SELECT COUNT(*) FROM class_students cs WHERE cs.class_id = c.class_id AND cs.is_enrolled = 1) as student_count
             FROM classes c
-            JOIN subjects s ON c.subject_id = s.subject_id
+            LEFT JOIN subjects s ON c.subject_id = s.subject_id
             WHERE c.teacher_id = ?
         ");
         $stmt->execute([$_SESSION['teacher_id']]);
@@ -409,11 +489,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         $scheduleData = json_decode($_POST['schedule'] ?? '{}', true);
         $classId = $_POST['classId'] ?? null;
 
-        if (
-            empty($classData['code']) || empty($classData['sectionName']) ||
-            empty($classData['subject']) || empty($classData['gradeLevel'])
-        ) {
+        $lowerGrades = ['Kindergarten', 'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6'];
+        $isLowerGrade = in_array($classData['gradeLevel'], $lowerGrades);
+
+        if (empty($classData['sectionName']) || empty($classData['gradeLevel'])) {
             echo json_encode(['success' => false, 'error' => 'Missing required fields']);
+            exit;
+        }
+
+        if (!$isLowerGrade && empty($classData['subject'])) {
+            echo json_encode(['success' => false, 'error' => 'Subject is required for Grade 7 and above']);
+            exit;
+        }
+
+        if (!$isLowerGrade && !empty($classData['code']) && empty($classData['subject'])) {
+            echo json_encode(['success' => false, 'error' => 'Subject name is required if subject code is provided']);
             exit;
         }
 
@@ -2700,13 +2790,13 @@ ob_end_flush();
                         <label class="class-form-label" for="sectionName">Section Name</label>
                         <input type="text" class="class-form-input" id="sectionName" required placeholder="e.g., Section A, Diamond, Einstein">
                     </div>
-                    <div class="class-form-group">
-                        <label class="class-form-label" for="classCode">Subject Code</label>
-                        <input type="text" class="class-form-input" id="classCode" required placeholder="e.g., MATH-101-A">
+                    <div class="class-form-group subject-field" id="classCodeGroup">
+                        <label class="class-form-label" for="classCode">Subject Code (Optional)</label>
+                        <input type="text" class="class-form-input" id="classCode" placeholder="e.g., MATH-101-A">
                     </div>
-                    <div class="class-form-group">
+                    <div class="class-form-group subject-field" id="subjectGroup">
                         <label class="class-form-label" for="subject">Subject</label>
-                        <input type="text" class="class-form-input" id="subject" required placeholder="e.g., Mathematics, Science, English">
+                        <input type="text" class="class-form-input" id="subject" placeholder="e.g., Mathematics, Science, English">
                     </div>
                     <div class="class-form-group">
                         <label class="class-form-label" for="room">Room (Optional)</label>
@@ -2867,6 +2957,7 @@ ob_end_flush();
             fetchClasses();
             setupEventListeners();
             clearScheduleInputs();
+            toggleSubjectFields(); // Initialize subject fields visibility
         });
 
         function fetchClasses() {
@@ -2909,12 +3000,14 @@ ob_end_flush();
             const subjectFilter = document.getElementById('subjectFilter');
             const sectionFilter = document.getElementById('sectionFilter');
             const classForm = document.getElementById('classForm');
+            const gradeLevelSelect = document.getElementById('gradeLevel');
 
             if (searchInput) searchInput.addEventListener('input', handleSearch);
             if (gradeFilter) gradeFilter.addEventListener('change', handleFilter);
             if (subjectFilter) subjectFilter.addEventListener('change', handleFilter);
             if (sectionFilter) sectionFilter.addEventListener('change', handleFilter);
             if (classForm) classForm.addEventListener('submit', handleFormSubmit);
+            if (gradeLevelSelect) gradeLevelSelect.addEventListener('change', toggleSubjectFields);
 
             const scheduleCheckboxes = document.querySelectorAll('input[name="scheduleDays"]');
             scheduleCheckboxes.forEach(checkbox => {
@@ -2929,6 +3022,33 @@ ob_end_flush();
                     }
                 });
             });
+        }
+
+        function toggleSubjectFields() {
+            const gradeLevel = document.getElementById('gradeLevel').value;
+            const classCodeGroup = document.getElementById('classCodeGroup');
+            const subjectGroup = document.getElementById('subjectGroup');
+            const classCodeInput = document.getElementById('classCode');
+            const subjectInput = document.getElementById('subject');
+
+            const lowerGrades = ['Kindergarten', 'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6'];
+            const isLowerGrade = lowerGrades.includes(gradeLevel);
+
+            if (classCodeGroup && subjectGroup && classCodeInput && subjectInput) {
+                if (isLowerGrade) {
+                    classCodeGroup.style.display = 'none';
+                    subjectGroup.style.display = 'none';
+                    classCodeInput.value = '';
+                    subjectInput.value = '';
+                    classCodeInput.removeAttribute('required');
+                    subjectInput.removeAttribute('required');
+                } else {
+                    classCodeGroup.style.display = 'block';
+                    subjectGroup.style.display = 'block';
+                    classCodeInput.removeAttribute('required');
+                    subjectInput.setAttribute('required', 'required');
+                }
+            }
         }
 
         function renderClasses() {
@@ -2961,11 +3081,11 @@ ob_end_flush();
                 card.className = 'class-card';
                 card.innerHTML = `
                     <div class="class-header">
-                        <h3>${sanitizeHTML(classItem.subject_code)}</h3>
+                        <h3>${sanitizeHTML(classItem.subject_code || classItem.section_name)}</h3>
                     </div>
                     <div class="class-info">
                         <h4>${sanitizeHTML(classItem.section_name)}</h4>
-                        <p><i class="fas fa-book"></i> ${sanitizeHTML(classItem.subject_name)}</p>
+                        ${classItem.subject_name ? `<p><i class="fas fa-book"></i> ${sanitizeHTML(classItem.subject_name)}</p>` : ''}
                         <p><i class="fas fa-graduation-cap"></i> ${sanitizeHTML(classItem.grade_level)}</p>
                         <p><i class="fas fa-map-marker-alt"></i> ${sanitizeHTML(classItem.room || 'No room specified')}</p>
                         <p><i class="fas fa-users"></i> ${studentCount} students</p>
@@ -3015,7 +3135,7 @@ ob_end_flush();
                 row.innerHTML = `
                     <td><input type="checkbox" class="row-checkbox" data-class-id="${classItem.class_id}"></td>
                     <td>
-                        <strong>${sanitizeHTML(classItem.subject_name)}</strong><br>
+                        <strong>${sanitizeHTML(classItem.subject_name || classItem.section_name)}</strong><br>
                         <small>${sanitizeHTML(classItem.section_name)}</small>
                     </td>
                     <td>${sanitizeHTML(classItem.grade_level)}</td>
@@ -3137,14 +3257,14 @@ ob_end_flush();
             const classForm = document.getElementById('classForm');
             const classModal = document.getElementById('classModal');
             const subjectInput = document.getElementById('subject');
+            const classCodeInput = document.getElementById('classCode');
 
             if (modalTitle) modalTitle.textContent = 'Add New Class';
             if (classForm) classForm.reset();
-            if (subjectInput) {
-                subjectInput.disabled = false;
-                subjectInput.value = '';
-            }
+            if (subjectInput) subjectInput.value = '';
+            if (classCodeInput) classCodeInput.value = '';
             clearScheduleInputs();
+            toggleSubjectFields();
             if (classModal) classModal.classList.add('show');
         }
 
@@ -3160,13 +3280,12 @@ ob_end_flush();
 
             editingClassId = classId;
             const modalTitle = document.getElementById('modalTitle');
-            const subjectInput = document.getElementById('subject');
             if (modalTitle) modalTitle.textContent = 'Edit Class';
 
             const fields = {
-                classCode: classItem.subject_code,
+                classCode: classItem.subject_code || '',
                 sectionName: classItem.section_name,
-                subject: classItem.subject_name,
+                subject: classItem.subject_name || '',
                 gradeLevel: classItem.grade_level,
                 room: classItem.room || ''
             };
@@ -3176,7 +3295,7 @@ ob_end_flush();
                 if (element) element.value = value;
             });
 
-            if (subjectInput) subjectInput.disabled = false;
+            toggleSubjectFields();
 
             clearScheduleInputs();
             if (classItem.schedule) {
@@ -3212,15 +3331,11 @@ ob_end_flush();
                 content.innerHTML = `
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
-                            <div class="detail-row">
-                                <strong>Subject Code:</strong> ${sanitizeHTML(classItem.subject_code)}
-                            </div>
+                            ${classItem.subject_code ? `<div class="detail-row"><strong>Subject Code:</strong> ${sanitizeHTML(classItem.subject_code)}</div>` : ''}
                             <div class="detail-row">
                                 <strong>Section Name:</strong> ${sanitizeHTML(classItem.section_name)}
                             </div>
-                            <div class="detail-row">
-                                <strong>Subject:</strong> ${sanitizeHTML(classItem.subject_name)}
-                            </div>
+                            ${classItem.subject_name ? `<div class="detail-row"><strong>Subject:</strong> ${sanitizeHTML(classItem.subject_name)}</div>` : ''}
                             <div class="detail-row">
                                 <strong>Grade Level:</strong> ${sanitizeHTML(classItem.grade_level)}
                             </div>
@@ -3601,7 +3716,7 @@ ob_end_flush();
                     <td>${sanitizeHTML(row[3] || '')}</td>
                     <td>${sanitizeHTML(row[4] || '')}</td>
                     <td>${sanitizeHTML(row[5] || '')}</td>
-                    <td>${sanitizeHTML(row[6] || '')}</td>
+                    <td>${sanitizeHTML(row[6] || excelDateToYYYYMMDD(row[6]))}</td>
                     <td>${sanitizeHTML(row[7] || '')}</td>
                     <td>${sanitizeHTML(row[8] || '')}</td>
                     <td>${sanitizeHTML(row[9] || '')}</td>
@@ -3609,9 +3724,9 @@ ob_end_flush();
                     <td>${sanitizeHTML(row[11] || '')}</td>
                     <td>${photoDisplay}</td>
                     <td>${qrDisplay}</td>
-                    <td>
-                        <button class="btn btn-sm btn-danger" onclick="removePreviewRow(this)">
-                            <i class="fas fa-trash"></i> Remove
+                    <td class="actions">
+                        <button class="btn btn-sm btn-danger" onclick="removePreviewRow(${index})">
+                            <i class="fas fa-trash"></i>
                         </button>
                     </td>
                 `;

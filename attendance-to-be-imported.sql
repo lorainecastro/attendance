@@ -28,8 +28,8 @@ CREATE TABLE teacher_sessions (
 
 CREATE TABLE subjects (
     subject_id INT AUTO_INCREMENT PRIMARY KEY,
-    subject_code VARCHAR(20) NOT NULL UNIQUE,
-    subject_name VARCHAR(100) NOT NULL UNIQUE,
+    subject_code VARCHAR(20) NOT NULL,
+    subject_name VARCHAR(100) NOT NULL,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 

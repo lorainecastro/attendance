@@ -1,3 +1,5 @@
+SET SESSION sql_mode = 'NO_AUTO_VALUE_ON_ZERO';
+
 CREATE TABLE teachers (
     teacher_id INT AUTO_INCREMENT PRIMARY KEY,
     firstname VARCHAR(50) NOT NULL,

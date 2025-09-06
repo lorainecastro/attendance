@@ -34,9 +34,10 @@ function checkSubjectByCode($subject_code)
     }
 }
 
-// Updated function to check for duplicate class
+// Updated function to check for duplicate class - now includes subject_code
 function isDuplicateClass($pdo, $section_name, $subject_code, $teacher_id, $grade_level, $class_id = null)
 {
+    // Check for duplicate based on section_name, subject_code (not subject_id), teacher_id, and grade_level
     $query = "SELECT COUNT(*) FROM classes c JOIN subjects s ON c.subject_id = s.subject_id WHERE c.section_name = ? AND s.subject_code = ? AND c.teacher_id = ? AND c.grade_level = ?";
     $params = [$section_name, $subject_code, $teacher_id, $grade_level];
 
@@ -58,8 +59,9 @@ function addClass($classData, $scheduleData, $class_id = null)
     try {
         $pdo->beginTransaction();
 
-        // For new subjects or updating subject names
+        // For new subjects or updating subject names, we need to handle this differently
         if ($class_id) {
+            // For updates, check if we need to create a new subject or update existing
             $stmt = $pdo->prepare("
                 SELECT s.subject_id, s.subject_code, s.subject_name 
                 FROM classes c 
@@ -69,19 +71,23 @@ function addClass($classData, $scheduleData, $class_id = null)
             $stmt->execute([$class_id]);
             $currentSubject = $stmt->fetch(PDO::FETCH_ASSOC);
 
+            // If subject code or name changed, we need to handle the subject
             if (!$currentSubject || 
                 $currentSubject['subject_code'] !== $classData['code'] || 
                 $currentSubject['subject_name'] !== $classData['subject']) {
                 
+                // Check if the new subject code already exists
                 $stmt = $pdo->prepare("SELECT subject_id FROM subjects WHERE subject_code = ?");
                 $stmt->execute([$classData['code']]);
                 $existingSubject = $stmt->fetch(PDO::FETCH_ASSOC);
                 
                 if ($existingSubject) {
+                    // Update existing subject name if different
                     $stmt = $pdo->prepare("UPDATE subjects SET subject_name = ? WHERE subject_id = ?");
                     $stmt->execute([$classData['subject'], $existingSubject['subject_id']]);
                     $subject_id = $existingSubject['subject_id'];
                 } else {
+                    // Create new subject
                     $stmt = $pdo->prepare("INSERT INTO subjects (subject_code, subject_name) VALUES (?, ?)");
                     $stmt->execute([$classData['code'], $classData['subject']]);
                     $subject_id = $pdo->lastInsertId();
@@ -90,6 +96,7 @@ function addClass($classData, $scheduleData, $class_id = null)
                 $subject_id = $currentSubject['subject_id'];
             }
         } else {
+            // For new classes, insert or get subject
             $stmt = $pdo->prepare("
                 INSERT INTO subjects (subject_code, subject_name)
                 VALUES (?, ?)
@@ -101,7 +108,7 @@ function addClass($classData, $scheduleData, $class_id = null)
             $subject_id = $pdo->lastInsertId();
         }
 
-        // Check for duplicate class
+        // Check for duplicate class using the updated function
         if (isDuplicateClass($pdo, $classData['sectionName'], $classData['code'], $_SESSION['teacher_id'], $classData['gradeLevel'], $class_id)) {
             $pdo->rollBack();
             return ['success' => false, 'error' => 'A class with this section name, subject code, and grade level already exists for this teacher.'];
@@ -111,7 +118,7 @@ function addClass($classData, $scheduleData, $class_id = null)
             // Update existing class
             $stmt = $pdo->prepare("
                 UPDATE classes 
-                SET section_name = ?, subject_id = ?, grade_level = ?, room = ?
+                SET section_name = ?, subject_id = ?, grade_level = ?, room = ?, status = ?
                 WHERE class_id = ? AND teacher_id = ?
             ");
             $stmt->execute([
@@ -119,6 +126,7 @@ function addClass($classData, $scheduleData, $class_id = null)
                 $subject_id,
                 $classData['gradeLevel'],
                 $classData['room'],
+                $classData['status'],
                 $class_id,
                 $_SESSION['teacher_id']
             ]);
@@ -129,15 +137,16 @@ function addClass($classData, $scheduleData, $class_id = null)
         } else {
             // Insert new class
             $stmt = $pdo->prepare("
-                INSERT INTO classes (section_name, subject_id, teacher_id, grade_level, room)
-                VALUES (?, ?, ?, ?, ?)
+                INSERT INTO classes (section_name, subject_id, teacher_id, grade_level, room, status)
+                VALUES (?, ?, ?, ?, ?, ?)
             ");
             $stmt->execute([
                 $classData['sectionName'],
                 $subject_id,
                 $_SESSION['teacher_id'],
                 $classData['gradeLevel'],
-                $classData['room']
+                $classData['room'],
+                $classData['status']
             ]);
             $class_id = $pdo->lastInsertId();
         }
@@ -164,7 +173,6 @@ function addClass($classData, $scheduleData, $class_id = null)
         return ['success' => false, 'error' => 'Failed to ' . ($class_id ? 'update' : 'add') . ' class: ' . $e->getMessage()];
     }
 }
-
 // Function to delete a class
 function deleteClass($class_id)
 {
@@ -199,8 +207,9 @@ function fetchClassesForTeacher()
 {
     $pdo = getDBConnection();
     try {
+        // Fetch class details with student count
         $stmt = $pdo->prepare("
-            SELECT c.class_id, c.section_name, c.grade_level, c.room, c.attendance_percentage,
+            SELECT c.class_id, c.section_name, c.grade_level, c.room, c.attendance_percentage, c.status,
                    s.subject_code, s.subject_name,
                    (SELECT COUNT(*) FROM class_students cs WHERE cs.class_id = c.class_id AND cs.is_enrolled = 1) as student_count
             FROM classes c
@@ -210,6 +219,7 @@ function fetchClassesForTeacher()
         $stmt->execute([$_SESSION['teacher_id']]);
         $classes = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
+        // Fetch schedules separately
         foreach ($classes as &$class) {
             $stmt = $pdo->prepare("
                 SELECT day, start_time, end_time
@@ -219,6 +229,7 @@ function fetchClassesForTeacher()
             $stmt->execute([$class['class_id']]);
             $schedules = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
+            // Build schedule array
             $class['schedule'] = [];
             foreach ($schedules as $schedule) {
                 if (!empty($schedule['day'])) {
@@ -289,11 +300,12 @@ function importStudents($class_id, $filePath)
         $rows = $sheet->toArray();
 
         $pdo->beginTransaction();
-        $header = array_shift($rows);
+        $header = array_shift($rows); // Remove header row
 
+        // Store QR codes to be generated
         $qrs_to_generate = [];
         foreach ($rows as $index => $row) {
-            if (count($row) >= 12) {
+            if (count($row) >= 12) { // Updated to 12 to account for parent_email
                 $lrn = $row[0] ?? null;
                 if ($lrn && (!isset($row[13]) || empty(trim($row[13])))) {
                     $qrs_to_generate[] = [
@@ -304,6 +316,7 @@ function importStudents($class_id, $filePath)
             }
         }
 
+        // Generate QR codes if needed
         $qr_files = [];
         if (!empty($qrs_to_generate)) {
             foreach ($qrs_to_generate as $item) {
@@ -321,11 +334,13 @@ function importStudents($class_id, $filePath)
             }
         }
 
+        // Insert or update students
         foreach ($rows as $row) {
-            if (count($row) >= 12) {
+            if (count($row) >= 12) { // Updated to 12 to account for parent_email
                 $lrn = $row[0] ?? null;
-                if (!$lrn) continue;
+                if (!$lrn) continue; // Skip if LRN is missing
 
+                // Use generated QR code if available, else use provided or null
                 $qr_code = isset($qr_files[$lrn]) ? $qr_files[$lrn] : (isset($row[13]) && !empty(trim($row[13])) ? trim($row[13]) : null);
 
                 $stmt = $pdo->prepare("
@@ -347,22 +362,23 @@ function importStudents($class_id, $filePath)
                         qr_code = VALUES(qr_code)
                 ");
                 $stmt->execute([
-                    $lrn,
-                    $row[1] ?? null,
-                    $row[2] ?? null,
-                    $row[3] ?? null,
-                    $row[4] ?? null,
-                    $row[5] ?? null,
-                    $row[6] ?? null,
-                    $row[7] ?? null,
-                    $row[8] ?? null,
-                    $row[9] ?? null,
-                    $row[10] ?? null,
-                    $row[11] ?? null,
-                    $row[12] ?? null,
-                    $qr_code
+                    $lrn,                          // lrn
+                    $row[1] ?? null,              // last_name
+                    $row[2] ?? null,              // first_name
+                    $row[3] ?? null,              // middle_name
+                    $row[4] ?? null,              // email
+                    $row[5] ?? null,              // gender
+                    $row[6] ?? null,              // dob
+                    $row[7] ?? null,              // grade_level
+                    $row[8] ?? null,              // address
+                    $row[9] ?? null,              // parent_name
+                    $row[10] ?? null,             // parent_email (new column)
+                    $row[11] ?? null,             // emergency_contact
+                    $row[12] ?? null,             // photo
+                    $qr_code                      // qr_code
                 ]);
 
+                // Enroll student in class
                 $stmt = $pdo->prepare("
                     INSERT INTO class_students (class_id, lrn, is_enrolled)
                     VALUES (?, ?, 1)
@@ -403,7 +419,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             'sectionName' => $_POST['sectionName'] ?? '',
             'subject' => $_POST['subject'] ?? '',
             'gradeLevel' => $_POST['gradeLevel'] ?? '',
-            'room' => $_POST['room'] ?? ''
+            'room' => $_POST['room'] ?? '',
+            'status' => $_POST['status'] ?? ''
         ];
 
         $scheduleData = json_decode($_POST['schedule'] ?? '{}', true);
@@ -411,7 +428,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 
         if (
             empty($classData['code']) || empty($classData['sectionName']) ||
-            empty($classData['subject']) || empty($classData['gradeLevel'])
+            empty($classData['subject']) || empty($classData['gradeLevel']) ||
+            empty($classData['status'])
         ) {
             echo json_encode(['success' => false, 'error' => 'Missing required fields']);
             exit;
@@ -452,16 +470,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         }
 
         $file = $_FILES['file'];
-        $filePath = 'Uploads/' . uniqid() . '_' . $file['name'];
+        $filePath = 'uploads/' . uniqid() . '_' . $file['name'];
         if (move_uploaded_file($file['tmp_name'], $filePath)) {
             $result = importStudents($class_id, $filePath);
-            unlink($filePath);
+            unlink($filePath); // Clean up
             echo json_encode($result);
         } else {
             echo json_encode(['success' => false, 'error' => 'Failed to upload file']);
         }
         exit;
-    } elseif ($_POST['action'] === 'generateQRCodes') {
+    }
+    // Add this new action handler in your existing AJAX requests section
+    elseif ($_POST['action'] === 'generateQRCodes') {
         $qrs_json = $_POST['qrs'] ?? '[]';
         $qrs_to_generate = json_decode($qrs_json, true);
 
@@ -471,7 +491,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         }
 
         try {
+            // Use your existing QR code generation logic
             $qr_files = [];
+
             foreach ($qrs_to_generate as $item) {
                 $qrCode = new QrCode($item['content']);
                 $writer = new PngWriter();
@@ -510,6 +532,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     exit;
 }
 
+// For non-AJAX requests, render the HTML page
 ob_end_flush();
 ?>
 
@@ -2584,6 +2607,20 @@ ob_end_flush();
         <div class="card">
             <div class="card-header">
                 <div>
+                    <div class="card-title">Active Classes</div>
+                    <div class="card-value" id="active-classes">0</div>
+                </div>
+                <div class="card-icon bg-green">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 16 16">
+                        <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z" />
+                        <path d="M10.97 4.97a.235.235 0 0 0-.02.022L7.477 9.417 5.384 7.323a.75.75 0 0 0-1.06 1.06L6.97 11.03a.75.75 0 0 0 1.079-.02l3.992-4.99a.75.75 0 0 0-1.071-1.05z" />
+                    </svg>
+                </div>
+            </div>
+        </div>
+        <div class="card">
+            <div class="card-header">
+                <div>
                     <div class="card-title">Total Students</div>
                     <div class="card-value" id="total-students">0</div>
                 </div>
@@ -2620,6 +2657,12 @@ ob_end_flush();
                 </div>
                 <select class="form-select filter-select" id="gradeFilter">
                     <option value="">All Grade Levels</option>
+                    <!-- Options will be dynamically populated by JavaScript -->
+                </select>
+                <select class="form-select filter-select" id="statusFilter">
+                    <option value="">All Status</option>
+                    <option value="active">Active</option>
+                    <option value="inactive">Inactive</option>
                 </select>
                 <select class="form-select filter-select" id="sectionFilter">
                     <option value="">All Sections</option>
@@ -2643,27 +2686,32 @@ ob_end_flush();
             </div>
         </div>
 
-        <div id="gridView" class="class-grid"></div>
+        <div id="gridView" class="class-grid">
+        </div>
 
         <div id="tableView" class="table-container hidden">
             <table class="table">
                 <thead>
                     <tr>
-                        <th><input type="checkbox" id="selectAll" onchange="toggleSelectAll()"></th>
+                        <th>
+                            <input type="checkbox" id="selectAll" onchange="toggleSelectAll()">
+                        </th>
                         <th>Subject & Section</th>
                         <th>Grade Level</th>
                         <th>Schedule</th>
                         <th>Students</th>
                         <th>Attendance %</th>
+                        <th>Status</th>
                         <th>Actions</th>
                     </tr>
                 </thead>
-                <tbody></tbody>
+                <tbody>
+                </tbody>
             </table>
         </div>
     </div>
 
-    <!-- Add New Class Modal -->
+    <!-- HTML for Add New Class Modal -->
     <div id="classModal" class="class-modal">
         <div class="class-modal-content">
             <div class="class-modal-header">
@@ -2671,6 +2719,7 @@ ob_end_flush();
                 <button class="class-close-btn" onclick="closeModal()">×</button>
             </div>
             <form id="classForm" class="class-modal-form">
+                <!-- First Column: Class Details -->
                 <div class="class-form-column">
                     <div class="class-form-group">
                         <label class="class-form-label" for="gradeLevel">Grade Level</label>
@@ -2688,7 +2737,7 @@ ob_end_flush();
                         <label class="class-form-label" for="sectionName">Section Name</label>
                         <input type="text" class="class-form-input" id="sectionName" required placeholder="e.g., Section A, Diamond, Einstein">
                     </div>
-                    <div class="class-form-group">
+                                        <div class="class-form-group">
                         <label class="class-form-label" for="classCode">Subject Code</label>
                         <input type="text" class="class-form-input" id="classCode" required placeholder="e.g., MATH-101-A">
                     </div>
@@ -2696,11 +2745,21 @@ ob_end_flush();
                         <label class="class-form-label" for="subject">Subject</label>
                         <input type="text" class="class-form-input" id="subject" required placeholder="e.g., Mathematics, Science, English">
                     </div>
+
                     <div class="class-form-group">
                         <label class="class-form-label" for="room">Room (Optional)</label>
                         <input type="text" class="class-form-input" id="room" placeholder="e.g., Room 201, Lab 1">
                     </div>
+                    <div class="class-form-group">
+                        <label class="class-form-label" for="status">Status</label>
+                        <select class="class-form-select" id="status" required>
+                            <option value="">Select Status</option>
+                            <option value="active">Active</option>
+                            <option value="inactive">Inactive</option>
+                        </select>
+                    </div>
                 </div>
+                <!-- Second Column: Schedule -->
                 <div class="class-form-column">
                     <div class="class-form-group">
                         <label class="class-form-label">Schedule</label>
@@ -2764,7 +2823,9 @@ ob_end_flush();
                 <h2 class="modal-title">Class Details</h2>
                 <button class="close-btn" onclick="closeViewModal()">×</button>
             </div>
-            <div id="viewContent" class="p-6"></div>
+            <div id="viewContent" class="p-6">
+                <!-- Dynamic content will be inserted here -->
+            </div>
             <div class="form-actions">
                 <button type="button" class="btn btn-secondary" onclick="closeViewModal()">Close</button>
             </div>
@@ -2785,6 +2846,7 @@ ob_end_flush();
                     </div>
                     <small class="import-note">Expected columns: LRN, Last Name, First Name, Middle Name, Email, Gender, DOB, Grade Level, Address, Parent Name, Parent Email, Emergency Contact, Photo, QR Code</small>
                 </div>
+                <!-- Preview Table -->
                 <div class="preview-table-container" id="previewTableContainer" style="display: none;">
                     <h3 class="preview-title">Preview</h3>
                     <div class="table-wrapper">
@@ -2812,6 +2874,8 @@ ob_end_flush();
                         </table>
                     </div>
                 </div>
+
+                <!-- Student Table -->
                 <div class="student-table-container">
                     <div class="table-wrapper">
                         <table class="student-table" id="studentTable">
@@ -2860,7 +2924,9 @@ ob_end_flush();
         function fetchClasses() {
             fetch('manage-classes.php?action=fetchClasses')
                 .then(response => {
-                    if (!response.ok) throw new Error('Network response was not ok: ' + response.statusText);
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok: ' + response.statusText);
+                    }
                     return response.json();
                 })
                 .then(result => {
@@ -2882,11 +2948,13 @@ ob_end_flush();
 
         function updateStats() {
             const totalClasses = classes.length;
+            const activeClasses = classes.filter(c => c.status === 'active').length;
             const totalStudents = classes.reduce((sum, c) => sum + (parseInt(c.student_count) || 0), 0);
             const averageAttendance = classes.length > 0 ?
                 (classes.reduce((sum, c) => sum + (parseFloat(c.attendance_percentage) || 0), 0) / classes.length).toFixed(1) : 0;
 
             document.getElementById('total-classes').textContent = totalClasses;
+            document.getElementById('active-classes').textContent = activeClasses;
             document.getElementById('total-students').textContent = totalStudents;
             document.getElementById('average-attendance').textContent = averageAttendance + '%';
         }
@@ -2894,15 +2962,19 @@ ob_end_flush();
         function setupEventListeners() {
             const searchInput = document.getElementById('searchInput');
             const gradeFilter = document.getElementById('gradeFilter');
+            const statusFilter = document.getElementById('statusFilter');
             const subjectFilter = document.getElementById('subjectFilter');
             const sectionFilter = document.getElementById('sectionFilter');
             const classForm = document.getElementById('classForm');
+            const classCodeInput = document.getElementById('classCode');
 
             if (searchInput) searchInput.addEventListener('input', handleSearch);
             if (gradeFilter) gradeFilter.addEventListener('change', handleFilter);
+            if (statusFilter) statusFilter.addEventListener('change', handleFilter);
             if (subjectFilter) subjectFilter.addEventListener('change', handleFilter);
             if (sectionFilter) sectionFilter.addEventListener('change', handleFilter);
             if (classForm) classForm.addEventListener('submit', handleFormSubmit);
+            // if (classCodeInput) classCodeInput.addEventListener('blur', checkSubjectCode);
 
             const scheduleCheckboxes = document.querySelectorAll('input[name="scheduleDays"]');
             scheduleCheckboxes.forEach(checkbox => {
@@ -2918,6 +2990,52 @@ ob_end_flush();
                 });
             });
         }
+
+        // function checkSubjectCode() {
+        //     const classCodeInput = document.getElementById('classCode');
+        //     const subjectInput = document.getElementById('subject');
+        //     if (!classCodeInput || !subjectInput) return;
+
+        //     const subjectCode = classCodeInput.value.trim();
+        //     if (!subjectCode) {
+        //         subjectInput.disabled = false;
+        //         subjectInput.value = '';
+        //         return;
+        //     }
+
+        //     fetch('manage-classes.php', {
+        //             method: 'POST',
+        //             headers: {
+        //                 'Content-Type': 'application/x-www-form-urlencoded',
+        //                 'X-Requested-With': 'XMLHttpRequest'
+        //             },
+        //             body: `action=checkSubject&subjectCode=${encodeURIComponent(subjectCode)}`
+        //         })
+        //         .then(response => {
+        //             if (!response.ok) {
+        //                 throw new Error('Network response was not ok: ' + response.statusText);
+        //             }
+        //             return response.json();
+        //         })
+        //         .then(data => {
+        //             if (data.success) {
+        //                 if (data.exists && data.subject_name) {
+        //                     subjectInput.value = data.subject_name;
+        //                     subjectInput.disabled = true;
+        //                 } else {
+        //                     subjectInput.value = '';
+        //                     subjectInput.disabled = false;
+        //                 }
+        //             } else {
+        //                 console.error('Error checking subject code:', data.error);
+        //                 subjectInput.disabled = false;
+        //             }
+        //         })
+        //         .catch(error => {
+        //             console.error('Error checking subject code:', error);
+        //             subjectInput.disabled = false;
+        //         });
+        // }
 
         function renderClasses() {
             updateStats();
@@ -2948,36 +3066,37 @@ ob_end_flush();
                 const card = document.createElement('div');
                 card.className = 'class-card';
                 card.innerHTML = `
-                    <div class="class-header">
-                        <h3>${sanitizeHTML(classItem.subject_code)}</h3>
-                    </div>
-                    <div class="class-info">
-                        <h4>${sanitizeHTML(classItem.section_name)}</h4>
-                        <p><i class="fas fa-book"></i> ${sanitizeHTML(classItem.subject_name)}</p>
-                        <p><i class="fas fa-graduation-cap"></i> ${sanitizeHTML(classItem.grade_level)}</p>
-                        <p><i class="fas fa-map-marker-alt"></i> ${sanitizeHTML(classItem.room || 'No room specified')}</p>
-                        <p><i class="fas fa-users"></i> ${studentCount} students</p>
-                        <p><i class="fas fa-percentage"></i> ${attendancePercentage.toFixed(1)}% attendance</p>
-                    </div>
-                    <div class="class-schedule">
-                        <h5>Schedule:</h5>
-                        ${scheduleText}
-                    </div>
-                    <div class="class-actions">
-                        <button class="btn btn-sm btn-info" onclick="viewClass(${classItem.class_id})">
-                            <i class="fas fa-eye"></i> View
-                        </button>
-                        <button class="btn btn-sm btn-warning" onclick="editClass(${classItem.class_id})">
-                            <i class="fas fa-edit"></i> Edit
-                        </button>
-                        <button class="btn btn-sm btn-success" onclick="openStudentModal(${classItem.class_id})">
-                            <i class="fas fa-users"></i> Students
-                        </button>
-                        <button class="btn btn-sm btn-danger" onclick="deleteClass(${classItem.class_id})">
-                            <i class="fas fa-trash"></i> Delete
-                        </button>
-                    </div>
-                `;
+                <div class="class-header">
+                    <h3>${sanitizeHTML(classItem.subject_code)}</h3>
+                    <span class="status-badge ${sanitizeHTML(classItem.status)}">${sanitizeHTML(classItem.status)}</span>
+                </div>
+                <div class="class-info">
+                    <h4>${sanitizeHTML(classItem.section_name)}</h4>
+                    <p><i class="fas fa-book"></i> ${sanitizeHTML(classItem.subject_name)}</p>
+                    <p><i class="fas fa-graduation-cap"></i> ${sanitizeHTML(classItem.grade_level)}</p>
+                    <p><i class="fas fa-map-marker-alt"></i> ${sanitizeHTML(classItem.room || 'No room specified')}</p>
+                    <p><i class="fas fa-users"></i> ${studentCount} students</p>
+                    <p><i class="fas fa-percentage"></i> ${attendancePercentage.toFixed(1)}% attendance</p>
+                </div>
+                <div class="class-schedule">
+                    <h5>Schedule:</h5>
+                    ${scheduleText}
+                </div>
+                <div class="class-actions">
+                    <button class="btn btn-sm btn-info" onclick="viewClass(${classItem.class_id})">
+                        <i class="fas fa-eye"></i> View
+                    </button>
+                    <button class="btn btn-sm btn-warning" onclick="editClass(${classItem.class_id})">
+                        <i class="fas fa-edit"></i> Edit
+                    </button>
+                    <button class="btn btn-sm btn-success" onclick="openStudentModal(${classItem.class_id})">
+                        <i class="fas fa-users"></i> Students
+                    </button>
+                    <button class="btn btn-sm btn-danger" onclick="deleteClass(${classItem.class_id})">
+                        <i class="fas fa-trash"></i> Delete
+                    </button>
+                </div>
+            `;
                 container.appendChild(card);
             });
         }
@@ -2990,7 +3109,7 @@ ob_end_flush();
             tbody.innerHTML = '';
 
             if (filteredClasses.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="7" class="no-classes">No classes found</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="9" class="no-classes">No classes found</td></tr>';
                 return;
             }
 
@@ -3001,30 +3120,31 @@ ob_end_flush();
 
                 const row = document.createElement('tr');
                 row.innerHTML = `
-                    <td><input type="checkbox" class="row-checkbox" data-class-id="${classItem.class_id}"></td>
-                    <td>
-                        <strong>${sanitizeHTML(classItem.subject_name)}</strong><br>
-                        <small>${sanitizeHTML(classItem.section_name)}</small>
-                    </td>
-                    <td>${sanitizeHTML(classItem.grade_level)}</td>
-                    <td>${sanitizeHTML(scheduleText)}</td>
-                    <td>${studentCount}</td>
-                    <td>${attendancePercentage.toFixed(1)}%</td>
-                    <td class="actions">
-                        <button class="btn btn-sm btn-info" onclick="viewClass(${classItem.class_id})">
-                            <i class="fas fa-eye"></i>
-                        </button>
-                        <button class="btn btn-sm btn-warning" onclick="editClass(${classItem.class_id})">
-                            <i class="fas fa-edit"></i>
-                        </button>
-                        <button class="btn btn-sm btn-success" onclick="openStudentModal(${classItem.class_id})">
-                            <i class="fas fa-users"></i>
-                        </button>
-                        <button class="btn btn-sm btn-danger" onclick="deleteClass(${classItem.class_id})">
-                            <i class="fas fa-trash"></i>
-                        </button>
-                    </td>
-                `;
+                <td><input type="checkbox" class="row-checkbox" data-class-id="${classItem.class_id}"></td>
+                <td>
+                    <strong>${sanitizeHTML(classItem.subject_name)}</strong><br>
+                    <small>${sanitizeHTML(classItem.section_name)}</small>
+                </td>
+                <td>${sanitizeHTML(classItem.grade_level)}</td>
+                <td>${sanitizeHTML(scheduleText)}</td>
+                <td>${studentCount}</td>
+                <td>${attendancePercentage.toFixed(1)}%</td>
+                <td><span class="status-badge ${sanitizeHTML(classItem.status)}">${sanitizeHTML(classItem.status)}</span></td>
+                <td class="actions">
+                    <button class="btn btn-sm btn-info" onclick="viewClass(${classItem.class_id})">
+                        <i class="fas fa-eye"></i>
+                    </button>
+                    <button class="btn btn-sm btn-warning" onclick="editClass(${classItem.class_id})">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button class="btn btn-sm btn-success" onclick="openStudentModal(${classItem.class_id})">
+                        <i class="fas fa-users"></i>
+                    </button>
+                    <button class="btn btn-sm btn-danger" onclick="deleteClass(${classItem.class_id})">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </td>
+            `;
                 tbody.appendChild(row);
             });
         }
@@ -3032,11 +3152,13 @@ ob_end_flush();
         function getFilteredClasses() {
             const searchInput = document.getElementById('searchInput');
             const gradeFilter = document.getElementById('gradeFilter');
+            const statusFilter = document.getElementById('statusFilter');
             const subjectFilter = document.getElementById('subjectFilter');
             const sectionFilter = document.getElementById('sectionFilter');
 
             const searchTerm = searchInput ? searchInput.value.toLowerCase() : '';
             const gradeFilterValue = gradeFilter ? gradeFilter.value : '';
+            const statusFilterValue = statusFilter ? statusFilter.value : '';
             const subjectFilterValue = subjectFilter ? subjectFilter.value : '';
             const sectionFilterValue = sectionFilter ? sectionFilter.value : '';
 
@@ -3047,10 +3169,11 @@ ob_end_flush();
                     (classItem.subject_name && classItem.subject_name.toLowerCase().includes(searchTerm));
 
                 const matchesGrade = gradeFilterValue === '' || classItem.grade_level === gradeFilterValue;
+                const matchesStatus = statusFilterValue === '' || classItem.status === statusFilterValue;
                 const matchesSubject = subjectFilterValue === '' || classItem.subject_name === subjectFilterValue;
                 const matchesSection = sectionFilterValue === '' || classItem.section_name === sectionFilterValue;
 
-                return matchesSearch && matchesGrade && matchesSubject && matchesSection;
+                return matchesSearch && matchesGrade && matchesStatus && matchesSubject && matchesSection;
             });
         }
 
@@ -3060,10 +3183,12 @@ ob_end_flush();
             const gradeFilter = document.getElementById('gradeFilter');
             if (!subjectFilter || !sectionFilter || !gradeFilter) return;
 
+            // Get unique subjects, sections, and grade levels
             const subjects = [...new Set(classes.map(c => c.subject_name).filter(s => s))];
             const sections = [...new Set(classes.map(c => c.section_name).filter(s => s))];
             const gradeLevels = [...new Set(classes.map(c => c.grade_level).filter(g => g))];
 
+            // Populate subject filter
             subjectFilter.innerHTML = '<option value="">All Subjects</option>';
             subjects.forEach(subject => {
                 const option = document.createElement('option');
@@ -3072,6 +3197,7 @@ ob_end_flush();
                 subjectFilter.appendChild(option);
             });
 
+            // Populate section filter
             sectionFilter.innerHTML = '<option value="">All Sections</option>';
             sections.forEach(section => {
                 const option = document.createElement('option');
@@ -3080,6 +3206,7 @@ ob_end_flush();
                 sectionFilter.appendChild(option);
             });
 
+            // Populate grade level filter
             gradeFilter.innerHTML = '<option value="">All Grade Levels</option>';
             gradeLevels.forEach(grade => {
                 const option = document.createElement('option');
@@ -3099,6 +3226,7 @@ ob_end_flush();
 
         function switchView(view) {
             currentView = view;
+
             const viewButtons = document.querySelectorAll('.view-btn');
             viewButtons.forEach(btn => btn.classList.remove('active'));
             event.target.closest('.view-btn').classList.add('active');
@@ -3129,7 +3257,7 @@ ob_end_flush();
             if (modalTitle) modalTitle.textContent = 'Add New Class';
             if (classForm) classForm.reset();
             if (subjectInput) {
-                subjectInput.disabled = false;
+                subjectInput.disabled = false; // Always keep subject field enabled
                 subjectInput.value = '';
             }
             clearScheduleInputs();
@@ -3156,7 +3284,8 @@ ob_end_flush();
                 sectionName: classItem.section_name,
                 subject: classItem.subject_name,
                 gradeLevel: classItem.grade_level,
-                room: classItem.room || ''
+                room: classItem.room || '',
+                status: classItem.status
             };
 
             Object.entries(fields).forEach(([id, value]) => {
@@ -3164,7 +3293,9 @@ ob_end_flush();
                 if (element) element.value = value;
             });
 
-            if (subjectInput) subjectInput.disabled = false;
+            if (subjectInput) {
+                subjectInput.disabled = false; // Keep subject field enabled for editing
+            }
 
             clearScheduleInputs();
             if (classItem.schedule) {
@@ -3185,6 +3316,9 @@ ob_end_flush();
 
             const classModal = document.getElementById('classModal');
             if (classModal) classModal.classList.add('show');
+
+            // Trigger subject code check to ensure consistency
+            // checkSubjectCode();
         }
 
         function viewClass(classId) {
@@ -3198,42 +3332,45 @@ ob_end_flush();
             const content = document.getElementById('viewContent');
             if (content) {
                 content.innerHTML = `
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div>
-                            <div class="detail-row">
-                                <strong>Subject Code:</strong> ${sanitizeHTML(classItem.subject_code)}
-                            </div>
-                            <div class="detail-row">
-                                <strong>Section Name:</strong> ${sanitizeHTML(classItem.section_name)}
-                            </div>
-                            <div class="detail-row">
-                                <strong>Subject:</strong> ${sanitizeHTML(classItem.subject_name)}
-                            </div>
-                            <div class="detail-row">
-                                <strong>Grade Level:</strong> ${sanitizeHTML(classItem.grade_level)}
-                            </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <div class="detail-row">
+                            <strong>Subject Code:</strong> ${sanitizeHTML(classItem.subject_code)}
                         </div>
-                        <div>
-                            <div class="detail-row">
-                                <strong>Room:</strong> ${sanitizeHTML(classItem.room || 'No room specified')}
-                            </div>
-                            <div class="detail-row">
-                                <strong>Students:</strong> ${studentCount}
-                            </div>
-                            <div class="detail-row">
-                                <strong>Attendance Percentage:</strong> ${attendancePercentage.toFixed(1)}%
-                            </div>
+                        <div class="detail-row">
+                            <strong>Section Name:</strong> ${sanitizeHTML(classItem.section_name)}
                         </div>
-                        <div class="col-span-2">
-                            <div class="detail-row">
-                                <strong>Schedule:</strong>
-                                <div class="schedule-details">
-                                    ${scheduleText}
-                                </div>
+                        <div class="detail-row">
+                            <strong>Subject:</strong> ${sanitizeHTML(classItem.subject_name)}
+                        </div>
+                        <div class="detail-row">
+                            <strong>Grade Level:</strong> ${sanitizeHTML(classItem.grade_level)}
+                        </div>
+                    </div>
+                    <div>
+                        <div class="detail-row">
+                            <strong>Room:</strong> ${sanitizeHTML(classItem.room || 'No room specified')}
+                        </div>
+                        <div class="detail-row">
+                            <strong>Students:</strong> ${studentCount}
+                        </div>
+                        <div class="detail-row">
+                            <strong>Attendance Percentage:</strong> ${attendancePercentage.toFixed(1)}%
+                        </div>
+                        <div class="detail-row">
+                            <strong>Status:</strong> <span class="status-badge ${sanitizeHTML(classItem.status)}">${sanitizeHTML(classItem.status)}</span>
+                        </div>
+                    </div>
+                    <div class="col-span-2">
+                        <div class="detail-row">
+                            <strong>Schedule:</strong>
+                            <div class="schedule-details">
+                                ${scheduleText}
                             </div>
                         </div>
                     </div>
-                `;
+                </div>
+            `;
             }
 
             const viewModal = document.getElementById('viewModal');
@@ -3249,12 +3386,16 @@ ob_end_flush();
             if (!confirm('Are you sure you want to delete this class?')) return;
 
             fetch('manage-classes.php', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                body: `action=deleteClass&classId=${classId}`
-            })
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded'
+                    },
+                    body: `action=deleteClass&classId=${classId}`
+                })
                 .then(response => {
-                    if (!response.ok) throw new Error('Network response was not ok: ' + response.statusText);
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok: ' + response.statusText);
+                    }
                     return response.json();
                 })
                 .then(data => {
@@ -3275,6 +3416,7 @@ ob_end_flush();
 
         function handleFormSubmit(event) {
             event.preventDefault();
+
             const schedule = getScheduleFromForm();
 
             const classData = {
@@ -3283,16 +3425,21 @@ ob_end_flush();
                 subject: document.getElementById('subject')?.value || '',
                 gradeLevel: document.getElementById('gradeLevel')?.value || '',
                 room: document.getElementById('room')?.value || '',
+                status: document.getElementById('status')?.value || '',
                 classId: editingClassId || ''
             };
 
             fetch('manage-classes.php', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                body: `action=addClass&${new URLSearchParams(classData)}&schedule=${encodeURIComponent(JSON.stringify(schedule))}`
-            })
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded'
+                    },
+                    body: `action=addClass&${new URLSearchParams(classData)}&schedule=${encodeURIComponent(JSON.stringify(schedule))}`
+                })
                 .then(response => {
-                    if (!response.ok) throw new Error('Network response was not ok: ' + response.statusText);
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok: ' + response.statusText);
+                    }
                     return response.json();
                 })
                 .then(data => {
@@ -3412,10 +3559,14 @@ ob_end_flush();
 
         function fetchStudents(classId) {
             fetch(`manage-classes.php?action=fetchStudents&classId=${classId}`, {
-                headers: { 'X-Requested-With': 'XMLHttpRequest' }
-            })
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                })
                 .then(response => {
-                    if (!response.ok) throw new Error('Network response was not ok: ' + response.statusText);
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok: ' + response.statusText);
+                    }
                     return response.json();
                 })
                 .then(result => {
@@ -3434,10 +3585,10 @@ ob_end_flush();
 
         function excelDateToYYYYMMDD(excelDate) {
             if (!excelDate || isNaN(excelDate)) return 'N/A';
-            const baseDate = new Date(1899, 11, 30);
-            const date = new Date(baseDate.getTime() + excelDate * 86400000);
+            const baseDate = new Date(1899, 11, 30); // Excel base date
+            const date = new Date(baseDate.getTime() + excelDate * 86400000); // Convert to milliseconds
             const year = date.getFullYear();
-            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const month = String(date.getMonth() + 1).padStart(2, '0'); // Months are 0-based
             const day = String(date.getDate()).padStart(2, '0');
             return `${year}-${month}-${day}`;
         }
@@ -3456,34 +3607,30 @@ ob_end_flush();
             students.forEach(student => {
                 const photoSrc = student.photo ? `uploads/${student.photo}` : '';
                 const qrSrc = student.qr_code ? `qrcodes/${student.qr_code}` : '';
-
-                let qrDisplay = qrSrc ? 
-                    `<img src="${qrSrc}" alt="QR Code" style="max-width: 50px; max-height: 50px;"><br><small>${student.qr_code}</small>` : 
-                    'QR Code To Be Provided';
+                console.log('Photo:', photoSrc, 'QR:', qrSrc); // Debug log
 
                 const row = document.createElement('tr');
                 row.innerHTML = `
-                    <td>${sanitizeHTML(student.lrn || 'N/A')}</td>
-                    <td>${sanitizeHTML(student.first_name || 'N/A')}</td>
-                    <td>${sanitizeHTML(student.middle_name || 'N/A')}</td>
-                    <td>${sanitizeHTML(student.last_name || 'N/A')}</td>
-                    <td>${sanitizeHTML(student.email || 'N/A')}</td>
-                    <td>${sanitizeHTML(student.gender || 'N/A')}</td>
-                    <td>${sanitizeHTML(student.dob || 'N/A')}</td>
-                    <td>${sanitizeHTML(student.grade_level || 'N/A')}</td>
-                    <td>${sanitizeHTML(student.address || 'N/A')}</td>
-                    <td>${sanitizeHTML(student.parent_name || 'N/A')}</td>
-                    <td>${sanitizeHTML(student.parent_email || 'N/A')}</td>
-                    <td>${sanitizeHTML(student.emergency_contact || 'N/A')}</td>
-                    <td>${photoSrc ? `<img src="${photoSrc}" alt="Student Photo" style="max-width: 45px; max-height: 45px; border-radius:50%;">` : 'Photo To Be Provided'}</td>
-                    <td>${qrDisplay}</td>
-                    <td>${sanitizeHTML(student.date_added || 'N/A')}</td>
-                    <td class="actions">
-                        <button class="btn btn-sm btn-danger" onclick="deleteStudent(${classId}, '${student.lrn}')">
-                            <i class="fas fa-trash"></i>
-                        </button>
-                    </td>
-                `;
+            <td>${sanitizeHTML(student.lrn || 'N/A')}</td>
+            <td>${sanitizeHTML(student.first_name || 'N/A')}</td>
+            <td>${sanitizeHTML(student.middle_name || 'N/A')}</td>
+            <td>${sanitizeHTML(student.last_name || 'N/A')}</td>
+            <td>${sanitizeHTML(student.email || 'N/A')}</td>
+            <td>${sanitizeHTML(student.gender || 'N/A')}</td>
+            <td>${sanitizeHTML(student.dob || 'N/A')}</td>
+            <td>${sanitizeHTML(student.grade_level || 'N/A')}</td>
+            <td>${sanitizeHTML(student.address || 'N/A')}</td>
+            <td>${sanitizeHTML(student.parent_name || 'N/A')}</td>
+            <td>${sanitizeHTML(student.emergency_contact || 'N/A')}</td>
+            <td>${photoSrc ? `<img src="${photoSrc}" alt="Student Photo" style="max-width: 45px; max-height: 45px; border-radius:50%;">` : 'Photo To Be Provided'}</td>
+            <td>${qrSrc ? `<img src="${qrSrc}" alt="QR Code" style="max-width: 50px; max-height: 50px;">` : 'QR Code To Be Provided'}</td>
+            <td>${sanitizeHTML(student.date_added || 'N/A')}</td>
+            <td class="actions">
+                <button class="btn btn-sm btn-danger" onclick="deleteStudent(${classId}, '${student.lrn}')">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </td>
+        `;
                 tbody.appendChild(row);
             });
         }
@@ -3492,12 +3639,16 @@ ob_end_flush();
             if (!confirm('Are you sure you want to delete this student from the class?')) return;
 
             fetch('manage-classes.php', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                body: `action=deleteStudent&classId=${classId}&lrn=${lrn}`
-            })
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded'
+                    },
+                    body: `action=deleteStudent&classId=${classId}&lrn=${lrn}`
+                })
                 .then(response => {
-                    if (!response.ok) throw new Error('Network response was not ok: ' + response.statusText);
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok: ' + response.statusText);
+                    }
                     return response.json();
                 })
                 .then(data => {
@@ -3529,10 +3680,15 @@ ob_end_flush();
             reader.onload = function(e) {
                 try {
                     const data = new Uint8Array(e.target.result);
-                    const workbook = XLSX.read(data, { type: 'array' });
+                    const workbook = XLSX.read(data, {
+                        type: 'array'
+                    });
                     const firstSheet = workbook.SheetNames[0];
                     const worksheet = workbook.Sheets[firstSheet];
-                    const rows = XLSX.utils.sheet_to_json(worksheet, { header: 1, raw: false });
+                    const rows = XLSX.utils.sheet_to_json(worksheet, {
+                        header: 1,
+                        raw: false
+                    });
 
                     const previewTableContainer = document.getElementById('previewTableContainer');
 
@@ -3550,8 +3706,6 @@ ob_end_flush();
 
                     excelHeader = rows[0];
                     previewData = rows.slice(1).filter(row => row.length >= 11);
-                    processQRCodeFilenames();
-                    generateAndDisplayQRCodes();
                     renderPreviewTable();
                     previewTableContainer.style.display = 'block';
                 } catch (error) {
@@ -3571,17 +3725,285 @@ ob_end_flush();
             tbody.innerHTML = '';
 
             previewData.forEach((row, index) => {
-                const photoValue = row[12] || '';
-                let photoDisplay = photoValue && (photoValue.includes('.jpg') || photoValue.includes('.jpeg') || photoValue.includes('.png') || photoValue.includes('.gif')) ?
-                    `<img src="Uploads/${photoValue}" alt="Student Photo" style="max-width: 45px; max-height: 45px; border-radius: 50%;" onerror="this.style.display='none'; this.nextSibling.style.display='inline';"><span style="display:none;">${sanitizeHTML(photoValue)}</span>` :
-                    photoValue ? sanitizeHTML(photoValue) : 'Photo To Be Provided';
-
-                let qrDisplay = row[13] && row[13].toString().trim() !== '' ?
-                    `<img src="qrcodes/${row[13]}" alt="QR Code" style="max-width: 50px; max-height: 50px;" onerror="this.style.display='none'; this.nextSibling.style.display='inline';"><span style="display:none;">QR: ${row[13]}</span>` :
-                    'To be generated';
-
                 const tr = document.createElement('tr');
                 tr.dataset.index = index;
+                tr.innerHTML = `
+            <td>${sanitizeHTML(row[0] || '')}</td>
+            <td>${sanitizeHTML(row[1] || '')}</td>
+            <td>${sanitizeHTML(row[2] || '')}</td>
+            <td>${sanitizeHTML(row[3] || '')}</td>
+            <td>${sanitizeHTML(row[4] || '')}</td>
+            <td>${sanitizeHTML(row[5] || '')}</td>
+            <td>${sanitizeHTML(row[6] || '')}</td>
+            <td>${sanitizeHTML(row[7] || '')}</td>
+            <td>${sanitizeHTML(row[8] || '')}</td>
+            <td>${sanitizeHTML(row[9] || '')}</td>
+            <td>${sanitizeHTML(row[10] || '')}</td>
+            <td>${sanitizeHTML(row[11] || '')}</td>
+            <td>${sanitizeHTML(row[12] || 'To be generated')}</td>
+            <td>
+                <button class="btn btn-sm btn-danger" onclick="removePreviewRow(this)">
+                    <i class="fas fa-trash"></i> Remove
+                </button>
+            </td>
+        `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function removePreviewRow(btn) {
+            const tr = btn.closest('tr');
+            const index = parseInt(tr.dataset.index);
+            previewData.splice(index, 1);
+            renderPreviewTable();
+        }
+
+        function importStudents() {
+            if (previewData.length === 0) {
+                alert('No data to import.');
+                return;
+            }
+
+            // Create modified workbook
+            const newRows = [excelHeader, ...previewData];
+            const newWs = XLSX.utils.aoa_to_sheet(newRows);
+            const newWb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(newWb, newWs, 'Sheet1');
+
+            const excelBuffer = XLSX.write(newWb, {
+                bookType: 'xlsx',
+                type: 'array'
+            });
+            const blob = new Blob([excelBuffer], {
+                type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+            });
+
+            const formData = new FormData();
+            formData.append('action', 'importStudents');
+            formData.append('classId', document.querySelector('#studentModal').dataset.classId || '0');
+            formData.append('file', blob, 'students.xlsx');
+
+            fetch('manage-classes.php', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok: ' + response.statusText);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.success) {
+                        fetchStudents(document.querySelector('#studentModal').dataset.classId);
+                        document.getElementById('previewTableContainer').style.display = 'none';
+                        document.getElementById('importFile').value = '';
+                        document.querySelector('#previewTable tbody').innerHTML = '';
+                        previewData = [];
+                        alert('Students imported successfully!');
+                    } else {
+                        alert('Failed to import students: ' + (data.error || 'Unknown error'));
+                    }
+                })
+                .catch(error => {
+                    console.error('Error importing students:', error);
+                    alert('Error importing students: ' + error.message);
+                });
+        }
+
+        function toggleSelectAll() {
+            const selectAll = document.getElementById('selectAll');
+            const checkboxes = document.querySelectorAll('.row-checkbox');
+            checkboxes.forEach(checkbox => checkbox.checked = selectAll.checked);
+        }
+    </script>
+
+    <script>
+        // Updated file change event listener
+        document.getElementById('importFile').addEventListener('change', function(event) {
+            const file = event.target.files[0];
+            if (!file) {
+                const previewTableContainer = document.getElementById('previewTableContainer');
+                if (previewTableContainer) previewTableContainer.style.display = 'none';
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, {
+                        type: 'array'
+                    });
+                    const firstSheet = workbook.SheetNames[0];
+                    const worksheet = workbook.Sheets[firstSheet];
+                    const rows = XLSX.utils.sheet_to_json(worksheet, {
+                        header: 1,
+                        raw: false
+                    });
+
+                    const previewTableContainer = document.getElementById('previewTableContainer');
+
+                    if (!previewTableContainer) {
+                        console.error('Preview table elements not found');
+                        alert('Error: Preview table is not available.');
+                        return;
+                    }
+
+                    if (rows.length <= 1) {
+                        previewTableContainer.style.display = 'none';
+                        alert('The selected Excel file is empty or contains only headers.');
+                        return;
+                    }
+
+                    excelHeader = rows[0];
+                    previewData = rows.slice(1).filter(row => row.length >= 11);
+
+                    // Process QR codes - generate filenames for missing QR codes
+                    processQRCodeFilenames();
+
+                    // Generate QR codes on server and display them
+                    generateAndDisplayQRCodes();
+
+                    renderPreviewTable();
+                    previewTableContainer.style.display = 'block';
+                } catch (error) {
+                    console.error('Error reading Excel file:', error);
+                    alert('Error reading Excel file: ' + error.message);
+                    const previewTableContainer = document.getElementById('previewTableContainer');
+                    if (previewTableContainer) previewTableContainer.style.display = 'none';
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        });
+
+        // Function to process QR code filenames
+        function processQRCodeFilenames() {
+            previewData.forEach((row, index) => {
+                const lrn = row[0];
+
+                // If QR code is empty or not provided, set the expected filename
+                if (!row[13] || row[13].toString().trim() === '') {
+                    const qrFilename = `${lrn}.png`;
+                    previewData[index][13] = qrFilename;
+                }
+            });
+        }
+
+        // Function to generate QR codes using your existing server-side system
+        function generateAndDisplayQRCodes() {
+            // Prepare data for QR codes that need to be generated
+            const qrsToGenerate = [];
+
+            previewData.forEach((row, index) => {
+                const lrn = row[0];
+                const lastName = row[1] || '';
+                const firstName = row[2] || '';
+                const middleName = row[3] || '';
+
+                // Check if this QR code needs to be generated (empty or just filename)
+                if (!row[12] || row[12].toString().trim() === '' || row[12] === `${lrn}.png`) {
+                    const qrContent = `${lrn}, ${lastName}, ${firstName}${middleName ? ' ' + middleName : ''}`;
+                    qrsToGenerate.push({
+                        lrn: lrn,
+                        content: qrContent,
+                        index: index
+                    });
+                }
+            });
+
+            if (qrsToGenerate.length > 0) {
+                // Send request to server to generate QR codes
+                generateQRCodesOnServer(qrsToGenerate);
+            } else {
+                // All QR codes already exist, just update display
+                updateAllQRDisplays();
+            }
+        }
+
+        // Function to generate QR codes on server
+        function generateQRCodesOnServer(qrsToGenerate) {
+            const formData = new FormData();
+            formData.append('action', 'generateQRCodes');
+            formData.append('qrs', JSON.stringify(qrsToGenerate));
+
+            fetch('manage-classes.php', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success && data.qr_files) {
+                        // Update preview data with generated QR codes
+                        Object.keys(data.qr_files).forEach(lrn => {
+                            const index = previewData.findIndex(row => row[0] === lrn);
+                            if (index !== -1) {
+                                previewData[index][12] = data.qr_files[lrn];
+                                updatePreviewQRCode(index, `qrcodes/${data.qr_files[lrn]}`, data.qr_files[lrn]);
+                            }
+                        });
+                    }
+                    updateAllQRDisplays();
+                })
+                .catch(error => {
+                    console.error('Error generating QR codes:', error);
+                    updateAllQRDisplays();
+                });
+        }
+
+        // Function to update all QR code displays
+        function updateAllQRDisplays() {
+            previewData.forEach((row, index) => {
+                if (row[12]) {
+                    const qrPath = `qrcodes/${row[12]}`;
+                    updatePreviewQRCode(index, qrPath, row[12]);
+                }
+            });
+        }
+
+        // Function to update QR code in specific preview table row
+        function updatePreviewQRCode(index, qrPath, filename) {
+            const tbody = document.querySelector('#previewTable tbody');
+            if (!tbody) return;
+
+            const row = tbody.querySelector(`tr[data-index="${index}"]`);
+            if (!row) return;
+
+            const qrCell = row.cells[12];
+            if (qrCell) {
+                qrCell.innerHTML = `<img src="${qrPath}" alt="QR Code" style="max-width: 50px; max-height: 50px;" onerror="this.style.display='none'; this.nextSibling.style.display='inline';"><span style="display:none;">QR: ${filename}</span>`;
+            }
+        }
+
+        // Updated renderPreviewTable function
+        function renderPreviewTable() {
+            const tbody = document.querySelector('#previewTable tbody');
+            if (!tbody) return;
+
+            tbody.innerHTML = '';
+
+            previewData.forEach((row, index) => {
+                const tr = document.createElement('tr');
+                tr.dataset.index = index;
+
+                const photoValue = row[12] || '';
+                let photoDisplay = '';
+                if (photoValue && (photoValue.includes('.jpg') || photoValue.includes('.jpeg') || photoValue.includes('.png') || photoValue.includes('.gif'))) {
+                    photoDisplay = `<img src="uploads/${photoValue}" alt="Student Photo" style="max-width: 45px; max-height: 45px; border-radius: 50%;" onerror="this.style.display='none'; this.nextSibling.style.display='inline';"><span style="display:none;">${sanitizeHTML(photoValue)}</span>`;
+                } else if (photoValue) {
+                    photoDisplay = sanitizeHTML(photoValue);
+                } else {
+                    photoDisplay = 'Photo To Be Provided';
+                }
+
+                let qrDisplay = '';
+                if (row[13] && row[13].toString().trim() !== '') {
+                    const qrPath = `qrcodes/${row[13]}`;
+                    qrDisplay = `<img src="${qrPath}" alt="QR Code" style="max-width: 50px; max-height: 50px;" onerror="this.style.display='none'; this.nextSibling.style.display='inline';"><span style="display:none;">QR: ${row[13]}</span>`;
+                } else {
+                    qrDisplay = 'To be generated';
+                }
+
                 tr.innerHTML = `
                     <td>${sanitizeHTML(row[0] || '')}</td>
                     <td>${sanitizeHTML(row[1] || '')}</td>
@@ -3607,148 +4029,56 @@ ob_end_flush();
             });
         }
 
-        function removePreviewRow(btn) {
-            const tr = btn.closest('tr');
-            const index = parseInt(tr.dataset.index);
-            previewData.splice(index, 1);
-            renderPreviewTable();
-        }
+        // Updated renderStudentTable function to show QR code filename
+        function renderStudentTable(students, classId) {
+            const tbody = document.querySelector('#studentTable tbody');
+            if (!tbody) return;
 
-        function importStudents() {
-            if (previewData.length === 0) {
-                alert('No data to import.');
+            tbody.innerHTML = '';
+
+            if (!students || students.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="16" class="no-classes">No students enrolled</td></tr>';
                 return;
             }
 
-            const newRows = [excelHeader, ...previewData];
-            const newWs = XLSX.utils.aoa_to_sheet(newRows);
-            const newWb = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(newWb, newWs, 'Sheet1');
+            students.forEach(student => {
+                const photoSrc = student.photo ? `uploads/${student.photo}` : '';
+                const qrSrc = student.qr_code ? `qrcodes/${student.qr_code}` : '';
 
-            const excelBuffer = XLSX.write(newWb, { bookType: 'xlsx', type: 'array' });
-            const blob = new Blob([excelBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-
-            const formData = new FormData();
-            formData.append('action', 'importStudents');
-            formData.append('classId', document.querySelector('#studentModal').dataset.classId || '0');
-            formData.append('file', blob, 'students.xlsx');
-
-            fetch('manage-classes.php', {
-                method: 'POST',
-                body: formData
-            })
-                .then(response => {
-                    if (!response.ok) throw new Error('Network response was not ok: ' + response.statusText);
-                    return response.json();
-                })
-                .then(data => {
-                    if (data.success) {
-                        fetchStudents(document.querySelector('#studentModal').dataset.classId);
-                        document.getElementById('previewTableContainer').style.display = 'none';
-                        document.getElementById('importFile').value = '';
-                        document.querySelector('#previewTable tbody').innerHTML = '';
-                        previewData = [];
-                        alert('Students imported successfully!');
-                    } else {
-                        alert('Failed to import students: ' + (data.error || 'Unknown error'));
-                    }
-                })
-                .catch(error => {
-                    console.error('Error importing students:', error);
-                    alert('Error importing students: ' + error.message);
-                });
-        }
-
-        function processQRCodeFilenames() {
-            previewData.forEach((row, index) => {
-                const lrn = row[0];
-                if (!row[13] || row[13].toString().trim() === '') {
-                    const qrFilename = `${lrn}.png`;
-                    previewData[index][13] = qrFilename;
+                let qrDisplay = '';
+                if (qrSrc) {
+                    qrDisplay = `<img src="${qrSrc}" alt="QR Code" style="max-width: 50px; max-height: 50px;"><br><small>${student.qr_code}</small>`;
+                } else {
+                    qrDisplay = 'QR Code To Be Provided';
                 }
+
+                const row = document.createElement('tr');
+                row.innerHTML = `
+            <td>${sanitizeHTML(student.lrn || 'N/A')}</td>
+            <td>${sanitizeHTML(student.first_name || 'N/A')}</td>
+            <td>${sanitizeHTML(student.middle_name || 'N/A')}</td>
+            <td>${sanitizeHTML(student.last_name || 'N/A')}</td>
+            <td>${sanitizeHTML(student.email || 'N/A')}</td>
+            <td>${sanitizeHTML(student.gender || 'N/A')}</td>
+            <td>${sanitizeHTML(student.dob || 'N/A')}</td>
+            <td>${sanitizeHTML(student.grade_level || 'N/A')}</td>
+            <td>${sanitizeHTML(student.address || 'N/A')}</td>
+            <td>${sanitizeHTML(student.parent_name || 'N/A')}</td>
+            <td>${sanitizeHTML(student.parent_email || 'N/A')}</td>
+            <td>${sanitizeHTML(student.emergency_contact || 'N/A')}</td>
+            <td>${photoSrc ? `<img src="${photoSrc}" alt="Student Photo" style="max-width: 45px; max-height: 45px; border-radius:50%;">` : 'Photo To Be Provided'}</td>
+            <td>${qrDisplay}</td>
+            <td>${sanitizeHTML(student.date_added || 'N/A')}</td>
+            <td class="actions">
+                <button class="btn btn-sm btn-danger" onclick="deleteStudent(${classId}, '${student.lrn}')">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </td>
+        `;
+                tbody.appendChild(row);
             });
-        }
-
-        function generateAndDisplayQRCodes() {
-            const qrsToGenerate = [];
-            previewData.forEach((row, index) => {
-                const lrn = row[0];
-                const lastName = row[1] || '';
-                const firstName = row[2] || '';
-                const middleName = row[3] || '';
-
-                if (!row[13] || row[13].toString().trim() === '' || row[13] === `${lrn}.png`) {
-                    const qrContent = `${lrn}, ${lastName}, ${firstName}${middleName ? ' ' + middleName : ''}`;
-                    qrsToGenerate.push({
-                        lrn: lrn,
-                        content: qrContent,
-                        index: index
-                    });
-                }
-            });
-
-            if (qrsToGenerate.length > 0) {
-                generateQRCodesOnServer(qrsToGenerate);
-            } else {
-                updateAllQRDisplays();
-            }
-        }
-
-        function generateQRCodesOnServer(qrsToGenerate) {
-            const formData = new FormData();
-            formData.append('action', 'generateQRCodes');
-            formData.append('qrs', JSON.stringify(qrsToGenerate));
-
-            fetch('manage-classes.php', {
-                method: 'POST',
-                body: formData
-            })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success && data.qr_files) {
-                        Object.keys(data.qr_files).forEach(lrn => {
-                            const index = previewData.findIndex(row => row[0] === lrn);
-                            if (index !== -1) {
-                                previewData[index][13] = data.qr_files[lrn];
-                                updatePreviewQRCode(index, `qrcodes/${data.qr_files[lrn]}`, data.qr_files[lrn]);
-                            }
-                        });
-                    }
-                    updateAllQRDisplays();
-                })
-                .catch(error => {
-                    console.error('Error generating QR codes:', error);
-                    updateAllQRDisplays();
-                });
-        }
-
-        function updateAllQRDisplays() {
-            previewData.forEach((row, index) => {
-                if (row[13]) {
-                    const qrPath = `qrcodes/${row[13]}`;
-                    updatePreviewQRCode(index, qrPath, row[13]);
-                }
-            });
-        }
-
-        function updatePreviewQRCode(index, qrPath, filename) {
-            const tbody = document.querySelector('#previewTable tbody');
-            if (!tbody) return;
-
-            const row = tbody.querySelector(`tr[data-index="${index}"]`);
-            if (!row) return;
-
-            const qrCell = row.cells[13];
-            if (qrCell) {
-                qrCell.innerHTML = `<img src="${qrPath}" alt="QR Code" style="max-width: 50px; max-height: 50px;" onerror="this.style.display='none'; this.nextSibling.style.display='inline';"><span style="display:none;">QR: ${filename}</span>`;
-            }
-        }
-
-        function toggleSelectAll() {
-            const selectAll = document.getElementById('selectAll');
-            const checkboxes = document.querySelectorAll('.row-checkbox');
-            checkboxes.forEach(checkbox => checkbox.checked = selectAll.checked);
         }
     </script>
 </body>
+
 </html>

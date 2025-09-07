@@ -3081,11 +3081,12 @@ ob_end_flush();
                 card.className = 'class-card';
                 card.innerHTML = `
                     <div class="class-header">
-                        <h3>${sanitizeHTML(classItem.grade_level)} - ${sanitizeHTML(classItem.section_name)}</h3>
+                        <h3>${sanitizeHTML(classItem.subject_code || classItem.section_name)}</h3>
                     </div>
                     <div class="class-info">
-                        <h4>${sanitizeHTML(classItem.subject_name)}</h4>
-                        ${classItem.subject_name ? `<p><i class="fas fa-book"></i> ${sanitizeHTML(classItem.subject_code)}</p>` : ''}
+                        <h4>${sanitizeHTML(classItem.section_name)}</h4>
+                        ${classItem.subject_name ? `<p><i class="fas fa-book"></i> ${sanitizeHTML(classItem.subject_name)}</p>` : ''}
+                        <p><i class="fas fa-graduation-cap"></i> ${sanitizeHTML(classItem.grade_level)}</p>
                         <p><i class="fas fa-map-marker-alt"></i> ${sanitizeHTML(classItem.room || 'No room specified')}</p>
                         <p><i class="fas fa-users"></i> ${studentCount} students</p>
                         <p><i class="fas fa-percentage"></i> ${attendancePercentage.toFixed(1)}% attendance</p>

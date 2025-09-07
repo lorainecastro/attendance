@@ -34,20 +34,23 @@ function checkSubjectByCode($subject_code)
     }
 }
 
-// Updated function to check for duplicate class
-function isDuplicateClass($pdo, $section_name, $subject_code, $subject_name, $teacher_id, $grade_level, $class_id = null)
+// Updated isDuplicateClass function to handle the new logic
+function isDuplicateClass($pdo, $section_name, $subject_code, $teacher_id, $grade_level, $class_id = null)
 {
-    $query = "SELECT COUNT(*) FROM classes c WHERE c.section_name = ? AND c.teacher_id = ? AND c.grade_level = ?";
-    $params = [$section_name, $teacher_id, $grade_level];
-
-    if ($subject_code) {
-        $query .= " AND EXISTS (SELECT 1 FROM subjects s WHERE s.subject_id = c.subject_id AND s.subject_code = ?)";
-        $params[] = $subject_code;
-    } else if ($subject_name) {
-        $query .= " AND EXISTS (SELECT 1 FROM subjects s WHERE s.subject_id = c.subject_id AND s.subject_name = ? AND s.subject_code IS NULL)";
-        $params[] = $subject_name;
+    // For lower grades, check section + teacher + grade combination
+    $lowerGrades = ['Kindergarten', 'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6'];
+    $isLowerGrade = in_array($grade_level, $lowerGrades);
+    
+    if ($isLowerGrade && ($subject_code === 'No Subject Code' || empty($subject_code))) {
+        // For lower grades without subject, just check section + teacher + grade
+        $query = "SELECT COUNT(*) FROM classes c WHERE c.section_name = ? AND c.teacher_id = ? AND c.grade_level = ?";
+        $params = [$section_name, $teacher_id, $grade_level];
     } else {
-        $query .= " AND c.subject_id = 0";
+        // For classes with subjects, check section + teacher + grade + subject combination
+        $query = "SELECT COUNT(*) FROM classes c 
+                  JOIN subjects s ON c.subject_id = s.subject_id 
+                  WHERE c.section_name = ? AND c.teacher_id = ? AND c.grade_level = ? AND s.subject_code = ?";
+        $params = [$section_name, $teacher_id, $grade_level, $subject_code];
     }
 
     if ($class_id) {
@@ -60,7 +63,7 @@ function isDuplicateClass($pdo, $section_name, $subject_code, $subject_name, $te
     return $stmt->fetchColumn() > 0;
 }
 
-// Updated addClass function
+// Updated addClass function with proper subject handling
 function addClass($classData, $scheduleData, $class_id = null)
 {
     $pdo = getDBConnection();
@@ -75,28 +78,37 @@ function addClass($classData, $scheduleData, $class_id = null)
         $stmt = $pdo->prepare("SELECT subject_id FROM subjects WHERE subject_id = 0");
         $stmt->execute();
         if (!$stmt->fetch()) {
-            // Temporarily allow subject_id = 0
             $pdo->exec("SET SESSION sql_mode = 'NO_AUTO_VALUE_ON_ZERO'");
             $stmt = $pdo->prepare("INSERT INTO subjects (subject_id, subject_code, subject_name) VALUES (0, 'No Subject Code', 'No Subject')");
             $stmt->execute();
-            $pdo->exec("SET SESSION sql_mode = ''"); // Reset SQL mode
+            $pdo->exec("SET SESSION sql_mode = ''");
         }
 
-        if ($isLowerGrade) {
-            $subject_id = 0; // Set subject_id to 0 for Kindergarten to Grade 6
+        if (empty($classData['subject']) && !$isLowerGrade) {
+            $pdo->rollBack();
+            return ['success' => false, 'error' => 'Subject is required for Grade 7 and above.'];
+        }
+
+        $subject_code = empty($classData['code']) ? 'No Subject Code' : $classData['code'];
+
+        // Check for duplicate class - but exclude the current class being edited
+        if (isDuplicateClass($pdo, $classData['sectionName'], $subject_code, $_SESSION['teacher_id'], $classData['gradeLevel'], $class_id)) {
+            $pdo->rollBack();
+            return ['success' => false, 'error' => 'A class with this section name, subject code/name, and grade level already exists for this teacher.'];
+        }
+
+        if (empty($classData['subject'])) {
+            // For lower grades with no subject
+            $subject_id = 0;
         } else {
-            // For Grade 7 and above, subject is required
-            if (empty($classData['subject'])) {
-                $pdo->rollBack();
-                return ['success' => false, 'error' => 'Subject is required for Grade 7 and above.'];
-            }
-
-            $subject_code = empty($classData['code']) ? null : $classData['code'];
-
+            // Handle subject for both lower and higher grades when subject is provided
+            // Allow same subject_code for multiple subject_names - always create new entry for different combinations
+            
             if ($class_id) {
-                // Editing existing class
+                // When editing, check if we need to update the existing subject or create new one
                 $stmt = $pdo->prepare("
-                    SELECT s.subject_id, s.subject_code, s.subject_name 
+                    SELECT s.subject_id, s.subject_code, s.subject_name,
+                           (SELECT COUNT(*) FROM classes WHERE subject_id = s.subject_id) as usage_count
                     FROM classes c 
                     JOIN subjects s ON c.subject_id = s.subject_id 
                     WHERE c.class_id = ?
@@ -104,87 +116,51 @@ function addClass($classData, $scheduleData, $class_id = null)
                 $stmt->execute([$class_id]);
                 $currentSubject = $stmt->fetch(PDO::FETCH_ASSOC);
 
-                $needsUpdate = !$currentSubject || 
-                    ($currentSubject['subject_code'] ?? null) !== $subject_code || 
-                    $currentSubject['subject_name'] !== $classData['subject'];
-
-                if ($needsUpdate) {
-                    // Find or create new subject, ensuring subject_id = 0 is not modified
-                    if ($subject_code !== null) {
-                        $stmt = $pdo->prepare("SELECT subject_id, subject_name FROM subjects WHERE subject_code = ? AND subject_id != 0");
-                        $stmt->execute([$subject_code]);
-                        $existingSubject = $stmt->fetch(PDO::FETCH_ASSOC);
-
-                        if ($existingSubject) {
-                            if ($existingSubject['subject_name'] !== $classData['subject']) {
-                                $stmt = $pdo->prepare("UPDATE subjects SET subject_name = ? WHERE subject_id = ?");
-                                $stmt->execute([$classData['subject'], $existingSubject['subject_id']]);
-                            }
-                            $subject_id = $existingSubject['subject_id'];
-                        } else {
-                            $stmt = $pdo->prepare("INSERT INTO subjects (subject_code, subject_name) VALUES (?, ?)");
-                            $stmt->execute([$subject_code, $classData['subject']]);
-                            $subject_id = $pdo->lastInsertId();
-                        }
-                    } else {
-                        // Null code, search by name, exclude subject_id = 0
-                        $stmt = $pdo->prepare("SELECT subject_id FROM subjects WHERE subject_name = ? AND subject_code IS NULL AND subject_id != 0");
-                        $stmt->execute([$classData['subject']]);
-                        $existingSubject = $stmt->fetch(PDO::FETCH_ASSOC);
-
-                        if ($existingSubject) {
-                            $subject_id = $existingSubject['subject_id'];
-                        } else {
-                            $stmt = $pdo->prepare("INSERT INTO subjects (subject_code, subject_name) VALUES (NULL, ?)");
-                            $stmt->execute([$classData['subject']]);
-                            $subject_id = $pdo->lastInsertId();
-                        }
+                if ($currentSubject && $currentSubject['usage_count'] == 1) {
+                    // This subject is only used by this class, safe to update it
+                    if ($currentSubject['subject_code'] !== $subject_code || $currentSubject['subject_name'] !== $classData['subject']) {
+                        $stmt = $pdo->prepare("UPDATE subjects SET subject_code = ?, subject_name = ? WHERE subject_id = ?");
+                        $stmt->execute([$subject_code, $classData['subject'], $currentSubject['subject_id']]);
                     }
-                } else {
                     $subject_id = $currentSubject['subject_id'];
-                }
-            } else {
-                // Adding new class
-                if ($subject_code !== null) {
+                } else {
+                    // Subject is used by multiple classes, need to find existing or create new
                     $stmt = $pdo->prepare("
-                        SELECT subject_id, subject_name FROM subjects 
-                        WHERE subject_code = ? AND subject_id != 0
+                        SELECT subject_id FROM subjects 
+                        WHERE subject_code = ? AND subject_name = ? AND subject_id != 0
                     ");
-                    $stmt->execute([$subject_code]);
+                    $stmt->execute([$subject_code, $classData['subject']]);
                     $existingSubject = $stmt->fetch(PDO::FETCH_ASSOC);
 
                     if ($existingSubject) {
-                        if ($existingSubject['subject_name'] !== $classData['subject']) {
-                            $stmt = $pdo->prepare("UPDATE subjects SET subject_name = ? WHERE subject_id = ?");
-                            $stmt->execute([$classData['subject'], $existingSubject['subject_id']]);
-                        }
                         $subject_id = $existingSubject['subject_id'];
                     } else {
+                        // Create new subject entry
                         $stmt = $pdo->prepare("INSERT INTO subjects (subject_code, subject_name) VALUES (?, ?)");
                         $stmt->execute([$subject_code, $classData['subject']]);
                         $subject_id = $pdo->lastInsertId();
                     }
-                } else {
-                    // Null code, search by name, exclude subject_id = 0
-                    $stmt = $pdo->prepare("SELECT subject_id FROM subjects WHERE subject_name = ? AND subject_code IS NULL AND subject_id != 0");
-                    $stmt->execute([$classData['subject']]);
-                    $existingSubject = $stmt->fetch(PDO::FETCH_ASSOC);
+                }
+            } else {
+                // When adding new class, always allow creating new subject entries
+                // Check if exact combination exists, if not create new
+                $stmt = $pdo->prepare("
+                    SELECT subject_id FROM subjects 
+                    WHERE subject_code = ? AND subject_name = ? AND subject_id != 0
+                ");
+                $stmt->execute([$subject_code, $classData['subject']]);
+                $existingSubject = $stmt->fetch(PDO::FETCH_ASSOC);
 
-                    if ($existingSubject) {
-                        $subject_id = $existingSubject['subject_id'];
-                    } else {
-                        $stmt = $pdo->prepare("INSERT INTO subjects (subject_code, subject_name) VALUES (NULL, ?)");
-                        $stmt->execute([$classData['subject']]);
-                        $subject_id = $pdo->lastInsertId();
-                    }
+                if ($existingSubject) {
+                    // Exact match found, use existing subject_id
+                    $subject_id = $existingSubject['subject_id'];
+                } else {
+                    // No exact match found, create new subject (allows same code with different name)
+                    $stmt = $pdo->prepare("INSERT INTO subjects (subject_code, subject_name) VALUES (?, ?)");
+                    $stmt->execute([$subject_code, $classData['subject']]);
+                    $subject_id = $pdo->lastInsertId();
                 }
             }
-        }
-
-        // Check for duplicate class
-        if (isDuplicateClass($pdo, $classData['sectionName'], $classData['code'], $classData['subject'], $_SESSION['teacher_id'], $classData['gradeLevel'], $class_id)) {
-            $pdo->rollBack();
-            return ['success' => false, 'error' => 'A class with this section name, subject code/name, and grade level already exists for this teacher.'];
         }
 
         if ($class_id) {
@@ -203,7 +179,7 @@ function addClass($classData, $scheduleData, $class_id = null)
                 $_SESSION['teacher_id']
             ]);
 
-            // Delete existing schedules
+            // Delete existing schedules for this class
             $stmt = $pdo->prepare("DELETE FROM schedules WHERE class_id = ?");
             $stmt->execute([$class_id]);
         } else {
@@ -222,18 +198,20 @@ function addClass($classData, $scheduleData, $class_id = null)
             $class_id = $pdo->lastInsertId();
         }
 
-        // Insert schedules
+        // Insert new schedules
         foreach ($scheduleData as $day => $times) {
-            $stmt = $pdo->prepare("
-                INSERT INTO schedules (class_id, day, start_time, end_time)
-                VALUES (?, ?, ?, ?)
-            ");
-            $stmt->execute([
-                $class_id,
-                $day,
-                $times['start'],
-                $times['end']
-            ]);
+            if (!empty($times['start']) && !empty($times['end'])) {
+                $stmt = $pdo->prepare("
+                    INSERT INTO schedules (class_id, day, start_time, end_time)
+                    VALUES (?, ?, ?, ?)
+                ");
+                $stmt->execute([
+                    $class_id,
+                    $day,
+                    $times['start'],
+                    $times['end']
+                ]);
+            }
         }
 
         $pdo->commit();
@@ -2646,12 +2624,6 @@ ob_end_flush();
 }
         
     </style>
-
-    <style>
-         
-    </style>
-
-
 </head>
 
 <body>

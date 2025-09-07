@@ -77,7 +77,7 @@ function addClass($classData, $scheduleData, $class_id = null)
         if (!$stmt->fetch()) {
             // Temporarily allow subject_id = 0
             $pdo->exec("SET SESSION sql_mode = 'NO_AUTO_VALUE_ON_ZERO'");
-            $stmt = $pdo->prepare("INSERT INTO subjects (subject_id, subject_code, subject_name) VALUES (0, 'NONE', 'No Subject')");
+            $stmt = $pdo->prepare("INSERT INTO subjects (subject_id, subject_code, subject_name) VALUES (0, 'No Subject Code', 'No Subject')");
             $stmt->execute();
             $pdo->exec("SET SESSION sql_mode = ''"); // Reset SQL mode
         }
@@ -2651,6 +2651,7 @@ ob_end_flush();
          
     </style>
 
+
 </head>
 
 <body>
@@ -2795,7 +2796,7 @@ ob_end_flush();
                         <input type="text" class="class-form-input" id="classCode" placeholder="e.g., MATH-101-A">
                     </div>
                     <div class="class-form-group subject-field" id="subjectGroup">
-                        <label class="class-form-label" for="subject">Subject</label>
+                        <label class="class-form-label" for="subject" id="subjectLabel">Subjects (Optional, Multiple Allowed)</label>
                         <input type="text" class="class-form-input" id="subject" placeholder="e.g., Mathematics, Science, English">
                     </div>
                     <div class="class-form-group">
@@ -2957,7 +2958,7 @@ ob_end_flush();
             fetchClasses();
             setupEventListeners();
             clearScheduleInputs();
-            toggleSubjectFields(); // Initialize subject fields visibility
+            toggleSubjectFields();
         });
 
         function fetchClasses() {
@@ -3030,22 +3031,23 @@ ob_end_flush();
             const subjectGroup = document.getElementById('subjectGroup');
             const classCodeInput = document.getElementById('classCode');
             const subjectInput = document.getElementById('subject');
+            const subjectLabel = document.getElementById('subjectLabel');
 
             const lowerGrades = ['Kindergarten', 'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6'];
             const isLowerGrade = lowerGrades.includes(gradeLevel);
 
-            if (classCodeGroup && subjectGroup && classCodeInput && subjectInput) {
+            if (classCodeGroup && subjectGroup && classCodeInput && subjectInput && subjectLabel) {
+                classCodeGroup.style.display = 'block';
+                subjectGroup.style.display = 'block';
+                classCodeInput.removeAttribute('required');
+
                 if (isLowerGrade) {
-                    classCodeGroup.style.display = 'none';
-                    subjectGroup.style.display = 'none';
-                    classCodeInput.value = '';
-                    subjectInput.value = '';
-                    classCodeInput.removeAttribute('required');
+                    subjectLabel.textContent = 'Subjects (Optional, Multiple Allowed)';
+                    subjectInput.placeholder = 'e.g., Mathematics, Science, English';
                     subjectInput.removeAttribute('required');
                 } else {
-                    classCodeGroup.style.display = 'block';
-                    subjectGroup.style.display = 'block';
-                    classCodeInput.removeAttribute('required');
+                    subjectLabel.textContent = 'Subject (One Subject Only)';
+                    subjectInput.placeholder = 'e.g., Mathematics';
                     subjectInput.setAttribute('required', 'required');
                 }
             }

@@ -2805,7 +2805,7 @@ ob_end_flush();
                 </div>
                 <div class="class-form-column">
                     <div class="class-form-group">
-                        <label class="class-form-label">Schedule</label>
+                        <label class="class-form-label">Schedule (Optional)</label>
                         <div class="class-schedule-inputs">
                             <div class="class-schedule-day-input">
                                 <input type="checkbox" id="monday" name="scheduleDays">

@@ -2689,7 +2689,7 @@ ob_end_flush();
         <div class="card">
             <div class="card-header">
                 <div>
-                    <div class="card-title">Average Attendance</div>
+                    <div class="card-title">Average Attendance Percentage</div>
                     <div class="card-value" id="average-attendance">0%</div>
                 </div>
                 <div class="card-icon bg-blue">

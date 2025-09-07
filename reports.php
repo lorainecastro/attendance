@@ -4,70 +4,59 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Reports - Student Attendance System</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         :root {
-            /* Primary Colors */
-            --primary-blue: #2563eb;
-            --primary-blue-hover: #1d4ed8;
+            --primary-blue: #3b82f6;
+            --primary-blue-hover: #2563eb;
             --primary-blue-light: #dbeafe;
-            
-            /* Status Colors */
-            --success-green: #16a34a;
-            --warning-yellow: #ca8a04;
-            --danger-red: #dc2626;
-            --info-cyan: #0891b2;
-            
-            /* Neutral Colors */
-            --dark-gray: #374151;
+            --success-green: #22c55e;
+            --warning-yellow: #f59e0b;
+            --danger-red: #ef4444;
+            --info-cyan: #06b6d4;
+            --dark-gray: #1f2937;
             --medium-gray: #6b7280;
-            --light-gray: #d1d5db;
+            --light-gray: #e5e7eb;
             --background: #f9fafb;
             --white: #ffffff;
-            --border-color: #e5e7eb;
-            
-            /* Additional Colors */
+            --border-color: #e2e8f0;
             --card-bg: #ffffff;
-            --blackfont-color: #111827;
+            --blackfont-color: #1e293b;
             --whitefont-color: #ffffff;
-            --grayfont-color: #6b7280;
+            --grayfont-color: #64748b;
             --primary-gradient: linear-gradient(135deg, #3b82f6, #3b82f6);
             --secondary-gradient: linear-gradient(135deg, #ec4899, #f472b6);
-            --primary-color: #2563eb;
-            --primary-hover: #1d4ed8;
-            --inputfield-color: #f3f4f6;
-            --inputfieldhover-color: #e5e7eb;
-            
-            /* Typography */
+            --inputfield-color: #f8fafc;
+            --inputfieldhover-color: #f1f5f9;
             --font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
             --font-size-sm: 0.875rem;
             --font-size-base: 1rem;
             --font-size-lg: 1.125rem;
             --font-size-xl: 1.25rem;
-            --font-size-2xl: 1.5rem;
-    
-            /* Spacing */
-            --spacing-xs: 0.25rem;
-            --spacing-sm: 0.5rem;
+            --font-size-2xl: 1.875rem;
+            --spacing-xs: 0.5rem;
+            --spacing-sm: 0.75rem;
             --spacing-md: 1rem;
             --spacing-lg: 1.5rem;
             --spacing-xl: 2rem;
             --spacing-2xl: 3rem;
-            
-            /* Shadows */
-            --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-            
-            /* Border Radius */
-            --radius-sm: 0.25rem;
+            --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.05);
+            --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08);
+            --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.1);
+            --radius-sm: 0.375rem;
             --radius-md: 0.5rem;
             --radius-lg: 0.75rem;
             --radius-xl: 1rem;
-    
-            /* Transitions */
-            --transition-fast: 0.15s ease-in-out;
+            --transition-fast: 0.2s ease-in-out;
             --transition-normal: 0.3s ease-in-out;
             --transition-slow: 0.5s ease-in-out;
+            --status-present-bg: rgba(16, 185, 129, 0.15);
+            --status-absent-bg: rgba(239, 68, 68, 0.15);
+            --status-late-bg: rgba(245, 158, 11, 0.15);
+            --status-none-bg: #f8fafc;
+            --success-color: #10b981;
+            --warning-color: #f59e0b;
+            --danger-color: #ef4444;
         }
 
         * {
@@ -75,6 +64,11 @@
             padding: 0;
             box-sizing: border-box;
             font-family: var(--font-family);
+        }
+
+        html, body {
+            height: 100%;
+            margin: 0;
         }
 
         body {
@@ -102,18 +96,17 @@
             border-radius: var(--radius-sm);
         }
 
-        /* Quick Stats */
         .stats-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
             gap: var(--spacing-md);
-            margin-bottom: var(--spacing-md);
+            margin-bottom: var(--spacing-lg);
         }
 
         .card {
             background: var(--card-bg);
-            border-radius: var(--radius-md);
-            padding: var(--spacing-md);
+            border-radius: 12px;
+            padding: 20px;
             box-shadow: var(--shadow-md);
             transition: var(--transition-normal);
         }
@@ -127,13 +120,13 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: var(--spacing-sm);
+            margin-bottom: 15px;
         }
 
         .card-icon {
             width: 48px;
             height: 48px;
-            border-radius: var(--radius-md);
+            border-radius: 12px;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -147,74 +140,104 @@
         .bg-green { background: linear-gradient(135deg, #10b981, #34d399); }
 
         .card-title {
-            font-size: var(--font-size-sm);
+            font-size: 14px;
             color: var(--grayfont-color);
             margin-bottom: var(--spacing-xs);
         }
 
         .card-value {
-            font-size: var(--font-size-xl);
+            font-size: 24px;
             font-weight: 700;
             color: var(--blackfont-color);
         }
 
-        /* Attendance Report Generator */
-        .attendance-grid {
+        .controls {
             background: var(--card-bg);
             border-radius: var(--radius-md);
             padding: var(--spacing-md);
             box-shadow: var(--shadow-md);
-            margin-bottom: var(--spacing-md);
+            margin-bottom: var(--spacing-lg);
+            display: flex;
+            flex-wrap: wrap;
+            gap: var(--spacing-sm);
+            align-items: center;
+            border: 1px solid var(--border-color);
+        }
+
+        .controls-left {
+            display: flex;
+            flex-wrap: wrap;
+            gap: var(--spacing-sm);
+            flex: 1;
+            align-items: center;
+        }
+
+        .selector-input,
+        .selector-select {
+            padding: var(--spacing-xs) var(--spacing-md);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-sm);
+            font-size: var(--font-size-sm);
+            background: var(--inputfield-color);
+            transition: var(--transition-normal);
+            min-width: 180px;
+            height: 38px;
+            box-sizing: border-box;
+        }
+
+        .selector-input:focus,
+        .selector-select:focus {
+            outline: none;
+            border-color: var(--primary-blue);
+            background: var(--white);
+            box-shadow: 0 0 0 4px var(--primary-blue-light);
+        }
+
+        .btn {
+            padding: var(--spacing-xs) var(--spacing-md);
+            border: none;
+            border-radius: var(--radius-md);
+            font-size: var(--font-size-sm);
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition-normal);
+            display: inline-flex;
+            align-items: center;
+            gap: var(--spacing-xs);
+            text-decoration: none;
+        }
+
+        .btn-primary {
+            background: var(--primary-gradient);
+            color: var(--whitefont-color);
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-blue-hover);
+            transform: translateY(-2px);
+        }
+
+        .attendance-grid {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: var(--shadow-md);
+            margin-bottom: var(--spacing-lg);
+            border: 1px solid var(--border-color);
         }
 
         .table-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: var(--spacing-sm);
+            margin-bottom: 15px;
             flex-wrap: wrap;
-            gap: var(--spacing-xs);
+            gap: var(--spacing-sm);
         }
 
         .table-title {
             font-size: var(--font-size-lg);
             font-weight: 600;
-        }
-
-        .table-controls {
-            display: flex;
-            gap: var(--spacing-xs);
-            flex-wrap: wrap;
-        }
-
-        .selector-input, .selector-select {
-            padding: var(--spacing-sm) var(--spacing-md);
-            border: 1px solid var(--border-color);
-            border-radius: var(--radius-md);
-            font-size: var(--font-size-sm);
-            background: var(--inputfield-color);
-            transition: var(--transition-normal);
-        }
-
-        .selector-input:focus, .selector-select:focus {
-            outline: none;
-            border-color: var(--primary-color);
-            background: var(--inputfieldhover-color);
-        }
-
-        .quick-action-btn {
-            border: none;
-            background: var(--primary-color);
-            color: var(--whitefont-color);
-            padding: var(--spacing-sm) var(--spacing-md);
-            border-radius: var(--radius-md);
-            font-size: var(--font-size-sm);
-            cursor: pointer;
-            transition: var(--transition-normal);
-        }
-
-        .quick-action-btn:hover {
-            background: var(--primary-hover);
         }
 
         table {
@@ -223,7 +246,7 @@
         }
 
         th, td {
-            padding: var(--spacing-md) var(--spacing-lg);
+            padding: 12px 15px;
             text-align: left;
             border-bottom: 1px solid var(--border-color);
         }
@@ -232,6 +255,7 @@
             font-weight: 600;
             color: var(--grayfont-color);
             font-size: var(--font-size-sm);
+            background: var(--inputfield-color);
         }
 
         tbody tr {
@@ -239,60 +263,84 @@
         }
 
         tbody tr:hover {
-            background-color: var(--inputfield-color);
+            background-color: var(--inputfieldhover-color);
         }
 
-        /* Status badges */
         .status-badge {
-            padding: var(--spacing-xs) var(--spacing-sm);
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: 600;
-            text-transform: uppercase;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: var(--font-size-sm);
+            font-weight: 500;
         }
 
         .status-present {
-            background: #dcfce7;
-            color: #166534;
+            background-color: var(--status-present-bg);
+            color: var(--success-color);
         }
 
         .status-absent {
-            background: #fecaca;
-            color: #991b1b;
+            background-color: var(--status-absent-bg);
+            color: var(--danger-color);
         }
 
         .status-late {
-            background: #fef3c7;
-            color: #92400e;
+            background-color: var(--status-late-bg);
+            color: var(--warning-color);
         }
 
-        /* Responsive adjustments */
+        .status-excellent {
+            background-color: var(--status-present-bg);
+            color: var(--success-color);
+        }
+
+        .status-good, .status-fair {
+            background-color: var(--status-late-bg);
+            color: var(--warning-color);
+        }
+
+        .status-poor {
+            background-color: var(--status-absent-bg);
+            color: var(--danger-color);
+        }
+
         @media (max-width: 1024px) {
             .stats-grid {
                 grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
             }
+            .controls {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            .controls-left {
+                flex-direction: column;
+                gap: var(--spacing-xs);
+            }
+            .selector-input, .selector-select {
+                width: 100%;
+                min-width: auto;
+            }
+            .btn {
+                width: 100%;
+                justify-content: center;
+            }
         }
 
         @media (max-width: 768px) {
-            th, td {
+            body {
                 padding: var(--spacing-sm);
             }
-
-            .card-value {
-                font-size: var(--font-size-lg);
+            th, td {
+                padding: 10px;
             }
-
-            .table-controls {
-                flex-direction: column;
-                align-items: flex-start;
+            .card-value {
+                font-size: 20px;
+            }
+            .table-responsive {
+                overflow-x: auto;
             }
         }
 
         @media (max-width: 576px) {
-            .table-responsive {
-                overflow-x: auto;
-            }
-
             .stats-grid {
                 grid-template-columns: 1fr;
             }
@@ -312,8 +360,9 @@
                 </div>
                 <div class="card-icon bg-blue">
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 16 16">
-                        <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
                         <path d="M7 14s-1 0-1-1 1-4 5-4 5 3 5 4-1 1-1 1H7zm4-6a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"/>
+                        <path fill-rule="evenodd" d="M5.216 14A2.238 2.238 0 0 1 5 13c0-1.355.68-2.75 1.936-3.72A6.325 6.325 0 0 0 5 9c-4 0-5 3-5 4s1 1 1 1h4.216z"/>
+                        <path d="M4.5 8a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z"/>
                     </svg>
                 </div>
             </div>
@@ -363,78 +412,76 @@
     </div>
 
     <!-- Attendance Report Generator -->
-    <div class="attendance-grid">
-        <div class="table-header">
-            <div class="table-title">Report Generator</div>
-            <div class="table-controls">
-                <select class="selector-select" id="grade-filter">
-                    <option value="">All Grades</option>
-                    <option value="Grade 7">Grade 7</option>
-                    <option value="Grade 10">Grade 10</option>
-                    <option value="Grade 12">Grade 12</option>
-                </select>
-                <select class="selector-select" id="subject-filter">
-                    <option value="">All Subjects</option>
-                    <option value="Mathematics">Mathematics</option>
-                    <option value="Science">Science</option>
-                    <option value="English Literature">English Literature</option>
-                </select>
-                <select class="selector-select" id="section-filter">
-                    <option value="">All Sections</option>
-                    <option value="Diamond Section">Diamond Section</option>
-                    <option value="Einstein Section">Einstein Section</option>
-                    <option value="Shakespeare Section">Shakespeare Section</option>
-                </select>
-                <select class="selector-select" id="student-filter">
-                    <option value="">All Students</option>
-                </select>
-                <select class="selector-select" id="report-type">
-                    <option value="">Select Report Type</option>
-                    <option value="student">Attendance History per Student</option>
-                    <option value="class">Attendance per Class</option>
-                    <option value="all-class">All Class Report</option>
-                </select>
-                <input type="date" class="selector-input" id="date-from" value="2024-09-01">
-                <input type="date" class="selector-input" id="date-to" value="2024-12-31">
-                <select class="selector-select" id="export-format">
-                    <option value="">Select Export Format</option>
-                    <option value="json">JSON</option>
-                    <option value="csv">CSV</option>
-                    <option value="pdf">PDF</option>
-                </select>
-                <button class="quick-action-btn" id="generate-report">Generate Report</button>
-            </div>
+    <div class="controls">
+        <div class="controls-left">
+            <select class="selector-select" id="grade-filter">
+                <option value="">All Grades</option>
+                <option value="Grade 7">Grade 7</option>
+                <option value="Grade 10">Grade 10</option>
+                <option value="Grade 12">Grade 12</option>
+            </select>
+            <select class="selector-select" id="section-filter">
+                <option value="">All Sections</option>
+                <option value="Diamond Section">Diamond Section</option>
+                <option value="Einstein Section">Einstein Section</option>
+                <option value="Shakespeare Section">Shakespeare Section</option>
+            </select>
+            <select class="selector-select" id="subject-filter">
+                <option value="">All Subjects</option>
+                <option value="Mathematics">Mathematics</option>
+                <option value="Science">Science</option>
+                <option value="English Literature">English Literature</option>
+            </select>
+            <select class="selector-select" id="student-filter">
+                <option value="">All Students</option>
+            </select>
+            <select class="selector-select" id="report-type">
+                <option value="">Select Report Type</option>
+                <option value="student">Attendance History per Student</option>
+                <option value="class">Attendance per Class</option>
+                <option value="all-class">All Class Report</option>
+            </select>
+            <input type="date" class="selector-input" id="date-from" value="2024-09-01">
+            <input type="date" class="selector-input" id="date-to" value="2024-12-31">
+            <select class="selector-select" id="export-format">
+                <option value="">Select Export Format</option>
+                <option value="json">JSON</option>
+                <option value="csv">CSV</option>
+                <option value="pdf">PDF</option>
+            </select>
+            <button class="btn btn-primary" id="generate-report">
+                <i class="fas fa-file-alt"></i> Generate Report
+            </button>
         </div>
     </div>
 
     <!-- Report Results -->
-    <div class="report-results" id="report-results">
+    <div class="attendance-grid" id="report-results">
         <div class="table-header">
             <div class="table-title" id="report-title">Attendance Report</div>
-            <button class="quick-action-btn" id="export-report">Export Report</button>
+            <button class="btn btn-primary" id="export-report">
+                <i class="fas fa-download"></i> Export Report
+            </button>
         </div>
-        
-        <div class="attendance-grid">
-            <div class="table-responsive">
-                <table id="report-table">
-                    <thead id="report-thead">
-                        <tr>
-                            <th>Student ID</th>
-                            <th>Name</th>
-                            <th>Grade</th>
-                            <th>Subject</th>
-                            <th>Section</th>
-                            <th>Date</th>
-                            <th>Status</th>
-                            <th>Time In</th>
-                            <th>Time Out</th>
-                        </tr>
-                    </thead>
-                    <tbody id="report-tbody">
-                        <!-- Data will be populated here -->
-                    </tbody>
-                </table>
-            </div>
+        <div class="table-responsive">
+            <table id="report-table">
+                <thead id="report-thead">
+                    <tr>
+                        <th>Student ID</th>
+                        <th>Name</th>
+                        <th>Grade</th>
+                        <th>Subject</th>
+                        <th>Section</th>
+                        <th>Date</th>
+                        <th>Status</th>
+                        <th>Time In</th>
+                        <th>Time Out</th>
+                    </tr>
+                </thead>
+                <tbody id="report-tbody">
+                    <!-- Data will be populated here -->
+                </tbody>
+            </table>
         </div>
     </div>
 
@@ -443,57 +490,59 @@
         <div class="table-header">
             <div class="table-title">Recent Activities</div>
         </div>
-        <table>
-            <thead>
-                <tr>
-                    <th>Date</th>
-                    <th>Student</th>
-                    <th>Grade</th>
-                    <th>Subject</th>
-                    <th>Section</th>
-                    <th>Status</th>
-                    <th>Time</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr>
-                    <td>2024-09-01</td>
-                    <td>John Doe</td>
-                    <td>Grade 7</td>
-                    <td>Mathematics</td>
-                    <td>Diamond Section</td>
-                    <td><span class="status-badge status-present">Present</span></td>
-                    <td>08:00 AM</td>
-                </tr>
-                <tr>
-                    <td>2024-09-01</td>
-                    <td>Jane Smith</td>
-                    <td>Grade 7</td>
-                    <td>Mathematics</td>
-                    <td>Diamond Section</td>
-                    <td><span class="status-badge status-late">Late</span></td>
-                    <td>08:15 AM</td>
-                </tr>
-                <tr>
-                    <td>2024-09-01</td>
-                    <td>Alice Brown</td>
-                    <td>Grade 10</td>
-                    <td>Science</td>
-                    <td>Einstein Section</td>
-                    <td><span class="status-badge status-absent">Absent</span></td>
-                    <td>--</td>
-                </tr>
-                <tr>
-                    <td>2024-09-01</td>
-                    <td>Carol Davis</td>
-                    <td>Grade 12</td>
-                    <td>English Literature</td>
-                    <td>Shakespeare Section</td>
-                    <td><span class="status-badge status-present">Present</span></td>
-                    <td>14:00 PM</td>
-                </tr>
-            </tbody>
-        </table>
+        <div class="table-responsive">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Student</th>
+                        <th>Grade</th>
+                        <th>Subject</th>
+                        <th>Section</th>
+                        <th>Status</th>
+                        <th>Time</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>2024-09-01</td>
+                        <td>John Doe</td>
+                        <td>Grade 7</td>
+                        <td>Mathematics</td>
+                        <td>Diamond Section</td>
+                        <td><span class="status-badge status-present">Present</span></td>
+                        <td>08:00 AM</td>
+                    </tr>
+                    <tr>
+                        <td>2024-09-01</td>
+                        <td>Jane Smith</td>
+                        <td>Grade 7</td>
+                        <td>Mathematics</td>
+                        <td>Diamond Section</td>
+                        <td><span class="status-badge status-late">Late</span></td>
+                        <td>08:15 AM</td>
+                    </tr>
+                    <tr>
+                        <td>2024-09-01</td>
+                        <td>Alice Brown</td>
+                        <td>Grade 10</td>
+                        <td>Science</td>
+                        <td>Einstein Section</td>
+                        <td><span class="status-badge status-absent">Absent</span></td>
+                        <td>--</td>
+                    </tr>
+                    <tr>
+                        <td>2024-09-01</td>
+                        <td>Carol Davis</td>
+                        <td>Grade 12</td>
+                        <td>English Literature</td>
+                        <td>Shakespeare Section</td>
+                        <td><span class="status-badge status-present">Present</span></td>
+                        <td>14:00 PM</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
     </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
@@ -562,7 +611,7 @@
             }
         ];
 
-        // Sample attendance data (aligned with new structure)
+        // Sample attendance data
         const attendanceData = [
             { studentId: 1, classId: 1, date: '2024-09-01', status: 'Present', timeIn: '08:00 AM', timeOut: '09:30 AM' },
             { studentId: 2, classId: 1, date: '2024-09-01', status: 'Late', timeIn: '08:15 AM', timeOut: '09:30 AM' },
@@ -658,8 +707,9 @@
                     const status = attendanceRate >= 90 ? 'Excellent' : 
                                   attendanceRate >= 80 ? 'Good' : 
                                   attendanceRate >= 70 ? 'Fair' : 'Poor';
-                    const statusClass = attendanceRate >= 90 ? 'status-present' : 
-                                       attendanceRate >= 80 ? 'status-late' : 'status-absent';
+                    const statusClass = attendanceRate >= 90 ? 'status-excellent' : 
+                                       attendanceRate >= 80 ? 'status-good' : 
+                                       attendanceRate >= 70 ? 'status-fair' : 'status-poor';
                     
                     row.innerHTML = `
                         <td>${cls.subject}</td>
@@ -687,7 +737,8 @@
                     </tr>
                 `;
 
-                // Filter attendance data
+               quiz.html
+                <!-- Filter attendance data -->
                 let filteredData = attendanceData;
                 
                 if (gradeFilter) {
@@ -712,7 +763,7 @@
                     filteredData = filteredData.filter(record => record.date <= dateTo);
                 }
 
-                // Populate student data
+                // <!-- Populate student data -->
                 filteredData.forEach(record => {
                     const cls = classes.find(c => c.id === record.classId);
                     const student = cls.students.find(s => s.id === record.studentId);
@@ -735,7 +786,7 @@
                 });
             }
 
-            // Show report results
+            // <!-- Show report results -->
             reportResults.style.display = 'block';
             reportResults.scrollIntoView({ behavior: 'smooth' });
         }
@@ -749,19 +800,19 @@
                 return;
             }
 
-            // Get current report data
+            // <!-- Get current report data -->
             const table = document.getElementById('report-table');
             const rows = table.querySelectorAll('tr');
             
             let data = [];
             const headers = [];
             
-            // Get headers
+            // <!-- Get headers -->
             rows[0].querySelectorAll('th').forEach(th => {
                 headers.push(th.textContent.trim());
             });
             
-            // Get data rows
+            // <!-- Get data rows -->
             for (let i = 1; i < rows.length; i++) {
                 const row = {};
                 rows[i].querySelectorAll('td').forEach((td, index) => {
@@ -771,7 +822,7 @@
                 data.push(row);
             }
 
-            // Export based on format
+            // <!-- Export based on format -->
             switch (format) {
                 case 'json':
                     exportJSON(data, reportType);
@@ -815,21 +866,21 @@
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF();
             
-            // Set document properties
+            // <!-- Set document properties -->
             doc.setFont('helvetica', 'normal');
             doc.setFontSize(16);
             doc.text(document.getElementById('report-title').textContent, 14, 20);
             
-            // Add date range
+            // <!-- Add date range -->
             const dateFrom = document.getElementById('date-from').value;
             const dateTo = document.getElementById('date-to').value;
             doc.setFontSize(10);
             doc.text(`Date Range: ${dateFrom} to ${dateTo}`, 14, 30);
             
-            // Prepare table data
+            // <!-- Prepare table data -->
             const tableData = data.map(row => headers.map(header => row[header] || ''));
             
-            // Generate table using autoTable
+            // <!-- Generate table using autoTable -->
             doc.autoTable({
                 startY: 40,
                 head: [headers],
@@ -874,11 +925,11 @@
                 }
             });
             
-            // Save the PDF
+            // <!-- Save the PDF -->
             doc.save(`${reportType}-report-${new Date().toISOString().split('T')[0]}.pdf`);
         }
-        
-        // Initialize with default date range
+
+        // <!-- Initialize with default date range -->
         document.getElementById('date-from').value = '2024-09-01';
         document.getElementById('date-to').value = '2024-09-30';
     </script>

@@ -34,6 +34,56 @@ function checkSubjectByCode($subject_code)
     }
 }
 
+// Function to calculate attendance percentages for the past two months
+function calculateAttendancePercentages($teacher_id) {
+    $pdo = getDBConnection();
+    try {
+        $twoMonthsAgo = date('Y-m-d', strtotime('-2 months'));
+        $stmt = $pdo->prepare("
+            SELECT 
+                c.class_id,
+                COUNT(*) as total_records,
+                SUM(CASE WHEN at.attendance_status = 'Present' THEN 1 ELSE 0 END) as present_records
+            FROM classes c
+            LEFT JOIN class_students cs ON c.class_id = cs.class_id AND cs.is_enrolled = 1
+            LEFT JOIN attendance_tracking at ON cs.class_id = at.class_id AND cs.lrn = at.lrn
+            WHERE c.teacher_id = ? 
+            AND at.attendance_date >= ? 
+            AND at.attendance_date <= CURDATE()
+            GROUP BY c.class_id
+        ");
+        $stmt->execute([$teacher_id, $twoMonthsAgo]);
+        $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        $attendanceData = [];
+        $totalPresent = 0;
+        $totalRecords = 0;
+
+        foreach ($results as $row) {
+            $class_id = $row['class_id'];
+            $total = $row['total_records'];
+            $present = $row['present_records'];
+            $percentage = $total > 0 ? ($present / $total) * 100 : 0;
+            $attendanceData[$class_id] = $percentage;
+            $totalPresent += $present;
+            $totalRecords += $total;
+            error_log("Class ID: $class_id, Present: $present, Total: $total, Percentage: $percentage%");
+        }
+
+        $overallAverage = $totalRecords > 0 ? ($totalPresent / $totalRecords) * 100 : 0;
+        error_log("Total Present: $totalPresent, Total Records: $totalRecords, Overall Average: $overallAverage%");
+
+        return [
+            'success' => true,
+            'class_percentages' => $attendanceData,
+            'overall_average' => $overallAverage
+        ];
+    } catch (PDOException $e) {
+        error_log("Calculate attendance percentages error: " . $e->getMessage());
+        return ['success' => false, 'error' => 'Failed to calculate attendance percentages: ' . $e->getMessage()];
+    }
+}
+
 // Updated isDuplicateClass function to handle the new logic
 function isDuplicateClass($pdo, $section_name, $subject_code, $teacher_id, $grade_level, $class_id = null)
 {
@@ -257,9 +307,11 @@ function fetchClassesForTeacher()
 {
     $pdo = getDBConnection();
     try {
+        // Fetch class details
         $stmt = $pdo->prepare("
-            SELECT c.class_id, c.section_name, c.grade_level, c.room, c.attendance_percentage,
-                   COALESCE(s.subject_code, '') as subject_code, COALESCE(s.subject_name, '') as subject_name,
+            SELECT c.class_id, c.section_name, c.grade_level, c.room, 
+                   COALESCE(s.subject_code, '') as subject_code, 
+                   COALESCE(s.subject_name, '') as subject_name,
                    (SELECT COUNT(*) FROM class_students cs WHERE cs.class_id = c.class_id AND cs.is_enrolled = 1) as student_count
             FROM classes c
             LEFT JOIN subjects s ON c.subject_id = s.subject_id
@@ -267,6 +319,15 @@ function fetchClassesForTeacher()
         ");
         $stmt->execute([$_SESSION['teacher_id']]);
         $classes = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        // Calculate attendance percentages
+        $attendanceResult = calculateAttendancePercentages($_SESSION['teacher_id']);
+        if (!$attendanceResult['success']) {
+            return ['success' => false, 'error' => $attendanceResult['error']];
+        }
+
+        $classPercentages = $attendanceResult['class_percentages'];
+        $overallAverage = $attendanceResult['overall_average'];
 
         foreach ($classes as &$class) {
             $stmt = $pdo->prepare("
@@ -286,9 +347,16 @@ function fetchClassesForTeacher()
                     ];
                 }
             }
+            // Assign calculated attendance percentage
+            $class['calculated_attendance_percentage'] = isset($classPercentages[$class['class_id']]) ? 
+                round($classPercentages[$class['class_id']], 1) : 0;
         }
 
-        return ['success' => true, 'data' => $classes];
+        return [
+            'success' => true,
+            'data' => $classes,
+            'overall_average_attendance' => round($overallAverage, 1)
+        ];
     } catch (PDOException $e) {
         error_log("Fetch classes error: " . $e->getMessage());
         return ['success' => false, 'error' => 'Failed to fetch classes: ' . $e->getMessage()];
@@ -2940,9 +3008,10 @@ ob_end_flush();
                     return response.json();
                 })
                 .then(result => {
+                    console.log('Fetch Classes Response:', result); // Debug the response
                     if (result.success) {
                         classes = result.data || [];
-                        updateStats();
+                        updateStats(result.overall_average_attendance);
                         renderClasses();
                         populateFilters();
                     } else {
@@ -2956,15 +3025,16 @@ ob_end_flush();
                 });
         }
 
-        function updateStats() {
+        function updateStats(overallAverage) {
             const totalClasses = classes.length;
             const totalStudents = classes.reduce((sum, c) => sum + (parseInt(c.student_count) || 0), 0);
-            const averageAttendance = classes.length > 0 ?
-                (classes.reduce((sum, c) => sum + (parseFloat(c.attendance_percentage) || 0), 0) / classes.length).toFixed(1) : 0;
+            const averageAttendance = parseFloat(overallAverage) || 0;
+
+            console.log('Updating Stats:', { totalClasses, totalStudents, averageAttendance }); // Debug
 
             document.getElementById('total-classes').textContent = totalClasses;
             document.getElementById('total-students').textContent = totalStudents;
-            document.getElementById('average-attendance').textContent = averageAttendance + '%';
+            document.getElementById('average-attendance').textContent = averageAttendance.toFixed(1) + '%';
         }
 
         function setupEventListeners() {
@@ -3026,7 +3096,7 @@ ob_end_flush();
         }
 
         function renderClasses() {
-            updateStats();
+            updateStats(classes.length > 0 ? classes[0].overall_average_attendance : 0);
             if (currentView === 'grid') {
                 renderGridView();
             } else {
@@ -3048,7 +3118,7 @@ ob_end_flush();
 
             filteredClasses.forEach(classItem => {
                 const scheduleText = formatSchedule(classItem.schedule);
-                const attendancePercentage = parseFloat(classItem.attendance_percentage) || 0;
+                const attendancePercentage = parseFloat(classItem.calculated_attendance_percentage) || 0;
                 const studentCount = parseInt(classItem.student_count) || 0;
 
                 const card = document.createElement('div');
@@ -3101,7 +3171,7 @@ ob_end_flush();
 
             filteredClasses.forEach(classItem => {
                 const scheduleText = formatScheduleShort(classItem.schedule);
-                const attendancePercentage = parseFloat(classItem.attendance_percentage) || 0;
+                const attendancePercentage = parseFloat(classItem.calculated_attendance_percentage) || 0;
                 const studentCount = parseInt(classItem.student_count) || 0;
 
                 const row = document.createElement('tr');
@@ -3296,7 +3366,7 @@ ob_end_flush();
             if (!classItem) return;
 
             const scheduleText = formatSchedule(classItem.schedule);
-            const attendancePercentage = parseFloat(classItem.attendance_percentage) || 0;
+            const attendancePercentage = parseFloat(classItem.calculated_attendance_percentage) || 0;
             const studentCount = parseInt(classItem.student_count) || 0;
 
             const content = document.getElementById('viewContent');

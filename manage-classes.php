@@ -352,6 +352,8 @@ function fetchClassesForTeacher()
                 round($classPercentages[$class['class_id']], 1) : 0;
         }
 
+        error_log("Overall Average Attendance in fetchClassesForTeacher: " . round($overallAverage, 1)); // Debug log
+
         return [
             'success' => true,
             'data' => $classes,
@@ -2991,6 +2993,7 @@ ob_end_flush();
 
     <script>
         let classes = [];
+        let overallAverageAttendance = 0;  // Store overall average globally to avoid reset
         let currentView = 'grid';
         let editingClassId = null;
 
@@ -3011,8 +3014,9 @@ ob_end_flush();
                     console.log('Fetch Classes Response:', result); // Debug the response
                     if (result.success) {
                         classes = result.data || [];
-                        updateStats(result.overall_average_attendance);
-                        renderClasses();
+                        overallAverageAttendance = result.overall_average_attendance || 0;  // Store globally
+                        updateStats();  // Update stats with stored value
+                        renderClasses();  // Render views without updating stats
                         populateFilters();
                     } else {
                         console.error('Error fetching classes:', result.error);
@@ -3025,10 +3029,10 @@ ob_end_flush();
                 });
         }
 
-        function updateStats(overallAverage) {
+        function updateStats() {
             const totalClasses = classes.length;
             const totalStudents = classes.reduce((sum, c) => sum + (parseInt(c.student_count) || 0), 0);
-            const averageAttendance = parseFloat(overallAverage) || 0;
+            const averageAttendance = parseFloat(overallAverageAttendance) || 0;
 
             console.log('Updating Stats:', { totalClasses, totalStudents, averageAttendance }); // Debug
 
@@ -3096,7 +3100,7 @@ ob_end_flush();
         }
 
         function renderClasses() {
-            updateStats(classes.length > 0 ? classes[0].overall_average_attendance : 0);
+            // Removed erroneous updateStats call - stats are overall and set in fetchClasses
             if (currentView === 'grid') {
                 renderGridView();
             } else {
@@ -3430,6 +3434,8 @@ ob_end_flush();
                 .then(data => {
                     if (data.success) {
                         classes = classes.filter(c => c.class_id !== classId);
+                        overallAverageAttendance = classes.length > 0 ? overallAverageAttendance : 0;  // Re-fetch if needed, but for simplicity, keep as-is (or refetch)
+                        updateStats();  // Update stats after delete
                         renderClasses();
                         populateFilters();
                         alert('Class deleted successfully!');

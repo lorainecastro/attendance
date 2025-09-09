@@ -2870,7 +2870,16 @@ ob_end_flush();
             if (subjectFilter) subjectFilter.addEventListener('change', handleFilter);
             if (sectionFilter) sectionFilter.addEventListener('change', handleFilter);
             if (classForm) classForm.addEventListener('submit', handleFormSubmit);
-            if (gradeLevelSelect) gradeLevelSelect.addEventListener('change', toggleSubjectFields);
+            
+            // Make sure this event listener is properly attached
+            if (gradeLevelSelect) {
+                gradeLevelSelect.addEventListener('change', function() {
+                    console.log('Grade level changed to:', this.value); // Debug log
+                    toggleSubjectFields();
+                });
+            } else {
+                console.error('Grade level select element not found');
+            }
 
             const scheduleCheckboxes = document.querySelectorAll('input[name="scheduleDays"]');
             scheduleCheckboxes.forEach(checkbox => {
@@ -2896,6 +2905,8 @@ ob_end_flush();
             const subjectLabel = document.getElementById('subjectLabel');
             const subjectAsterisk = document.getElementById('subjectAsterisk');
 
+            console.log('toggleSubjectFields called with grade:', gradeLevel); // Debug log
+
             const lowerGrades = ['Kindergarten', 'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6'];
             const isLowerGrade = lowerGrades.includes(gradeLevel);
 
@@ -2904,27 +2915,34 @@ ob_end_flush();
                 subjectGroup.style.display = 'block';
                 classCodeInput.removeAttribute('required');
 
-                if (gradeLevel === '') {
+                if (gradeLevel === '' || gradeLevel === 'Select Grade') {
                     // No grade selected
-                    subjectLabel.textContent = 'Subject';
+                    subjectLabel.innerHTML = 'Subject <span id="subjectAsterisk" class="required-asterisk" style="display: none;">*</span>';
                     subjectInput.placeholder = '';
                     subjectInput.removeAttribute('required');
-                    subjectAsterisk.style.display = 'none';
                 } else if (isLowerGrade) {
-                    // Kindergarten to Grade 6
-                    subjectLabel.textContent = 'Subjects (Optional – Multiple Allowed)';
+                    // Kindergarten to Grade 6 - Multiple subjects allowed, optional
+                    subjectLabel.innerHTML = 'Subjects (Optional – Multiple Allowed) <span id="subjectAsterisk" class="required-asterisk" style="display: none;">*</span>';
                     subjectInput.placeholder = 'e.g., Mathematics, Science, English';
                     subjectInput.removeAttribute('required');
-                    subjectAsterisk.style.display = 'none';
+                    console.log('Set to lower grade - optional subjects'); // Debug log
                 } else {
-                    // Grade 7 to College
-                    subjectLabel.textContent = 'Subject (One Subject Only)';
+                    // Grade 7 to College - Single subject only, required
+                    subjectLabel.innerHTML = 'Subject (One Subject Only) <span id="subjectAsterisk" class="required-asterisk" style="display: inline;">*</span>';
                     subjectInput.placeholder = 'e.g., Mathematics';
                     subjectInput.setAttribute('required', 'required');
-                    subjectAsterisk.style.display = 'inline';
+                    console.log('Set to higher grade - required single subject'); // Debug log
                 }
             } else {
                 console.error('One or more DOM elements not found for subject field toggle');
+                console.log('Elements found:', {
+                    classCodeGroup: !!classCodeGroup,
+                    subjectGroup: !!subjectGroup,
+                    classCodeInput: !!classCodeInput,
+                    subjectInput: !!subjectInput,
+                    subjectLabel: !!subjectLabel,
+                    subjectAsterisk: !!subjectAsterisk
+                });
             }
         }
 

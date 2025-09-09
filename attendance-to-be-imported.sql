@@ -73,6 +73,7 @@ CREATE TABLE schedules (
     day ENUM('monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday') NOT NULL,
     start_time TIME NOT NULL,
     end_time TIME NOT NULL,
+    grace_period_minutes INT DEFAULT 0, -- Grace period for late in minutes
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (class_id) REFERENCES classes(class_id)
 );

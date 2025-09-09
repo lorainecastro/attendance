@@ -1091,8 +1091,7 @@ ob_end_flush();
 
         .actions {
             display: flex;
-            justify-content: flex-end; /* Align buttons to the right */
-            gap: var(--spacing-md); /* Consistent spacing */
+            gap: var(--spacing-xs);
         }
 
         .modal {

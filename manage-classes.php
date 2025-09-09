@@ -2665,7 +2665,7 @@ ob_end_flush();
                 </div>
                 <div class="class-form-column">
                     <div class="class-form-group">
-                        <label class="class-form-label">Schedule (Optional)</label>
+                        <label class="class-form-label">Schedule <span class="required-asterisk">*</span></label>
                         <div class="class-schedule-inputs">
                             <div class="class-schedule-day-input">
                                 <input type="checkbox" id="monday" name="scheduleDays">
@@ -2810,7 +2810,7 @@ ob_end_flush();
 
     <script>
         let classes = [];
-        let overallAverageAttendance = 0;  // Store overall average globally to avoid reset
+        let overallAverageAttendance = 0;
         let currentView = 'grid';
         let editingClassId = null;
 
@@ -2818,7 +2818,6 @@ ob_end_flush();
             fetchClasses();
             setupEventListeners();
             clearScheduleInputs();
-            toggleSubjectFields();
         });
 
         function fetchClasses() {
@@ -2828,12 +2827,12 @@ ob_end_flush();
                     return response.json();
                 })
                 .then(result => {
-                    console.log('Fetch Classes Response:', result); // Debug the response
+                    console.log('Fetch Classes Response:', result);
                     if (result.success) {
                         classes = result.data || [];
-                        overallAverageAttendance = result.overall_average_attendance || 0;  // Store globally
-                        updateStats();  // Update stats with stored value
-                        renderClasses();  // Render views without updating stats
+                        overallAverageAttendance = result.overall_average_attendance || 0;
+                        updateStats();
+                        renderClasses();
                         populateFilters();
                     } else {
                         console.error('Error fetching classes:', result.error);
@@ -2851,7 +2850,7 @@ ob_end_flush();
             const totalStudents = classes.reduce((sum, c) => sum + (parseInt(c.student_count) || 0), 0);
             const averageAttendance = parseFloat(overallAverageAttendance) || 0;
 
-            console.log('Updating Stats:', { totalClasses, totalStudents, averageAttendance }); // Debug
+            console.log('Updating Stats:', { totalClasses, totalStudents, averageAttendance });
 
             document.getElementById('total-classes').textContent = totalClasses;
             document.getElementById('total-students').textContent = totalStudents;
@@ -2905,22 +2904,31 @@ ob_end_flush();
                 subjectGroup.style.display = 'block';
                 classCodeInput.removeAttribute('required');
 
-                if (isLowerGrade) {
-                    subjectLabel.textContent = 'Subjects (Optional, Multiple Allowed)';
+                if (gradeLevel === '') {
+                    // No grade selected
+                    subjectLabel.textContent = 'Subject';
+                    subjectInput.placeholder = '';
+                    subjectInput.removeAttribute('required');
+                    subjectAsterisk.style.display = 'none';
+                } else if (isLowerGrade) {
+                    // Kindergarten to Grade 6
+                    subjectLabel.textContent = 'Subjects (Optional – Multiple Allowed)';
                     subjectInput.placeholder = 'e.g., Mathematics, Science, English';
                     subjectInput.removeAttribute('required');
                     subjectAsterisk.style.display = 'none';
                 } else {
+                    // Grade 7 to College
                     subjectLabel.textContent = 'Subject (One Subject Only)';
                     subjectInput.placeholder = 'e.g., Mathematics';
                     subjectInput.setAttribute('required', 'required');
                     subjectAsterisk.style.display = 'inline';
                 }
+            } else {
+                console.error('One or more DOM elements not found for subject field toggle');
             }
         }
 
         function renderClasses() {
-            // Removed erroneous updateStats call - stats are overall and set in fetchClasses
             if (currentView === 'grid') {
                 renderGridView();
             } else {
@@ -3131,7 +3139,6 @@ ob_end_flush();
             if (subjectInput) subjectInput.value = '';
             if (classCodeInput) classCodeInput.value = '';
             clearScheduleInputs();
-            toggleSubjectFields();
             if (classModal) classModal.classList.add('show');
         }
 
@@ -3254,8 +3261,8 @@ ob_end_flush();
                 .then(data => {
                     if (data.success) {
                         classes = classes.filter(c => c.class_id !== classId);
-                        overallAverageAttendance = classes.length > 0 ? overallAverageAttendance : 0;  // Re-fetch if needed, but for simplicity, keep as-is (or refetch)
-                        updateStats();  // Update stats after delete
+                        overallAverageAttendance = classes.length > 0 ? overallAverageAttendance : 0;
+                        updateStats();
                         renderClasses();
                         populateFilters();
                         alert('Class deleted successfully!');
@@ -3272,6 +3279,11 @@ ob_end_flush();
         function handleFormSubmit(event) {
             event.preventDefault();
             const schedule = getScheduleFromForm();
+
+            if (Object.keys(schedule).length === 0) {
+                alert('Please select at least one schedule day with start and end times.');
+                return;
+            }
 
             const classData = {
                 classCode: document.getElementById('classCode')?.value || '',
@@ -3569,7 +3581,7 @@ ob_end_flush();
             previewData.forEach((row, index) => {
                 const photoValue = row[12] || '';
                 let photoDisplay = photoValue && (photoValue.includes('.jpg') || photoValue.includes('.jpeg') || photoValue.includes('.png') || photoValue.includes('.gif')) ?
-                    `<img src="uploads/${photoValue}" alt="Student Photo" style="max-width: 45px; max-height: 45px; border-radius: 50%;" onerror="this.style.display='none'; this.nextSibling.style.display='inline';"><span style="display:none;">${sanitizeHTML(photoValue)}</span>` :
+                    `<img src="Uploads/${photoValue}" alt="Student Photo" style="max-width: 45px; max-height: 45px; border-radius: 50%;" onerror="this.style.display='none'; this.nextSibling.style.display='inline';"><span style="display:none;">${sanitizeHTML(photoValue)}</span>` :
                     photoValue ? sanitizeHTML(photoValue) : 'Photo To Be Provided';
 
                 let qrDisplay = row[13] && row[13].toString().trim() !== '' ?

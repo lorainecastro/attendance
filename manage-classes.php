@@ -716,7 +716,6 @@ ob_end_flush();
 
         html {
             height: 100%;
-            /* Ensure html takes full viewport height */
             margin: 0;
         }
 
@@ -724,17 +723,10 @@ ob_end_flush();
             background-color: var(--card-bg);
             color: var(--blackfont-color);
             height: 100%;
-            /* margin: 0; */
             padding: 20px;
-            /* Padding applies within the height */
             display: flex;
-            /* Use flex to manage content height */
             flex-direction: column;
-            /* Stack content vertically */
         }
-
-
-
 
         h1 {
             font-size: 24px;
@@ -797,10 +789,6 @@ ob_end_flush();
             background: var(--primary-gradient);
         }
 
-        .bg-purple {
-            background: var(--primary-gradient);
-        }
-
         .bg-pink {
             background: var(--secondary-gradient);
         }
@@ -845,8 +833,6 @@ ob_end_flush();
 
         .form-input:disabled,
         .form-select:disabled {
-            /* background: var(--light-gray); */
-            /* opacity: 0.7; */
             cursor: not-allowed;
         }
 
@@ -955,7 +941,6 @@ ob_end_flush();
         .class-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-            gap: var(--spacing-lg);
             gap: 15px;
         }
 
@@ -1068,6 +1053,7 @@ ob_end_flush();
             display: flex;
             gap: var(--spacing-sm);
             flex-wrap: wrap;
+            /* padding-top: var(--spacing-sm); */
         }
 
         .table-container {
@@ -1105,7 +1091,8 @@ ob_end_flush();
 
         .actions {
             display: flex;
-            gap: var(--spacing-xs);
+            justify-content: flex-end; /* Align buttons to the right */
+            gap: var(--spacing-md); /* Consistent spacing */
         }
 
         .modal {
@@ -1384,10 +1371,13 @@ ob_end_flush();
             }
 
             .class-actions {
-                flex-direction: column;
+                flex-direction: row; /* Keep horizontal */
+                justify-content: center; /* Center buttons */
+                gap: var(--spacing-sm);
             }
 
             .class-actions .btn {
+                flex: 1; /* Equal width for buttons */
                 justify-content: center;
             }
 
@@ -1463,7 +1453,6 @@ ob_end_flush();
         }
 
         @media (max-width: 768px) {
-
             .table th:nth-child(n+6),
             .table td:nth-child(n+6) {
                 display: none;
@@ -1471,7 +1460,6 @@ ob_end_flush();
         }
 
         @media (max-width: 600px) {
-
             .table th:nth-child(n+4),
             .table td:nth-child(n+4) {
                 display: none;
@@ -1479,7 +1467,6 @@ ob_end_flush();
         }
 
         @media print {
-
             .controls,
             .class-actions,
             .actions,
@@ -1499,9 +1486,8 @@ ob_end_flush();
                 page-break-inside: avoid;
             }
         }
-    </style>
 
-    <style>
+        /* Controls Section Styles */
         .controls {
             background: var(--card-bg);
             border-radius: var(--radius-md);
@@ -1526,8 +1512,9 @@ ob_end_flush();
         .controls-right {
             display: flex;
             flex-wrap: wrap;
-            gap: var(--spacing-sm);
+            gap: var(--spacing-md); /* Increased gap for clarity */
             align-items: center;
+            justify-content: flex-end; /* Right-align buttons */
         }
 
         .search-container {
@@ -1560,10 +1547,10 @@ ob_end_flush();
             padding: var(--spacing-xs) var(--spacing-sm);
         }
 
-        .btn {
+        /* .btn {
             padding: var(--spacing-xs) var(--spacing-md);
             font-size: var(--font-size-sm);
-        }
+        } */
 
         .view-toggle {
             border: 1px solid var(--border-color);
@@ -1585,7 +1572,7 @@ ob_end_flush();
             }
 
             .controls-right {
-                justify-content: flex-start;
+                justify-content: flex-end; /* Maintain right-alignment */
                 margin-top: var(--spacing-sm);
             }
         }
@@ -1597,8 +1584,9 @@ ob_end_flush();
             }
 
             .controls-right {
-                flex-direction: column;
-                gap: var(--spacing-xs);
+                flex-direction: row;
+                gap: var(--spacing-sm);
+                justify-content: center; /* Center for better mobile alignment */
             }
 
             .search-container {
@@ -1611,7 +1599,7 @@ ob_end_flush();
             }
 
             .btn {
-                width: 100%;
+                width: auto; /* Allow buttons to fit content */
                 justify-content: center;
             }
 
@@ -1621,25 +1609,6 @@ ob_end_flush();
             }
         }
 
-        .preview-table-container {
-            margin-top: var(--spacing-lg);
-            background: var(--card-bg);
-            border-radius: var(--radius-lg);
-            padding: var(--spacing-lg);
-            box-shadow: var(--shadow-md);
-            border: 1px solid var(--border-color);
-        }
-
-        .preview-table-container h3 {
-            font-size: var(--font-size-lg);
-            font-weight: 600;
-            color: var(--blackfont-color);
-            margin-bottom: var(--spacing-md);
-        }
-    </style>
-
-    <!-- CSS for Add New Class Modal -->
-    <style>
         /* Class Modal Specific Styles */
         .class-modal {
             display: none;
@@ -1665,7 +1634,6 @@ ob_end_flush();
             padding: 0;
             border-radius: var(--radius-xl);
             max-width: 1000px;
-            /* Landscape layout */
             width: 95%;
             max-height: 90vh;
             overflow-y: auto;
@@ -1723,7 +1691,6 @@ ob_end_flush();
             padding: var(--spacing-2xl);
             display: grid;
             grid-template-columns: 1fr 1fr;
-            /* Two-column layout */
             gap: var(--spacing-xl);
             background: linear-gradient(180deg, #f9fafb, #ffffff);
         }
@@ -1839,7 +1806,6 @@ ob_end_flush();
 
         .class-form-actions {
             grid-column: 1 / -1;
-            /* Span across both columns */
             display: flex;
             justify-content: flex-end;
             gap: var(--spacing-md);
@@ -1884,28 +1850,6 @@ ob_end_flush();
             box-shadow: var(--shadow-md);
         }
 
-        @keyframes fadeIn {
-            from {
-                opacity: 0;
-            }
-
-            to {
-                opacity: 1;
-            }
-        }
-
-        @keyframes slideIn {
-            from {
-                transform: translateY(-20px);
-                opacity: 0;
-            }
-
-            to {
-                transform: translateY(0);
-                opacity: 1;
-            }
-        }
-
         @media (max-width: 768px) {
             .class-modal-content {
                 width: 98%;
@@ -1914,7 +1858,6 @@ ob_end_flush();
 
             .class-modal-form {
                 grid-template-columns: 1fr;
-                /* Stack columns on smaller screens */
                 padding: var(--spacing-lg);
             }
 
@@ -1942,10 +1885,8 @@ ob_end_flush();
                 justify-content: center;
             }
         }
-    </style>
 
-    <style>
-        /* Adjusted styles for Class Details (View Modal) and Student List */
+        /* Class Details and Student List Styles */
         .detail-row {
             display: flex;
             align-items: center;
@@ -1993,7 +1934,6 @@ ob_end_flush();
             margin-right: var(--spacing-xs);
         }
 
-        /* Adjusted Student List (Student Modal) */
         .student-table-container {
             margin-top: var(--spacing-xl);
             padding: var(--spacing-xl);
@@ -2003,7 +1943,6 @@ ob_end_flush();
             border: 1px solid var(--border-color);
             width: 100%;
             max-width: 1200px;
-            /* Increased width for better readability */
             margin-left: auto;
             margin-right: auto;
         }
@@ -2045,7 +1984,6 @@ ob_end_flush();
             object-fit: cover;
         }
 
-        /* Responsive adjustments for student table */
         @media (max-width: 1024px) {
             .student-table-container {
                 max-width: 100%;
@@ -2064,7 +2002,6 @@ ob_end_flush();
         }
 
         @media (max-width: 768px) {
-
             .student-table th:nth-child(n+6),
             .student-table td:nth-child(n+6) {
                 display: none;
@@ -2084,7 +2021,6 @@ ob_end_flush();
         }
 
         @media (max-width: 576px) {
-
             .student-table th:nth-child(n+4),
             .student-table td:nth-child(n+4) {
                 display: none;
@@ -2104,22 +2040,11 @@ ob_end_flush();
                 padding: var(--spacing-xs);
             }
         }
-    </style>
 
-    <style>
         .modal-body {
             padding: 1.5rem 2rem;
             max-height: 70vh;
             overflow-y: auto;
-        }
-
-        .import-section {
-            margin-bottom: 1.5rem;
-            padding: 1rem;
-            background: var(--card-bg);
-            border-radius: var(--radius-lg);
-            box-shadow: var(--shadow-sm);
-            border: 1px solid var(--border-color);
         }
 
         .import-controls {
@@ -2176,9 +2101,7 @@ ob_end_flush();
             border-collapse: separate;
             border-spacing: 0;
             min-width: 1200px;
-            /* Increased to maximize column widths and force scroll if needed */
             table-layout: auto;
-            /* Allow columns to adjust based on content */
         }
 
         .preview-table th,
@@ -2186,14 +2109,11 @@ ob_end_flush();
         .preview-table td,
         .student-table td {
             padding: 1rem 1.5rem;
-            /* Increased padding for better readability */
             text-align: left;
             border-bottom: 1px solid var(--border-color);
             white-space: nowrap;
             overflow: hidden;
-            /* text-overflow: ellipsis; */
             max-width: 200px;
-            /* Maximize column width while preventing overflow */
         }
 
         .preview-table th,
@@ -2204,10 +2124,6 @@ ob_end_flush();
             position: sticky;
             top: 0;
             z-index: 5;
-        }
-
-        .student-table td {
-            color: var(--blackfont-color);
         }
 
         .preview-table tr:hover,
@@ -2245,10 +2161,10 @@ ob_end_flush();
                 max-width: 100%;
             }
 
-            .preview-table th:nth-child(n+8),
-            .preview-table td:nth-child(n+8),
-            .student-table th:nth-child(n+8),
-            .student-table td:nth-child(n+8) {
+            .preview-table th:nth-child(n+9),
+            .preview-table td:nth-child(n+9),
+            .student-table th:nth-child(n+9),
+            .student-table td:nth-child(n+9) {
                 display: none;
             }
 
@@ -2262,11 +2178,10 @@ ob_end_flush();
         }
 
         @media (max-width: 768px) {
-
-            .preview-table th:nth-child(n+6),
-            .preview-table td:nth-child(n+6),
-            .student-table th:nth-child(n+6),
-            .student-table td:nth-child(n+6) {
+            .preview-table th:nth-child(n+7),
+            .preview-table td:nth-child(n+7),
+            .student-table th:nth-child(n+7),
+            .student-table td:nth-child(n+7) {
                 display: none;
             }
 
@@ -2296,11 +2211,10 @@ ob_end_flush();
         }
 
         @media (max-width: 576px) {
-
-            .preview-table th:nth-child(n+4),
-            .preview-table td:nth-child(n+4),
-            .student-table th:nth-child(n+4),
-            .student-table td:nth-child(n+4) {
+            .preview-table th:nth-child(n+5),
+            .preview-table td:nth-child(n+5),
+            .student-table th:nth-child(n+5),
+            .student-table td:nth-child(n+5) {
                 display: none;
             }
 
@@ -2341,13 +2255,10 @@ ob_end_flush();
                 font-size: 0.65rem;
             }
         }
-    </style>
 
-    <style>
-        /* Class Details (View Modal) Styles */
+        /* View Modal Styles */
         #viewModal .modal-content {
             max-width: 900px;
-            /* Slightly narrower for better focus */
             width: 90%;
             border-radius: var(--radius-xl);
             box-shadow: var(--shadow-lg);
@@ -2421,7 +2332,6 @@ ob_end_flush();
 
         .detail-row strong {
             flex: 0 0 180px;
-            /* Wider label for better readability */
             font-weight: 600;
             color: var(--blackfont-color);
             font-size: var(--font-size-base);
@@ -2510,7 +2420,6 @@ ob_end_flush();
             padding: 30px;
         }
 
-        /* Responsive Adjustments */
         @media (max-width: 768px) {
             #viewModal .modal-content {
                 width: 98%;
@@ -2597,102 +2506,11 @@ ob_end_flush();
             }
         }
 
-        @media (max-width: 1024px) {
-    .preview-table th:nth-child(n+9),
-    .preview-table td:nth-child(n+9),
-    .student-table th:nth-child(n+9),
-    .student-table td:nth-child(n+9) {
-        display: none;
-    }
-
-    .preview-table th,
-    .preview-table td,
-    .student-table th,
-    .student-table td {
-        padding: 0.75rem 1rem;
-        max-width: 120px;
-    }
-}
-
-@media (max-width: 768px) {
-    .preview-table th:nth-child(n+7),
-    .preview-table td:nth-child(n+7),
-    .student-table th:nth-child(n+7),
-    .student-table td:nth-child(n+7) {
-        display: none;
-    }
-
-    .modal-content {
-        width: 98%;
-        max-height: 95vh;
-    }
-
-    .import-section {
-        padding: 0.75rem;
-    }
-
-    .preview-table th,
-    .preview-table td,
-    .student-table th,
-    .student-table td {
-        padding: 0.5rem 0.75rem;
-        max-width: 100px;
-        font-size: 0.875rem;
-    }
-
-    .form-actions {
-        padding: 1rem;
-        flex-direction: column;
-        gap: 0.75rem;
-    }
-}
-
-@media (max-width: 576px) {
-    .preview-table th:nth-child(n+5),
-    .preview-table td:nth-child(n+5),
-    .student-table th:nth-child(n+5),
-    .student-table td:nth-child(n+5) {
-        display: none;
-    }
-
-    .modal-body {
-        padding: 0.75rem;
-    }
-
-    .preview-table-container,
-    .student-table-container {
-        padding: 0.75rem;
-    }
-
-    .preview-table th,
-    .preview-table td,
-    .student-table th,
-    .student-table td {
-        padding: 0.5rem 0.25rem;
-        font-size: 0.75rem;
-        max-width: 80px;
-    }
-
-    .form-actions {
-        padding: 1rem;
-        flex-direction: column;
-        gap: 0.5rem;
-    }
-
-    .form-actions .btn {
-        width: 100%;
-        justify-content: center;
-    }
-
-    .import-controls {
-        gap: 0.5rem;
-    }
-
-    .import-note {
-        font-size: 0.65rem;
-    }
-}
-        
+        .required-asterisk {
+            color: red;
+            font-size: 1.2em;
+            vertical-align: top;
+        }
     </style>
 </head>
 
@@ -2806,7 +2624,7 @@ ob_end_flush();
             <form id="classForm" class="class-modal-form">
                 <div class="class-form-column">
                     <div class="class-form-group">
-                        <label class="class-form-label" for="gradeLevel">Grade Level</label>
+                        <label class="class-form-label" for="gradeLevel">Grade Level <span class="required-asterisk">*</span></label>
                         <select class="class-form-select" id="gradeLevel" required>
                             <option value="">Select Grade</option>
                             <option value="Kindergarten">Kindergarten</option>
@@ -2830,7 +2648,7 @@ ob_end_flush();
                         </select>
                     </div>
                     <div class="class-form-group">
-                        <label class="class-form-label" for="sectionName">Section Name</label>
+                        <label class="class-form-label" for="sectionName">Section Name <span class="required-asterisk">*</span></label>
                         <input type="text" class="class-form-input" id="sectionName" required placeholder="e.g., Section A, Diamond, Einstein">
                     </div>
                     <div class="class-form-group subject-field" id="classCodeGroup">
@@ -2838,8 +2656,8 @@ ob_end_flush();
                         <input type="text" class="class-form-input" id="classCode" placeholder="e.g., MATH-101-A">
                     </div>
                     <div class="class-form-group subject-field" id="subjectGroup">
-                        <label class="class-form-label" for="subject" id="subjectLabel">Subjects (Optional, Multiple Allowed)</label>
-                        <input type="text" class="class-form-input" id="subject" placeholder="e.g., Mathematics, Science, English">
+                        <label class="class-form-label" for="subject" id="subjectLabel">Subject <span id="subjectAsterisk" class="required-asterisk" style="display: none;">*</span></label>
+                        <input type="text" class="class-form-input" id="subject" placeholder="e.g., Mathematics">
                     </div>
                     <div class="class-form-group">
                         <label class="class-form-label" for="room">Room (Optional)</label>
@@ -3078,11 +2896,12 @@ ob_end_flush();
             const classCodeInput = document.getElementById('classCode');
             const subjectInput = document.getElementById('subject');
             const subjectLabel = document.getElementById('subjectLabel');
+            const subjectAsterisk = document.getElementById('subjectAsterisk');
 
             const lowerGrades = ['Kindergarten', 'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6'];
             const isLowerGrade = lowerGrades.includes(gradeLevel);
 
-            if (classCodeGroup && subjectGroup && classCodeInput && subjectInput && subjectLabel) {
+            if (classCodeGroup && subjectGroup && classCodeInput && subjectInput && subjectLabel && subjectAsterisk) {
                 classCodeGroup.style.display = 'block';
                 subjectGroup.style.display = 'block';
                 classCodeInput.removeAttribute('required');
@@ -3091,10 +2910,12 @@ ob_end_flush();
                     subjectLabel.textContent = 'Subjects (Optional, Multiple Allowed)';
                     subjectInput.placeholder = 'e.g., Mathematics, Science, English';
                     subjectInput.removeAttribute('required');
+                    subjectAsterisk.style.display = 'none';
                 } else {
                     subjectLabel.textContent = 'Subject (One Subject Only)';
                     subjectInput.placeholder = 'e.g., Mathematics';
                     subjectInput.setAttribute('required', 'required');
+                    subjectAsterisk.style.display = 'inline';
                 }
             }
         }

@@ -110,7 +110,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action']) && $_POST['a
     $first_name = $_POST['first_name'] ?? '';
     $middle_name = $_POST['middle_name'] ?? '';
 
-    if (empty($lrn) || strlen($lrn) != 12 || empty($last_name) || empty($first_name)) {
+    if (empty($lrn) || empty($last_name) || empty($first_name)) {
         echo json_encode(['success' => false, 'message' => 'Missing required fields for QR generation']);
         exit();
     }
@@ -659,9 +659,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['lrn']) && !isset($_POS
         exit();
     }
 
-    // Validate LRN format
-    if (!preg_match('/^\d{12}$/', $lrn)) {
-        echo json_encode(['success' => false, 'message' => 'LRN must be exactly 12 digits']);
+    // Validate LRN is numeric
+    if (!preg_match('/^\d+$/', $lrn)) {
+        echo json_encode(['success' => false, 'message' => 'LRN or Student Number must contain only numbers']);
         exit();
     }
 
@@ -1986,6 +1986,12 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
             width: 100px;
             justify-content: center;
         }
+
+        .required-asterisk {
+            color: red;
+            font-size: 1.2em;
+            vertical-align: top;
+        }
     </style>
 </head>
 
@@ -2143,12 +2149,12 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
                 <form id="studentForm" class="modal-form" enctype="multipart/form-data">
                     <div class="form-column">
                         <div class="form-group">
-                            <label class="form-label">LRN</label>
-                            <input type="text" class="form-input" id="student-id" name="lrn" maxlength="12" onkeypress="return (event.charCode !=8 && event.charCode ==0 || (event.charCode >= 48 && event.charCode <= 57))" pattern="[0-9]{12}" title="Please enter exactly 12 digits" required>
+                            <label class="form-label">LRN<span class="required-asterisk"> *</span></label>
+                            <input type="text" class="form-input" id="student-id" name="lrn" onkeypress="return (event.charCode != 8 && event.charCode != 0 && (event.charCode >= 48 && event.charCode <= 57))" required>
                         </div>
                         <div class="form-group photo-qr-container">
                             <div class="photo-upload">
-                                <label class="form-label">Photo</label>
+                                <label class="form-label">Photo (Optional)</label>
                                 <img id="student-photo-preview" src="uploads/no-icon.png" alt="Student Photo">
                                 <input type="file" id="student-photo" name="photo" accept="image/*" onchange="previewPhoto(event)">
                                 <button type="button" class="btn btn-primary" id="change-photo-btn" onclick="document.getElementById('student-photo').click()">Change</button>
@@ -2160,36 +2166,36 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
                             </div>
                         </div>
                         <div class="form-group">
-                            <label class="form-label">First Name</label>
+                            <label class="form-label">First Name<span class="required-asterisk"> *</span></label>
                             <input type="text" class="form-input" id="first-name" name="first_name" required>
                         </div>
                         <div class="form-group">
-                            <label class="form-label">Middle Name</label>
+                            <label class="form-label">Middle Name<span class="required-asterisk"> *</span></label>
                             <input type="text" class="form-input" id="middle-name" name="middle_name" required>
                         </div>
                         <div class="form-group">
-                            <label class="form-label">Last Name</label>
+                            <label class="form-label">Last Name<span class="required-asterisk"> *</span></label>
                             <input type="text" class="form-input" id="last-name" name="last_name" required>
                         </div>
                         <div class="form-group">
-                            <label class="form-label">Email (Optional)</label>
-                            <input type="email" class="form-input" id="email" name="email">
+                            <label class="form-label">Email<span class="required-asterisk"> *</span></label>
+                            <input type="email" class="form-input" id="email" name="email" required>
                         </div>
                         <div class="form-group">
-                            <label class="form-label">Gender</label>
-                            <select class="form-select" id="gender" name="gender">
+                            <label class="form-label">Gender<span class="required-asterisk"> *</span></label>
+                            <select class="form-select" id="gender" name="gender" required>
                                 <option value="Male">Male</option>
                                 <option value="Female">Female</option>
                             </select>
                         </div>
                         <div class="form-group">
-                            <label class="form-label">Date of Birth</label>
-                            <input type="date" class="form-input" id="dob" name="dob">
+                            <label class="form-label">Date of Birth<span class="required-asterisk"> *</span></label>
+                            <input type="date" class="form-input" id="dob" name="dob" required>
                         </div>
                     </div>
                     <div class="form-column">
                         <div class="form-group">
-                            <label class="form-label">Grade Level</label>
+                            <label class="form-label">Grade Level<span class="required-asterisk"> *</span></label>
                             <select class="form-select" id="grade-level" name="grade_level" required>
                                 <option value="">Select Grade Level</option>
                                 <?php foreach ($gradeLevels as $grade): ?>
@@ -2198,32 +2204,32 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
                             </select>
                         </div>
                         <div class="form-group">
-                            <label class="form-label">Section</label>
+                            <label class="form-label">Section<span class="required-asterisk"> *</span></label>
                             <select class="form-select" id="section" name="section" required>
                                 <option value="">Select Section</option>
                             </select>
                         </div>
                         <div class="form-group">
-                            <label class="form-label">Subject</label>
+                            <label class="form-label">Subject<span class="required-asterisk"> *</span></label>
                             <select class="form-select" id="class" name="class" required>
                                 <option value="">Select Subject</option>
                             </select>
                         </div>
                         <div class="form-group">
-                            <label class="form-label">Address</label>
-                            <input type="text" class="form-input" id="address" name="address">
+                            <label class="form-label">Address<span class="required-asterisk"> *</span></label>
+                            <input type="text" class="form-input" id="address" name="address" required>
                         </div>
                         <div class="form-group">
-                            <label class="form-label">Parent/Guardian Name</label>
-                            <input type="text" class="form-input" id="parent-name" name="parent_name">
+                            <label class="form-label">Parent/Guardian Name<span class="required-asterisk"> *</span></label>
+                            <input type="text" class="form-input" id="parent-name" name="parent_name" required>
                         </div>
                         <div class="form-group">
-                            <label class="form-label">Parent/Guardian Email</label>
+                            <label class="form-label">Parent/Guardian Email (Optional)</label>
                             <input type="email" class="form-input" id="parent-email" name="parent_email">
                         </div>
                         <div class="form-group">
-                            <label class="form-label">Emergency Contact</label>
-                            <input type="text" class="form-input" id="emergency-contact" name="emergency_contact">
+                            <label class="form-label">Emergency Contact<span class="required-asterisk"> *</span></label>
+                            <input type="text" class="form-input" id="emergency-contact" name="emergency_contact" required>
                         </div>
                     </div>
                     <div class="form-actions">
@@ -2338,7 +2344,7 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
         // Auto fill student on LRN change
         function autoFillStudent() {
             const lrn = this.value;
-            if (lrn.length === 12) {
+            if (lrn) {
                 fetch(`?lrn=${lrn}`)
                     .then(res => {
                         if (!res.ok) {
@@ -3485,26 +3491,26 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
                 const middle_name = middleNameInput.value.trim();
                 const last_name = lastNameInput.value.trim();
 
-                if (lrn.length === 12 && first_name && last_name) {
+                if (lrn && first_name && last_name) {
                     fetch('', {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/x-www-form-urlencoded'
-                            },
-                            body: `action=generateQR&lrn=${encodeURIComponent(lrn)}&first_name=${encodeURIComponent(first_name)}&middle_name=${encodeURIComponent(middle_name)}&last_name=${encodeURIComponent(last_name)}`
-                        })
-                        .then(res => res.json())
-                        .then(data => {
-                            if (data.success) {
-                                const filename = data.filename;
-                                qrCodeDiv.innerHTML = `<img src="qrcodes/${filename}" width="100" height="100">`;
-                                qrContainer.style.display = 'block';
-                                qrCodeHidden.value = filename;
-                            } else {
-                                console.error('QR generation failed:', data.message);
-                            }
-                        })
-                        .catch(err => console.error('Error generating QR:', err));
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded'
+                        },
+                        body: `action=generateQR&lrn=${encodeURIComponent(lrn)}&first_name=${encodeURIComponent(first_name)}&middle_name=${encodeURIComponent(middle_name)}&last_name=${encodeURIComponent(last_name)}`
+                    })
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.success) {
+                            const filename = data.filename;
+                            qrCodeDiv.innerHTML = `<img src="qrcodes/${filename}" width="100" height="100">`;
+                            qrContainer.style.display = 'block';
+                            qrCodeHidden.value = filename;
+                        } else {
+                            console.error('QR generation failed:', data.message);
+                        }
+                    })
+                    .catch(err => console.error('Error generating QR:', err));
                 }
             }
 

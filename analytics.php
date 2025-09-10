@@ -446,11 +446,11 @@
             <select class="selector-select" id="grade-level-filter">
                 <option value="">All Grade Levels</option>
             </select>
-            <select class="selector-select" id="subject-filter">
-                <option value="">All Subjects</option>
-            </select>
             <select class="selector-select" id="section-filter">
                 <option value="">All Sections</option>
+            </select>
+            <select class="selector-select" id="subject-filter">
+                <option value="">All Subjects</option>
             </select>
             <select class="selector-select" id="student-filter">
                 <option value="">All Students</option>

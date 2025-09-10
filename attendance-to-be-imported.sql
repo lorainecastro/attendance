@@ -50,7 +50,7 @@ CREATE TABLE classes (
 );
 
 CREATE TABLE students (
-    lrn BIGINT NOT NULL PRIMARY KEY,
+    lrn VARCHAR(255) NOT NULL,
     last_name VARCHAR(50) NOT NULL,
     first_name VARCHAR(50) NOT NULL,
     middle_name VARCHAR(50) NOT NULL,
@@ -67,6 +67,26 @@ CREATE TABLE students (
     date_added DATE
 );
 
+-- -- Step 1: Disable foreign key checks to avoid conflicts
+-- SET FOREIGN_KEY_CHECKS = 0;
+
+-- -- Step 2: Drop the foreign key constraint from class_students
+-- ALTER TABLE class_students DROP FOREIGN KEY class_students_ibfk_2;
+
+-- -- Step 3: Modify the lrn columns in all tables
+-- ALTER TABLE students MODIFY lrn VARCHAR(255) NOT NULL;
+-- ALTER TABLE attendance_tracking MODIFY lrn VARCHAR(255) NOT NULL;
+-- ALTER TABLE class_students MODIFY lrn VARCHAR(255) NOT NULL;
+
+-- -- Step 4: Re-add the foreign key constraint for class_students
+-- ALTER TABLE class_students
+-- ADD CONSTRAINT class_students_ibfk_2
+-- FOREIGN KEY (lrn) REFERENCES students(lrn)
+-- ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- -- Step 5: Re-enable foreign key checks
+-- SET FOREIGN_KEY_CHECKS = 1;
+
 CREATE TABLE schedules (
     schedule_id INT AUTO_INCREMENT PRIMARY KEY,
     class_id INT NOT NULL,
@@ -80,7 +100,7 @@ CREATE TABLE schedules (
 
 CREATE TABLE class_students (
     class_id INT NOT NULL,
-    lrn BIGINT NOT NULL,
+    lrn VARCHAR(255) NOT NULL;
     is_enrolled TINYINT(1) DEFAULT 1,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (class_id, lrn),
@@ -91,7 +111,7 @@ CREATE TABLE class_students (
 CREATE TABLE attendance_tracking (
     attendance_id INT PRIMARY KEY AUTO_INCREMENT,
     class_id INT NOT NULL,
-    lrn BIGINT NOT NULL,
+    lrn VARCHAR(255) NOT NULL,
     attendance_date DATE NOT NULL,
     attendance_status ENUM('Present', 'Absent', 'Late') NULL,
     reason ENUM('Health Issue', 'Household Income', 'Transportation', 'Family Structure', 'No Reason', 'Other') NULL,

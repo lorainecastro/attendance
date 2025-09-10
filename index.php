@@ -9,8 +9,8 @@
     <style>
         :root {
             /* Primary Colors */
-            --primary-blue: #2563eb;
-            --primary-blue-hover: #1d4ed8;
+            --primary-blue: #3b82f6;
+            --primary-blue-hover: #2563eb;
             --primary-blue-light: #dbeafe;
             
             /* Status Colors */

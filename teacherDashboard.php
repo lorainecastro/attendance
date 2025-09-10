@@ -757,8 +757,8 @@ $profileName = htmlspecialchars($currentUser['firstname'] . ' ' . $currentUser['
                 <div class="nav-item">
                     <a href="#" class="nav-link menu-item">
                         <i class="fas fa-user-check nav-icon"></i>
-                        <span class="nav-text">Attendance Tracking</span>
-                        <span class="nav-tooltip">Attendance Tracking</span>
+                        <span class="nav-text">Mark Attendance</span>
+                        <span class="nav-tooltip">Mark Attendance</span>
                     </a>
                 </div>
                 <div class="nav-item">

@@ -38,7 +38,7 @@ function checkSubjectByCode($subject_code)
 function calculateAttendancePercentages($teacher_id) {
     $pdo = getDBConnection();
     try {
-        $twoMonthsAgo = date('Y-m-d', strtotime('-2 months'));
+        $oneMonthAgo = date('Y-m-d', strtotime('-1 months'));
         $stmt = $pdo->prepare("
             SELECT 
                 c.class_id,
@@ -52,7 +52,7 @@ function calculateAttendancePercentages($teacher_id) {
             AND at.attendance_date <= CURDATE()
             GROUP BY c.class_id
         ");
-        $stmt->execute([$teacher_id, $twoMonthsAgo]);
+        $stmt->execute([$teacher_id, $oneMonthAgo]);
         $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
         $attendanceData = [];

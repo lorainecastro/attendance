@@ -1376,7 +1376,7 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
                     attendanceData[today][current_class_id][lrn].notes = '';
                     attendanceData[today][current_class_id][lrn].timeChecked = formatDateTime(new Date());
                     attendanceData[today][current_class_id][lrn].is_qr_scanned = true;
-                    attendanceData[today][current_class_id][lrn].logged_by = source === 'scanner' ? 'Scanner Device' : 'QR';
+                    attendanceData[today][current_class_id][lrn].logged_by = source === 'scanner' ? 'Scanner Device' : 'Device Camera';
                     scannedStudents.add(lrn);
                     showNotification(`Student ${student.name} marked as Present. Email sent to parent.`, 'success');
                     // Submit to database immediately

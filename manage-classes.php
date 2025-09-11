@@ -1732,7 +1732,7 @@ ob_end_flush();
 
         .class-schedule-inputs {
             display: grid;
-            gap: var(--spacing-md);
+            gap: 1.1rem;
             background: var(--white);
             padding: var(--spacing-md);
             border-radius: var(--radius-md);
@@ -2658,6 +2658,10 @@ ob_end_flush();
                         <label class="class-form-label" for="room">Room (Optional)</label>
                         <input type="text" class="class-form-input" id="room" placeholder="e.g., Room 201, Lab 1">
                     </div>
+                    <div class="class-form-group">
+                        <label class="class-form-label" for="lateToAbsent">Number of Late Marks Equal to 1 Absence (Optional)</label>
+                        <input type="number" class="class-form-input" id="lateToAbsent" min="0" placeholder="e.g., 3">
+                    </div>
                 </div>
                 <div class="class-form-column">
                     <div class="class-form-group">
@@ -2708,7 +2712,7 @@ ob_end_flush();
                         </div>
                     </div>
                     <div class="class-form-group">
-                        <label class="class-form-label" for="gracePeriod">Grace Period for Late Arrival (in Minutes)</label>
+                        <label class="class-form-label" for="gracePeriod">Grace Period for Late Arrival – in Minutes (Optional)</label>
                         <input type="number" class="class-form-input" id="gracePeriod" min="0" placeholder="e.g., 15">
                     </div>
                 </div>
@@ -2807,6 +2811,30 @@ ob_end_flush();
             </div>
         </div>
     </div>
+
+    <script>
+        const numberInputs = document.querySelectorAll('#gracePeriod, #lateToAbsent');
+
+        numberInputs.forEach(input => {
+            input.addEventListener('keydown', function (e) {
+            // Allow: backspace, delete, tab, escape, enter, arrows
+            const allowedKeys = [8, 9, 13, 27, 46, 37, 38, 39, 40];
+            const ctrlAllowed = (e.ctrlKey && ['65', '67', '86', '88'].includes(String(e.keyCode)));
+
+            if (allowedKeys.includes(e.keyCode) || ctrlAllowed) return;
+
+            // Block if not a digit or would exceed 2 digits
+            if (!/^\d$/.test(e.key) || this.value.length >= 2) {
+                e.preventDefault();
+            }
+            });
+
+            // Optional: prevent pasting non-numeric or long values
+            input.addEventListener('input', function () {
+            this.value = this.value.replace(/\D/g, '').slice(0, 2); // remove non-digits, limit to 2
+            });
+        });
+    </script>
 
     <script>
         let classes = [];

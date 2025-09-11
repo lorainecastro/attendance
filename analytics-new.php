@@ -644,6 +644,26 @@
         <canvas id="pattern-chart"></canvas>
     </div>
 
+    <!-- Attendance Status Distribution -->
+    <div class="chart-container">
+        <div class="table-header">
+            <div class="table-title">Attendance Status Distribution</div>
+        </div>
+        <canvas id="attendance-status"></canvas>
+    </div>
+
+    <!-- Top Factors Affecting Attendance -->
+    <div class="chart-card">
+        <div class="chart-header">
+            <div class="chart-title">Top Factors Affecting Attendance</div>
+            <div class="chart-filter">
+                <button class="filter-btn active" data-period="absent">Absent</button>
+                <button class="filter-btn" data-period="late">Late</button>
+            </div>
+        </div>
+        <canvas id="factors-chart"></canvas>
+    </div>
+
     <!-- Individual Student Predictions -->
     <div class="prediction-card" id="student-prediction-card" style="display: none;">
         <div class="prediction-header">
@@ -677,6 +697,26 @@
                     <tbody id="student-metrics"></tbody>
                 </table>
             </div>
+        </div>
+    </div>
+
+    <!-- Historical Analysis -->
+    <div class="pattern-table">
+        <div class="table-header">
+            <div class="table-title">Historical Analysis</div>
+        </div>
+        <h3>Student Behavior Patterns</h3>
+        <div class="table-responsive">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Student</th>
+                        <th>Pattern</th>
+                        <th>Frequency</th>
+                    </tr>
+                </thead>
+                <tbody id="behavior-patterns"></tbody>
+            </table>
         </div>
     </div>
 
@@ -717,6 +757,7 @@
                     <tr>
                         <th>Subject/Class</th>
                         <th>Current Rate</th>
+                        <th>Risk Level</th>
                         <th>Trend (30 days)</th>
                         <th>Seasonal Pattern</th>
                         <th>Forecast Confidence</th>
@@ -726,19 +767,6 @@
                 <tbody id="trends-analysis-table"></tbody>
             </table>
         </div>
-    </div>
-
-    <!-- Intervention Effectiveness -->
-    <div class="chart-container">
-        <div class="chart-header">
-            <div class="chart-title">Intervention Impact Analysis</div>
-            <div class="chart-filter">
-                <button class="filter-btn active" data-intervention="reminders">Automated Reminders</button>
-                <button class="filter-btn" data-intervention="parent">Parent Notifications</button>
-                <button class="filter-btn" data-intervention="counseling">Counseling Sessions</button>
-            </div>
-        </div>
-        <canvas id="intervention-chart"></canvas>
     </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
@@ -768,10 +796,25 @@
                         firstName: 'John', 
                         lastName: 'Doe', 
                         email: 'john.doe@email.com', 
-                        attendanceRate: 94.5,
+                        attendanceRate: 92,
                         timeSeriesData: [92, 95, 89, 97, 93, 91, 96, 94, 88, 95, 93, 97, 92, 94],
                         trend: 'stable',
-                        riskLevel: 'low'
+                        riskLevel: 'low',
+                        totalAbsences: 9,
+                        primaryAbsenceReason: 'Health Issue',
+                        chronicAbsenteeism: 5,
+                        attendanceStatus: { present: 20, absent: 6, late: 4 },
+                        behaviorPatterns: [{ pattern: 'Frequent Friday absences', frequency: 2 }],
+                        factors: {
+                            absent: {
+                                labels: ['Health Issue', 'Household Income', 'Transportation', 'Family Structure', 'No Reason'],
+                                values: [28, 20, 15, 12, 10, 8]
+                            },
+                            late: {
+                                labels: ['Health Issue', 'Transportation', 'Family Structure', 'Household Income', 'No Reason'],
+                                values: [25, 20, 15, 10, 8, 5]
+                            }
+                        }
                     },
                     { 
                         id: 2, 
@@ -781,7 +824,22 @@
                         attendanceRate: 76.8,
                         timeSeriesData: [85, 82, 75, 70, 68, 72, 74, 76, 78, 80, 77, 75, 78, 76],
                         trend: 'declining',
-                        riskLevel: 'high'
+                        riskLevel: 'high',
+                        totalAbsences: 15,
+                        primaryAbsenceReason: 'Transportation',
+                        chronicAbsenteeism: 8,
+                        attendanceStatus: { present: 15, absent: 10, late: 5 },
+                        behaviorPatterns: [{ pattern: 'Monday absences', frequency: 3 }],
+                        factors: {
+                            absent: {
+                                labels: ['Health Issue', 'Household Income', 'Transportation', 'Family Structure', 'No Reason', 'Other'],
+                                values: [20, 15, 25, 10, 12, 8]
+                            },
+                            late: {
+                                labels: ['Health Issue', 'Transportation', 'Family Structure', 'Household Income', 'No Reason', 'Other'],
+                                values: [20, 25, 15, 10, 8, 5]
+                            }
+                        }
                     },
                     { 
                         id: 3, 
@@ -791,7 +849,22 @@
                         attendanceRate: 87.2,
                         timeSeriesData: [88, 85, 90, 87, 89, 86, 88, 87, 85, 89, 88, 86, 87, 88],
                         trend: 'stable',
-                        riskLevel: 'medium'
+                        riskLevel: 'medium',
+                        totalAbsences: 12,
+                        primaryAbsenceReason: 'Family Structure',
+                        chronicAbsenteeism: 6,
+                        attendanceStatus: { present: 18, absent: 8, late: 4 },
+                        behaviorPatterns: [{ pattern: 'Midweek absences', frequency: 2 }],
+                        factors: {
+                            absent: {
+                                labels: ['Health Issue', 'Household Income', 'Transportation', 'Family Structure', 'No Reason', 'Other'],
+                                values: [15, 10, 12, 20, 8, 5]
+                            },
+                            late: {
+                                labels: ['Health Issue', 'Transportation', 'Family Structure', 'Household Income', 'No Reason', 'Other'],
+                                values: [15, 10, 20, 8, 5, 3]
+                            }
+                        }
                     }
                 ]
             },
@@ -820,7 +893,22 @@
                         attendanceRate: 91.3,
                         timeSeriesData: [90, 92, 89, 93, 91, 90, 92, 91, 89, 93, 92, 90, 91, 92],
                         trend: 'improving',
-                        riskLevel: 'low'
+                        riskLevel: 'low',
+                        totalAbsences: 8,
+                        primaryAbsenceReason: 'No Reason',
+                        chronicAbsenteeism: 4,
+                        attendanceStatus: { present: 22, absent: 5, late: 3 },
+                        behaviorPatterns: [{ pattern: 'Occasional absences', frequency: 1 }],
+                        factors: {
+                            absent: {
+                                labels: ['Health Issue', 'Household Income', 'Transportation', 'Family Structure', 'No Reason', 'Other'],
+                                values: [10, 8, 5, 5, 15, 3]
+                            },
+                            late: {
+                                labels: ['Health Issue', 'Transportation', 'Family Structure', 'Household Income', 'No Reason', 'Other'],
+                                values: [10, 8, 5, 5, 15, 3]
+                            }
+                        }
                     },
                     { 
                         id: 5, 
@@ -830,7 +918,22 @@
                         attendanceRate: 83.4,
                         timeSeriesData: [85, 84, 82, 85, 83, 84, 82, 83, 85, 82, 84, 83, 85, 84],
                         trend: 'stable',
-                        riskLevel: 'medium'
+                        riskLevel: 'medium',
+                        totalAbsences: 14,
+                        primaryAbsenceReason: 'Household Income',
+                        chronicAbsenteeism: 7,
+                        attendanceStatus: { present: 16, absent: 9, late: 5 },
+                        behaviorPatterns: [{ pattern: 'Thursday absences', frequency: 2 }],
+                        factors: {
+                            absent: {
+                                labels: ['Health Issue', 'Household Income', 'Transportation', 'Family Structure', 'No Reason', 'Other'],
+                                values: [12, 20, 10, 8, 5, 3]
+                            },
+                            late: {
+                                labels: ['Health Issue', 'Transportation', 'Family Structure', 'Household Income', 'No Reason', 'Other'],
+                                values: [10, 15, 8, 12, 5, 3]
+                            }
+                        }
                     }
                 ]
             }
@@ -847,7 +950,6 @@
                 date.setDate(date.getDate() - i);
                 labels.push(date.toISOString().split('T')[0]);
                 
-                // Generate realistic attendance data with patterns
                 const dayOfWeek = date.getDay();
                 const weekendEffect = (dayOfWeek === 0 || dayOfWeek === 6) ? -5 : 0;
                 const mondayEffect = dayOfWeek === 1 ? -3 : 0;
@@ -869,7 +971,6 @@
             const lastValue = historicalData[historicalData.length - 1];
             
             for (let i = 1; i <= periods; i++) {
-                // Simple ARIMA simulation - in real implementation, use proper ARIMA algorithm
                 const trend = (historicalData[historicalData.length - 1] - historicalData[historicalData.length - 7]) / 7;
                 const seasonalEffect = Math.sin(i * Math.PI / 3.5) * 2;
                 const noise = (Math.random() - 0.5) * 1.5;
@@ -895,10 +996,11 @@
         // Chart contexts
         const forecastChartCtx = document.getElementById('forecast-chart').getContext('2d');
         const patternChartCtx = document.getElementById('pattern-chart').getContext('2d');
-        const interventionChartCtx = document.getElementById('intervention-chart').getContext('2d');
+        const attendanceStatusCtx = document.getElementById('attendance-status').getContext('2d');
+        const factorsChartCtx = document.getElementById('factors-chart').getContext('2d');
         
         // Chart instances
-        let forecastChart, patternChart, interventionChart, individualForecastChart;
+        let forecastChart, patternChart, attendanceStatusChart, factorsChart, individualForecastChart;
 
         // Initialize filters
         function initializeFilters() {
@@ -1097,45 +1199,51 @@
                 }
             });
 
-            // Intervention Chart
-            interventionChart = new Chart(interventionChartCtx, {
-                type: 'line',
+            // Attendance Status Chart
+            attendanceStatusChart = new Chart(attendanceStatusCtx, {
+                type: 'pie',
                 data: {
-                    labels: ['Week 1', 'Week 2', 'Week 3', 'Week 4', 'Week 5', 'Week 6'],
-                    datasets: [
-                        {
-                            label: 'Before Intervention',
-                            data: [78, 76, 74, 73, 71, 70],
-                            borderColor: '#ef4444',
-                            backgroundColor: 'rgba(239, 68, 68, 0.1)',
-                            tension: 0.4
-                        },
-                        {
-                            label: 'After Intervention',
-                            data: [null, null, null, 75, 78, 82],
-                            borderColor: '#22c55e',
-                            backgroundColor: 'rgba(34, 197, 94, 0.1)',
-                            tension: 0.4
-                        }
-                    ]
+                    labels: ['Present', 'Absent', 'Late'],
+                    datasets: [{
+                        data: [20, 6, 4],
+                        backgroundColor: ['#22c55e', '#ef4444', '#f59e0b']
+                    }]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
                     plugins: {
-                        legend: {
-                            position: 'top'
-                        }
+                        tooltip: { enabled: true },
+                        legend: { position: 'top' }
+                    }
+                }
+            });
+
+            // Factors Chart
+            factorsChart = new Chart(factorsChartCtx, {
+                type: 'bar',
+                data: {
+                    labels: ['Health Issue', 'Household Income', 'Transportation', 'Family Structure', 'No Reason', 'Other'],
+                    datasets: [{
+                        label: 'Percentage Impact',
+                        data: [28, 20, 15, 12, 10, 8],
+                        backgroundColor: '#3b82f6',
+                        borderColor: '#3b82f6',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: { enabled: true }
                     },
                     scales: {
                         y: {
-                            beginAtZero: false,
-                            min: 65,
-                            max: 85,
-                            title: {
-                                display: true,
-                                text: 'Attendance Rate (%)'
-                            }
+                            beginAtZero: true,
+                            max: 40,
+                            title: { display: true, text: 'Percentage (%)' }
                         }
                     }
                 }
@@ -1182,16 +1290,38 @@
                 const trendIcon = cls.trend === 'improving' ? '↗️' : cls.trend === 'declining' ? '↘️' : '➡️';
                 const strategy = cls.attendancePercentage < 85 ? 'Enhanced engagement activities' : 
                                cls.attendancePercentage < 90 ? 'Monitor and maintain' : 'Continue current approach';
+                const riskLevel = cls.attendancePercentage < 85 ? 'High' : cls.attendancePercentage < 90 ? 'Medium' : 'Low';
                 
                 row.innerHTML = `
                     <td>${cls.subject} (${cls.sectionName})</td>
                     <td>${cls.attendancePercentage}%</td>
+                    <td><span class="risk-${riskLevel.toLowerCase()}">${riskLevel}</span></td>
                     <td>${trendIcon} ${cls.trend}</td>
                     <td>${cls.seasonality.replace('_', ' ')}</td>
                     <td>${cls.forecastConfidence}%</td>
                     <td>${strategy}</td>
                 `;
                 trendsTable.appendChild(row);
+            });
+        }
+
+        // Update behavior patterns table
+        function updateBehaviorPatternsTable() {
+            const behaviorPatterns = document.getElementById('behavior-patterns');
+            behaviorPatterns.innerHTML = '';
+            
+            const allStudents = classes.flatMap(c => c.students);
+            
+            allStudents.forEach(student => {
+                student.behaviorPatterns.forEach(pattern => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${student.firstName} ${student.lastName}</td>
+                        <td>${pattern.pattern}</td>
+                        <td>${pattern.frequency}</td>
+                    `;
+                    behaviorPatterns.appendChild(row);
+                });
             });
         }
 
@@ -1211,7 +1341,7 @@
             
             document.getElementById('student-prediction-card').style.display = 'block';
             
-            const forecast = arimaForecast(student.timeSeriesData, 7);
+            const forecast = arimaForecast(student.timeSeriesData, 30);
             const avgForecast = forecast.reduce((a, b) => a + b, 0) / forecast.length;
             
             // Update student details
@@ -1227,10 +1357,16 @@
                     <strong>Risk Level:</strong> ${student.riskLevel.charAt(0).toUpperCase() + student.riskLevel.slice(1)}
                 </div>
                 <div class="detail-item">
-                    <strong>7-Day Forecast:</strong> ${avgForecast.toFixed(1)}%
+                    <strong>Predicted Next Month:</strong> ${avgForecast.toFixed(1)}%
                 </div>
                 <div class="detail-item">
-                    <strong>Trend:</strong> ${student.trend}
+                    <strong>Total Absences:</strong> ${student.totalAbsences}
+                </div>
+                <div class="detail-item">
+                    <strong>Primary Absence Reason:</strong> ${student.primaryAbsenceReason}
+                </div>
+                <div class="detail-item">
+                    <strong>Chronic Absenteeism:</strong> ${student.chronicAbsenteeism}%
                 </div>
                 <div class="detail-item">
                     <strong>Class:</strong> ${student.subject} (${student.section})
@@ -1251,27 +1387,51 @@
             const metricsTable = document.getElementById('student-metrics');
             metricsTable.innerHTML = `
                 <tr>
-                    <td>Daily Attendance</td>
+                    <td>Attendance Rate</td>
                     <td>${student.attendanceRate}%</td>
                     <td>${avgForecast.toFixed(1)}%</td>
                     <td>${avgForecast < student.attendanceRate ? 'Implement intervention plan' : 'Continue monitoring'}</td>
                 </tr>
                 <tr>
-                    <td>Weekly Pattern</td>
-                    <td>${student.trend}</td>
-                    <td>Stable</td>
-                    <td>Focus on Monday motivation strategies</td>
+                    <td>Total Absences</td>
+                    <td>${student.totalAbsences}</td>
+                    <td>-</td>
+                    <td>${student.totalAbsences > 10 ? 'Contact parents' : 'Review absence patterns'}</td>
                 </tr>
                 <tr>
-                    <td>Risk Score</td>
-                    <td>${student.riskLevel}</td>
-                    <td>${avgForecast < 80 ? 'High' : avgForecast < 90 ? 'Medium' : 'Low'}</td>
-                    <td>${student.riskLevel === 'high' ? 'Schedule parent meeting' : 'Send automated reminders'}</td>
+                    <td>Primary Absence Reason</td>
+                    <td>${student.primaryAbsenceReason}</td>
+                    <td>-</td>
+                    <td>${student.primaryAbsenceReason === 'Health Issue' ? 'Health check-up' : 'Address specific issue'}</td>
+                </tr>
+                <tr>
+                    <td>Chronic Absenteeism</td>
+                    <td>${student.chronicAbsenteeism}%</td>
+                    <td>-</td>
+                    <td>${student.chronicAbsenteeism > 10 ? 'Implement attendance plan' : 'Monitor attendance'}</td>
                 </tr>
             `;
             
             // Create individual forecast chart
             createIndividualForecastChart(student);
+            
+            // Update attendance status chart for selected student
+            if (attendanceStatusChart) {
+                attendanceStatusChart.data.datasets[0].data = [
+                    student.attendanceStatus.present,
+                    student.attendanceStatus.absent,
+                    student.attendanceStatus.late
+                ];
+                attendanceStatusChart.update();
+            }
+            
+            // Update factors chart for selected student
+            if (factorsChart) {
+                const activePeriod = document.querySelector('.filter-btn.active[data-period]')?.dataset.period || 'absent';
+                factorsChart.data.labels = student.factors[activePeriod].labels;
+                factorsChart.data.datasets[0].data = student.factors[activePeriod].values;
+                factorsChart.update();
+            }
         }
         
         function generateRecommendations(student) {
@@ -1370,17 +1530,29 @@
                 showStudentPrediction(e.target.value);
             } else {
                 document.getElementById('student-prediction-card').style.display = 'none';
+                // Reset attendance status chart to default
+                if (attendanceStatusChart) {
+                    attendanceStatusChart.data.datasets[0].data = [20, 6, 4];
+                    attendanceStatusChart.update();
+                }
+                // Reset factors chart to default
+                if (factorsChart) {
+                    factorsChart.data.labels = ['Health Issue', 'Household Income', 'Transportation', 'Family Structure', 'No Reason', 'Other'];
+                    factorsChart.data.datasets[0].data = [28, 20, 15, 12, 10, 8];
+                    factorsChart.update();
+                }
             }
         });
 
         document.getElementById('refresh-data').addEventListener('click', () => {
-            // Simulate new forecast
             forecastChart.destroy();
             patternChart.destroy();
-            interventionChart.destroy();
+            attendanceStatusChart.destroy();
+            factorsChart.destroy();
             initializeCharts();
             updateEarlyWarningTable();
             updateTrendsAnalysisTable();
+            updateBehaviorPatternsTable();
         });
 
         document.getElementById('clear-filters').addEventListener('click', () => {
@@ -1393,6 +1565,16 @@
             endDate.value = '';
             updateStudentFilter();
             document.getElementById('student-prediction-card').style.display = 'none';
+            // Reset charts to default
+            if (attendanceStatusChart) {
+                attendanceStatusChart.data.datasets[0].data = [20, 6, 4];
+                attendanceStatusChart.update();
+            }
+            if (factorsChart) {
+                factorsChart.data.labels = ['Health Issue', 'Household Income', 'Transportation', 'Family Structure', 'No Reason', 'Other'];
+                factorsChart.data.datasets[0].data = [28, 20, 15, 12, 10, 8];
+                factorsChart.update();
+            }
         });
 
         // Chart filter buttons
@@ -1402,8 +1584,17 @@
                 parent.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
                 this.classList.add('active');
                 
-                // Update chart based on filter
-                // Implementation would depend on specific filter type
+                if (this.dataset.period) {
+                    const selectedStudentId = studentFilter.value;
+                    if (selectedStudentId) {
+                        const student = classes.flatMap(c => c.students).find(s => s.id == selectedStudentId);
+                        if (student) {
+                            factorsChart.data.labels = student.factors[this.dataset.period].labels;
+                            factorsChart.data.datasets[0].data = student.factors[this.dataset.period].values;
+                            factorsChart.update();
+                        }
+                    }
+                }
             });
         });
 
@@ -1413,6 +1604,7 @@
             initializeCharts();
             updateEarlyWarningTable();
             updateTrendsAnalysisTable();
+            updateBehaviorPatternsTable();
         });
     </script>
 </body>

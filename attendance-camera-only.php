@@ -42,12 +42,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     continue;
                 }
                 // Update
-                $stmt = $pdo->prepare("UPDATE attendance_tracking SET attendance_status = ?, reason = ?, time_checked = ?, is_qr_scanned = ?, logged_by = ? WHERE class_id = ? AND lrn = ? AND attendance_date = ?");
-                $logged_by = $is_qr_scanned ? ($att['logged_by'] ?? 'Scanner Device') : 'Teacher';
-                $stmt->execute([$status, $reason, $time_checked, $is_qr_scanned, $logged_by, $class_id, $lrn, $date]);
+                $stmt = $pdo->prepare("UPDATE attendance_tracking SET attendance_status = ?, reason = ?, time_checked = ?, is_qr_scanned = ?, logged_by = 'Teacher' WHERE class_id = ? AND lrn = ? AND attendance_date = ?");
+                $stmt->execute([$status, $reason, $time_checked, $is_qr_scanned, $class_id, $lrn, $date]);
             } else if ($status) {
                 // Insert
-                $logged_by = $is_qr_scanned ? ($att['logged_by'] ?? 'Scanner Device') : 'Teacher';
+                $logged_by = $is_qr_scanned ? 'QR' : 'Teacher';
                 $stmt = $pdo->prepare("INSERT INTO attendance_tracking (class_id, lrn, attendance_date, attendance_status, reason, time_checked, is_qr_scanned, logged_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
                 $stmt->execute([$class_id, $lrn, $date, $status, $reason, $time_checked, $is_qr_scanned, $logged_by]);
             }
@@ -357,8 +356,7 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
         }
 
         .selector-input,
-        .selector-select,
-        .qr-device-select {
+        .selector-select {
             padding: var(--spacing-xs) var(--spacing-md);
             border: 1px solid var(--border-color);
             border-radius: var(--radius-sm);
@@ -371,8 +369,7 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
         }
 
         .selector-input:focus,
-        .selector-select:focus,
-        .qr-device-select:focus {
+        .selector-select:focus {
             outline: none;
             border-color: var(--primary-blue);
             background: var(--white);
@@ -684,8 +681,7 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
             }
 
             .selector-input, 
-            .selector-select,
-            .qr-device-select { 
+            .selector-select { 
                 width: 100%; 
                 min-width: auto; 
             }
@@ -826,11 +822,9 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
             <button class="btn btn-primary" onclick="markAllPresent()">
                 <i class="fas fa-check-circle"></i> Mark All Present
             </button>
-            <select class="qr-device-select" id="qr-device-selector" onchange="startQRScanner(this.value)">
-                <option value="">Select QR Scanner</option>
-                <option value="camera">Device Camera</option>
-                <option value="scanner">Scanner Device</option>
-            </select>
+            <button class="btn btn-primary" onclick="startQRScanner()">
+                <i class="fas fa-qrcode"></i> Scan QR Code
+            </button>
         </div>
         <div class="table-responsive">
             <table id="attendance-table">
@@ -870,8 +864,6 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
         let currentPage = 1;
         const rowsPerPage = 5;
         let isProcessingScan = false; // Debounce flag
-        let scannerInputBuffer = ''; // Buffer for USB scanner input
-        let isScannerActive = false; // Flag to track if scanner is active
 
         function showNotification(message, type) {
             const notification = document.createElement('div');
@@ -1083,7 +1075,7 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
                 const row = document.createElement('tr');
                 row.innerHTML = `
                     <td><input type="checkbox" class="select-student" data-id="${student.lrn}" ${isChecked} ${isQRScanned ? 'disabled' : ''}></td>
-                    <td><img src="Uploads/${student.photo || 'no-icon.png'}" class="student-photo" alt="${student.name}"></td>
+                    <td><img src="uploads/${student.photo || 'no-icon.png'}" class="student-photo" alt="${student.name}"></td>
                     <td>${student.lrn}</td>
                     <td>${student.name}</td>
                     <td>
@@ -1358,100 +1350,86 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
             });
         }
 
-        function processQRScan(qrData, source) {
-            if (!current_class_id || isProcessingScan) return;
-            isProcessingScan = true; // Set debounce flag
-
-            const lrn = qrData.split(',')[0].trim();
-            console.log('QR Data:', qrData); // Debug: Check raw QR code data
-            console.log('Extracted LRN:', lrn); // Debug: Check extracted LRN
-            const student = (students_by_class[current_class_id] || []).find(s => s.lrn.toString() === lrn);
-            console.log('Found Student:', student); // Debug: Check if student is found
-            if (student) {
-                if (scannedStudents.has(lrn) || attendanceData[today][current_class_id][lrn]?.is_qr_scanned) {
-                    showNotification(`Student ${student.name} already scanned today.`, 'error');
-                    setTimeout(() => { isProcessingScan = false; }, 1000); // Reset after 1 second
-                } else {
-                    attendanceData[today][current_class_id][lrn].status = 'Present';
-                    attendanceData[today][current_class_id][lrn].notes = '';
-                    attendanceData[today][current_class_id][lrn].timeChecked = formatDateTime(new Date());
-                    attendanceData[today][current_class_id][lrn].is_qr_scanned = true;
-                    attendanceData[today][current_class_id][lrn].logged_by = source === 'scanner' ? 'Scanner Device' : 'QR';
-                    scannedStudents.add(lrn);
-                    showNotification(`Student ${student.name} marked as Present. Email sent to parent.`, 'success');
-                    // Submit to database immediately
-                    const data = {};
-                    data[lrn] = attendanceData[today][current_class_id][lrn];
-                    fetch('', {
-                        method: 'POST',
-                        headers: {'Content-Type': 'application/json'},
-                        body: JSON.stringify({class_id: current_class_id, date: today, attendance: data})
-                    }).then(res => res.json()).then(result => {
-                        if (!result.success) {
-                            showNotification('Failed to save QR attendance.', 'error');
-                        }
-                        setTimeout(() => { isProcessingScan = false; }, 1000); // Reset after 1 second
-                    }).catch(err => {
-                        showNotification('Error: ' + err.message, 'error');
-                        setTimeout(() => { isProcessingScan = false; }, 1000); // Reset after 1 second
-                    });
-                    renderTable(true);
-                }
-            } else {
-                showNotification('Invalid LRN for this class.', 'error');
-                setTimeout(() => { isProcessingScan = false; }, 1000); // Reset after 1 second
-            }
-        }
-
-        function startQRScanner(deviceType) {
-            if (!current_class_id || !deviceType) return;
+        function startQRScanner() {
+            if (!current_class_id) return;
             const qrScanner = document.getElementById('qr-scanner');
             const video = document.getElementById('qr-video');
             const canvasElement = document.getElementById('qr-canvas');
             const canvas = canvasElement.getContext('2d');
 
+            qrScanner.style.display = 'block';
             scannedStudents.clear();
             isProcessingScan = false; // Reset debounce flag
-            isScannerActive = false;
 
-            if (deviceType === 'camera') {
-                qrScanner.style.display = 'block';
-                navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
-                    .then(stream => {
-                        videoStream = stream;
-                        video.srcObject = stream;
-                        video.play();
-                        requestAnimationFrame(tick);
-                    })
-                    .catch(err => {
-                        showNotification('Error accessing camera: ' + err.message, 'error');
-                        qrScanner.style.display = 'none';
-                        document.getElementById('qr-device-selector').value = '';
+            navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
+                .then(stream => {
+                    videoStream = stream;
+                    video.srcObject = stream;
+                    video.play();
+                    requestAnimationFrame(tick);
+                })
+                .catch(err => {
+                    showNotification('Error accessing camera: ' + err.message, 'error');
+                    qrScanner.style.display = 'none';
+                });
+
+            function tick() {
+                if (video.readyState === video.HAVE_ENOUGH_DATA && !isProcessingScan) {
+                    canvasElement.height = video.videoHeight;
+                    canvasElement.width = video.videoWidth;
+                    canvas.drawImage(video, 0, 0, canvasElement.width, canvasElement.height);
+                    const imageData = canvas.getImageData(0, 0, canvasElement.width, canvasElement.height);
+                    const code = jsQR(imageData.data, imageData.width, imageData.height, {
+                        inversionAttempts: 'dontInvert',
                     });
 
-                function tick() {
-                    if (video.readyState === video.HAVE_ENOUGH_DATA && !isProcessingScan) {
-                        canvasElement.height = video.videoHeight;
-                        canvasElement.width = video.videoWidth;
-                        canvas.drawImage(video, 0, 0, canvasElement.width, canvasElement.height);
-                        const imageData = canvas.getImageData(0, 0, canvasElement.width, canvasElement.height);
-                        const code = jsQR(imageData.data, imageData.width, imageData.height, {
-                            inversionAttempts: 'dontInvert',
-                        });
-
-                        if (code) {
-                            processQRScan(code.data, 'camera');
+                    if (code) {
+                        isProcessingScan = true; // Set debounce flag
+                        // Extract LRN from QR code data
+                        const qrData = code.data;
+                        console.log('QR Data:', qrData); // Debug: Check raw QR code data
+                        const lrn = qrData.split(',')[0].trim();
+                        console.log('Extracted LRN:', lrn); // Debug: Check extracted LRN
+                        const student = (students_by_class[current_class_id] || []).find(s => s.lrn.toString() === lrn);
+                        console.log('Found Student:', student); // Debug: Check if student is found
+                        if (student) {
+                            if (scannedStudents.has(lrn) || attendanceData[today][current_class_id][lrn]?.is_qr_scanned) {
+                                showNotification(`Student ${student.name} already scanned today.`, 'error');
+                                setTimeout(() => { isProcessingScan = false; }, 1000); // Reset after 1 second
+                            } else {
+                                attendanceData[today][current_class_id][lrn].status = 'Present';
+                                attendanceData[today][current_class_id][lrn].notes = '';
+                                attendanceData[today][current_class_id][lrn].timeChecked = formatDateTime(new Date());
+                                attendanceData[today][current_class_id][lrn].is_qr_scanned = true;
+                                scannedStudents.add(lrn);
+                                showNotification(`Student ${student.name} marked as Present. Email sent to parent.`, 'success');
+                                // Submit to database immediately
+                                const data = {};
+                                data[lrn] = attendanceData[today][current_class_id][lrn];
+                                fetch('', {
+                                    method: 'POST',
+                                    headers: {'Content-Type': 'application/json'},
+                                    body: JSON.stringify({class_id: current_class_id, date: today, attendance: data})
+                                }).then(res => res.json()).then(result => {
+                                    if (!result.success) {
+                                        showNotification('Failed to save QR attendance.', 'error');
+                                    }
+                                    setTimeout(() => { isProcessingScan = false; }, 1000); // Reset after 1 second
+                                }).catch(err => {
+                                    showNotification('Error: ' + err.message, 'error');
+                                    setTimeout(() => { isProcessingScan = false; }, 1000); // Reset after 1 second
+                                });
+                                renderTable(true);
+                            }
+                        } else {
+                            showNotification('Invalid LRN for this class.', 'error');
+                            setTimeout(() => { isProcessingScan = false; }, 1000); // Reset after 1 second
                         }
                     }
-                    if (qrScanner.style.display !== 'none') {
-                        requestAnimationFrame(tick);
-                    }
                 }
-            } else if (deviceType === 'scanner') {
-                isScannerActive = true;
-                qrScanner.style.display = 'none'; // Hide video feed for scanner
-                showNotification('Scanner device active. Scan a QR code.', 'success');
-                // The scanner input is handled by the keydown event listener below
+                if (qrScanner.style.display !== 'none') {
+                    requestAnimationFrame(tick);
+                }
             }
         }
         
@@ -1461,10 +1439,7 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
                 videoStream = null;
             }
             document.getElementById('qr-scanner').style.display = 'none';
-            document.getElementById('qr-device-selector').value = '';
-            isScannerActive = false;
             isProcessingScan = false; // Reset debounce flag
-            scannerInputBuffer = ''; // Clear scanner input buffer
         }
 
         function clearFilters() {
@@ -1475,31 +1450,8 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
             document.getElementById('select-all').indeterminate = false;
             populateGradeLevels();
             today = '<?php echo date('Y-m-d'); ?>';
-            stopQRScanner(); // Stop any active scanner
             renderTable();
         }
-
-        // Handle USB scanner input (simulating keyboard input)
-        document.addEventListener('keydown', (event) => {
-            if (!isScannerActive) return;
-
-            // Prevent default behavior for input fields to avoid interference
-            if (event.target.tagName === 'INPUT' || event.target.tagName === 'SELECT') {
-                event.preventDefault();
-                return;
-            }
-
-            // Accumulate key presses in buffer
-            if (event.key === 'Enter') {
-                if (scannerInputBuffer) {
-                    processQRScan(scannerInputBuffer, 'scanner');
-                    scannerInputBuffer = ''; // Clear buffer after processing
-                }
-            } else {
-                // Add character to buffer (assuming scanner sends QR code data as text)
-                scannerInputBuffer += event.key;
-            }
-        });
 
         const tableBody = document.querySelector('#attendance-table tbody');
         const dateSelector = document.getElementById('date-selector');
@@ -1516,7 +1468,6 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
             selectedStudents.clear();
             selectAllCheckbox.checked = false;
             selectAllCheckbox.indeterminate = false;
-            stopQRScanner(); // Stop scanner when changing filters
             renderTable();
         });
 
@@ -1527,7 +1478,6 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
             selectedStudents.clear();
             selectAllCheckbox.checked = false;
             selectAllCheckbox.indeterminate = false;
-            stopQRScanner(); // Stop scanner when changing filters
             renderTable();
         });
 
@@ -1535,7 +1485,6 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
             selectedStudents.clear();
             selectAllCheckbox.checked = false;
             selectAllCheckbox.indeterminate = false;
-            stopQRScanner(); // Stop scanner when changing filters
             renderTable();
         });
 
@@ -1554,7 +1503,6 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
             selectedStudents.clear();
             selectAllCheckbox.checked = false;
             selectAllCheckbox.indeterminate = false;
-            stopQRScanner(); // Stop scanner when changing date
             renderTable();
         });
 

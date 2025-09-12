@@ -201,7 +201,7 @@ function addClass($classData, $scheduleData, $class_id = null)
         }
 
         if ($class_id) {
-            // Update existing class (remove grace_period_minutes)
+            // Update existing class
             $stmt = $pdo->prepare("
                 UPDATE classes 
                 SET section_name = ?, subject_id = ?, grade_level = ?, room = ?
@@ -220,7 +220,7 @@ function addClass($classData, $scheduleData, $class_id = null)
             $stmt = $pdo->prepare("DELETE FROM schedules WHERE class_id = ?");
             $stmt->execute([$class_id]);
         } else {
-            // Insert new class (remove grace_period_minutes)
+            // Insert new class
             $stmt = $pdo->prepare("
                 INSERT INTO classes (section_name, subject_id, teacher_id, grade_level, room)
                 VALUES (?, ?, ?, ?, ?)
@@ -235,19 +235,20 @@ function addClass($classData, $scheduleData, $class_id = null)
             $class_id = $pdo->lastInsertId();
         }
 
-        // Insert new schedules with grace_period_minutes
+        // Insert new schedules with grace_period_minutes and late_to_absent
         foreach ($scheduleData as $day => $times) {
             if (!empty($times['start']) && !empty($times['end'])) {
                 $stmt = $pdo->prepare("
-                    INSERT INTO schedules (class_id, day, start_time, end_time, grace_period_minutes)
-                    VALUES (?, ?, ?, ?, ?)
+                    INSERT INTO schedules (class_id, day, start_time, end_time, grace_period_minutes, late_to_absent)
+                    VALUES (?, ?, ?, ?, ?, ?)
                 ");
                 $stmt->execute([
                     $class_id,
                     $day,
                     $times['start'],
                     $times['end'],
-                    $classData['gracePeriod'] ?? 0
+                    $classData['gracePeriod'] ?? 0,
+                    $classData['lateToAbsent'] ?? 0
                 ]);
             }
         }
@@ -260,6 +261,7 @@ function addClass($classData, $scheduleData, $class_id = null)
         return ['success' => false, 'error' => 'Failed to ' . ($class_id ? 'update' : 'add') . ' class: ' . $e->getMessage()];
     }
 }
+
 // Function to delete a class
 function deleteClass($class_id)
 {
@@ -294,7 +296,7 @@ function fetchClassesForTeacher()
 {
     $pdo = getDBConnection();
     try {
-        // Fetch class details with grace_period_minutes from schedules
+        // Fetch class details with grace_period_minutes and late_to_absent from schedules
         $stmt = $pdo->prepare("
             SELECT 
                 c.class_id, 
@@ -304,7 +306,8 @@ function fetchClassesForTeacher()
                 COALESCE(s.subject_code, '') as subject_code, 
                 COALESCE(s.subject_name, '') as subject_name,
                 (SELECT COUNT(*) FROM class_students cs WHERE cs.class_id = c.class_id AND cs.is_enrolled = 1) as student_count,
-                MAX(sc.grace_period_minutes) as grace_period_minutes
+                MAX(sc.grace_period_minutes) as grace_period_minutes,
+                MAX(sc.late_to_absent) as late_to_absent
             FROM classes c
             LEFT JOIN subjects s ON c.subject_id = s.subject_id
             LEFT JOIN schedules sc ON c.class_id = sc.class_id
@@ -325,7 +328,7 @@ function fetchClassesForTeacher()
 
         foreach ($classes as &$class) {
             $stmt = $pdo->prepare("
-                SELECT day, start_time, end_time, grace_period_minutes
+                SELECT day, start_time, end_time, grace_period_minutes, late_to_absent
                 FROM schedules
                 WHERE class_id = ?
             ");
@@ -338,7 +341,8 @@ function fetchClassesForTeacher()
                     $class['schedule'][$schedule['day']] = [
                         'start' => $schedule['start_time'],
                         'end' => $schedule['end_time'],
-                        'grace_period' => $schedule['grace_period_minutes']
+                        'grace_period' => $schedule['grace_period_minutes'],
+                        'late_to_absent' => $schedule['late_to_absent']
                     ];
                 }
             }
@@ -527,7 +531,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             'subject' => $_POST['subject'] ?? '',
             'gradeLevel' => $_POST['gradeLevel'] ?? '',
             'room' => $_POST['room'] ?? '',
-            'gracePeriod' => $_POST['gracePeriod'] ?? 0
+            'gracePeriod' => $_POST['gracePeriod'] ?? 0,
+            'lateToAbsent' => $_POST['lateToAbsent'] ?? 0
         ];
 
         $scheduleData = json_decode($_POST['schedule'] ?? '{}', true);
@@ -2817,26 +2822,24 @@ ob_end_flush();
 
         numberInputs.forEach(input => {
             input.addEventListener('keydown', function (e) {
-            // Allow: backspace, delete, tab, escape, enter, arrows
-            const allowedKeys = [8, 9, 13, 27, 46, 37, 38, 39, 40];
-            const ctrlAllowed = (e.ctrlKey && ['65', '67', '86', '88'].includes(String(e.keyCode)));
+                // Allow: backspace, delete, tab, escape, enter, arrows
+                const allowedKeys = [8, 9, 13, 27, 46, 37, 38, 39, 40];
+                const ctrlAllowed = (e.ctrlKey && ['65', '67', '86', '88'].includes(String(e.keyCode)));
 
-            if (allowedKeys.includes(e.keyCode) || ctrlAllowed) return;
+                if (allowedKeys.includes(e.keyCode) || ctrlAllowed) return;
 
-            // Block if not a digit or would exceed 2 digits
-            if (!/^\d$/.test(e.key) || this.value.length >= 2) {
-                e.preventDefault();
-            }
+                // Block if not a digit or would exceed 2 digits
+                if (!/^\d$/.test(e.key) || this.value.length >= 2) {
+                    e.preventDefault();
+                }
             });
 
             // Optional: prevent pasting non-numeric or long values
             input.addEventListener('input', function () {
-            this.value = this.value.replace(/\D/g, '').slice(0, 2); // remove non-digits, limit to 2
+                this.value = this.value.replace(/\D/g, '').slice(0, 2); // remove non-digits, limit to 2
             });
         });
-    </script>
 
-    <script>
         let classes = [];
         let overallAverageAttendance = 0;
         let currentView = 'grid';
@@ -2999,6 +3002,7 @@ ob_end_flush();
                 const attendancePercentage = parseFloat(classItem.calculated_attendance_percentage) || 0;
                 const studentCount = parseInt(classItem.student_count) || 0;
                 const gracePeriod = parseInt(classItem.grace_period_minutes) || 0;
+                const lateToAbsent = parseInt(classItem.late_to_absent) || 0;
 
                 const card = document.createElement('div');
                 card.className = 'class-card';
@@ -3013,6 +3017,7 @@ ob_end_flush();
                         <p><i class="fas fa-users"></i> ${studentCount} students</p>
                         <p><i class="fas fa-percentage"></i> ${attendancePercentage.toFixed(1)}% attendance</p>
                         <p><i class="fas fa-clock"></i> Grace Period: ${gracePeriod} minutes</p>
+                        <p><i class="fas fa-exclamation-triangle"></i> Late to Absent: ${lateToAbsent} marks</p>
                     </div>
                     <div class="class-schedule">
                         <h5>Schedule:</h5>
@@ -3183,13 +3188,16 @@ ob_end_flush();
             const subjectInput = document.getElementById('subject');
             const classCodeInput = document.getElementById('classCode');
             const gracePeriodInput = document.getElementById('gracePeriod');
+            const lateToAbsentInput = document.getElementById('lateToAbsent');
 
             if (modalTitle) modalTitle.textContent = 'Add New Class';
             if (classForm) classForm.reset();
             if (subjectInput) subjectInput.value = '';
             if (classCodeInput) classCodeInput.value = '';
             if (gracePeriodInput) gracePeriodInput.value = '';
+            if (lateToAbsentInput) lateToAbsentInput.value = '';
             clearScheduleInputs();
+            toggleSubjectFields();
             if (classModal) classModal.classList.add('show');
         }
 
@@ -3213,7 +3221,8 @@ ob_end_flush();
                 subject: classItem.subject_name || '',
                 gradeLevel: classItem.grade_level,
                 room: classItem.room || '',
-                gracePeriod: classItem.grace_period_minutes || ''
+                gracePeriod: classItem.grace_period_minutes || '',
+                lateToAbsent: classItem.late_to_absent || ''
             };
 
             Object.entries(fields).forEach(([id, value]) => {
@@ -3252,6 +3261,7 @@ ob_end_flush();
             const attendancePercentage = parseFloat(classItem.calculated_attendance_percentage) || 0;
             const studentCount = parseInt(classItem.student_count) || 0;
             const gracePeriod = parseInt(classItem.grace_period_minutes) || 0;
+            const lateToAbsent = parseInt(classItem.late_to_absent) || 0;
 
             const content = document.getElementById('viewContent');
             if (content) {
@@ -3279,6 +3289,9 @@ ob_end_flush();
                             </div>
                             <div class="detail-row">
                                 <strong>Grace Period:</strong> ${gracePeriod} minutes
+                            </div>
+                            <div class="detail-row">
+                                <strong>Late to Absent:</strong> ${lateToAbsent} marks
                             </div>
                         </div>
                         <div class="col-span-2">
@@ -3348,6 +3361,7 @@ ob_end_flush();
                 gradeLevel: document.getElementById('gradeLevel')?.value || '',
                 room: document.getElementById('room')?.value || '',
                 gracePeriod: document.getElementById('gracePeriod')?.value || '0',
+                lateToAbsent: document.getElementById('lateToAbsent')?.value || '0',
                 classId: editingClassId || ''
             };
 
@@ -3401,12 +3415,9 @@ ob_end_flush();
             const endInput = document.getElementById(day + 'End');
 
             if (startInput && endInput) {
-                if (event.target.checked) {
-                    startInput.disabled = false;
-                    endInput.disabled = false;
-                } else {
-                    startInput.disabled = true;
-                    endInput.disabled = true;
+                startInput.disabled = !event.target.checked;
+                endInput.disabled = !event.target.checked;
+                if (!event.target.checked) {
                     startInput.value = '';
                     endInput.value = '';
                 }

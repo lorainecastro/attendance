@@ -1362,11 +1362,25 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
             if (!current_class_id || isProcessingScan) return;
             isProcessingScan = true; // Set debounce flag
 
-            const lrn = qrData.split(',')[0].trim();
-            console.log('QR Data:', qrData); // Debug: Check raw QR code data
+            // Debug: Log the raw QR code data
+            console.log('Raw QR Data:', qrData);
+
+            // Extract LRN using regex (assuming LRN is a number)
+            const lrnMatch = qrData.match(/^(\d+),/);
+            const lrn = lrnMatch ? lrnMatch[1].trim() : qrData.trim(); // Fallback to full data if no comma
+
             console.log('Extracted LRN:', lrn); // Debug: Check extracted LRN
+
+            // Validate LRN (e.g., ensure it's numeric and has expected length)
+            if (!/^\d+$/.test(lrn)) {
+                showNotification('Invalid LRN format.', 'error');
+                setTimeout(() => { isProcessingScan = false; }, 1000); // Reset after 1 second
+                return;
+            }
+
             const student = (students_by_class[current_class_id] || []).find(s => s.lrn.toString() === lrn);
             console.log('Found Student:', student); // Debug: Check if student is found
+
             if (student) {
                 if (scannedStudents.has(lrn) || attendanceData[today][current_class_id][lrn]?.is_qr_scanned) {
                     showNotification(`Student ${student.name} already scanned today.`, 'error');
@@ -1379,6 +1393,7 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
                     attendanceData[today][current_class_id][lrn].logged_by = source === 'scanner' ? 'Scanner Device' : 'Device Camera';
                     scannedStudents.add(lrn);
                     showNotification(`Student ${student.name} marked as Present. Email sent to parent.`, 'success');
+
                     // Submit to database immediately
                     const data = {};
                     data[lrn] = attendanceData[today][current_class_id][lrn];
@@ -1489,13 +1504,16 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
                 return;
             }
 
-            // Accumulate key presses in buffer
+            // Handle scanner input
             if (event.key === 'Enter') {
                 if (scannerInputBuffer) {
-                    processQRScan(scannerInputBuffer, 'scanner');
+                    // Clean the buffer (remove extra spaces, newlines, etc.)
+                    const cleanedBuffer = scannerInputBuffer.trim();
+                    console.log('Scanner Buffer:', cleanedBuffer); // Debug: Log buffer
+                    processQRScan(cleanedBuffer, 'scanner');
                     scannerInputBuffer = ''; // Clear buffer after processing
                 }
-            } else {
+            } else if (event.key.length === 1) { // Only accumulate printable characters
                 // Add character to buffer (assuming scanner sends QR code data as text)
                 scannerInputBuffer += event.key;
             }

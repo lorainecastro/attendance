@@ -2666,16 +2666,35 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
                 return;
             }
 
+            // Extract unique LRNs from selected students (remove duplicates)
             const selectedLRNs = Array.from(allSelectedStudents).map(key => String(key.split('-')[0]));
+            const uniqueLRNs = [...new Set(selectedLRNs)]; // Remove duplicate LRNs
+            
             console.log('selectedLRNs:', selectedLRNs);
-            const studentsToPrint = students.filter(s => selectedLRNs.includes(String(s.lrn))).map(student => {
-                const qrFile = student.qr_code || `${student.lrn}.png`;
-                return {
-                    lrn: student.lrn,
-                    qr_code: qrFile
-                };
+            console.log('uniqueLRNs:', uniqueLRNs);
+            
+            // Get unique students by LRN (take the first occurrence of each LRN)
+            const uniqueStudents = [];
+            const processedLRNs = new Set();
+            
+            students.forEach(student => {
+                const lrnStr = String(student.lrn);
+                if (uniqueLRNs.includes(lrnStr) && !processedLRNs.has(lrnStr)) {
+                    processedLRNs.add(lrnStr);
+                    const qrFile = student.qr_code || `${student.lrn}.png`;
+                    uniqueStudents.push({
+                        lrn: student.lrn,
+                        qr_code: qrFile
+                    });
+                }
             });
-            console.log('studentsToPrint:', studentsToPrint);
+            
+            console.log('uniqueStudents:', uniqueStudents);
+
+            if (uniqueStudents.length === 0) {
+                alert('No valid students found for QR printing.');
+                return;
+            }
 
             const printBtn = document.getElementById('bulkPrintQRBtn');
             const originalText = printBtn.innerHTML;
@@ -2687,7 +2706,7 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
                     headers: {
                         'Content-Type': 'application/x-www-form-urlencoded'
                     },
-                    body: `action=bulkPrintQR&students=${encodeURIComponent(JSON.stringify(studentsToPrint))}`
+                    body: `action=bulkPrintQR&students=${encodeURIComponent(JSON.stringify(uniqueStudents))}`
                 })
                 .then(res => {
                     if (!res.ok) {

@@ -14,6 +14,17 @@ if (!$user) {
 
 $pdo = getDBConnection();
 
+// Fetch the earliest attendance date for the teacher
+$stmt = $pdo->prepare("
+    SELECT MIN(attendance_date) AS earliest_date 
+    FROM attendance_tracking a 
+    JOIN classes c ON a.class_id = c.class_id 
+    WHERE c.teacher_id = ?
+");
+$stmt->execute([$user['teacher_id']]);
+$earliest_date_result = $stmt->fetch(PDO::FETCH_ASSOC);
+$earliest_date = $earliest_date_result['earliest_date'] ?? date('Y-m-d');
+
 // Fetch classes for the teacher
 $stmt = $pdo->prepare("
     SELECT c.class_id, c.section_name, s.subject_name, c.grade_level 
@@ -620,6 +631,7 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
         const classes = <?php echo json_encode($classes_fetch); ?>;
         const students_by_class = <?php echo json_encode($students_by_class); ?>;
         const attendanceData = <?php echo json_encode($attendance_arr); ?> || {};
+        const earliestDate = '<?php echo $earliest_date; ?>';
         let today = document.getElementById('date-selector').value;
         let current_class_id = null;
         let currentPage = 1;
@@ -722,47 +734,80 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
             }).sort((a, b) => a.name.localeCompare(b.name));
         }
 
-        // Calculate the attendance rate for a student in a specific class over the past calendar month
         function calcAttendanceRate(class_id, lrn) {
+            // Initialize counters: total days with teacher-marked attendance and present/late days
             let total = 0;
             let pl = 0;
 
             // Define the date range: from 1 calendar month ago to the selected date (inclusive)
-            const endDate = new Date(`${today}T00:00:00`);
-            const startDate = new Date(endDate);
-            startDate.setMonth(startDate.getMonth() - 1);
+            const endDate = new Date(`${today}T00:00:00`); // Selected date in local time at midnight
+            const startDate = new Date(endDate);           // Copy of end date
+            startDate.setMonth(startDate.getMonth() - 1);  // Subtract 1 calendar month
+            startDate.setDate(startDate.getDate() + 1);    // Adjust to include the day after one month ago
 
-            const startStr = startDate.toISOString().split('T')[0];
-            const endStr = today;
+            // Use the earliest date from the system
+            const earliestSystemDate = new Date('<?php echo $earliest_date; ?>');
+            const effectiveStartDate = startDate > earliestSystemDate ? startDate : earliestSystemDate;
+
+            const startStr = effectiveStartDate.toISOString().split('T')[0]; // Format: YYYY-MM-DD
+            const endStr = today; // Use provided 'today' string
 
             // Iterate through all dates in attendanceData
             for (const date in attendanceData) {
+                // Filter dates within the range (inclusive)
                 if (date >= startStr && date <= endStr) {
                     const classData = attendanceData[date]?.[class_id];
-                    if (!classData || Object.keys(classData).length === 0) continue;
+                    if (!classData || Object.keys(classData).length === 0) continue; // Skip if no data
 
-                    // Check if there's at least one marked status on this day
-                    let hasMarkedDay = false;
+                    // Check if there's at least one teacher-marked status on this day
+                    let hasTeacherMarkedDay = false;
                     for (const studentLrn in classData) {
                         const dayData = classData[studentLrn];
                         if (dayData && dayData.status && dayData.status !== '') {
-                            hasMarkedDay = true;
+                            hasTeacherMarkedDay = true;
                             break;
                         }
                     }
-                    if (!hasMarkedDay) continue;
+                    if (!hasTeacherMarkedDay) continue; // Skip unmarked days
 
                     // Check this specific student's record
                     const studentDayData = classData[lrn];
                     if (studentDayData && studentDayData.status && studentDayData.status !== '') {
-                        total++;
+                        total++; // Count this teacher-marked day with a valid student status
                         if (studentDayData.status === 'Present' || studentDayData.status === 'Late') {
-                            pl++;
+                            pl++; // Count if Present or Late
                         }
                     }
                 }
             }
 
+            // Debug Logs — helpful for testing
+            console.log(`For ${today} (LRN: ${lrn}): Range ${startStr} to ${endStr}`);
+            console.log(`Total marked days: ${total}, Present/Late: ${pl}`);
+
+            // Optional: list marked dates and student status
+            const markedDates = [];
+            for (const date in attendanceData) {
+                if (date >= startStr && date <= endStr) {
+                    const classData = attendanceData[date]?.[class_id];
+                    if (classData && Object.keys(classData).length > 0) {
+                        let hasTeacherMarked = false;
+                        for (const sLrn in classData) {
+                            if (classData[sLrn]?.status && classData[sLrn].status !== '') {
+                                hasTeacherMarked = true;
+                                break;
+                            }
+                        }
+                        if (hasTeacherMarked) {
+                            const studentStatus = classData[lrn]?.status || 'NO_STATUS';
+                            markedDates.push(`${date}: ${studentStatus}`);
+                        }
+                    }
+                }
+            }
+            console.log('Marked dates in range:', markedDates);
+
+            // Calculate and return the percentage (Present or Late days / Total days) with two decimal places
             return total > 0 ? (pl / total * 100).toFixed(2) + '%' : '0.00%';
         }
 

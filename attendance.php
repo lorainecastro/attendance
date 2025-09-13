@@ -1451,7 +1451,7 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
                 
                 let statusIndicator = '';
                 if (isQRScanned && att.status === 'Late') {
-                    statusIndicator = '<span class="status-indicator qr-locked">QR Late</span>';
+                    statusIndicator = '<span class="status-indicator qr-locked">QR</span>';
                 }
                 
                 const row = document.createElement('tr');

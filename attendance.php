@@ -116,6 +116,31 @@ foreach ($classes_fetch as $class) {
     $students_by_class[$class_id] = $stmt->fetchAll(PDO::FETCH_ASSOC);
 }
 
+// Fetch attendance rates for past 1 month
+$stmt = $pdo->prepare("
+    SELECT a.class_id, a.lrn, COUNT(*) as total_days,
+    SUM(CASE WHEN a.attendance_status IN ('Present', 'Late') THEN 1 ELSE 0 END) as present_late
+    FROM attendance_tracking a
+    JOIN classes c ON a.class_id = c.class_id
+    WHERE c.teacher_id = ?
+    AND a.attendance_date >= DATE_SUB(CURDATE(), INTERVAL 1 MONTH)
+    AND a.attendance_date <= CURDATE()
+    GROUP BY a.class_id, a.lrn
+");
+$stmt->execute([$user['teacher_id']]);
+$attendance_rates = [];
+while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+    $class_id = $row['class_id'];
+    $lrn = $row['lrn'];
+    if (!isset($attendance_rates[$class_id])) {
+        $attendance_rates[$class_id] = [];
+    }
+    $total = $row['total_days'];
+    $pl = $row['present_late'];
+    $rate = $total > 0 ? round(($pl / $total) * 100) : 0;
+    $attendance_rates[$class_id][$lrn] = $rate . '%';
+}
+
 // Fetch existing attendance
 $attendance_arr = [];
 $stmt = $pdo->prepare("
@@ -854,6 +879,7 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
         const classes = <?php echo json_encode($classes_fetch); ?>;
         const students_by_class = <?php echo json_encode($students_by_class); ?>;
         const attendanceData = <?php echo json_encode($attendance_arr); ?> || {};
+        const attendanceRates = <?php echo json_encode($attendance_rates); ?>;
         let today = document.getElementById('date-selector').value;
         let videoStream = null;
         let scannedStudents = new Set();
@@ -1071,6 +1097,7 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
                 const isEditable = !isQRScanned;
                 const statusClass = att.status ? att.status.toLowerCase() : 'none';
                 const isChecked = selectedStudents.has(student.lrn.toString()) && isEditable ? 'checked' : '';
+                const rate = attendanceRates[current_class_id]?.[student.lrn] || '0%';
                 const row = document.createElement('tr');
                 row.innerHTML = `
                     <td><input type="checkbox" class="select-student" data-id="${student.lrn}" ${isChecked} ${isQRScanned ? 'disabled' : ''}></td>
@@ -1086,7 +1113,7 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
                         </select>
                     </td>
                     <td>${att.timeChecked || '-'}</td>
-                    <td class="attendance-rate">90%</td>
+                    <td class="attendance-rate">${rate}</td>
                 `;
                 tableBody.appendChild(row);
             });

@@ -1104,7 +1104,7 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
                         
                         if (timeRemaining <= 0) {
                             gracePeriodInfo.classList.add('expired');
-                            graceCountdown.textContent = '(Grace period expired)';
+                            graceCountdown.textContent = '(Grace period Ended)';
                             graceCountdown.className = 'grace-countdown expired';
                             if (gracePeriodInterval) {
                                 clearInterval(gracePeriodInterval);

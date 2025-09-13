@@ -652,18 +652,6 @@
         <canvas id="attendance-status"></canvas>
     </div>
 
-    <!-- Top Factors Affecting Attendance -->
-    <div class="chart-card">
-        <div class="chart-header">
-            <div class="chart-title">Top Factors Affecting Attendance</div>
-            <div class="chart-filter">
-                <button class="filter-btn active" data-period="absent">Absent</button>
-                <button class="filter-btn" data-period="late">Late</button>
-            </div>
-        </div>
-        <canvas id="factors-chart"></canvas>
-    </div>
-
     <!-- Individual Student Predictions -->
     <div class="prediction-card" id="student-prediction-card" style="display: none;">
         <div class="prediction-header">
@@ -804,17 +792,7 @@
                         primaryAbsenceReason: 'Health Issue',
                         chronicAbsenteeism: 5,
                         attendanceStatus: { present: 20, absent: 6, late: 4 },
-                        behaviorPatterns: [{ pattern: 'Frequent Friday absences', frequency: 2 }],
-                        factors: {
-                            absent: {
-                                labels: ['Health Issue', 'Household Income', 'Transportation', 'Family Structure', 'No Reason'],
-                                values: [28, 20, 15, 12, 10, 8]
-                            },
-                            late: {
-                                labels: ['Health Issue', 'Transportation', 'Family Structure', 'Household Income', 'No Reason'],
-                                values: [25, 20, 15, 10, 8, 5]
-                            }
-                        }
+                        behaviorPatterns: [{ pattern: 'Frequent Friday absences', frequency: 2 }]
                     },
                     { 
                         id: 2, 
@@ -829,17 +807,7 @@
                         primaryAbsenceReason: 'Transportation',
                         chronicAbsenteeism: 8,
                         attendanceStatus: { present: 15, absent: 10, late: 5 },
-                        behaviorPatterns: [{ pattern: 'Monday absences', frequency: 3 }],
-                        factors: {
-                            absent: {
-                                labels: ['Health Issue', 'Household Income', 'Transportation', 'Family Structure', 'No Reason', 'Other'],
-                                values: [20, 15, 25, 10, 12, 8]
-                            },
-                            late: {
-                                labels: ['Health Issue', 'Transportation', 'Family Structure', 'Household Income', 'No Reason', 'Other'],
-                                values: [20, 25, 15, 10, 8, 5]
-                            }
-                        }
+                        behaviorPatterns: [{ pattern: 'Monday absences', frequency: 3 }]
                     },
                     { 
                         id: 3, 
@@ -854,17 +822,7 @@
                         primaryAbsenceReason: 'Family Structure',
                         chronicAbsenteeism: 6,
                         attendanceStatus: { present: 18, absent: 8, late: 4 },
-                        behaviorPatterns: [{ pattern: 'Midweek absences', frequency: 2 }],
-                        factors: {
-                            absent: {
-                                labels: ['Health Issue', 'Household Income', 'Transportation', 'Family Structure', 'No Reason', 'Other'],
-                                values: [15, 10, 12, 20, 8, 5]
-                            },
-                            late: {
-                                labels: ['Health Issue', 'Transportation', 'Family Structure', 'Household Income', 'No Reason', 'Other'],
-                                values: [15, 10, 20, 8, 5, 3]
-                            }
-                        }
+                        behaviorPatterns: [{ pattern: 'Midweek absences', frequency: 2 }]
                     }
                 ]
             },
@@ -898,17 +856,7 @@
                         primaryAbsenceReason: 'No Reason',
                         chronicAbsenteeism: 4,
                         attendanceStatus: { present: 22, absent: 5, late: 3 },
-                        behaviorPatterns: [{ pattern: 'Occasional absences', frequency: 1 }],
-                        factors: {
-                            absent: {
-                                labels: ['Health Issue', 'Household Income', 'Transportation', 'Family Structure', 'No Reason', 'Other'],
-                                values: [10, 8, 5, 5, 15, 3]
-                            },
-                            late: {
-                                labels: ['Health Issue', 'Transportation', 'Family Structure', 'Household Income', 'No Reason', 'Other'],
-                                values: [10, 8, 5, 5, 15, 3]
-                            }
-                        }
+                        behaviorPatterns: [{ pattern: 'Occasional absences', frequency: 1 }]
                     },
                     { 
                         id: 5, 
@@ -923,17 +871,7 @@
                         primaryAbsenceReason: 'Household Income',
                         chronicAbsenteeism: 7,
                         attendanceStatus: { present: 16, absent: 9, late: 5 },
-                        behaviorPatterns: [{ pattern: 'Thursday absences', frequency: 2 }],
-                        factors: {
-                            absent: {
-                                labels: ['Health Issue', 'Household Income', 'Transportation', 'Family Structure', 'No Reason', 'Other'],
-                                values: [12, 20, 10, 8, 5, 3]
-                            },
-                            late: {
-                                labels: ['Health Issue', 'Transportation', 'Family Structure', 'Household Income', 'No Reason', 'Other'],
-                                values: [10, 15, 8, 12, 5, 3]
-                            }
-                        }
+                        behaviorPatterns: [{ pattern: 'Thursday absences', frequency: 2 }]
                     }
                 ]
             }
@@ -997,10 +935,9 @@
         const forecastChartCtx = document.getElementById('forecast-chart').getContext('2d');
         const patternChartCtx = document.getElementById('pattern-chart').getContext('2d');
         const attendanceStatusCtx = document.getElementById('attendance-status').getContext('2d');
-        const factorsChartCtx = document.getElementById('factors-chart').getContext('2d');
         
         // Chart instances
-        let forecastChart, patternChart, attendanceStatusChart, factorsChart, individualForecastChart;
+        let forecastChart, patternChart, attendanceStatusChart, individualForecastChart;
 
         // Initialize filters
         function initializeFilters() {
@@ -1218,36 +1155,6 @@
                     }
                 }
             });
-
-            // Factors Chart
-            factorsChart = new Chart(factorsChartCtx, {
-                type: 'bar',
-                data: {
-                    labels: ['Health Issue', 'Household Income', 'Transportation', 'Family Structure', 'No Reason', 'Other'],
-                    datasets: [{
-                        label: 'Percentage Impact',
-                        data: [28, 20, 15, 12, 10, 8],
-                        backgroundColor: '#3b82f6',
-                        borderColor: '#3b82f6',
-                        borderWidth: 1
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: { display: false },
-                        tooltip: { enabled: true }
-                    },
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            max: 40,
-                            title: { display: true, text: 'Percentage (%)' }
-                        }
-                    }
-                }
-            });
         }
 
         // Update early warning table
@@ -1424,14 +1331,6 @@
                 ];
                 attendanceStatusChart.update();
             }
-            
-            // Update factors chart for selected student
-            if (factorsChart) {
-                const activePeriod = document.querySelector('.filter-btn.active[data-period]')?.dataset.period || 'absent';
-                factorsChart.data.labels = student.factors[activePeriod].labels;
-                factorsChart.data.datasets[0].data = student.factors[activePeriod].values;
-                factorsChart.update();
-            }
         }
         
         function generateRecommendations(student) {
@@ -1535,12 +1434,6 @@
                     attendanceStatusChart.data.datasets[0].data = [20, 6, 4];
                     attendanceStatusChart.update();
                 }
-                // Reset factors chart to default
-                if (factorsChart) {
-                    factorsChart.data.labels = ['Health Issue', 'Household Income', 'Transportation', 'Family Structure', 'No Reason', 'Other'];
-                    factorsChart.data.datasets[0].data = [28, 20, 15, 12, 10, 8];
-                    factorsChart.update();
-                }
             }
         });
 
@@ -1548,7 +1441,6 @@
             forecastChart.destroy();
             patternChart.destroy();
             attendanceStatusChart.destroy();
-            factorsChart.destroy();
             initializeCharts();
             updateEarlyWarningTable();
             updateTrendsAnalysisTable();
@@ -1570,11 +1462,6 @@
                 attendanceStatusChart.data.datasets[0].data = [20, 6, 4];
                 attendanceStatusChart.update();
             }
-            if (factorsChart) {
-                factorsChart.data.labels = ['Health Issue', 'Household Income', 'Transportation', 'Family Structure', 'No Reason', 'Other'];
-                factorsChart.data.datasets[0].data = [28, 20, 15, 12, 10, 8];
-                factorsChart.update();
-            }
         });
 
         // Chart filter buttons
@@ -1583,18 +1470,6 @@
                 const parent = this.closest('.chart-filter');
                 parent.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
                 this.classList.add('active');
-                
-                if (this.dataset.period) {
-                    const selectedStudentId = studentFilter.value;
-                    if (selectedStudentId) {
-                        const student = classes.flatMap(c => c.students).find(s => s.id == selectedStudentId);
-                        if (student) {
-                            factorsChart.data.labels = student.factors[this.dataset.period].labels;
-                            factorsChart.data.datasets[0].data = student.factors[this.dataset.period].values;
-                            factorsChart.update();
-                        }
-                    }
-                }
             });
         });
 

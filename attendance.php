@@ -28,7 +28,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $pdo = getDBConnection();
         foreach ($attendance as $lrn => $att) {
             $status = $att['status'] ?: null;
-            $reason = $att['notes'] ?: null;
             $is_qr_scanned = isset($att['is_qr_scanned']) ? $att['is_qr_scanned'] : 0;
             // Parse timeChecked in Asia/Manila timezone
             $time_checked = $att['timeChecked'] ? date('Y-m-d H:i:s', strtotime($att['timeChecked'] . ' Asia/Manila')) : null;
@@ -42,14 +41,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     continue;
                 }
                 // Update
-                $stmt = $pdo->prepare("UPDATE attendance_tracking SET attendance_status = ?, reason = ?, time_checked = ?, is_qr_scanned = ?, logged_by = ? WHERE class_id = ? AND lrn = ? AND attendance_date = ?");
+                $stmt = $pdo->prepare("UPDATE attendance_tracking SET attendance_status = ?, time_checked = ?, is_qr_scanned = ?, logged_by = ? WHERE class_id = ? AND lrn = ? AND attendance_date = ?");
                 $logged_by = $is_qr_scanned ? ($att['logged_by'] ?? 'Scanner Device') : 'Teacher';
-                $stmt->execute([$status, $reason, $time_checked, $is_qr_scanned, $logged_by, $class_id, $lrn, $date]);
+                $stmt->execute([$status, $time_checked, $is_qr_scanned, $logged_by, $class_id, $lrn, $date]);
             } else if ($status) {
                 // Insert
                 $logged_by = $is_qr_scanned ? ($att['logged_by'] ?? 'Scanner Device') : 'Teacher';
-                $stmt = $pdo->prepare("INSERT INTO attendance_tracking (class_id, lrn, attendance_date, attendance_status, reason, time_checked, is_qr_scanned, logged_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
-                $stmt->execute([$class_id, $lrn, $date, $status, $reason, $time_checked, $is_qr_scanned, $logged_by]);
+                $stmt = $pdo->prepare("INSERT INTO attendance_tracking (class_id, lrn, attendance_date, attendance_status, time_checked, is_qr_scanned, logged_by) VALUES (?, ?, ?, ?, ?, ?, ?)");
+                $stmt->execute([$class_id, $lrn, $date, $status, $time_checked, $is_qr_scanned, $logged_by]);
             }
             // Send email if QR-scanned
             if ($is_qr_scanned && $status === 'Present') {
@@ -120,7 +119,7 @@ foreach ($classes_fetch as $class) {
 // Fetch existing attendance
 $attendance_arr = [];
 $stmt = $pdo->prepare("
-    SELECT a.class_id, a.attendance_date, a.lrn, a.attendance_status, a.reason, a.time_checked, a.is_qr_scanned 
+    SELECT a.class_id, a.attendance_date, a.lrn, a.attendance_status, a.time_checked, a.is_qr_scanned 
     FROM attendance_tracking a 
     JOIN classes c ON a.class_id = c.class_id 
     WHERE c.teacher_id = ?
@@ -137,7 +136,6 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
         ->format('M d Y h:i:s A') : '';
     $attendance_arr[$date][$class_id][$lrn] = [
         'status' => $row['attendance_status'] ?: '',
-        'notes' => $row['reason'] ?: '',
         'timeChecked' => $time_checked,
         'is_qr_scanned' => $row['is_qr_scanned'] ? true : false
     ];
@@ -485,7 +483,7 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
             object-fit: cover; 
         }
 
-        .status-select, .notes-select { 
+        .status-select { 
             padding: 8px 12px; 
             border: 1px solid var(--border-color); 
             border-radius: 8px; 
@@ -494,7 +492,7 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
             width: 100%; 
         }
 
-        .status-select:focus, .notes-select:focus { 
+        .status-select:focus { 
             outline: none; 
             border-color: var(--primary-blue); 
             background: var(--inputfieldhover-color); 
@@ -532,7 +530,7 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
             background-color: var(--status-none-bg); 
         }
 
-        .status-select:disabled, .notes-select:disabled { 
+        .status-select:disabled { 
             background: var(--light-gray); 
             cursor: not-allowed; 
         }
@@ -841,7 +839,6 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
                         <th>LRN</th>
                         <th>Student Name</th>
                         <th>Status</th>
-                        <th>Reason</th>
                         <th>Time Checked</th>
                         <th>Attendance Rate</th>
                     </tr>
@@ -1036,7 +1033,7 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
             const current_students = students_by_class[current_class_id] || [];
 
             if (current_students.length === 0) {
-                tableBody.innerHTML = '<tr><td colspan="8" class="no-students-message">No students for this class</td></tr>';
+                tableBody.innerHTML = '<tr><td colspan="7" class="no-students-message">No students for this class</td></tr>';
                 updateStats([]);
                 document.getElementById('pagination').innerHTML = '';
                 selectedStudents.clear();
@@ -1051,7 +1048,6 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
                 if (!attendanceData[today][current_class_id][student.lrn]) {
                     attendanceData[today][current_class_id][student.lrn] = {
                         status: '',
-                        notes: '',
                         timeChecked: '',
                         is_qr_scanned: false
                     };
@@ -1061,7 +1057,7 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
             const filteredStudents = getAllFilteredStudents();
 
             if (filteredStudents.length === 0) {
-                tableBody.innerHTML = '<tr><td colspan="8" class="no-students-message">No students match the current filters</td></tr>';
+                tableBody.innerHTML = '<tr><td colspan="7" class="no-students-message">No students match the current filters</td></tr>';
                 updateStats([]);
                 document.getElementById('pagination').innerHTML = '';
                 document.getElementById('select-all').checked = false;
@@ -1077,7 +1073,6 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
                 const att = attendanceData[today][current_class_id][student.lrn];
                 const isQRScanned = att.is_qr_scanned;
                 const isEditable = !isQRScanned;
-                const isNotesDisabled = !isEditable || att.status === 'Present';
                 const statusClass = att.status ? att.status.toLowerCase() : 'none';
                 const isChecked = selectedStudents.has(student.lrn.toString()) && isEditable ? 'checked' : '';
                 const row = document.createElement('tr');
@@ -1092,17 +1087,6 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
                             <option value="Present" ${att.status === 'Present' ? 'selected' : ''}>Present</option>
                             <option value="Absent" ${att.status === 'Absent' ? 'selected' : ''}>Absent</option>
                             <option value="Late" ${att.status === 'Late' ? 'selected' : ''}>Late</option>
-                        </select>
-                    </td>
-                    <td>
-                        <select class="notes-select" data-id="${student.lrn}" ${isNotesDisabled ? 'disabled' : ''}>
-                            <option value="" ${att.notes === '' ? 'selected' : ''}>Select Reason</option>
-                            <option value="Health Issue" ${att.notes === 'Health Issue' ? 'selected' : ''}>Health Issue</option>
-                            <option value="Household Income" ${att.notes === 'Household Income' ? 'selected' : ''}>Household Income</option>
-                            <option value="Transportation" ${att.notes === 'Transportation' ? 'selected' : ''}>Transportation</option>
-                            <option value="Family Structure" ${att.notes === 'Family Structure' ? 'selected' : ''}>Family Structure</option>
-                            <option value="No Reason" ${att.notes === 'No Reason' ? 'selected' : ''}>No Reason</option>
-                            <option value="Other" ${att.notes === 'Other' ? 'selected' : ''}>Other</option>
                         </select>
                     </td>
                     <td>${att.timeChecked || '-'}</td>
@@ -1132,44 +1116,16 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
                     if (select.disabled) return;
                     const studentId = select.dataset.id.toString();
                     const newStatus = select.value;
-                    const notesSelect = tableBody.querySelector(`.notes-select[data-id="${studentId}"]`);
                     attendanceData[today][current_class_id][studentId].status = newStatus;
                     attendanceData[today][current_class_id][studentId].is_qr_scanned = false;
-                    notesSelect.disabled = newStatus === 'Present';
-                    if (newStatus === 'Present') {
-                        attendanceData[today][current_class_id][studentId].notes = '';
+                    if (newStatus) {
                         attendanceData[today][current_class_id][studentId].timeChecked = formatDateTime(new Date());
-                        notesSelect.value = '';
-                    } else if (newStatus === 'Absent' || newStatus === 'Late') {
-                        if (!attendanceData[today][current_class_id][studentId].notes) {
-                            showNotification('Please select a reason for Absent or Late status.', 'error');
-                            attendanceData[today][current_class_id][studentId].timeChecked = '';
-                        } else {
-                            attendanceData[today][current_class_id][studentId].timeChecked = formatDateTime(new Date());
-                        }
                     } else {
-                        attendanceData[today][current_class_id][studentId].notes = '';
                         attendanceData[today][current_class_id][studentId].timeChecked = '';
-                        notesSelect.value = '';
                     }
                     select.classList.remove('present', 'absent', 'late', 'none');
                     select.classList.add(newStatus ? newStatus.toLowerCase() : 'none');
                     updateStats(filteredStudents);
-                    renderTable(true);
-                });
-            });
-
-            document.querySelectorAll('.notes-select').forEach(select => {
-                select.addEventListener('change', () => {
-                    if (select.disabled) return;
-                    const studentId = select.dataset.id.toString();
-                    const newNotes = select.value;
-                    attendanceData[today][current_class_id][studentId].notes = newNotes;
-                    if ((attendanceData[today][current_class_id][studentId].status === 'Absent' || attendanceData[today][current_class_id][studentId].status === 'Late') && newNotes) {
-                        attendanceData[today][current_class_id][studentId].timeChecked = formatDateTime(new Date());
-                    } else {
-                        attendanceData[today][current_class_id][studentId].timeChecked = '';
-                    }
                     renderTable(true);
                 });
             });
@@ -1297,7 +1253,6 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
 
             filteredStudents.forEach(student => {
                 attendanceData[today][current_class_id][student.lrn].status = 'Present';
-                attendanceData[today][current_class_id][student.lrn].notes = '';
                 attendanceData[today][current_class_id][student.lrn].timeChecked = formatDateTime(new Date());
                 attendanceData[today][current_class_id][student.lrn].is_qr_scanned = false;
             });
@@ -1323,26 +1278,15 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
             }
             selected.forEach(studentId => {
                 attendanceData[today][current_class_id][studentId].status = action;
-                attendanceData[today][current_class_id][studentId].notes = (action === 'Present') ? '' : attendanceData[today][current_class_id][studentId].notes;
-                attendanceData[today][current_class_id][studentId].timeChecked = (action === 'Present') ? formatDateTime(new Date()) : '';
+                attendanceData[today][current_class_id][studentId].timeChecked = formatDateTime(new Date());
                 attendanceData[today][current_class_id][studentId].is_qr_scanned = false;
             });
-            if (action === 'Absent' || action === 'Late') {
-                showNotification('Please select a reason for each student marked as Absent or Late.', 'error');
-            }
             renderTable(true);
         }
 
         function submitAttendance() {
             if (!current_class_id) return;
             const data = attendanceData[today][current_class_id];
-            const hasInvalidEntries = Object.values(data).some(att => 
-                (att.status === 'Absent' || att.status === 'Late') && !att.notes
-            );
-            if (hasInvalidEntries) {
-                showNotification('Please provide a reason for all Absent or Late statuses before submitting.', 'error');
-                return;
-            }
             fetch('', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
@@ -1387,7 +1331,6 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
                     setTimeout(() => { isProcessingScan = false; }, 1000); // Reset after 1 second
                 } else {
                     attendanceData[today][current_class_id][lrn].status = 'Present';
-                    attendanceData[today][current_class_id][lrn].notes = '';
                     attendanceData[today][current_class_id][lrn].timeChecked = formatDateTime(new Date());
                     attendanceData[today][current_class_id][lrn].is_qr_scanned = true;
                     attendanceData[today][current_class_id][lrn].logged_by = source === 'scanner' ? 'Scanner Device' : 'Device Camera';

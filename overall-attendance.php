@@ -41,7 +41,7 @@ foreach ($classes_fetch as $class) {
 // Fetch existing attendance
 $attendance_arr = [];
 $stmt = $pdo->prepare("
-    SELECT a.class_id, a.attendance_date, a.lrn, a.attendance_status, a.time_checked 
+    SELECT a.class_id, a.attendance_date, a.lrn, a.attendance_status, a.time_checked, a.is_qr_scanned 
     FROM attendance_tracking a 
     JOIN classes c ON a.class_id = c.class_id 
     WHERE c.teacher_id = ?
@@ -58,7 +58,8 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
         ->format('M d Y h:i:s A') : '';
     $attendance_arr[$date][$class_id][$lrn] = [
         'status' => $row['attendance_status'] ?: '',
-        'timeChecked' => $time_checked
+        'timeChecked' => $time_checked,
+        'is_qr_scanned' => $row['is_qr_scanned'] ? true : false
     ];
 }
 ?>
@@ -627,11 +628,11 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
         function updateStats(filteredStudents) {
             const total = filteredStudents.length;
             const present = filteredStudents.filter(s => 
-                attendanceData[today]?.[current_class_id]?.[s.lrn]?.status === 'Present' || 
-                attendanceData[today]?.[current_class_id]?.[s.lrn]?.status === 'Late'
+                attendanceData[today]?.[s.class_id]?.[s.lrn]?.status === 'Present' || 
+                attendanceData[today]?.[s.class_id]?.[s.lrn]?.status === 'Late'
             ).length;
             const absent = filteredStudents.filter(s => 
-                attendanceData[today]?.[current_class_id]?.[s.lrn]?.status === 'Absent'
+                attendanceData[today]?.[s.class_id]?.[s.lrn]?.status === 'Absent'
             ).length;
             const percentage = total ? ((present / total) * 100).toFixed(1) : 0;
 
@@ -721,6 +722,50 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
             }).sort((a, b) => a.name.localeCompare(b.name));
         }
 
+        // Calculate the attendance rate for a student in a specific class over the past calendar month
+        function calcAttendanceRate(class_id, lrn) {
+            let total = 0;
+            let pl = 0;
+
+            // Define the date range: from 1 calendar month ago to the selected date (inclusive)
+            const endDate = new Date(`${today}T00:00:00`);
+            const startDate = new Date(endDate);
+            startDate.setMonth(startDate.getMonth() - 1);
+
+            const startStr = startDate.toISOString().split('T')[0];
+            const endStr = today;
+
+            // Iterate through all dates in attendanceData
+            for (const date in attendanceData) {
+                if (date >= startStr && date <= endStr) {
+                    const classData = attendanceData[date]?.[class_id];
+                    if (!classData || Object.keys(classData).length === 0) continue;
+
+                    // Check if there's at least one marked status on this day
+                    let hasMarkedDay = false;
+                    for (const studentLrn in classData) {
+                        const dayData = classData[studentLrn];
+                        if (dayData && dayData.status && dayData.status !== '') {
+                            hasMarkedDay = true;
+                            break;
+                        }
+                    }
+                    if (!hasMarkedDay) continue;
+
+                    // Check this specific student's record
+                    const studentDayData = classData[lrn];
+                    if (studentDayData && studentDayData.status && studentDayData.status !== '') {
+                        total++;
+                        if (studentDayData.status === 'Present' || studentDayData.status === 'Late') {
+                            pl++;
+                        }
+                    }
+                }
+            }
+
+            return total > 0 ? (pl / total * 100).toFixed(2) + '%' : '0.00%';
+        }
+
         function renderTable(isPagination = false) {
             if (!isPagination) currentPage = 1;
             const tableBody = document.querySelector('#attendance-table tbody');
@@ -742,6 +787,7 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
             paginatedStudents.forEach(student => {
                 const att = attendanceData[today]?.[student.class_id]?.[student.lrn] || { status: '', timeChecked: '' };
                 const statusClass = att.status ? att.status.toLowerCase() : 'none';
+                const rate = calcAttendanceRate(student.class_id, student.lrn);
                 const row = document.createElement('tr');
                 row.innerHTML = `
                     <td><img src="Uploads/${student.photo || 'no-icon.png'}" class="student-photo" alt="${student.name}"></td>
@@ -749,7 +795,7 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
                     <td>${student.name}</td>
                     <td><span class="status-badge status-${statusClass}">${att.status || 'None'}</span></td>
                     <td>${att.timeChecked || '-'}</td>
-                    <td class="attendance-rate">90%</td>
+                    <td class="attendance-rate">${rate}</td>
                 `;
                 tableBody.appendChild(row);
             });

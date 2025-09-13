@@ -244,52 +244,16 @@
             border: 1px solid var(--border-color);
         }
 
-        .chart-card {
-            background: var(--card-bg);
-            border-radius: var(--radius-lg);
-            padding: var(--spacing-md);
-            box-shadow: var(--shadow-md);
+        .chart-row {
+            display: flex;
+            gap: var(--spacing-lg);
             margin-bottom: var(--spacing-lg);
-            border: 1px solid var(--border-color);
-        }
-
-        .chart-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: var(--spacing-md);
             flex-wrap: wrap;
-            gap: var(--spacing-sm);
         }
 
-        .chart-title {
-            font-size: var(--font-size-lg);
-            font-weight: 600;
-        }
-
-        .chart-filter {
-            display: flex;
-            gap: var(--spacing-sm);
-        }
-
-        .filter-btn {
-            padding: var(--spacing-xs) var(--spacing-md);
-            border: none;
-            border-radius: var(--radius-md);
-            background: var(--inputfield-color);
-            color: var(--grayfont-color);
-            font-size: var(--font-size-sm);
-            cursor: pointer;
-            transition: var(--transition-normal);
-        }
-
-        .filter-btn.active {
-            background: var(--primary-blue);
-            color: var(--whitefont-color);
-        }
-
-        .filter-btn:hover {
-            background: var(--inputfieldhover-color);
+        .chart-column {
+            flex: 1;
+            min-width: 300px;
         }
 
         canvas {
@@ -413,6 +377,9 @@
                 width: 100%;
                 justify-content: center;
             }
+            .chart-row {
+                flex-direction: column;
+            }
         }
 
         @media (max-width: 768px) {
@@ -528,12 +495,24 @@
         </div>
     </div>
 
-    <!-- Attendance Status Distribution -->
-    <div class="chart-container">
-        <div class="table-header">
-            <div class="table-title">Attendance Status Distribution</div>
+    <!-- Charts Row -->
+    <div class="chart-row">
+        <div class="chart-column">
+            <div class="chart-container">
+                <div class="table-header">
+                    <div class="table-title">Attendance Status Distribution</div>
+                </div>
+                <canvas id="attendance-status"></canvas>
+            </div>
         </div>
-        <canvas id="attendance-status"></canvas>
+        <div class="chart-column">
+            <div class="chart-container">
+                <div class="table-header">
+                    <div class="table-title">Risk Analysis</div>
+                </div>
+                <canvas id="risk-analysis-chart"></canvas>
+            </div>
+        </div>
     </div>
 
     <!-- Historical Analysis -->
@@ -578,14 +557,6 @@
                 </table>
             </div>
         </div>
-    </div>
-
-    <!-- Risk Analysis -->
-    <div class="chart-container">
-        <div class="table-header">
-            <div class="table-title">Risk Analysis</div>
-        </div>
-        <canvas id="risk-analysis-chart"></canvas>
     </div>
 
     <!-- Predictive Analytics Dashboard -->

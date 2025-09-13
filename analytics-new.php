@@ -764,9 +764,9 @@
             {
                 id: 1,
                 code: 'MATH-101-A',
-                sectionName: 'Diamond Section',
+                sectionName: 'Bonifacio',
                 subject: 'Mathematics',
-                gradeLevel: 'Grade 7',
+                gradeLevel: 'Grade 11',
                 room: 'Room 201',
                 attendancePercentage: 92.3,
                 schedule: {
@@ -775,7 +775,7 @@
                     friday: { start: '08:00', end: '09:30' }
                 },
                 status: 'active',
-                trend: 'improving',
+                trend: 'stable',
                 seasonality: 'weekday_pattern',
                 forecastConfidence: 89.2,
                 students: [
@@ -799,6 +799,7 @@
                         firstName: 'Jane', 
                         lastName: 'Smith', 
                         email: 'jane.smith@email.com', 
+                        lrn: '304958671230',
                         attendanceRate: 76.8,
                         timeSeriesData: [85, 82, 75, 70, 68, 72, 74, 76, 78, 80, 77, 75, 78, 76],
                         trend: 'declining',
@@ -814,6 +815,7 @@
                         firstName: 'Mike', 
                         lastName: 'Johnson', 
                         email: 'mike.johnson@email.com', 
+                        lrn: '641902738459',
                         attendanceRate: 87.2,
                         timeSeriesData: [88, 85, 90, 87, 89, 86, 88, 87, 85, 89, 88, 86, 87, 88],
                         trend: 'stable',
@@ -829,9 +831,9 @@
             {
                 id: 2,
                 code: 'SCI-201-B',
-                sectionName: 'Einstein Section',
+                sectionName: 'Lennox',
                 subject: 'Science',
-                gradeLevel: 'Grade 10',
+                gradeLevel: 'Grade 11',
                 room: 'Lab 1',
                 attendancePercentage: 89.7,
                 schedule: {
@@ -874,6 +876,25 @@
                         behaviorPatterns: [{ pattern: 'Thursday absences', frequency: 2 }]
                     }
                 ]
+            },
+            {
+                id: 3,
+                code: 'MATH-101-B',
+                sectionName: 'Galileo',
+                subject: 'Mathematics',
+                gradeLevel: 'Grade 7',
+                room: 'Room 202',
+                attendancePercentage: 90.1,
+                schedule: {
+                    monday: { start: '09:00', end: '10:30' },
+                    wednesday: { start: '09:00', end: '10:30' },
+                    friday: { start: '09:00', end: '10:30' }
+                },
+                status: 'active',
+                trend: 'improving',
+                seasonality: 'no_significant_pattern',
+                forecastConfidence: 90.0,
+                students: []
             }
         ];
 
@@ -1179,7 +1200,7 @@
                     <td>${student.firstName} ${student.lastName}</td>
                     <td><span class="risk-${student.riskLevel}">${student.riskLevel.charAt(0).toUpperCase() + student.riskLevel.slice(1)}</span></td>
                     <td>${avgForecast.toFixed(1)}%</td>
-                    <td>${student.trend === 'declining' ? 'Decreasing trend detected' : 'Monday absences pattern'}</td>
+                    <td>${student.behaviorPatterns[0]?.pattern || 'No pattern detected'}</td>
                     <td>${student.riskLevel === 'high' ? 'Immediate parent conference' : 'Monitor closely + automated reminders'}</td>
                     <td>${student.riskLevel === 'high' ? 'High' : 'Medium'}</td>
                 `;
@@ -1258,6 +1279,9 @@
                     <strong>Student:</strong> ${student.firstName} ${student.lastName}
                 </div>
                 <div class="detail-item">
+                    <strong>LRN:</strong> ${student.lrn || 'N/A'}
+                </div>
+                <div class="detail-item">
                     <strong>Current Attendance:</strong> ${student.attendanceRate}%
                 </div>
                 <div class="detail-item risk-${student.riskLevel}">
@@ -1268,9 +1292,6 @@
                 </div>
                 <div class="detail-item">
                     <strong>Total Absences:</strong> ${student.totalAbsences}
-                </div>
-                <div class="detail-item">
-                    <strong>Primary Absence Reason:</strong> ${student.primaryAbsenceReason}
                 </div>
                 <div class="detail-item">
                     <strong>Chronic Absenteeism:</strong> ${student.chronicAbsenteeism}%
@@ -1306,12 +1327,6 @@
                     <td>${student.totalAbsences > 10 ? 'Contact parents' : 'Review absence patterns'}</td>
                 </tr>
                 <tr>
-                    <td>Primary Absence Reason</td>
-                    <td>${student.primaryAbsenceReason}</td>
-                    <td>-</td>
-                    <td>${student.primaryAbsenceReason === 'Health Issue' ? 'Health check-up' : 'Address specific issue'}</td>
-                </tr>
-                <tr>
                     <td>Chronic Absenteeism</td>
                     <td>${student.chronicAbsenteeism}%</td>
                     <td>-</td>
@@ -1340,18 +1355,30 @@
                 recommendations.push({
                     type: 'danger',
                     icon: 'exclamation-triangle',
-                    message: 'Critical: Schedule immediate intervention meeting with parents and counselor'
+                    message: `Critical: Schedule immediate parent conference to address ${student.primaryAbsenceReason.toLowerCase()} issues`
                 });
                 recommendations.push({
                     type: 'warning',
                     icon: 'phone',
                     message: 'Enable daily automated SMS reminders and check-ins'
                 });
+                if (student.primaryAbsenceReason === 'Transportation') {
+                    recommendations.push({
+                        type: 'info',
+                        icon: 'bus',
+                        message: 'Provide bus pass subsidies if available'
+                    });
+                }
             } else if (student.riskLevel === 'medium') {
                 recommendations.push({
                     type: 'warning',
                     icon: 'bell',
                     message: 'Moderate risk: Implement peer support system and weekly progress reviews'
+                });
+                recommendations.push({
+                    type: 'info',
+                    icon: 'users',
+                    message: 'Provide resources for family engagement workshops'
                 });
             } else {
                 recommendations.push({
@@ -1464,12 +1491,54 @@
             }
         });
 
+        document.getElementById('export-chart').addEventListener('click', () => {
+            const charts = [forecastChart, patternChart, attendanceStatusChart];
+            charts.forEach((chart, index) => {
+                if (chart) {
+                    const link = document.createElement('a');
+                    link.href = chart.toBase64Image();
+                    link.download = `chart-${index + 1}.png`;
+                    link.click();
+                }
+            });
+        });
+
         // Chart filter buttons
         document.querySelectorAll('.filter-btn').forEach(btn => {
             btn.addEventListener('click', function() {
                 const parent = this.closest('.chart-filter');
                 parent.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
                 this.classList.add('active');
+                
+                const period = this.dataset.period;
+                const pattern = this.dataset.pattern;
+                
+                if (period) {
+                    const periods = { 'daily': 7, 'weekly': 14, 'monthly': 30 };
+                    const forecastData = arimaForecast(generateTimeSeriesData(30).data, periods[period]);
+                    forecastChart.data.datasets[1].data = [...Array(30).fill(null), ...forecastData];
+                    forecastChart.data.datasets[2].data = [...Array(30).fill(null), ...forecastData.map(v => v + 2.3)];
+                    forecastChart.data.labels = [...generateTimeSeriesData(30).labels, ...Array(periods[period]).fill(0).map((_, i) => {
+                        const date = new Date();
+                        date.setDate(date.getDate() + i + 1);
+                        return date.toISOString().split('T')[0];
+                    })];
+                    forecastChart.update();
+                }
+                
+                if (pattern) {
+                    if (pattern === 'weekday') {
+                        patternChart.data.datasets[0].data = [87.2, 91.5, 93.1, 92.8, 89.4];
+                        patternChart.data.labels = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+                    } else if (pattern === 'monthly') {
+                        patternChart.data.datasets[0].data = [88.5, 90.2, 91.8, 89.7];
+                        patternChart.data.labels = ['Week 1', 'Week 2', 'Week 3', 'Week 4'];
+                    } else if (pattern === 'seasonal') {
+                        patternChart.data.datasets[0].data = [90.5, 89.2, 91.0];
+                        patternChart.data.labels = ['Term 1', 'Term 2', 'Term 3'];
+                    }
+                    patternChart.update();
+                }
             });
         });
 

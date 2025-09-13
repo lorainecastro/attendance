@@ -9,80 +9,68 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
     <style>
         :root {
-            /* Primary Colors */
-            --primary-blue: #2563eb;
-            --primary-blue-hover: #1d4ed8;
+            --primary-blue: #3b82f6;
+            --primary-blue-hover: #2563eb;
             --primary-blue-light: #dbeafe;
-
-            /* Status Colors */
-            --success-green: #16a34a;
-            --warning-yellow: #ca8a04;
-            --danger-red: #dc2626;
-            --info-cyan: #0891b2;
-
-            /* Neutral Colors */
-            --dark-gray: #374151;
+            --success-green: #22c55e;
+            --warning-yellow: #f59e0b;
+            --danger-red: #ef4444;
+            --info-cyan: #06b6d4;
+            --dark-gray: #1f2937;
             --medium-gray: #6b7280;
-            --light-gray: #d1d5db;
+            --light-gray: #e5e7eb;
             --background: #f9fafb;
             --white: #ffffff;
-            --border-color: #e5e7eb;
-
-            /* Additional Colors for Missing Variables */
+            --border-color: #e2e8f0;
             --card-bg: #ffffff;
-            --blackfont-color: #111827;
+            --blackfont-color: #1e293b;
             --whitefont-color: #ffffff;
-            --grayfont-color: #6b7280;
-            --primary-gradient: linear-gradient(135deg, #2563eb, #a855f7);
+            --grayfont-color: #64748b;
+            --primary-gradient: linear-gradient(135deg, #3b82f6, #3b82f6);
             --secondary-gradient: linear-gradient(135deg, #ec4899, #f472b6);
-            --primary-color: #2563eb;
-            --primary-hover: #1d4ed8;
-            --inputfield-color: #f3f4f6;
-            --inputfieldhover-color: #e5e7eb;
-
-            /* Typography */
-            --font-family: 'Inter', sans-serif;
+            --inputfield-color: #f8fafc;
+            --inputfieldhover-color: #f1f5f9;
+            --font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
             --font-size-sm: 0.875rem;
             --font-size-base: 1rem;
             --font-size-lg: 1.125rem;
             --font-size-xl: 1.25rem;
-            --font-size-2xl: 1.5rem;
-
-            /* Spacing */
-            --spacing-xs: 0.25rem;
-            --spacing-sm: 0.5rem;
+            --font-size-2xl: 1.875rem;
+            --spacing-xs: 0.5rem;
+            --spacing-sm: 0.75rem;
             --spacing-md: 1rem;
             --spacing-lg: 1.5rem;
             --spacing-xl: 2rem;
             --spacing-2xl: 3rem;
-
-            /* Layout */
-            --sidebar-width: 280px;
-            --sidebar-collapsed-width: 70px;
-            --header-height: 70px;
-
-            /* Shadows */
-            --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-
-            /* Border Radius */
-            --radius-sm: 0.25rem;
+            --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.05);
+            --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08);
+            --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.1);
+            --radius-sm: 0.375rem;
             --radius-md: 0.5rem;
             --radius-lg: 0.75rem;
             --radius-xl: 1rem;
-
-            /* Transitions */
-            --transition-fast: 0.15s ease-in-out;
+            --transition-fast: 0.2s ease-in-out;
             --transition-normal: 0.3s ease-in-out;
             --transition-slow: 0.5s ease-in-out;
+            --status-present-bg: rgba(16, 185, 129, 0.15);
+            --status-absent-bg: rgba(239, 68, 68, 0.15);
+            --status-late-bg: rgba(245, 158, 11, 0.15);
+            --status-none-bg: #f8fafc;
+            --success-color: #10b981;
+            --warning-color: #f59e0b;
+            --danger-color: #ef4444;
         }
 
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-            font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+            font-family: var(--font-family);
+        }
+
+        html, body {
+            height: 100%;
+            margin: 0;
         }
 
         body {
@@ -104,16 +92,16 @@
             position: absolute;
             left: 0;
             bottom: 0;
-            height: 3px;
-            width: 60px;
+            height: 4px;
+            width: 80px;
             background: var(--primary-gradient);
-            border-radius: 2px;
+            border-radius: var(--radius-sm);
         }
 
         /* Dashboard grid layout */
         .dashboard-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
             gap: 20px;
             margin-bottom: 20px;
         }
@@ -123,7 +111,8 @@
             border-radius: 12px;
             padding: 20px;
             box-shadow: var(--shadow-md);
-            transition: var(--transition);
+            transition: var(--transition-normal);
+            border: 1px solid var(--border-color);
         }
 
         .card:hover {
@@ -149,21 +138,10 @@
             color: var(--whitefont-color);
         }
 
-        .bg-purple {
-            background: var(--primary-gradient);
-        }
-
-        .bg-pink {
-            background: var(--secondary-gradient);
-        }
-
-        .bg-blue {
-            background: linear-gradient(135deg, #3b82f6, #60a5fa);
-        }
-
-        .bg-green {
-            background: linear-gradient(135deg, #10b981, #34d399);
-        }
+        .bg-purple { background: var(--primary-gradient); }
+        .bg-pink { background: var(--secondary-gradient); }
+        .bg-blue { background: linear-gradient(135deg, #3b82f6, #60a5fa); }
+        .bg-green { background: linear-gradient(135deg, #10b981, #34d399); }
 
         .card-title {
             font-size: 14px;
@@ -175,32 +153,6 @@
             font-size: 24px;
             font-weight: 700;
             color: var(--blackfont-color);
-        }
-
-        .card-footer {
-            display: flex;
-            align-items: center;
-            margin-top: 15px;
-            font-size: 14px;
-        }
-
-        .card-trend {
-            display: flex;
-            align-items: center;
-            margin-right: 10px;
-            font-weight: 600;
-        }
-
-        .card-trend.up {
-            color: #10b981;
-        }
-
-        .card-trend.down {
-            color: #ef4444;
-        }
-
-        .card-period {
-            color: var(--grayfont-color);
         }
 
         /* Charts row */
@@ -216,6 +168,7 @@
             border-radius: 12px;
             padding: 20px;
             box-shadow: var(--shadow-md);
+            border: 1px solid var(--border-color);
         }
 
         .chart-header {
@@ -242,11 +195,11 @@
             border-radius: 8px;
             font-size: 14px;
             cursor: pointer;
-            transition: var(--transition);
+            transition: var(--transition-normal);
         }
 
         .filter-btn.active {
-            background: var(--primary-color);
+            background: var(--primary-blue);
             color: var(--whitefont-color);
         }
 
@@ -254,48 +207,16 @@
             background: var(--inputfieldhover-color);
         }
 
-        /* Responsive adjustments */
-        @media (max-width: 1024px) {
-            .charts-row {
-                grid-template-columns: 1fr;
-            }
-        }
-
-        @media (max-width: 768px) {
-            .dashboard-grid {
-                grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            }
-
-            th,
-            td {
-                padding: 10px;
-            }
-
-            .card-value {
-                font-size: 20px;
-            }
-        }
-
-        @media (max-width: 576px) {
-            .table-responsive {
-                overflow-x: auto;
-            }
-
-            .dashboard-grid {
-                grid-template-columns: 1fr;
-            }
-        }
-
         /* Quick Actions */
         .quick-actions {
             display: flex;
-            gap: var(--spacing-md);
-            margin-bottom: var(--spacing-2xl);
+            gap: var(--spacing-sm);
+            margin-bottom: var(--spacing-lg);
             flex-wrap: wrap;
         }
 
         .action-btn {
-            padding: var(--spacing-sm) var(--spacing-lg);
+            padding: var(--spacing-xs) var(--spacing-md);
             border: none;
             border-radius: var(--radius-md);
             font-size: var(--font-size-sm);
@@ -322,6 +243,7 @@
             padding: 20px;
             box-shadow: var(--shadow-md);
             margin-bottom: 20px;
+            border: 1px solid var(--border-color);
         }
 
         .schedule-table {
@@ -331,15 +253,16 @@
 
         .schedule-table th,
         .schedule-table td {
-            padding: 12px;
+            padding: 12px 15px;
             text-align: left;
             border-bottom: 1px solid var(--border-color);
         }
 
         .schedule-table th {
-            font-size: 14px;
+            font-weight: 600;
             color: var(--grayfont-color);
-            text-transform: uppercase;
+            font-size: 14px;
+            background: var(--inputfield-color);
         }
 
         .schedule-table td {
@@ -349,23 +272,23 @@
 
         .status-badge {
             padding: 4px 8px;
-            border-radius: 12px;
-            font-size: 12px;
-            font-weight: 600;
+            border-radius: 4px;
+            font-size: var(--font-size-sm);
+            font-weight: 500;
         }
 
         .status-badge.active {
-            background: var(--success-green);
-            color: var(--whitefont-color);
+            background-color: var(--status-present-bg);
+            color: var(--success-color);
         }
 
         .status-badge.inactive {
-            background: var(--danger-red);
-            color: var(--whitefont-color);
+            background-color: var(--status-absent-bg);
+            color: var(--danger-color);
         }
 
         .btn-info {
-            background: var(--primary-color);
+            background: var(--primary-blue);
             color: var(--whitefont-color);
             padding: 6px 12px;
             border: none;
@@ -376,13 +299,15 @@
         }
 
         .btn-info:hover {
-            background: var(--primary-hover);
+            background: var(--primary-blue-hover);
             transform: translateY(-2px);
         }
 
         .no-schedule {
+            text-align: center;
+            padding: 20px;
             color: var(--grayfont-color);
-            font-style: italic;
+            font-size: var(--font-size-lg);
         }
 
         /* Recent Activity Section */
@@ -392,6 +317,7 @@
             padding: 20px;
             box-shadow: var(--shadow-md);
             margin-bottom: 20px;
+            border: 1px solid var(--border-color);
         }
 
         .activity-list {
@@ -434,6 +360,46 @@
         .activity-time {
             font-size: 12px;
             color: var(--grayfont-color);
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 1024px) {
+            .charts-row {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 768px) {
+            body {
+                padding: var(--spacing-sm);
+            }
+            .dashboard-grid {
+                grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            }
+            .schedule-table th,
+            .schedule-table td {
+                padding: 10px;
+            }
+            .card-value {
+                font-size: 20px;
+            }
+            .table-responsive {
+                overflow-x: auto;
+            }
+        }
+
+        @media (max-width: 576px) {
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+            }
+            .quick-actions {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            .action-btn {
+                width: 100%;
+                justify-content: center;
+            }
         }
     </style>
 </head>
@@ -727,7 +693,7 @@
             {
                 date: '2025-07-18',
                 studentId: 2,
-                status: 'excused'
+                status: 'late'
             },
             {
                 date: '2025-07-18',
@@ -762,12 +728,12 @@
             {
                 date: '2025-07-15',
                 studentId: 9,
-                status: 'excused'
+                status: 'late'
             },
             ...new Array(100).fill().map((_, i) => ({
                 date: `2025-07-${(i % 19) + 1 < 10 ? '0' : ''}${(i % 19) + 1}`,
                 studentId: (i % 9) + 1,
-                status: ['present', 'absent', 'late', 'excused'][Math.floor(Math.random() * 4)]
+                status: ['present', 'absent', 'late'][Math.floor(Math.random() * 4)]
             }))
         ];
 
@@ -849,8 +815,7 @@ Students List: ${classItem.students.map(s => `${s.firstName} ${s.lastName}`).joi
                     values: [
                         attendanceRecords.filter(r => r.date >= '2025-07-15' && r.date <= '2025-07-19' && r.status === 'present').length,
                         attendanceRecords.filter(r => r.date >= '2025-07-15' && r.date <= '2025-07-19' && r.status === 'absent').length,
-                        attendanceRecords.filter(r => r.date >= '2025-07-15' && r.date <= '2025-07-19' && r.status === 'late').length,
-                        attendanceRecords.filter(r => r.date >= '2025-07-15' && r.date <= '2025-07-19' && r.status === 'excused').length
+                        attendanceRecords.filter(r => r.date >= '2025-07-15' && r.date <= '2025-07-19' && r.status === 'late').length
                     ]
                 },
                 month: {
@@ -858,8 +823,7 @@ Students List: ${classItem.students.map(s => `${s.firstName} ${s.lastName}`).joi
                     values: [
                         attendanceRecords.filter(r => r.status === 'present').length,
                         attendanceRecords.filter(r => r.status === 'absent').length,
-                        attendanceRecords.filter(r => r.status === 'late').length,
-                        attendanceRecords.filter(r => r.status === 'excused').length
+                        attendanceRecords.filter(r => r.status === 'late').length
                     ]
                 }
             };
@@ -1004,7 +968,7 @@ Students List: ${classItem.students.map(s => `${s.firstName} ${s.lastName}`).joi
                     <td>${time}</td>
                     <td><span class="status-badge ${classItem.status}">${classItem.status}</span></td>
                     <td>
-                        <button class="btn btn-sm btn-info" onclick="viewClass(${classItem.id})">
+                        <button class="btn-info" onclick="viewClass(${classItem.id})">
                             <i class="fas fa-eye"></i> View
                         </button>
                     </td>
@@ -1039,15 +1003,13 @@ Students List: ${classItem.students.map(s => `${s.firstName} ${s.lastName}`).joi
                 const statusColors = {
                     present: 'bg-green',
                     absent: 'bg-pink',
-                    late: 'bg-warning-yellow',
-                    excused: 'bg-blue'
+                    late: 'bg-blue'
                 };
 
                 const statusIcons = {
                     present: 'fa-check-circle',
                     absent: 'fa-times-circle',
-                    late: 'fa-clock',
-                    excused: 'fa-info-circle'
+                    late: 'fa-clock'
                 };
 
                 const li = document.createElement('li');

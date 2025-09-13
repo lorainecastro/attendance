@@ -528,18 +528,6 @@
         </div>
     </div>
 
-    <!-- Predictive Factors Section -->
-    <div class="chart-card">
-        <div class="chart-header">
-            <div class="chart-title">Top Factors Affecting Attendance</div>
-            <div class="chart-filter">
-                <button class="filter-btn" data-period="late" data-chart="factors">Late</button>
-                <button class="filter-btn active" data-period="absent" data-chart="factors">Absent</button>
-            </div>
-        </div>
-        <canvas id="factors-chart"></canvas>
-    </div>
-
     <!-- Attendance Status Distribution -->
     <div class="chart-container">
         <div class="table-header">
@@ -727,27 +715,7 @@
                 { month: 'Dec', reason: 'Health Issue', count: Math.floor(Math.random() * 5) },
                 { day: ['Monday', 'Friday'][Math.floor(Math.random() * 2)], count: Math.floor(Math.random() * 6) }
             ],
-            consecutiveAbsences: Math.floor(Math.random() * 15),
-            factors: {
-                late: {
-                    labels: ['Health Issue', 'Transportation', 'Family Structure', 'Household Income'],
-                    values: [
-                        Math.floor(Math.random() * 10 + 20), // 20-30%
-                        Math.floor(Math.random() * 10 + 15), // 15-25%
-                        Math.floor(Math.random() * 10 + 10), // 10-20%
-                        Math.floor(Math.random() * 10 + 5)   // 5-15%
-                    ]
-                },
-                absent: {
-                    labels: ['Health Issue', 'Household Income', 'Transportation', 'Family Structure'],
-                    values: [
-                        Math.floor(Math.random() * 10 + 25), // 25-35%
-                        Math.floor(Math.random() * 10 + 20), // 20-30%
-                        Math.floor(Math.random() * 10 + 15), // 15-25%
-                        Math.floor(Math.random() * 10 + 10)  // 10-20%
-                    ]
-                }
-            }
+            consecutiveAbsences: Math.floor(Math.random() * 15)
         })));
 
         // Sample absence data
@@ -762,18 +730,6 @@
             { status: 'Absent', count: 30 },
             { status: 'Late', count: 15 }
         ];
-
-        // Sample factors data (for all students)
-        const factorsData = {
-            late: {
-                labels: ['Health Issue', 'Transportation', 'Family Structure', 'Household Income'],
-                values: [25, 20, 15, 10]
-            },
-            absent: {
-                labels: ['Health Issue', 'Household Income', 'Transportation', 'Family Structure'],
-                values: [28, 26, 20, 16]
-            }
-        };
 
         // DOM Elements
         const gradeLevelFilter = document.getElementById('grade-level-filter');
@@ -796,12 +752,11 @@
         const predictionAccuracy = document.getElementById('prediction-accuracy');
 
         // Chart Contexts
-        const factorsChartCtx = document.getElementById('factors-chart').getContext('2d');
         const attendanceStatusCtx = document.getElementById('attendance-status').getContext('2d');
         const riskAnalysisChartCtx = document.getElementById('risk-analysis-chart').getContext('2d');
 
         // Chart Instances
-        let factorsChart, attendanceStatusChart, riskAnalysis;
+        let attendanceStatusChart, riskAnalysis;
 
         // Initialize Filters
         function initializeFilters() {
@@ -871,38 +826,8 @@
 
         // Initialize Charts
         function initializeCharts() {
-            if (factorsChart) factorsChart.destroy();
             if (attendanceStatusChart) attendanceStatusChart.destroy();
             if (riskAnalysis) riskAnalysis.destroy();
-
-            factorsChart = new Chart(factorsChartCtx, {
-                type: 'bar',
-                data: {
-                    labels: factorsData.absent.labels,
-                    datasets: [{
-                        label: 'Percentage Impact',
-                        data: factorsData.absent.values,
-                        backgroundColor: '#3b82f6',
-                        borderColor: '#3b82f6',
-                        borderWidth: 1
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: { display: false },
-                        tooltip: { enabled: true }
-                    },
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            max: 40,
-                            title: { display: true, text: 'Percentage (%)' }
-                        }
-                    }
-                }
-            });
 
             attendanceStatusChart = new Chart(attendanceStatusCtx, {
                 type: 'pie',
@@ -941,27 +866,6 @@
                     }
                 }
             });
-        }
-
-        // Update Factors Chart
-        function updateFactorsChart(period, selectedStudentId, filteredStudents) {
-            let data;
-            if (selectedStudentId) {
-                const student = students.find(s => s.id == selectedStudentId);
-                data = student ? student.factors[period] : factorsData[period];
-            } else {
-                const avgValues = factorsData[period].labels.map((label, i) => {
-                    const total = filteredStudents.reduce((sum, s) => sum + (s.factors[period].values[i] || 0), 0);
-                    return total / (filteredStudents.length || 1);
-                });
-                data = {
-                    labels: factorsData[period].labels,
-                    values: avgValues
-                };
-            }
-            factorsChart.data.labels = data.labels;
-            factorsChart.data.datasets[0].data = data.values;
-            factorsChart.update();
         }
 
         // Update Attendance Status Chart
@@ -1204,8 +1108,6 @@
                 subjectPatterns.appendChild(row);
             });
 
-            const activePeriod = document.querySelector('.filter-btn.active[data-period]')?.dataset.period || 'absent';
-            updateFactorsChart(activePeriod, selectedStudentId, filteredStudents);
             updateAttendanceStatusChart(selectedTime, startDateValue, endDateValue, selectedStudentId, filteredStudents);
             updateRiskAnalysisChart(selectedStudentId, filteredStudents);
         }
@@ -1247,7 +1149,6 @@
                 <div class="detail-item">
                     <strong>Probability of Being Present Tomorrow:</strong> ${probabilityPresentTomorrow.toFixed(1)}%
                 </div>
-                
             `;
 
             atRiskStatus.innerHTML = riskLevel === 'High' ? `
@@ -1322,25 +1223,12 @@
         endDate.addEventListener('change', updateData);
         document.getElementById('clear-filters').addEventListener('change', clearFilters);
 
-        document.querySelectorAll('.filter-btn[data-chart="factors"]').forEach(btn => {
-            btn.addEventListener('click', function() {
-                document.querySelectorAll('.filter-btn[data-chart="factors"]').forEach(b => b.classList.remove('active'));
-                this.classList.add('active');
-                updateFactorsChart(this.dataset.period, studentFilter.value, students.filter(s => {
-                    const gradeMatch = !gradeLevelFilter.value || s.gradeLevel === gradeLevelFilter.value;
-                    const subjectMatch = !subjectFilter.value || s.class === subjectFilter.value;
-                    const sectionMatch = !sectionFilter.value || s.section === sectionFilter.value;
-                    return gradeMatch && subjectMatch && sectionMatch;
-                }));
-            });
-        });
-
         document.getElementById('refresh-data').addEventListener('click', updateData);
 
         document.getElementById('export-chart').addEventListener('click', () => {
-            const canvas = document.getElementById('factors-chart');
+            const canvas = document.getElementById('attendance-status');
             const link = document.createElement('a');
-            link.download = 'attendance-factors-chart.png';
+            link.download = 'attendance-status-chart.png';
             link.href = canvas.toDataURL();
             link.click();
         });

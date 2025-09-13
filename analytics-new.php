@@ -556,7 +556,7 @@
         <div class="card">
             <div class="card-header">
                 <div>
-                    <div class="card-title">Predicted Next Week</div>
+                    <div class="card-title">Predicted Next Month</div>
                     <div class="card-value" id="predicted-attendance">91.7%</div>
                     <div class="card-trend">
                         <i class="fas fa-crystal-ball"></i>

@@ -355,8 +355,7 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
         }
 
         .selector-input,
-        .selector-select,
-        .qr-device-select {
+        .selector-select {
             padding: var(--spacing-xs) var(--spacing-md);
             border: 1px solid var(--border-color);
             border-radius: var(--radius-sm);
@@ -369,8 +368,7 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
         }
 
         .selector-input:focus,
-        .selector-select:focus,
-        .qr-device-select:focus {
+        .selector-select:focus {
             outline: none;
             border-color: var(--primary-blue);
             background: var(--white);
@@ -682,8 +680,7 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
             }
 
             .selector-input, 
-            .selector-select,
-            .qr-device-select { 
+            .selector-select { 
                 width: 100%; 
                 min-width: auto; 
             }
@@ -824,11 +821,9 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
             <button class="btn btn-primary" onclick="markAllPresent()">
                 <i class="fas fa-check-circle"></i> Mark All Present
             </button>
-            <select class="qr-device-select" id="qr-device-selector" onchange="startQRScanner(this.value)">
-                <option value="">Select QR Scanner</option>
-                <option value="camera">Device Camera</option>
-                <option value="scanner">Scanner Device</option>
-            </select>
+            <button class="btn btn-primary" id="qr-scan-btn" onclick="toggleQRScanner()">
+                <i class="fas fa-qrcode"></i> Scan QR Code
+            </button>
         </div>
         <div class="table-responsive">
             <table id="attendance-table">
@@ -869,6 +864,7 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
         let isProcessingScan = false; // Debounce flag
         let scannerInputBuffer = ''; // Buffer for USB scanner input
         let isScannerActive = false; // Flag to track if scanner is active
+        let isCameraActive = false; // Flag to track if camera is active
 
         function showNotification(message, type) {
             const notification = document.createElement('div');
@@ -1361,34 +1357,55 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
             }
         }
 
-        function startQRScanner(deviceType) {
-            if (!current_class_id || !deviceType) return;
+        function toggleQRScanner() {
             const qrScanner = document.getElementById('qr-scanner');
+            const scanButton = document.getElementById('qr-scan-btn');
             const video = document.getElementById('qr-video');
             const canvasElement = document.getElementById('qr-canvas');
             const canvas = canvasElement.getContext('2d');
 
-            scannedStudents.clear();
-            isProcessingScan = false; // Reset debounce flag
-            isScannerActive = false;
+            if (isCameraActive || isScannerActive) {
+                // Stop both camera and scanner
+                stopQRScanner();
+                scanButton.innerHTML = '<i class="fas fa-qrcode"></i> Scan QR Code';
+            } else {
+                if (!current_class_id) {
+                    showNotification('Please select a class before scanning.', 'error');
+                    return;
+                }
+                // Start both camera and scanner
+                scannedStudents.clear();
+                isProcessingScan = false; // Reset debounce flag
+                scannerInputBuffer = ''; // Clear scanner input buffer
 
-            if (deviceType === 'camera') {
+                // Start camera
                 qrScanner.style.display = 'block';
                 navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
                     .then(stream => {
                         videoStream = stream;
                         video.srcObject = stream;
                         video.play();
+                        isCameraActive = true;
+                        scanButton.innerHTML = '<i class="fas fa-stop"></i> Stop Scanning';
                         requestAnimationFrame(tick);
                     })
                     .catch(err => {
                         showNotification('Error accessing camera: ' + err.message, 'error');
                         qrScanner.style.display = 'none';
-                        document.getElementById('qr-device-selector').value = '';
+                        // Still enable scanner even if camera fails
+                        isScannerActive = true;
+                        scanButton.innerHTML = '<i class="fas fa-stop"></i> Stop Scanning';
+                        showNotification('Scanner device active. Scan a QR code.', 'success');
                     });
 
+                // Start scanner
+                isScannerActive = true;
+                if (!isCameraActive) {
+                    showNotification('Scanner device active. Scan a QR code.', 'success');
+                }
+
                 function tick() {
-                    if (video.readyState === video.HAVE_ENOUGH_DATA && !isProcessingScan) {
+                    if (video.readyState === video.HAVE_ENOUGH_DATA && !isProcessingScan && isCameraActive) {
                         canvasElement.height = video.videoHeight;
                         canvasElement.width = video.videoWidth;
                         canvas.drawImage(video, 0, 0, canvasElement.width, canvasElement.height);
@@ -1401,15 +1418,10 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
                             processQRScan(code.data, 'camera');
                         }
                     }
-                    if (qrScanner.style.display !== 'none') {
+                    if (qrScanner.style.display !== 'none' && isCameraActive) {
                         requestAnimationFrame(tick);
                     }
                 }
-            } else if (deviceType === 'scanner') {
-                isScannerActive = true;
-                qrScanner.style.display = 'none'; // Hide video feed for scanner
-                showNotification('Scanner device active. Scan a QR code.', 'success');
-                // The scanner input is handled by the keydown event listener below
             }
         }
         
@@ -1419,8 +1431,8 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
                 videoStream = null;
             }
             document.getElementById('qr-scanner').style.display = 'none';
-            document.getElementById('qr-device-selector').value = '';
             isScannerActive = false;
+            isCameraActive = false;
             isProcessingScan = false; // Reset debounce flag
             scannerInputBuffer = ''; // Clear scanner input buffer
         }

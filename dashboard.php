@@ -384,13 +384,63 @@
             color: var(--grayfont-color);
             font-style: italic;
         }
+
+        /* Recent Activity Section */
+        .activity-card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: var(--shadow-md);
+            margin-bottom: 20px;
+        }
+
+        .activity-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .activity-item {
+            display: flex;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .activity-item:last-child {
+            border-bottom: none;
+        }
+
+        .activity-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            color: var(--whitefont-color);
+            margin-right: 12px;
+        }
+
+        .activity-details {
+            flex: 1;
+        }
+
+        .activity-description {
+            font-size: 14px;
+            color: var(--blackfont-color);
+        }
+
+        .activity-time {
+            font-size: 12px;
+            color: var(--grayfont-color);
+        }
     </style>
 </head>
 
 <body>
     <h1>Teacher Dashboard</h1>
 
-    <!-- Quick Actions -->
     <!-- Quick Actions -->
     <div class="quick-actions">
         <a href="attendance.php" class="action-btn">
@@ -520,18 +570,13 @@
         </div>
     </div>
 
-    <!-- Predictive Factors Section -->
-    <div class="chart-card">
+    <!-- Recent Activity Section -->
+    <div class="activity-card">
         <div class="chart-header">
-            <div class="chart-title">Top Factors Affecting Attendance</div>
-            <div class="chart-filter">
-                <button class="filter-btn" data-period="week" data-chart="factors">Week</button>
-                <button class="filter-btn active" data-period="month" data-chart="factors">Month</button>
-            </div>
+            <div class="chart-title">Recent Activity</div>
         </div>
-        <div>
-            <canvas id="factors-chart" style="height: 300px; width: 100%;"></canvas>
-        </div>
+        <ul class="activity-list" id="activityList">
+        </ul>
     </div>
 
     <script>
@@ -556,7 +601,7 @@
                     saturday: {
                         start: '09:00',
                         end: '10:30'
-                    } // Added for demo
+                    }
                 },
                 status: 'active',
                 students: [{
@@ -731,6 +776,7 @@
                 updateDashboardStats();
                 initializeCharts();
                 renderTodaySchedule();
+                renderRecentActivity();
 
                 window.markAttendance = function() {
                     alert('Mark Attendance functionality to be implemented');
@@ -815,17 +861,6 @@ Students List: ${classItem.students.map(s => `${s.firstName} ${s.lastName}`).joi
                         attendanceRecords.filter(r => r.status === 'late').length,
                         attendanceRecords.filter(r => r.status === 'excused').length
                     ]
-                }
-            };
-
-            const factorsData = {
-                week: {
-                    labels: ['Health Issue', 'Household Income', 'Transportation', 'Family Structure'],
-                    values: [30, 25, 22, 15]
-                },
-                month: {
-                    labels: ['Health Issue', 'Household Income', 'Transportation', 'Family Structure'],
-                    values: [28, 26, 20, 16]
                 }
             };
 
@@ -919,55 +954,6 @@ Students List: ${classItem.students.map(s => `${s.firstName} ${s.lastName}`).joi
                 }
             });
 
-            const factorsChartCtx = document.getElementById('factors-chart').getContext('2d');
-            const factorsChart = new Chart(factorsChartCtx, {
-                type: 'bar',
-                data: {
-                    labels: factorsData.month.labels,
-                    datasets: [{
-                        label: 'Impact on Absenteeism (%)',
-                        data: factorsData.month.values,
-                        backgroundColor: ['#6366f1', '#f43f5e', '#3b82f6', '#10b981'],
-                        borderWidth: 0
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            max: 50,
-                            grid: {
-                                color: 'rgba(0, 0, 0, 0.05)'
-                            },
-                            ticks: {
-                                callback: function(value) {
-                                    return value + '%';
-                                }
-                            }
-                        },
-                        x: {
-                            grid: {
-                                display: false
-                            }
-                        }
-                    },
-                    plugins: {
-                        legend: {
-                            display: false
-                        },
-                        tooltip: {
-                            callbacks: {
-                                label: function(context) {
-                                    return context.label + ': ' + context.parsed.y + '%';
-                                }
-                            }
-                        }
-                    }
-                }
-            });
-
             document.querySelectorAll('.filter-btn').forEach(button => {
                 button.addEventListener('click', function() {
                     this.parentNode.querySelectorAll('.filter-btn').forEach(btn => {
@@ -986,10 +972,6 @@ Students List: ${classItem.students.map(s => `${s.firstName} ${s.lastName}`).joi
                         statusChart.data.labels = statusData[period].labels;
                         statusChart.data.datasets[0].data = statusData[period].values;
                         statusChart.update();
-                    } else if (chartType === 'factors') {
-                        factorsChart.data.labels = factorsData[period].labels;
-                        factorsChart.data.datasets[0].data = factorsData[period].values;
-                        factorsChart.update();
                     }
                 });
             });
@@ -1031,6 +1013,60 @@ Students List: ${classItem.students.map(s => `${s.firstName} ${s.lastName}`).joi
             });
         }
 
+        function renderRecentActivity() {
+            const activityList = document.getElementById('activityList');
+            const recentRecords = attendanceRecords
+                .slice()
+                .sort((a, b) => new Date(b.date) - new Date(a.date))
+                .slice(0, 5);
+
+            activityList.innerHTML = '';
+
+            if (recentRecords.length === 0) {
+                activityList.innerHTML = '<li class="no-schedule">No recent activity</li>';
+                return;
+            }
+
+            recentRecords.forEach(record => {
+                const student = classes
+                    .flatMap(c => c.students)
+                    .find(s => s.id === record.studentId);
+                if (!student) return;
+
+                const classItem = classes.find(c => c.students.some(s => s.id === record.studentId));
+                if (!classItem) return;
+
+                const statusColors = {
+                    present: 'bg-green',
+                    absent: 'bg-pink',
+                    late: 'bg-warning-yellow',
+                    excused: 'bg-blue'
+                };
+
+                const statusIcons = {
+                    present: 'fa-check-circle',
+                    absent: 'fa-times-circle',
+                    late: 'fa-clock',
+                    excused: 'fa-info-circle'
+                };
+
+                const li = document.createElement('li');
+                li.className = 'activity-item';
+                li.innerHTML = `
+                    <div class="activity-icon ${statusColors[record.status]}">
+                        <i class="fas ${statusIcons[record.status]}"></i>
+                    </div>
+                    <div class="activity-details">
+                        <div class="activity-description">
+                            ${student.firstName} ${student.lastName} marked as ${record.status} in ${classItem.code} (${classItem.subject})
+                        </div>
+                        <div class="activity-time">${formatDate(record.date)}</div>
+                    </div>
+                `;
+                activityList.appendChild(li);
+            });
+        }
+
         function formatSchedule(schedule) {
             if (!schedule || Object.keys(schedule).length === 0) {
                 return '<span class="no-schedule">No schedule set</span>';
@@ -1049,6 +1085,18 @@ Students List: ${classItem.students.map(s => `${s.firstName} ${s.lastName}`).joi
             const period = hourNum >= 12 ? 'PM' : 'AM';
             const displayHour = hourNum % 12 || 12;
             return `${displayHour}:${minutes} ${period}`;
+        }
+
+        function formatDate(dateStr) {
+            const date = new Date(dateStr);
+            return date.toLocaleString('en-US', {
+                month: 'short',
+                day: 'numeric',
+                year: 'numeric',
+                hour: 'numeric',
+                minute: '2-digit',
+                hour12: true
+            });
         }
 
         function capitalizeFirst(str) {

@@ -990,36 +990,50 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
             selectAllCheckbox.indeterminate = someSelected && !allSelected;
         }
 
+        // Calculate the attendance rate for a student in a specific class over the past month
         function calcAttendanceRate(class_id, lrn) {
+            // Initialize counters: total days with attendance records and present/late days
             let total = 0;
             let pl = 0;
-            const now = new Date(currentToday);
-            const start = new Date(now);
-            start.setMonth(start.getMonth() - 1);
-            const startStr = start.toISOString().split('T')[0];
+            
+            // Define the date range: from one month ago to the current server date
+            const now = new Date(currentToday); // Current server date (e.g., "2025-09-13")
+            const start = new Date(now); // Copy of current date
+            start.setMonth(start.getMonth() - 1); // Go back one month
+            const startStr = start.toISOString().split('T')[0]; // Convert to YYYY-MM-DD (e.g., "2025-08-13")
+
+            // Iterate through all dates in attendanceData
             for (const date in attendanceData) {
+                // Filter dates within the last month (inclusive)
                 if (date >= startStr && date <= currentToday) {
+                    // Safely access attendance data for this date, class, and student
                     const dayData = attendanceData[date]?.[class_id]?.[lrn];
-                    if (dayData) {
-                        const status = dayData.status;
-                        const isNew = dayData.isNew === true;
+                    if (dayData) { // Check if attendance record exists
+                        const status = dayData.status; // Get status (Present, Absent, Late, or '')
+                        const isNew = dayData.isNew === true; // Check if this is an unsaved change (current day only)
+                        
+                        // Handle current day's unsaved changes
                         if (date === today && isNew) {
+                            // Only count if a status is set (exclude empty statuses)
                             if (status && status !== '') {
-                                total++;
+                                total++; // Increment total days
                                 if (status === 'Present' || status === 'Late') {
-                                    pl++;
+                                    pl++; // Increment present/late count
                                 }
                             }
                         } else {
-                            total++;
+                            // Handle historical or saved data
+                            total++; // Always count the day (record exists)
                             if (status === 'Present' || status === 'Late') {
-                                pl++;
+                                pl++; // Increment present/late count
                             }
                         }
                     }
                 }
             }
-            return total > 0 ? Math.round((pl / total) * 100) + '%' : '0%';
+            
+            // Calculate and return the percentage (Present or Late days / Total days) with two decimal places
+            return total > 0 ? (pl / total * 100).toFixed(2) + '%' : '0.00%';
         }
 
         function renderTable(isPagination = false) {

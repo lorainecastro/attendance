@@ -41,7 +41,7 @@ foreach ($classes_fetch as $class) {
 // Fetch existing attendance
 $attendance_arr = [];
 $stmt = $pdo->prepare("
-    SELECT a.class_id, a.attendance_date, a.lrn, a.attendance_status, a.reason, a.time_checked 
+    SELECT a.class_id, a.attendance_date, a.lrn, a.attendance_status, a.time_checked 
     FROM attendance_tracking a 
     JOIN classes c ON a.class_id = c.class_id 
     WHERE c.teacher_id = ?
@@ -58,7 +58,6 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
         ->format('M d Y h:i:s A') : '';
     $attendance_arr[$date][$class_id][$lrn] = [
         'status' => $row['attendance_status'] ?: '',
-        'notes' => $row['reason'] ?: '',
         'timeChecked' => $time_checked
     ];
 }
@@ -606,7 +605,6 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
                         <th>LRN</th>
                         <th>Student Name</th>
                         <th>Status</th>
-                        <th>Reason</th>
                         <th>Time Checked</th>
                         <th>Attendance Rate</th>
                     </tr>
@@ -714,7 +712,7 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
             });
 
             return allStudents.filter(s => {
-                const att = attendanceData[today]?.[s.class_id]?.[s.lrn] || { status: '', notes: '' };
+                const att = attendanceData[today]?.[s.class_id]?.[s.lrn] || { status: '' };
                 const matchesStatus = statusFilter ? att.status === statusFilter : true;
                 const matchesSearch = searchQuery ? 
                     s.lrn.toString().includes(searchQuery) || 
@@ -731,7 +729,7 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
             const filteredStudents = getAllFilteredStudents();
 
             if (filteredStudents.length === 0) {
-                tableBody.innerHTML = '<tr><td colspan="7" class="no-students-message">No students match the current filters</td></tr>';
+                tableBody.innerHTML = '<tr><td colspan="6" class="no-students-message">No students match the current filters</td></tr>';
                 updateStats([]);
                 document.getElementById('pagination').innerHTML = '';
                 return;
@@ -742,7 +740,7 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
             const paginatedStudents = filteredStudents.slice(start, end);
 
             paginatedStudents.forEach(student => {
-                const att = attendanceData[today]?.[student.class_id]?.[student.lrn] || { status: '', notes: '', timeChecked: '' };
+                const att = attendanceData[today]?.[student.class_id]?.[student.lrn] || { status: '', timeChecked: '' };
                 const statusClass = att.status ? att.status.toLowerCase() : 'none';
                 const row = document.createElement('tr');
                 row.innerHTML = `
@@ -750,7 +748,6 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
                     <td>${student.lrn}</td>
                     <td>${student.name}</td>
                     <td><span class="status-badge status-${statusClass}">${att.status || 'None'}</span></td>
-                    <td>${att.notes || '-'}</td>
                     <td>${att.timeChecked || '-'}</td>
                     <td class="attendance-rate">90%</td>
                 `;

@@ -26,61 +26,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $date = $input['date']; // YYYY-MM-DD
         $attendance = $input['attendance'];
         $pdo = getDBConnection();
-        
-        // Get schedule for the class to determine grace period
-        $schedule_stmt = $pdo->prepare("
-            SELECT s.day, s.start_time, s.grace_period_minutes, s.end_time 
-            FROM schedules s 
-            JOIN classes c ON s.class_id = c.class_id 
-            WHERE s.class_id = ? AND DATE_FORMAT(?, '%W') = s.day
-        ");
-        $schedule_stmt->execute([$class_id, $date]);
-        $schedule = $schedule_stmt->fetch(PDO::FETCH_ASSOC);
-        
-        $grace_period_end = null;
-        if ($schedule) {
-            $start_time = new DateTime($date . ' ' . $schedule['start_time']);
-            $grace_period_end = clone $start_time;
-            $grace_period_end->add(new DateInterval('PT' . $schedule['grace_period_minutes'] . 'M'));
-        }
-        
         foreach ($attendance as $lrn => $att) {
             $status = $att['status'] ?: null;
             $is_qr_scanned = isset($att['is_qr_scanned']) ? $att['is_qr_scanned'] : 0;
-            $scan_time = $att['timeChecked'] ? new DateTime($att['timeChecked']) : new DateTime();
-            
-            // Apply grace period logic for QR scans only
-            if ($is_qr_scanned && $status === 'Present' && $grace_period_end) {
-                if ($scan_time > $grace_period_end) {
-                    $status = 'Late'; // Mark as Late if scanned after grace period
-                }
-            }
-            
             // Parse timeChecked in Asia/Manila timezone
-            $time_checked = $att['timeChecked'] ? date('Y-m-d H:i:s', strtotime($att['timeChecked'] . ' Asia/Manila')) : date('Y-m-d H:i:s');
-            
+            $time_checked = $att['timeChecked'] ? date('Y-m-d H:i:s', strtotime($att['timeChecked'] . ' Asia/Manila')) : null;
             // Check if exists
             $stmt = $pdo->prepare("SELECT attendance_id, is_qr_scanned FROM attendance_tracking WHERE class_id = ? AND lrn = ? AND attendance_date = ?");
             $stmt->execute([$class_id, $lrn, $date]);
             $existing = $stmt->fetch();
-            
             if ($existing) {
-                // Skip update if record was QR-scanned and status is already set
-                if ($existing['is_qr_scanned'] && $status && $status !== 'Select Status') {
+                // Skip update if record was QR-scanned
+                if ($existing['is_qr_scanned']) {
                     continue;
                 }
                 // Update
                 $stmt = $pdo->prepare("UPDATE attendance_tracking SET attendance_status = ?, time_checked = ?, is_qr_scanned = ?, logged_by = ? WHERE class_id = ? AND lrn = ? AND attendance_date = ?");
                 $logged_by = $is_qr_scanned ? ($att['logged_by'] ?? 'Scanner Device') : 'Teacher';
                 $stmt->execute([$status, $time_checked, $is_qr_scanned, $logged_by, $class_id, $lrn, $date]);
-            } else if ($status && $status !== 'Select Status') {
+            } else if ($status) {
                 // Insert
                 $logged_by = $is_qr_scanned ? ($att['logged_by'] ?? 'Scanner Device') : 'Teacher';
                 $stmt = $pdo->prepare("INSERT INTO attendance_tracking (class_id, lrn, attendance_date, attendance_status, time_checked, is_qr_scanned, logged_by) VALUES (?, ?, ?, ?, ?, ?, ?)");
                 $stmt->execute([$class_id, $lrn, $date, $status, $time_checked, $is_qr_scanned, $logged_by]);
             }
-            
-            // Send email if QR-scanned and Present (only if within grace period)
+            // Send email if QR-scanned
             if ($is_qr_scanned && $status === 'Present') {
                 $stmt = $pdo->prepare("SELECT parent_email, CONCAT(first_name, ' ', last_name) AS name FROM students WHERE lrn = ?");
                 $stmt->execute([$lrn]);
@@ -102,11 +72,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $mail->Body = "
                             <h3>Attendance Notification</h3>
                             <p>Dear Parent/Guardian,</p>
-                            <p>Your child, {$student['name']}, has been marked {$status} for the class on {$date} at {$time_checked}.</p>
+                            <p>Your child, {$student['name']}, has been marked Present for the class on {$date} at {$time_checked}.</p>
                             <p>Thank you,<br>SAMS Team</p>
                         ";
                         $mail->send();
                     } catch (Exception $e) {
+                        // Log error instead of echoing to avoid breaking JSON response
                         error_log("Email error for LRN $lrn: " . $mail->ErrorInfo);
                     }
                 }
@@ -121,15 +92,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 $pdo = getDBConnection();
 
-// Fetch classes for the teacher with schedule information
+// Fetch classes for the teacher
 $stmt = $pdo->prepare("
-    SELECT c.class_id, c.section_name, s.subject_name, c.grade_level,
-           sch.day, sch.start_time, sch.grace_period_minutes, sch.end_time
+    SELECT c.class_id, c.section_name, s.subject_name, c.grade_level 
     FROM classes c 
     JOIN subjects s ON c.subject_id = s.subject_id 
-    LEFT JOIN schedules sch ON c.class_id = sch.class_id
     WHERE c.teacher_id = ?
-    ORDER BY c.grade_level, c.section_name, s.subject_name
 ");
 $stmt->execute([$user['teacher_id']]);
 $classes_fetch = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -148,57 +116,28 @@ foreach ($classes_fetch as $class) {
     $students_by_class[$class_id] = $stmt->fetchAll(PDO::FETCH_ASSOC);
 }
 
-// Fetch the earliest attendance date for the teacher
+// Fetch existing attendance
+$attendance_arr = [];
 $stmt = $pdo->prepare("
-    SELECT MIN(attendance_date) AS earliest_date 
+    SELECT a.class_id, a.attendance_date, a.lrn, a.attendance_status, a.time_checked, a.is_qr_scanned 
     FROM attendance_tracking a 
     JOIN classes c ON a.class_id = c.class_id 
     WHERE c.teacher_id = ?
 ");
 $stmt->execute([$user['teacher_id']]);
-$earliest_date_result = $stmt->fetch(PDO::FETCH_ASSOC);
-$earliest_date = $earliest_date_result['earliest_date'] ?? date('Y-m-d');
-
-// Fetch attendance from the earliest date to today
-$stmt = $pdo->prepare("
-    SELECT a.class_id, a.attendance_date, a.lrn, a.attendance_status, a.time_checked, a.is_qr_scanned,
-           sch.start_time, sch.grace_period_minutes, sch.end_time
-    FROM attendance_tracking a 
-    JOIN classes c ON a.class_id = c.class_id 
-    LEFT JOIN schedules sch ON c.class_id = sch.class_id AND DATE_FORMAT(a.attendance_date, '%W') = sch.day
-    WHERE c.teacher_id = ? AND a.attendance_date >= ?
-    ORDER BY a.attendance_date DESC
-");
-$stmt->execute([$user['teacher_id'], $earliest_date]);
-$attendance_arr = [];
 while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
     $date = $row['attendance_date']; // YYYY-MM-DD
     $class_id = $row['class_id'];
     $lrn = $row['lrn'];
-    
     if (!isset($attendance_arr[$date])) $attendance_arr[$date] = [];
     if (!isset($attendance_arr[$date][$class_id])) $attendance_arr[$date][$class_id] = [];
-    
-    // Calculate grace period end time for display
-    $grace_period_end = null;
-    if ($row['start_time'] && $row['grace_period_minutes']) {
-        $start_time = new DateTime($date . ' ' . $row['start_time']);
-        $grace_period_end = clone $start_time;
-        $grace_period_end->add(new DateInterval('PT' . $row['grace_period_minutes'] . 'M'));
-    }
-    
     // Format time_checked in en-US with Asia/Manila timezone
     $time_checked = $row['time_checked'] ? (new DateTime($row['time_checked'], new DateTimeZone('Asia/Manila')))
         ->format('M d Y h:i:s A') : '';
-    
     $attendance_arr[$date][$class_id][$lrn] = [
         'status' => $row['attendance_status'] ?: '',
         'timeChecked' => $time_checked,
-        'is_qr_scanned' => $row['is_qr_scanned'] ? true : false,
-        'grace_period_end' => $grace_period_end ? $grace_period_end->format('h:i:s A') : null,
-        'start_time' => $row['start_time'],
-        'end_time' => $row['end_time'],
-        'grace_period_minutes' => $row['grace_period_minutes']
+        'is_qr_scanned' => $row['is_qr_scanned'] ? true : false
     ];
 }
 ?>
@@ -773,97 +712,6 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
                 padding: 10px; 
             }
         }
-
-        .grace-period-info {
-            background: linear-gradient(135deg, #fef3c7, #fde68a);
-            border: 1px solid #f59e0b;
-            border-radius: var(--radius-md);
-            padding: 12px;
-            margin-bottom: 15px;
-            font-size: 0.875rem;
-            color: #92400e;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-        
-        .grace-period-info .icon {
-            color: #f59e0b;
-            font-size: 1rem;
-        }
-        
-        .grace-period-info.expired {
-            background: linear-gradient(135deg, #fee2e2, #fecaca);
-            border-color: #ef4444;
-            color: #dc2626;
-        }
-        
-        .grace-period-info.expired .icon {
-            color: #ef4444;
-        }
-        
-        .grace-time {
-            font-weight: 600;
-            color: #92400e;
-        }
-        
-        .grace-time.expired {
-            color: #dc2626;
-        }
-        
-        .grace-countdown {
-            font-weight: 600;
-            margin-left: 4px;
-        }
-        
-        .grace-countdown.active {
-            color: #059669;
-        }
-        
-        .grace-countdown.expired {
-            color: #dc2626;
-        }
-        
-        .status-select.late:disabled {
-            background-color: var(--status-late-bg) !important;
-            color: #92400e;
-            font-weight: 600;
-        }
-        
-        .schedule-info {
-            background: var(--inputfield-color);
-            border: 1px solid var(--border-color);
-            border-radius: var(--radius-sm);
-            padding: 8px 12px;
-            font-size: 0.75rem;
-            color: var(--grayfont-color);
-            margin-bottom: 10px;
-        }
-        
-        .status-indicator {
-            display: inline-block;
-            padding: 4px 8px;
-            border-radius: 4px;
-            font-size: 0.75rem;
-            font-weight: 600;
-            margin-left: 5px;
-        }
-        
-        .status-indicator.present {
-            background: var(--status-present-bg);
-            color: #166534;
-        }
-        
-        .status-indicator.late {
-            background: var(--status-late-bg);
-            color: #92400e;
-        }
-        
-        .status-indicator.qr-locked {
-            background: #fee2e2;
-            color: #dc2626;
-            font-size: 0.7rem;
-        }
     </style>
 </head>
 <body>
@@ -907,7 +755,7 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
                 </div>
                 <div class="card-icon bg-pink">
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 16 16">
-                        <path d="M2 0a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2H2zm0 1h12a1 1 0 1 1 1 1v12a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1z"/>
+                        <path d="M2 0a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2H2zm0 1h12a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1z"/>
                         <path d="M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708z"/>
                     </svg>
                 </div>
@@ -955,23 +803,11 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
     </div>
 
     <div class="attendance-grid">
-        <div id="schedule-info" class="schedule-info" style="display: none;">
-            <i class="fas fa-clock"></i> Class schedule: <span id="schedule-details"></span>
-        </div>
-        
-        <div id="grace-period-info" class="grace-period-info" style="display: none;">
-            <i class="fas fa-info-circle icon"></i>
-            <span id="grace-period-text">Grace period ends at </span>
-            <span id="grace-period-time" class="grace-time"></span>
-            <span id="grace-countdown" class="grace-countdown"></span>
-        </div>
-
         <div class="qr-scanner-container" id="qr-scanner" style="display: none;">
             <video id="qr-video"></video>
             <canvas id="qr-canvas"></canvas>
             <button class="btn btn-secondary" onclick="stopQRScanner()">Stop Scanner</button>
         </div>
-        
         <div class="action-buttons-container">
             <div class="bulk-actions">
                 <select class="bulk-action-btn" id="bulk-action-select">
@@ -989,7 +825,6 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
                 <i class="fas fa-qrcode"></i> Scan QR Code
             </button>
         </div>
-        
         <div class="table-responsive">
             <table id="attendance-table">
                 <thead>
@@ -1000,7 +835,7 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
                         <th>Student Name</th>
                         <th>Status</th>
                         <th>Time Checked</th>
-                        <th>Current Attendance Rate</th>
+                        <th>Attendance Rate</th>
                     </tr>
                 </thead>
                 <tbody></tbody>
@@ -1019,7 +854,6 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
         const classes = <?php echo json_encode($classes_fetch); ?>;
         const students_by_class = <?php echo json_encode($students_by_class); ?>;
         const attendanceData = <?php echo json_encode($attendance_arr); ?> || {};
-        const earliestDate = '<?php echo $earliest_date; ?>';
         let today = document.getElementById('date-selector').value;
         let currentToday = '<?php echo date('Y-m-d'); ?>';
         let videoStream = null;
@@ -1028,12 +862,10 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
         let current_class_id = null;
         let currentPage = 1;
         const rowsPerPage = 5;
-        let isProcessingScan = false;
-        let scannerInputBuffer = '';
-        let isScannerActive = false;
-        let isCameraActive = false;
-        let currentSchedule = null;
-        let gracePeriodInterval = null;
+        let isProcessingScan = false; // Debounce flag
+        let scannerInputBuffer = ''; // Buffer for USB scanner input
+        let isScannerActive = false; // Flag to track if scanner is active
+        let isCameraActive = false; // Flag to track if camera is active
 
         function showNotification(message, type) {
             const notification = document.createElement('div');
@@ -1044,101 +876,6 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
                 notification.style.opacity = '0';
                 setTimeout(() => notification.remove(), 300);
             }, 3000);
-        }
-
-        function updateScheduleInfo() {
-            const scheduleInfo = document.getElementById('schedule-info');
-            const gracePeriodInfo = document.getElementById('grace-period-info');
-            const scheduleDetails = document.getElementById('schedule-details');
-            const gracePeriodText = document.getElementById('grace-period-text');
-            const gracePeriodTime = document.getElementById('grace-period-time');
-            const graceCountdown = document.getElementById('grace-countdown');
-
-            if (!current_class_id || !currentSchedule) {
-                scheduleInfo.style.display = 'none';
-                gracePeriodInfo.style.display = 'none';
-                if (gracePeriodInterval) {
-                    clearInterval(gracePeriodInterval);
-                    gracePeriodInterval = null;
-                }
-                return;
-            }
-
-            const selectedDate = new Date(today);
-            const dayOfWeek = selectedDate.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
-            
-            const classSchedule = classes.find(c => c.class_id == current_class_id);
-            if (classSchedule && classSchedule.start_time && classSchedule.day === dayOfWeek) {
-                scheduleInfo.style.display = 'block';
-                const startTime = new Date(`${today}T${classSchedule.start_time}`).toLocaleTimeString('en-US', { 
-                    hour: '2-digit', 
-                    minute: '2-digit',
-                    hour12: true 
-                });
-                const endTime = new Date(`${today}T${classSchedule.end_time}`).toLocaleTimeString('en-US', { 
-                    hour: '2-digit', 
-                    minute: '2-digit',
-                    hour12: true 
-                });
-                scheduleDetails.textContent = `${classSchedule.day.charAt(0).toUpperCase() + classSchedule.day.slice(1)} ${startTime} - ${endTime}`;
-                
-                if (classSchedule.grace_period_minutes > 0) {
-                    gracePeriodInfo.style.display = 'block';
-                    gracePeriodInfo.classList.remove('expired');
-                    
-                    const startTime = new Date(`${today}T${classSchedule.start_time}`);
-                    const graceEndTime = new Date(startTime.getTime() + (classSchedule.grace_period_minutes * 60 * 1000));
-                    
-                    const updateGracePeriod = () => {
-                        const now = new Date();
-                        const timeRemaining = graceEndTime - now;
-                        
-                        const graceTime = graceEndTime.toLocaleTimeString('en-US', { 
-                            hour: '2-digit', 
-                            minute: '2-digit',
-                            hour12: true 
-                        });
-                        
-                        gracePeriodTime.textContent = graceTime;
-                        gracePeriodTime.classList.remove('expired');
-                        
-                        if (timeRemaining <= 0) {
-                            gracePeriodInfo.classList.add('expired');
-                            graceCountdown.textContent = '(Grace period expired)';
-                            graceCountdown.className = 'grace-countdown expired';
-                            if (gracePeriodInterval) {
-                                clearInterval(gracePeriodInterval);
-                                gracePeriodInterval = null;
-                            }
-                        } else {
-                            const minutes = Math.floor(timeRemaining / 60000);
-                            const seconds = Math.floor((timeRemaining % 60000) / 1000);
-                            
-                            graceCountdown.textContent = `(${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')} min remaining)`;
-                            graceCountdown.className = 'grace-countdown active';
-                        }
-                    };
-                    
-                    updateGracePeriod();
-                    if (gracePeriodInterval) {
-                        clearInterval(gracePeriodInterval);
-                    }
-                    gracePeriodInterval = setInterval(updateGracePeriod, 1000);
-                } else {
-                    gracePeriodInfo.style.display = 'none';
-                    if (gracePeriodInterval) {
-                        clearInterval(gracePeriodInterval);
-                        gracePeriodInterval = null;
-                    }
-                }
-            } else {
-                scheduleInfo.style.display = 'none';
-                gracePeriodInfo.style.display = 'none';
-                if (gracePeriodInterval) {
-                    clearInterval(gracePeriodInterval);
-                    gracePeriodInterval = null;
-                }
-            }
         }
 
         function populateGradeLevels() {
@@ -1190,22 +927,17 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
 
         function updateStats(filteredStudents) {
             const total = filteredStudents.length;
-            let presentCount = 0;
-            
-            filteredStudents.forEach(student => {
-                const att = attendanceData[today]?.[current_class_id]?.[student.lrn];
-                if (att && (att.status === 'Present' || att.status === 'Late')) {
-                    presentCount++;
-                }
-            });
-            
+            const present = filteredStudents.filter(s => 
+                attendanceData[today]?.[current_class_id]?.[s.lrn]?.status === 'Present' || 
+                attendanceData[today]?.[current_class_id]?.[s.lrn]?.status === 'Late'
+            ).length;
             const absent = filteredStudents.filter(s => 
                 attendanceData[today]?.[current_class_id]?.[s.lrn]?.status === 'Absent'
             ).length;
-            const percentage = total ? ((presentCount / total) * 100).toFixed(1) : 0;
+            const percentage = total ? ((present / total) * 100).toFixed(1) : 0;
 
             document.getElementById('total-students').textContent = total;
-            document.getElementById('present-count').textContent = presentCount;
+            document.getElementById('present-count').textContent = present;
             document.getElementById('absent-count').textContent = absent;
             document.getElementById('attendance-percentage').textContent = `${percentage}%`;
         }
@@ -1258,21 +990,21 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
             selectAllCheckbox.indeterminate = someSelected && !allSelected;
         }
 
+        //ISO
+        // Calculate the attendance rate for a student in a specific class over the past month
         function calcAttendanceRate(class_id, lrn) {
             // Initialize counters: total days with teacher-marked attendance and present/late days
             let total = 0;
             let pl = 0;
 
             // Define the date range: from 1 calendar month ago to the selected date (inclusive)
-            const endDate = new Date(`${today}T00:00:00`); // Selected date in local time at midnight
+            const endDate = new Date(`${today}T00:00:00`); // Today in local time at midnight
             const startDate = new Date(endDate);           // Copy of end date
-            startDate.setMonth(startDate.getMonth() - 1);  // Subtract 1 calendar month
-            startDate.setDate(startDate.getDate() + 1);    // Adjust to include the day after one month ago
 
-            const earliestSystemDate = new Date(earliestDate); // Earliest date from system
-            const effectiveStartDate = startDate > earliestSystemDate ? startDate : earliestSystemDate;
+            // Subtract 1 calendar month
+            startDate.setMonth(startDate.getMonth() - 1);
 
-            const startStr = effectiveStartDate.toISOString().split('T')[0]; // Format: YYYY-MM-DD
+            const startStr = startDate.toISOString().split('T')[0]; // Format: YYYY-MM-DD
             const endStr = today; // Use provided 'today' string
 
             // Iterate through all dates in attendanceData
@@ -1334,14 +1066,82 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
             return total > 0 ? (pl / total * 100).toFixed(2) + '%' : '0.00%';
         }
 
-        function isWithinGracePeriod(currentTime, startTime, graceMinutes) {
-            if (!startTime || !graceMinutes) return true;
-            
-            const classStart = new Date(`${today}T${startTime}`);
-            const graceEnd = new Date(classStart.getTime() + (graceMinutes * 60 * 1000));
-            
-            return currentTime <= graceEnd;
-        }
+        // Calculate the attendance rate for a student in a specific class over the past calendar month
+// function calcAttendanceRate(class_id, lrn) {
+//     let total = 0;
+//     let pl = 0;
+
+//     // Ensure today is in YYYY-MM-DD format (e.g., '2025-09-13')
+//     const endDate = new Date(`${today}T00:00:00`);
+//     const startDate = new Date(endDate);
+
+//     // Subtract 1 calendar month
+//     startDate.setMonth(startDate.getMonth() - 1);
+
+//     // Convert to YYYY-MM-DD format (ISO date without time)
+//     const startStr = startDate.toISOString().split('T')[0];
+//     const endStr = endDate.toISOString().split('T')[0];
+
+//     // Loop through attendanceData dates
+//     for (const rawDate in attendanceData) {
+//         const date = rawDate.split('T')[0]; // Normalize the date key to YYYY-MM-DD
+
+//         if (date >= startStr && date <= endStr) {
+//             const classData = attendanceData[date]?.[class_id];
+//             if (!classData || Object.keys(classData).length === 0) continue;
+
+//             // Check if any student has a teacher-marked status
+//             let hasTeacherMarkedDay = false;
+//             for (const studentLrn in classData) {
+//                 const dayData = classData[studentLrn];
+//                 if (dayData && dayData.status && dayData.status !== '') {
+//                     hasTeacherMarkedDay = true;
+//                     break;
+//                 }
+//             }
+//             if (!hasTeacherMarkedDay) continue;
+
+//             // Check this student's record
+//             const studentDayData = classData[lrn];
+//             if (studentDayData && studentDayData.status && studentDayData.status !== '') {
+//                 total++;
+//                 if (studentDayData.status === 'Present' || studentDayData.status === 'Late') {
+//                     pl++;
+//                 }
+//             }
+//         }
+//     }
+
+//     // Debugging logs
+//     console.log(`For ${today} (LRN: ${lrn}): Range ${startStr} to ${endStr}`);
+//     console.log(`Total marked days: ${total}, Present/Late: ${pl}`);
+
+//     // Optional: list dates with status
+//     const markedDates = [];
+//     for (const rawDate in attendanceData) {
+//         const date = rawDate.split('T')[0]; // Normalize again for consistency
+//         if (date >= startStr && date <= endStr) {
+//             const classData = attendanceData[date]?.[class_id];
+//             if (classData && Object.keys(classData).length > 0) {
+//                 let hasTeacherMarked = false;
+//                 for (const sLrn in classData) {
+//                     if (classData[sLrn]?.status && classData[sLrn].status !== '') {
+//                         hasTeacherMarked = true;
+//                         break;
+//                     }
+//                 }
+//                 if (hasTeacherMarked) {
+//                     const studentStatus = classData[lrn]?.status || 'NO_STATUS';
+//                     markedDates.push(`${date}: ${studentStatus}`);
+//                 }
+//             }
+//         }
+//     }
+//     console.log('Marked dates in range:', markedDates);
+
+//     // Final rate result
+//     return total > 0 ? (pl / total * 100).toFixed(2) + '%' : '0.00%';
+// }
 
         function renderTable(isPagination = false) {
             const bulkActionSelect = document.getElementById('bulk-action-select');
@@ -1360,7 +1160,6 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
                 selectedStudents.clear();
                 document.getElementById('select-all').checked = false;
                 document.getElementById('select-all').indeterminate = false;
-                updateScheduleInfo();
                 return;
             }
 
@@ -1376,13 +1175,11 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
                 selectedStudents.clear();
                 document.getElementById('select-all').checked = false;
                 document.getElementById('select-all').indeterminate = false;
-                updateScheduleInfo();
                 return;
             }
 
             const currentClass = matchingClasses[0];
             current_class_id = currentClass.class_id;
-            currentSchedule = currentClass;
             const current_students = students_by_class[current_class_id] || [];
 
             if (current_students.length === 0) {
@@ -1392,27 +1189,18 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
                 selectedStudents.clear();
                 document.getElementById('select-all').checked = false;
                 document.getElementById('select-all').indeterminate = false;
-                updateScheduleInfo();
                 return;
             }
 
-            if (!attendanceData[today]) {
-                attendanceData[today] = {};
-            }
-            if (!attendanceData[today][current_class_id]) {
-                attendanceData[today][current_class_id] = {};
-            }
-            
+            if (!attendanceData[today]) attendanceData[today] = {};
+            if (!attendanceData[today][current_class_id]) attendanceData[today][current_class_id] = {};
             current_students.forEach(student => {
                 if (!attendanceData[today][current_class_id][student.lrn]) {
                     attendanceData[today][current_class_id][student.lrn] = {
                         status: '',
                         timeChecked: '',
                         is_qr_scanned: false,
-                        isNew: true,
-                        start_time: currentClass.start_time,
-                        end_time: currentClass.end_time,
-                        grace_period_minutes: currentClass.grace_period_minutes
+                        isNew: true
                     };
                 }
             });
@@ -1425,7 +1213,6 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
                 document.getElementById('pagination').innerHTML = '';
                 document.getElementById('select-all').checked = false;
                 document.getElementById('select-all').indeterminate = false;
-                updateScheduleInfo();
                 return;
             }
 
@@ -1434,30 +1221,16 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
             const paginatedStudents = filteredStudents.slice(start, end);
 
             paginatedStudents.forEach(student => {
-                let att = attendanceData[today]?.[current_class_id]?.[student.lrn] || {
-                    status: '',
-                    timeChecked: '',
-                    is_qr_scanned: false,
-                    start_time: currentClass.start_time,
-                    end_time: currentClass.end_time,
-                    grace_period_minutes: currentClass.grace_period_minutes
-                };
-                
+                const att = attendanceData[today][current_class_id][student.lrn];
                 const isQRScanned = att.is_qr_scanned;
                 const isEditable = !isQRScanned;
                 const statusClass = att.status ? att.status.toLowerCase() : 'none';
                 const isChecked = selectedStudents.has(student.lrn.toString()) && isEditable ? 'checked' : '';
                 const rate = calcAttendanceRate(current_class_id, student.lrn);
-                
-                let statusIndicator = '';
-                if (isQRScanned && att.status === 'Late') {
-                    statusIndicator = '<span class="status-indicator qr-locked">QR Late</span>';
-                }
-                
                 const row = document.createElement('tr');
                 row.innerHTML = `
                     <td><input type="checkbox" class="select-student" data-id="${student.lrn}" ${isChecked} ${isQRScanned ? 'disabled' : ''}></td>
-                    <td><img src="uploads/${student.photo || 'no-icon.png'}" class="student-photo" alt="${student.name}" onerror="this.src='uploads/no-icon.png'"></td>
+                    <td><img src="Uploads/${student.photo || 'no-icon.png'}" class="student-photo" alt="${student.name}"></td>
                     <td>${student.lrn}</td>
                     <td>${student.name}</td>
                     <td>
@@ -1467,7 +1240,6 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
                             <option value="Absent" ${att.status === 'Absent' ? 'selected' : ''}>Absent</option>
                             <option value="Late" ${att.status === 'Late' ? 'selected' : ''}>Late</option>
                         </select>
-                        ${statusIndicator}
                     </td>
                     <td>${att.timeChecked || '-'}</td>
                     <td class="attendance-rate">${rate}</td>
@@ -1476,8 +1248,8 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
             });
 
             bulkActionSelect.value = selectedBulkAction;
+
             updateSelectAllState();
-            updateScheduleInfo();
 
             document.querySelectorAll('.select-student').forEach(checkbox => {
                 checkbox.addEventListener('change', () => {
@@ -1496,17 +1268,15 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
                     if (select.disabled) return;
                     const studentId = select.dataset.id.toString();
                     const newStatus = select.value;
-                    
-                    attendanceData[today][current_class_id][studentId] = {
-                        ...attendanceData[today][current_class_id][studentId],
-                        status: newStatus,
-                        is_qr_scanned: false,
-                        timeChecked: newStatus ? formatDateTime(new Date()) : ''
-                    };
-                    
+                    attendanceData[today][current_class_id][studentId].status = newStatus;
+                    attendanceData[today][current_class_id][studentId].is_qr_scanned = false;
+                    if (newStatus) {
+                        attendanceData[today][current_class_id][studentId].timeChecked = formatDateTime(new Date());
+                    } else {
+                        attendanceData[today][current_class_id][studentId].timeChecked = '';
+                    }
                     select.classList.remove('present', 'absent', 'late', 'none');
                     select.classList.add(newStatus ? newStatus.toLowerCase() : 'none');
-                    
                     updateStats(filteredStudents);
                     renderTable(true);
                 });
@@ -1634,12 +1404,9 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
             );
 
             filteredStudents.forEach(student => {
-                attendanceData[today][current_class_id][student.lrn] = {
-                    ...attendanceData[today][current_class_id][student.lrn],
-                    status: 'Present',
-                    timeChecked: formatDateTime(new Date()),
-                    is_qr_scanned: false
-                };
+                attendanceData[today][current_class_id][student.lrn].status = 'Present';
+                attendanceData[today][current_class_id][student.lrn].timeChecked = formatDateTime(new Date());
+                attendanceData[today][current_class_id][student.lrn].is_qr_scanned = false;
             });
             renderTable(true);
         }
@@ -1662,12 +1429,9 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
                 return;
             }
             selected.forEach(studentId => {
-                attendanceData[today][current_class_id][studentId] = {
-                    ...attendanceData[today][current_class_id][studentId],
-                    status: action,
-                    timeChecked: formatDateTime(new Date()),
-                    is_qr_scanned: false
-                };
+                attendanceData[today][current_class_id][studentId].status = action;
+                attendanceData[today][current_class_id][studentId].timeChecked = formatDateTime(new Date());
+                attendanceData[today][current_class_id][studentId].is_qr_scanned = false;
             });
             renderTable(true);
         }
@@ -1682,7 +1446,6 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
             }).then(res => res.json()).then(result => {
                 if (result.success) {
                     showNotification('Attendance submitted successfully.', 'success');
-                    location.reload();
                 } else {
                     showNotification('Failed to submit attendance.', 'error');
                 }
@@ -1719,33 +1482,10 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
                     showNotification(`Student ${student.name} already scanned today.`, 'error');
                     setTimeout(() => { isProcessingScan = false; }, 1000); // Reset after 1 second
                 } else {
-                    const now = new Date();
-                    let status = 'Present';
-                    
-                    if (currentSchedule && currentSchedule.start_time && currentSchedule.grace_period_minutes) {
-                        const classStart = new Date(`${today}T${currentSchedule.start_time}`);
-                        const graceEnd = new Date(classStart.getTime() + (currentSchedule.grace_period_minutes * 60 * 1000));
-                        
-                        if (now > graceEnd) {
-                            status = 'Late';
-                            showNotification(`Student ${student.name} marked as Late (after grace period).`, 'warning');
-                        } else {
-                            showNotification(`Student ${student.name} marked as Present (within grace period).`, 'success');
-                        }
-                    } else {
-                        showNotification(`Student ${student.name} marked as Present.`, 'success');
-                    }
-                    
-                    attendanceData[today][current_class_id][lrn] = {
-                        status: status,
-                        timeChecked: formatDateTime(now),
-                        is_qr_scanned: true,
-                        logged_by: source === 'scanner' ? 'Scanner Device' : 'Device Camera',
-                        start_time: currentSchedule?.start_time,
-                        end_time: currentSchedule?.end_time,
-                        grace_period_minutes: currentSchedule?.grace_period_minutes
-                    };
-                    
+                    attendanceData[today][current_class_id][lrn].status = 'Present';
+                    attendanceData[today][current_class_id][lrn].timeChecked = formatDateTime(new Date());
+                    attendanceData[today][current_class_id][lrn].is_qr_scanned = true;
+                    attendanceData[today][current_class_id][lrn].logged_by = source === 'scanner' ? 'Scanner Device' : 'Device Camera';
                     scannedStudents.add(lrn);
                     showNotification(`Student ${student.name} marked as Present. Email sent to parent.`, 'success');
 
@@ -1794,15 +1534,6 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
                     return;
                 }
                 // Start both camera and scanner
-                const selectedDate = new Date(today);
-                const dayOfWeek = selectedDate.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
-                const classSchedule = classes.find(c => c.class_id == current_class_id && c.day === dayOfWeek);
-                
-                if (!classSchedule) {
-                    showNotification('No schedule found for this class today. Cannot enable QR scanning.', 'error');
-                    return;
-                }
-                
                 scannedStudents.clear();
                 isProcessingScan = false; // Reset debounce flag
                 scannerInputBuffer = ''; // Clear scanner input buffer
@@ -1864,10 +1595,6 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
             isCameraActive = false;
             isProcessingScan = false; // Reset debounce flag
             scannerInputBuffer = ''; // Clear scanner input buffer
-            if (gracePeriodInterval) {
-                clearInterval(gracePeriodInterval);
-                gracePeriodInterval = null;
-            }
         }
 
         function clearFilters() {

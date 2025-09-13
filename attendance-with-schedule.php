@@ -148,29 +148,21 @@ foreach ($classes_fetch as $class) {
     $students_by_class[$class_id] = $stmt->fetchAll(PDO::FETCH_ASSOC);
 }
 
-// Fetch the earliest attendance date for the teacher
-$stmt = $pdo->prepare("
-    SELECT MIN(attendance_date) AS earliest_date 
-    FROM attendance_tracking a 
-    JOIN classes c ON a.class_id = c.class_id 
-    WHERE c.teacher_id = ?
-");
-$stmt->execute([$user['teacher_id']]);
-$earliest_date_result = $stmt->fetch(PDO::FETCH_ASSOC);
-$earliest_date = $earliest_date_result['earliest_date'] ?? date('Y-m-d');
+// Fetch attendance for ALL dates in the last 30 days
+$attendance_arr = [];
+$start_date = date('Y-m-d', strtotime('-30 days'));
+$end_date = date('Y-m-d');
 
-// Fetch attendance from the earliest date to today
 $stmt = $pdo->prepare("
     SELECT a.class_id, a.attendance_date, a.lrn, a.attendance_status, a.time_checked, a.is_qr_scanned,
            sch.start_time, sch.grace_period_minutes, sch.end_time
     FROM attendance_tracking a 
     JOIN classes c ON a.class_id = c.class_id 
     LEFT JOIN schedules sch ON c.class_id = sch.class_id AND DATE_FORMAT(a.attendance_date, '%W') = sch.day
-    WHERE c.teacher_id = ? AND a.attendance_date >= ?
+    WHERE c.teacher_id = ? AND a.attendance_date BETWEEN ? AND ?
     ORDER BY a.attendance_date DESC
 ");
-$stmt->execute([$user['teacher_id'], $earliest_date]);
-$attendance_arr = [];
+$stmt->execute([$user['teacher_id'], $start_date, $end_date]);
 while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
     $date = $row['attendance_date']; // YYYY-MM-DD
     $class_id = $row['class_id'];
@@ -1000,7 +992,7 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
                         <th>Student Name</th>
                         <th>Status</th>
                         <th>Time Checked</th>
-                        <th>Current Attendance Rate</th>
+                        <th>Attendance Rate</th>
                     </tr>
                 </thead>
                 <tbody></tbody>
@@ -1019,7 +1011,6 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
         const classes = <?php echo json_encode($classes_fetch); ?>;
         const students_by_class = <?php echo json_encode($students_by_class); ?>;
         const attendanceData = <?php echo json_encode($attendance_arr); ?> || {};
-        const earliestDate = '<?php echo $earliest_date; ?>';
         let today = document.getElementById('date-selector').value;
         let currentToday = '<?php echo date('Y-m-d'); ?>';
         let videoStream = null;
@@ -1258,81 +1249,91 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
             selectAllCheckbox.indeterminate = someSelected && !allSelected;
         }
 
-        function calcAttendanceRate(class_id, lrn) {
-            // Initialize counters: total days with teacher-marked attendance and present/late days
-            let total = 0;
-            let pl = 0;
+        function calcAttendanceRate(class_id, lrn, selectedDate) {
+    // Initialize counters: total days with teacher-marked attendance and present/late days
+    let total = 0;
+    let pl = 0;
 
-            // Define the date range: from 1 calendar month ago to the selected date (inclusive)
-            const endDate = new Date(`${today}T00:00:00`); // Selected date in local time at midnight
-            const startDate = new Date(endDate);           // Copy of end date
-            startDate.setMonth(startDate.getMonth() - 1);  // Subtract 1 calendar month
-            startDate.setDate(startDate.getDate() + 1);    // Adjust to include the day after one month ago
-
-            const earliestSystemDate = new Date(earliestDate); // Earliest date from system
-            const effectiveStartDate = startDate > earliestSystemDate ? startDate : earliestSystemDate;
-
-            const startStr = effectiveStartDate.toISOString().split('T')[0]; // Format: YYYY-MM-DD
-            const endStr = today; // Use provided 'today' string
-
-            // Iterate through all dates in attendanceData
-            for (const date in attendanceData) {
-                // Filter dates within the range (inclusive)
-                if (date >= startStr && date <= endStr) {
-                    const classData = attendanceData[date]?.[class_id];
-                    if (!classData || Object.keys(classData).length === 0) continue; // Skip if no data
-
-                    // Check if there's at least one teacher-marked status on this day
-                    let hasTeacherMarkedDay = false;
-                    for (const studentLrn in classData) {
-                        const dayData = classData[studentLrn];
-                        if (dayData && dayData.status && dayData.status !== '') {
-                            hasTeacherMarkedDay = true;
-                            break;
-                        }
-                    }
-                    if (!hasTeacherMarkedDay) continue; // Skip unmarked days
-
-                    // Check this specific student's record
-                    const studentDayData = classData[lrn];
-                    if (studentDayData && studentDayData.status && studentDayData.status !== '') {
-                        total++; // Count this teacher-marked day with a valid student status
-                        if (studentDayData.status === 'Present' || studentDayData.status === 'Late') {
-                            pl++; // Count if Present or Late
-                        }
-                    }
-                }
-            }
-
-            // Debug Logs — helpful for testing
-            console.log(`For ${today} (LRN: ${lrn}): Range ${startStr} to ${endStr}`);
-            console.log(`Total marked days: ${total}, Present/Late: ${pl}`);
-
-            // Optional: list marked dates and student status
-            const markedDates = [];
-            for (const date in attendanceData) {
-                if (date >= startStr && date <= endStr) {
-                    const classData = attendanceData[date]?.[class_id];
-                    if (classData && Object.keys(classData).length > 0) {
-                        let hasTeacherMarked = false;
-                        for (const sLrn in classData) {
-                            if (classData[sLrn]?.status && classData[sLrn].status !== '') {
-                                hasTeacherMarked = true;
-                                break;
-                            }
-                        }
-                        if (hasTeacherMarked) {
-                            const studentStatus = classData[lrn]?.status || 'NO_STATUS';
-                            markedDates.push(`${date}: ${studentStatus}`);
-                        }
-                    }
-                }
-            }
-            console.log('Marked dates in range:', markedDates);
-
-            // Calculate and return the percentage (Present or Late days / Total days) with two decimal places
-            return total > 0 ? (pl / total * 100).toFixed(2) + '%' : '0.00%';
+    // Validate selectedDate (expecting YYYY-MM-DD format)
+    let endDate;
+    if (!selectedDate || !/^\d{4}-\d{2}-\d{2}$/.test(selectedDate)) {
+        console.warn(`Invalid or missing selectedDate: ${selectedDate}. Falling back to today's date.`);
+        endDate = new Date(); // Fallback to today if invalid
+        endDate.setHours(0, 0, 0, 0); // Set to midnight
+    } else {
+        endDate = new Date(selectedDate + 'T00:00:00');
+        if (isNaN(endDate.getTime())) {
+            console.warn(`Invalid date format for selectedDate: ${selectedDate}. Falling back to today's date.`);
+            endDate = new Date();
+            endDate.setHours(0, 0, 0, 0);
         }
+    }
+
+    // Define the date range: from 1 calendar month ago to the selected date (inclusive)
+    const startDate = new Date(endDate);
+    startDate.setMonth(startDate.getMonth() - 1); // Subtract exactly 1 calendar month
+
+    const startStr = startDate.toISOString().split('T')[0]; // Format: YYYY-MM-DD
+    const endStr = endDate.toISOString().split('T')[0]; // Format: YYYY-MM-DD
+
+    // Iterate through all dates in attendanceData
+    for (const date in attendanceData) {
+        // Filter dates within the range (inclusive)
+        if (date >= startStr && date <= endStr) {
+            const classData = attendanceData[date]?.[class_id];
+            if (!classData || Object.keys(classData).length === 0) continue; // Skip if no data
+
+            // Check if there's at least one teacher-marked status on this day
+            let hasTeacherMarkedDay = false;
+            for (const studentLrn in classData) {
+                const dayData = classData[studentLrn];
+                if (dayData && dayData.status && dayData.status !== '') {
+                    hasTeacherMarkedDay = true;
+                    break;
+                }
+            }
+            if (!hasTeacherMarkedDay) continue; // Skip unmarked days
+
+            // Check this specific student's record
+            const studentDayData = classData[lrn];
+            if (studentDayData && studentDayData.status && studentDayData.status !== '') {
+                total++; // Count this teacher-marked day with a valid student status
+                if (studentDayData.status === 'Present' || studentDayData.status === 'Late') {
+                    pl++; // Count if Present or Late
+                }
+            }
+        }
+    }
+
+    // Debug Logs — helpful for testing
+    console.log(`For ${endStr} (LRN: ${lrn}): Range ${startStr} to ${endStr}`);
+    console.log(`Total marked days: ${total}, Present/Late: ${pl}`);
+
+    // Optional: list marked dates and student status
+    const markedDates = [];
+    for (const date in attendanceData) {
+        if (date >= startStr && date <= endStr) {
+            const classData = attendanceData[date]?.[class_id];
+            if (classData && Object.keys(classData).length > 0) {
+                let hasTeacherMarked = false;
+                for (const sLrn in classData) {
+                    if (classData[sLrn]?.status && classData[sLrn].status !== '') {
+                        hasTeacherMarked = true;
+                        break;
+                    }
+                }
+                if (hasTeacherMarked) {
+                    const studentStatus = classData[lrn]?.status || 'NO_STATUS';
+                    markedDates.push(`${date}: ${studentStatus}`);
+                }
+            }
+        }
+    }
+    console.log('Marked dates in range:', markedDates);
+
+    // Calculate and return the percentage (Present or Late days / Total days) with two decimal places
+    return total > 0 ? (pl / total * 100).toFixed(2) + '%' : '0.00%';
+}
 
         function isWithinGracePeriod(currentTime, startTime, graceMinutes) {
             if (!startTime || !graceMinutes) return true;
@@ -1457,7 +1458,7 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
                 const row = document.createElement('tr');
                 row.innerHTML = `
                     <td><input type="checkbox" class="select-student" data-id="${student.lrn}" ${isChecked} ${isQRScanned ? 'disabled' : ''}></td>
-                    <td><img src="uploads/${student.photo || 'no-icon.png'}" class="student-photo" alt="${student.name}" onerror="this.src='uploads/no-icon.png'"></td>
+                    <td><img src="Uploads/${student.photo || 'no-icon.png'}" class="student-photo" alt="${student.name}" onerror="this.src='Uploads/no-icon.png'"></td>
                     <td>${student.lrn}</td>
                     <td>${student.name}</td>
                     <td>
@@ -1693,31 +1694,28 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
 
         function processQRScan(qrData, source) {
             if (!current_class_id || isProcessingScan) return;
-            isProcessingScan = true; // Set debounce flag
+            isProcessingScan = true;
 
-            // Debug: Log the raw QR code data
             console.log('Raw QR Data:', qrData);
 
-            // Extract LRN using regex (assuming LRN is a number)
             const lrnMatch = qrData.match(/^(\d+),/);
-            const lrn = lrnMatch ? lrnMatch[1].trim() : qrData.trim(); // Fallback to full data if no comma
+            const lrn = lrnMatch ? lrnMatch[1].trim() : qrData.trim();
 
-            console.log('Extracted LRN:', lrn); // Debug: Check extracted LRN
+            console.log('Extracted LRN:', lrn);
 
-            // Validate LRN (e.g., ensure it's numeric and has expected length)
             if (!/^\d+$/.test(lrn)) {
                 showNotification('Invalid LRN format.', 'error');
-                setTimeout(() => { isProcessingScan = false; }, 1000); // Reset after 1 second
+                setTimeout(() => { isProcessingScan = false; }, 1000);
                 return;
             }
 
             const student = (students_by_class[current_class_id] || []).find(s => s.lrn.toString() === lrn);
-            console.log('Found Student:', student); // Debug: Check if student is found
+            console.log('Found Student:', student);
 
             if (student) {
                 if (scannedStudents.has(lrn) || attendanceData[today][current_class_id][lrn]?.is_qr_scanned) {
                     showNotification(`Student ${student.name} already scanned today.`, 'error');
-                    setTimeout(() => { isProcessingScan = false; }, 1000); // Reset after 1 second
+                    setTimeout(() => { isProcessingScan = false; }, 1000);
                 } else {
                     const now = new Date();
                     let status = 'Present';
@@ -1747,9 +1745,7 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
                     };
                     
                     scannedStudents.add(lrn);
-                    showNotification(`Student ${student.name} marked as Present. Email sent to parent.`, 'success');
 
-                    // Submit to database immediately
                     const data = {};
                     data[lrn] = attendanceData[today][current_class_id][lrn];
                     fetch('', {
@@ -1760,16 +1756,16 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
                         if (!result.success) {
                             showNotification('Failed to save QR attendance.', 'error');
                         }
-                        setTimeout(() => { isProcessingScan = false; }, 1000); // Reset after 1 second
+                        setTimeout(() => { isProcessingScan = false; }, 1000);
                     }).catch(err => {
                         showNotification('Error: ' + err.message, 'error');
-                        setTimeout(() => { isProcessingScan = false; }, 1000); // Reset after 1 second
+                        setTimeout(() => { isProcessingScan = false; }, 1000);
                     });
                     renderTable(true);
                 }
             } else {
                 showNotification('Invalid LRN for this class.', 'error');
-                setTimeout(() => { isProcessingScan = false; }, 1000); // Reset after 1 second
+                setTimeout(() => { isProcessingScan = false; }, 1000);
             }
         }
 
@@ -1781,7 +1777,6 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
             const canvas = canvasElement.getContext('2d');
 
             if (isCameraActive || isScannerActive) {
-                // Stop both camera and scanner
                 stopQRScanner();
                 scanButton.innerHTML = '<i class="fas fa-qrcode"></i> Scan QR Code';
             } else {
@@ -1793,7 +1788,7 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
                     showNotification('QR scanning is only available for the current date.', 'error');
                     return;
                 }
-                // Start both camera and scanner
+                
                 const selectedDate = new Date(today);
                 const dayOfWeek = selectedDate.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
                 const classSchedule = classes.find(c => c.class_id == current_class_id && c.day === dayOfWeek);
@@ -1804,10 +1799,9 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
                 }
                 
                 scannedStudents.clear();
-                isProcessingScan = false; // Reset debounce flag
-                scannerInputBuffer = ''; // Clear scanner input buffer
+                isProcessingScan = false;
+                scannerInputBuffer = '';
 
-                // Start camera
                 qrScanner.style.display = 'block';
                 navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
                     .then(stream => {
@@ -1821,13 +1815,11 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
                     .catch(err => {
                         showNotification('Error accessing camera: ' + err.message, 'error');
                         qrScanner.style.display = 'none';
-                        // Still enable scanner even if camera fails
                         isScannerActive = true;
                         scanButton.innerHTML = '<i class="fas fa-stop"></i> Stop Scanning';
                         showNotification('Scanner device active. Scan a QR code.', 'success');
                     });
 
-                // Start scanner
                 isScannerActive = true;
                 if (!isCameraActive) {
                     showNotification('Scanner device active. Scan a QR code.', 'success');
@@ -1862,8 +1854,8 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
             document.getElementById('qr-scanner').style.display = 'none';
             isScannerActive = false;
             isCameraActive = false;
-            isProcessingScan = false; // Reset debounce flag
-            scannerInputBuffer = ''; // Clear scanner input buffer
+            isProcessingScan = false;
+            scannerInputBuffer = '';
             if (gracePeriodInterval) {
                 clearInterval(gracePeriodInterval);
                 gracePeriodInterval = null;
@@ -1878,31 +1870,26 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
             document.getElementById('select-all').indeterminate = false;
             populateGradeLevels();
             today = '<?php echo date('Y-m-d'); ?>';
-            stopQRScanner(); // Stop any active scanner
+            stopQRScanner();
             renderTable();
         }
 
-        // Handle USB scanner input (simulating keyboard input)
         document.addEventListener('keydown', (event) => {
             if (!isScannerActive) return;
 
-            // Prevent default behavior for input fields to avoid interference
             if (event.target.tagName === 'INPUT' || event.target.tagName === 'SELECT') {
                 event.preventDefault();
                 return;
             }
 
-            // Handle scanner input
             if (event.key === 'Enter') {
                 if (scannerInputBuffer) {
-                    // Clean the buffer (remove extra spaces, newlines, etc.)
                     const cleanedBuffer = scannerInputBuffer.trim();
-                    console.log('Scanner Buffer:', cleanedBuffer); // Debug: Log buffer
+                    console.log('Scanner Buffer:', cleanedBuffer);
                     processQRScan(cleanedBuffer, 'scanner');
-                    scannerInputBuffer = ''; // Clear buffer after processing
+                    scannerInputBuffer = '';
                 }
-            } else if (event.key.length === 1) { // Only accumulate printable characters
-                // Add character to buffer (assuming scanner sends QR code data as text)
+            } else if (event.key.length === 1) {
                 scannerInputBuffer += event.key;
             }
         });
@@ -1922,18 +1909,18 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
             selectedStudents.clear();
             selectAllCheckbox.checked = false;
             selectAllCheckbox.indeterminate = false;
-            stopQRScanner(); // Stop scanner when changing filters
+            stopQRScanner();
             renderTable();
         });
 
-        sectionSelector.addEventListener('change', () => {
+                sectionSelector.addEventListener('change', () => {
             const gradeLevel = gradeLevelSelector.value;
             const section = sectionSelector.value;
             populateSubjects(gradeLevel, section);
             selectedStudents.clear();
             selectAllCheckbox.checked = false;
             selectAllCheckbox.indeterminate = false;
-            stopQRScanner(); // Stop scanner when changing filters
+            stopQRScanner();
             renderTable();
         });
 
@@ -1941,7 +1928,7 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
             selectedStudents.clear();
             selectAllCheckbox.checked = false;
             selectAllCheckbox.indeterminate = false;
-            stopQRScanner(); // Stop scanner when changing filters
+            stopQRScanner();
             renderTable();
         });
 
@@ -1960,7 +1947,7 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
             selectedStudents.clear();
             selectAllCheckbox.checked = false;
             selectAllCheckbox.indeterminate = false;
-            stopQRScanner(); // Stop scanner when changing date
+            stopQRScanner();
             renderTable();
         });
 

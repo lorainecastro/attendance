@@ -990,51 +990,158 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
             selectAllCheckbox.indeterminate = someSelected && !allSelected;
         }
 
+        //ISO
         // Calculate the attendance rate for a student in a specific class over the past month
         function calcAttendanceRate(class_id, lrn) {
-            // Initialize counters: total days with attendance records and present/late days
+            // Initialize counters: total days with teacher-marked attendance and present/late days
             let total = 0;
             let pl = 0;
-            
-            // Define the date range: from one month ago to the current server date
-            const now = new Date(currentToday); // Current server date (e.g., "2025-09-13")
-            const start = new Date(now); // Copy of current date
-            start.setMonth(start.getMonth() - 1); // Go back one month
-            const startStr = start.toISOString().split('T')[0]; // Convert to YYYY-MM-DD (e.g., "2025-08-13")
+
+            // Define the date range: from 1 calendar month ago to the selected date (inclusive)
+            const endDate = new Date(`${today}T00:00:00`); // Today in local time at midnight
+            const startDate = new Date(endDate);           // Copy of end date
+
+            // Subtract 1 calendar month
+            startDate.setMonth(startDate.getMonth() - 1);
+
+            const startStr = startDate.toISOString().split('T')[0]; // Format: YYYY-MM-DD
+            const endStr = today; // Use provided 'today' string
 
             // Iterate through all dates in attendanceData
             for (const date in attendanceData) {
-                // Filter dates within the last month (inclusive)
-                if (date >= startStr && date <= currentToday) {
-                    // Safely access attendance data for this date, class, and student
-                    const dayData = attendanceData[date]?.[class_id]?.[lrn];
-                    if (dayData) { // Check if attendance record exists
-                        const status = dayData.status; // Get status (Present, Absent, Late, or '')
-                        const isNew = dayData.isNew === true; // Check if this is an unsaved change (current day only)
-                        
-                        // Handle current day's unsaved changes
-                        if (date === today && isNew) {
-                            // Only count if a status is set (exclude empty statuses)
-                            if (status && status !== '') {
-                                total++; // Increment total days
-                                if (status === 'Present' || status === 'Late') {
-                                    pl++; // Increment present/late count
-                                }
-                            }
-                        } else {
-                            // Handle historical or saved data
-                            total++; // Always count the day (record exists)
-                            if (status === 'Present' || status === 'Late') {
-                                pl++; // Increment present/late count
-                            }
+                // Filter dates within the range (inclusive)
+                if (date >= startStr && date <= endStr) {
+                    const classData = attendanceData[date]?.[class_id];
+                    if (!classData || Object.keys(classData).length === 0) continue; // Skip if no data
+
+                    // Check if there's at least one teacher-marked status on this day
+                    let hasTeacherMarkedDay = false;
+                    for (const studentLrn in classData) {
+                        const dayData = classData[studentLrn];
+                        if (dayData && dayData.status && dayData.status !== '') {
+                            hasTeacherMarkedDay = true;
+                            break;
+                        }
+                    }
+                    if (!hasTeacherMarkedDay) continue; // Skip unmarked days
+
+                    // Check this specific student's record
+                    const studentDayData = classData[lrn];
+                    if (studentDayData && studentDayData.status && studentDayData.status !== '') {
+                        total++; // Count this teacher-marked day with a valid student status
+                        if (studentDayData.status === 'Present' || studentDayData.status === 'Late') {
+                            pl++; // Count if Present or Late
                         }
                     }
                 }
             }
-            
+
+            // Debug Logs — helpful for testing
+            console.log(`For ${today} (LRN: ${lrn}): Range ${startStr} to ${endStr}`);
+            console.log(`Total marked days: ${total}, Present/Late: ${pl}`);
+
+            // Optional: list marked dates and student status
+            const markedDates = [];
+            for (const date in attendanceData) {
+                if (date >= startStr && date <= endStr) {
+                    const classData = attendanceData[date]?.[class_id];
+                    if (classData && Object.keys(classData).length > 0) {
+                        let hasTeacherMarked = false;
+                        for (const sLrn in classData) {
+                            if (classData[sLrn]?.status && classData[sLrn].status !== '') {
+                                hasTeacherMarked = true;
+                                break;
+                            }
+                        }
+                        if (hasTeacherMarked) {
+                            const studentStatus = classData[lrn]?.status || 'NO_STATUS';
+                            markedDates.push(`${date}: ${studentStatus}`);
+                        }
+                    }
+                }
+            }
+            console.log('Marked dates in range:', markedDates);
+
             // Calculate and return the percentage (Present or Late days / Total days) with two decimal places
             return total > 0 ? (pl / total * 100).toFixed(2) + '%' : '0.00%';
         }
+
+        // Calculate the attendance rate for a student in a specific class over the past calendar month
+// function calcAttendanceRate(class_id, lrn) {
+//     let total = 0;
+//     let pl = 0;
+
+//     // Ensure today is in YYYY-MM-DD format (e.g., '2025-09-13')
+//     const endDate = new Date(`${today}T00:00:00`);
+//     const startDate = new Date(endDate);
+
+//     // Subtract 1 calendar month
+//     startDate.setMonth(startDate.getMonth() - 1);
+
+//     // Convert to YYYY-MM-DD format (ISO date without time)
+//     const startStr = startDate.toISOString().split('T')[0];
+//     const endStr = endDate.toISOString().split('T')[0];
+
+//     // Loop through attendanceData dates
+//     for (const rawDate in attendanceData) {
+//         const date = rawDate.split('T')[0]; // Normalize the date key to YYYY-MM-DD
+
+//         if (date >= startStr && date <= endStr) {
+//             const classData = attendanceData[date]?.[class_id];
+//             if (!classData || Object.keys(classData).length === 0) continue;
+
+//             // Check if any student has a teacher-marked status
+//             let hasTeacherMarkedDay = false;
+//             for (const studentLrn in classData) {
+//                 const dayData = classData[studentLrn];
+//                 if (dayData && dayData.status && dayData.status !== '') {
+//                     hasTeacherMarkedDay = true;
+//                     break;
+//                 }
+//             }
+//             if (!hasTeacherMarkedDay) continue;
+
+//             // Check this student's record
+//             const studentDayData = classData[lrn];
+//             if (studentDayData && studentDayData.status && studentDayData.status !== '') {
+//                 total++;
+//                 if (studentDayData.status === 'Present' || studentDayData.status === 'Late') {
+//                     pl++;
+//                 }
+//             }
+//         }
+//     }
+
+//     // Debugging logs
+//     console.log(`For ${today} (LRN: ${lrn}): Range ${startStr} to ${endStr}`);
+//     console.log(`Total marked days: ${total}, Present/Late: ${pl}`);
+
+//     // Optional: list dates with status
+//     const markedDates = [];
+//     for (const rawDate in attendanceData) {
+//         const date = rawDate.split('T')[0]; // Normalize again for consistency
+//         if (date >= startStr && date <= endStr) {
+//             const classData = attendanceData[date]?.[class_id];
+//             if (classData && Object.keys(classData).length > 0) {
+//                 let hasTeacherMarked = false;
+//                 for (const sLrn in classData) {
+//                     if (classData[sLrn]?.status && classData[sLrn].status !== '') {
+//                         hasTeacherMarked = true;
+//                         break;
+//                     }
+//                 }
+//                 if (hasTeacherMarked) {
+//                     const studentStatus = classData[lrn]?.status || 'NO_STATUS';
+//                     markedDates.push(`${date}: ${studentStatus}`);
+//                 }
+//             }
+//         }
+//     }
+//     console.log('Marked dates in range:', markedDates);
+
+//     // Final rate result
+//     return total > 0 ? (pl / total * 100).toFixed(2) + '%' : '0.00%';
+// }
 
         function renderTable(isPagination = false) {
             const bulkActionSelect = document.getElementById('bulk-action-select');

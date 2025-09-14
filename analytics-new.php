@@ -469,8 +469,8 @@
 
         .prediction-header {
             display: flex;
-            justify-content: space-between;
-            align-items: center;
+            flex-direction: column;
+            gap: var(--spacing-sm);
             margin-bottom: var(--spacing-md);
         }
 
@@ -544,12 +544,6 @@
                 width: 100%;
                 justify-content: center;
             }
-            .attendance-status-container {
-                grid-template-columns: 1fr;
-            }
-            .attendance-status-legend {
-                margin-top: var(--spacing-md);
-            }
         }
 
         @media (max-width: 768px) {
@@ -570,6 +564,16 @@
             }
             .legend-value {
                 font-size: var(--font-size-base);
+            }
+            .attendance-status-container {
+                grid-template-columns: 1fr;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+            }
+            .attendance-status-legend {
+                width: 100%;
+                max-width: 350px;
             }
         }
 

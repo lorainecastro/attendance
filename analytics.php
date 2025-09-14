@@ -764,30 +764,6 @@
         </div>
     </div>
 
-    <!-- Attendance Trends Analysis -->
-    <div class="pattern-table">
-        <div class="table-header">
-            <div class="table-title">Time Series Trends Analysis</div>
-            <div class="alert alert-info">
-                <i class="fas fa-info-circle"></i>
-                <span>Trends and patterns based on class-level attendance data</span>
-            </div>
-        </div>
-        <div class="table-responsive">
-            <table>
-                <thead>
-                    <tr>
-                        <th>Class</th>
-                        <th>Current Rate</th>
-                        <th>Risk Level</th>
-                        <th>Enhancement Strategy</th>
-                    </tr>
-                </thead>
-                <tbody id="trends-analysis-table"></tbody>
-            </table>
-        </div>
-    </div>
-
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0/dist/chartjs-plugin-datalabels.min.js"></script>
     <script>
@@ -1193,27 +1169,6 @@
             });
         }
 
-        // Update trends analysis table
-        function updateTrendsAnalysisTable() {
-            const trendsTable = document.getElementById('trends-analysis-table');
-            trendsTable.innerHTML = '';
-            
-            classes.forEach(cls => {
-                const row = document.createElement('tr');
-                const strategy = cls.attendancePercentage < 85 ? 'Enhanced engagement activities' : 
-                               cls.attendancePercentage < 90 ? 'Monitor and maintain' : 'Continue current approach';
-                const riskLevel = cls.attendancePercentage < 85 ? 'High' : cls.attendancePercentage < 90 ? 'Medium' : 'Low';
-                
-                row.innerHTML = `
-                    <td>${cls.gradeLevel} – ${cls.sectionName} (${cls.subject})</td>
-                    <td>${cls.attendancePercentage}%</td>
-                    <td><span class="risk-${riskLevel.toLowerCase()}">${riskLevel}</span></td>
-                    <td>${strategy}</td>
-                `;
-                trendsTable.appendChild(row);
-            });
-        }
-
         // Show individual student prediction
         function showStudentPrediction(studentId) {
             const student = classes.flatMap(c => c.students.map(s => ({
@@ -1491,7 +1446,6 @@
             attendanceStatusChart.destroy();
             initializeCharts();
             updateEarlyWarningTable();
-            updateTrendsAnalysisTable();
         });
 
         document.getElementById('clear-filters').addEventListener('click', () => {
@@ -1551,7 +1505,6 @@
             initializeFilters();
             initializeCharts();
             updateEarlyWarningTable();
-            updateTrendsAnalysisTable();
         });
     </script>
 </body>

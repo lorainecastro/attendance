@@ -10,7 +10,7 @@
             --primary-blue: #3b82f6;
             --primary-blue-hover: #2563eb;
             --primary-blue-light: #dbeafe;
-            --success-green: #22c55e;
+            --success-green: #10b981;
             --warning-yellow: #f59e0b;
             --danger-red: #ef4444;
             --info-cyan: #06b6d4;
@@ -24,7 +24,7 @@
             --blackfont-color: #1e293b;
             --whitefont-color: #ffffff;
             --grayfont-color: #64748b;
-            --primary-gradient: linear-gradient(135deg, #3b82f6, #3b82f6);
+            --primary-gradient: linear-gradient(135deg, #3b82f6, #60a5fa);
             --secondary-gradient: linear-gradient(135deg, #ec4899, #f472b6);
             --inputfield-color: #f8fafc;
             --inputfieldhover-color: #f1f5f9;
@@ -57,6 +57,9 @@
             --success-color: #10b981;
             --warning-color: #f59e0b;
             --danger-color: #ef4444;
+            --present-color: linear-gradient(135deg, #34d399, #10b981);
+            --absent-color: linear-gradient(135deg, #f87171, #ef4444);
+            --late-color: linear-gradient(135deg, #fbbf24, #f59e0b);
         }
 
         * {
@@ -125,7 +128,7 @@
             align-items: center;
         }
 
-        .selector-select, .date-input {
+        .selector-select {
             padding: var(--spacing-xs) var(--spacing-md);
             border: 1px solid var(--border-color);
             border-radius: var(--radius-sm);
@@ -137,7 +140,7 @@
             box-sizing: border-box;
         }
 
-        .selector-select:focus, .date-input:focus {
+        .selector-select:focus {
             outline: none;
             border-color: var(--primary-blue);
             background: var(--white);
@@ -221,6 +224,7 @@
         .bg-pink { background: var(--secondary-gradient); }
         .bg-blue { background: linear-gradient(135deg, #3b82f6, #60a5fa); }
         .bg-green { background: linear-gradient(135deg, #10b981, #34d399); }
+        .bg-orange { background: linear-gradient(135deg, #f59e0b, #fbbf24); }
 
         .card-title {
             font-size: var(--font-size-sm);
@@ -234,6 +238,17 @@
             color: var(--blackfont-color);
         }
 
+        .card-trend {
+            font-size: var(--font-size-sm);
+            margin-top: var(--spacing-xs);
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-xs);
+        }
+
+        .trend-up { color: var(--success-color); }
+        .trend-down { color: var(--danger-color); }
+
         /* Charts */
         .chart-container {
             background: var(--card-bg);
@@ -244,21 +259,144 @@
             border: 1px solid var(--border-color);
         }
 
-        .chart-row {
+        .chart-header {
             display: flex;
-            gap: var(--spacing-lg);
-            margin-bottom: var(--spacing-lg);
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: var(--spacing-md);
             flex-wrap: wrap;
+            gap: var(--spacing-sm);
         }
 
-        .chart-column {
-            flex: 1;
-            min-width: 300px;
+        .chart-title {
+            font-size: var(--font-size-lg);
+            font-weight: 600;
+        }
+
+        .chart-filter {
+            display: flex;
+            gap: var(--spacing-sm);
+        }
+
+        .filter-btn {
+            padding: var(--spacing-xs) var(--spacing-md);
+            border: none;
+            border-radius: var(--radius-md);
+            background: var(--inputfield-color);
+            color: var(--grayfont-color);
+            font-size: var(--font-size-sm);
+            cursor: pointer;
+            transition: var(--transition-normal);
+        }
+
+        .filter-btn.active {
+            background: var(--primary-blue);
+            color: var(--whitefont-color);
+        }
+
+        .filter-btn:hover {
+            background: var(--inputfieldhover-color);
         }
 
         canvas {
-            max-height: 300px;
+            max-height: 400px;
             width: 100%;
+        }
+
+        /* Attendance Status Distribution */
+        .attendance-status-container {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0.85));
+            backdrop-filter: blur(8px);
+            border-radius: var(--radius-lg);
+            padding: var(--spacing-lg);
+            box-shadow: var(--shadow-lg);
+            margin-bottom: var(--spacing-lg);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: var(--spacing-lg);
+            align-items: center;
+            transition: var(--transition-normal);
+        }
+
+        .attendance-status-container:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 32px rgba(0, 0, 0, 0.12);
+        }
+
+        .attendance-status-header {
+            grid-column: span 2;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: var(--spacing-md);
+        }
+
+        .attendance-status-title {
+            font-size: var(--font-size-lg);
+            font-weight: 600;
+        }
+
+        .attendance-status-legend {
+            display: flex;
+            flex-direction: column;
+            gap: var(--spacing-md);
+            padding: var(--spacing-md);
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: var(--radius-md);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+            font-size: var(--font-size-base);
+            color: var(--blackfont-color);
+            padding: var(--spacing-xs) var(--spacing-sm);
+            border-radius: var(--radius-sm);
+            transition: var(--transition-fast);
+            transform: translateX(0);
+            opacity: 1;
+        }
+
+        .legend-item:hover {
+            background: var(--inputfieldhover-color);
+            transform: translateX(5px);
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(-20px);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        .legend-item:nth-child(1) { animation: slideIn 0.3s ease-in-out; }
+        .legend-item:nth-child(2) { animation: slideIn 0.4s ease-in-out; }
+        .legend-item:nth-child(3) { animation: slideIn 0.5s ease-in-out; }
+
+        .legend-color {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: inline-block;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .legend-label {
+            font-weight: 600;
+            font-size: var(--font-size-base);
+        }
+
+        .legend-value {
+            font-weight: 700;
+            font-size: var(--font-size-lg);
+            color: var(--primary-blue);
         }
 
         /* Tables */
@@ -315,9 +453,9 @@
             background-color: var(--inputfieldhover-color);
         }
 
-        .risk-high { color: var(--danger-color); }
-        .risk-medium { color: var(--warning-color); }
-        .risk-low { color: var(--success-color); }
+        .risk-high { color: var(--danger-color); font-weight: 600; }
+        .risk-medium { color: var(--warning-color); font-weight: 600; }
+        .risk-low { color: var(--success-color); font-weight: 600; }
 
         /* Prediction Card */
         .prediction-card {
@@ -331,29 +469,58 @@
 
         .prediction-header {
             display: flex;
-            justify-content: space-between;
-            align-items: center;
+            flex-direction: column;
+            gap: var(--spacing-sm);
             margin-bottom: var(--spacing-md);
         }
 
         .prediction-details {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
             gap: var(--spacing-md);
-            margin-top: var(--spacing-md);
+            margin-bottom: var(--spacing-md);
         }
 
         .detail-item {
             font-size: var(--font-size-sm);
-            padding: var(--spacing-sm);
+            padding: var(--spacing-md);
             border-radius: var(--radius-md);
             background: var(--inputfield-color);
+            border-left: 4px solid var(--primary-blue);
         }
 
         .detail-item strong {
             color: var(--grayfont-color);
             display: block;
             margin-bottom: var(--spacing-xs);
+        }
+
+        .detail-item.risk-high { border-left-color: var(--danger-color); }
+        .detail-item.risk-medium { border-left-color: var(--warning-color); }
+        .detail-item.risk-low { border-left-color: var(--success-color); }
+
+        /* Alert Styles */
+        .alert {
+            padding: var(--spacing-md);
+            border-radius: var(--radius-md);
+            margin-bottom: var(--spacing-md);
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+        }
+
+        .alert-warning { background: rgba(245, 158, 11, 0.1); border-left: 4px solid var(--warning-color); }
+        .alert-danger { background: rgba(239, 68, 68, 0.1); border-left: 4px solid var(--danger-color); }
+        .alert-info { background: rgba(59, 130, 246, 0.1); border-left: 4px solid var(--primary-blue); }
+
+        /* Forecast Visualization */
+        .forecast-container {
+            background: var(--card-bg);
+            border-radius: var(--radius-lg);
+            padding: var(--spacing-md);
+            box-shadow: var(--shadow-md);
+            margin-bottom: var(--spacing-lg);
+            border: 1px solid var(--border-color);
         }
 
         /* Responsive Adjustments */
@@ -369,16 +536,13 @@
                 flex-direction: column;
                 gap: var(--spacing-xs);
             }
-            .selector-select, .date-input {
+            .selector-select {
                 width: 100%;
                 min-width: auto;
             }
             .btn {
                 width: 100%;
                 justify-content: center;
-            }
-            .chart-row {
-                flex-direction: column;
             }
         }
 
@@ -395,11 +559,30 @@
             .table-responsive {
                 overflow-x: auto;
             }
+            .attendance-status-title {
+                font-size: var(--font-size-lg);
+            }
+            .legend-value {
+                font-size: var(--font-size-base);
+            }
+            .attendance-status-container {
+                grid-template-columns: 1fr;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+            }
+            .attendance-status-legend {
+                width: 100%;
+                max-width: 350px;
+            }
         }
 
         @media (max-width: 576px) {
             .stats-grid {
                 grid-template-columns: 1fr;
+            }
+            .attendance-status-container {
+                padding: var(--spacing-md);
             }
         }
     </style>
@@ -410,29 +593,15 @@
     <!-- Filters -->
     <div class="controls">
         <div class="controls-left">
-            <select class="selector-select" id="grade-level-filter">
-                <option value="">All Grade Levels</option>
-            </select>
-            <select class="selector-select" id="section-filter">
-                <option value="">All Sections</option>
-            </select>
-            <select class="selector-select" id="subject-filter">
-                <option value="">All Subjects</option>
+            <select class="selector-select" id="class-filter">
+                <option value="">Select Class</option>
             </select>
             <select class="selector-select" id="student-filter">
                 <option value="">All Students</option>
             </select>
-            <select class="selector-select" id="time-filter">
-                <option value="">All Time</option>
-                <option value="week">Last Week</option>
-                <option value="month">Last Month</option>
-                <option value="year">Last Year</option>
-            </select>
-            <input type="date" class="date-input" id="start-date" placeholder="Start Date">
-            <input type="date" class="date-input" id="end-date" placeholder="End Date">
-            <button class="btn btn-primary" id="refresh-data"><i class="fas fa-sync"></i> Refresh</button>
-            <button class="btn btn-primary" id="export-chart"><i class="fas fa-download"></i> Export Chart</button>
-            <button class="btn btn-secondary" id="clear-filters"><i class="fas fa-times"></i> Clear Filters</button>
+            <button class="btn btn-primary" id="refresh-data"><i class="fas fa-sync"></i> Update Forecast</button>
+            <button class="btn btn-primary" id="export-chart"><i class="fas fa-download"></i> Export</button>
+            <button class="btn btn-secondary" id="clear-filters"><i class="fas fa-times"></i> Clear</button>
         </div>
     </div>
 
@@ -441,14 +610,30 @@
         <div class="card">
             <div class="card-header">
                 <div>
-                    <div class="card-title">Average Attendance Rate</div>
-                    <div class="card-value" id="avg-attendance-rate">0%</div>
+                    <div class="card-title">Current Attendance Rate</div>
+                    <div class="card-value" id="current-attendance-rate">92.3%</div>
+                    <div class="card-trend trend-up">
+                        <i class="fas fa-arrow-up"></i>
+                        <span>+2.1% vs last week</span>
+                    </div>
                 </div>
                 <div class="card-icon bg-green">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 16 16">
-                        <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
-                        <path d="M10.97 4.97a.235.235 0 0 0-.02.022L7.477 9.417 5.384 7.323a.75.75 0 0 0-1.06 1.06L6.97 11.03a.75.75 0 0 0 1.079-.02l3.992-4.99a.75.75 0 0 0-1.071-1.05z"/>
-                    </svg>
+                    <i class="fas fa-chart-line"></i>
+                </div>
+            </div>
+        </div>
+        <div class="card">
+            <div class="card-header">
+                <div>
+                    <div class="card-title">Predicted Next Month</div>
+                    <div class="card-value" id="predicted-attendance">91.7%</div>
+                    <div class="card-trend">
+                        <i class="fas fa-crystal-ball"></i>
+                        <span>ARIMA Forecast</span>
+                    </div>
+                </div>
+                <div class="card-icon bg-blue">
+                    <i class="fas fa-chart-area"></i>
                 </div>
             </div>
         </div>
@@ -456,761 +641,863 @@
             <div class="card-header">
                 <div>
                     <div class="card-title">At-Risk Students</div>
-                    <div class="card-value" id="at-risk-students">0</div>
+                    <div class="card-value" id="at-risk-count">8</div>
+                    <div class="card-trend trend-down">
+                        <i class="fas fa-arrow-down"></i>
+                        <span>-3 vs last week</span>
+                    </div>
                 </div>
                 <div class="card-icon bg-pink">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 16 16">
-                        <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
-                        <path d="M4 8a.5.5 0 0 1 .5-.5h7a.5.5 0 0 1 0 1h-7A.5.5 0 0 1 4 8z"/>
-                    </svg>
+                    <i class="fas fa-exclamation-triangle"></i>
                 </div>
             </div>
         </div>
         <div class="card">
             <div class="card-header">
                 <div>
-                    <div class="card-title">Top Absenteeism Factor</div>
-                    <div class="card-value" id="top-absenteeism-factor">-</div>
-                </div>
-                <div class="card-icon bg-blue">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 16 16">
-                        <path d="M2 0a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2H2zm0 1h12a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1z"/>
-                        <path d="M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708z"/>
-                    </svg>
-                </div>
-            </div>
-        </div>
-        <div class="card">
-            <div class="card-header">
-                <div>
-                    <div class="card-title">Prediction Accuracy</div>
-                    <div class="card-value" id="prediction-accuracy">85%</div>
+                    <div class="card-title">Forecast Accuracy (ARIMA)</div>
+                    <div class="card-value" id="forecast-accuracy">89.2%</div>
+                    <div class="card-trend trend-up">
+                        <i class="fas fa-arrow-up"></i>
+                        <span>High confidence</span>
+                    </div>
                 </div>
                 <div class="card-icon bg-purple">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 16 16">
-                        <path d="M7 14s-1 0-1-1 1-4 5-4 5 3 5 4-1 1-1 1H7zm4-6a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"/>
-                    </svg>
+                    <i class="fas fa-brain"></i>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Charts Row -->
-    <div class="chart-row">
-        <div class="chart-column">
-            <div class="chart-container">
-                <div class="table-header">
-                    <div class="table-title">Attendance Status Distribution</div>
-                </div>
-                <canvas id="attendance-status"></canvas>
+    <!-- Time Series Forecast Chart -->
+    <div class="forecast-container">
+        <div class="chart-header">
+            <div class="chart-title">ARIMA Time Series Forecast</div>
+            <div class="chart-filter">
+                <button class="filter-btn active" data-period="monthly">Monthly</button>
             </div>
         </div>
-        <div class="chart-column">
-            <div class="chart-container">
-                <div class="table-header">
-                    <div class="table-title">Risk Analysis</div>
-                </div>
-                <canvas id="risk-analysis-chart"></canvas>
-            </div>
-        </div>
+        <canvas id="forecast-chart"></canvas>
     </div>
 
-    <!-- Historical Analysis -->
-    <div class="pattern-table">
-        <div class="table-header">
-            <div class="table-title">Historical Analysis</div>
+    <!-- Attendance Status Distribution -->
+    <div class="attendance-status-container">
+        <div class="attendance-status-header">
+            <div class="attendance-status-title">Attendance Status Distribution</div>
         </div>
-        <h3>Student Behavior Patterns</h3>
-        <div class="table-responsive">
-            <table>
-                <thead>
-                    <tr>
-                        <th>Student</th>
-                        <th>Pattern</th>
-                        <th>Frequency</th>
-                    </tr>
-                </thead>
-                <tbody id="behavior-patterns"></tbody>
-            </table>
+        <canvas id="attendance-status" style="max-width: 350px; margin: 0 auto;"></canvas>
+        <div class="attendance-status-legend">
+            <div class="legend-item">
+                <span class="legend-color" style="background: var(--present-color);"></span>
+                <span class="legend-label">Present</span>
+                <span class="legend-value" id="present-count">20 (66.7%)</span>
+            </div>
+            <div class="legend-item">
+                <span class="legend-color" style="background: var(--absent-color);"></span>
+                <span class="legend-label">Absent</span>
+                <span class="legend-value" id="absent-count">6 (20.0%)</span>
+            </div>
+            <div class="legend-item">
+                <span class="legend-color" style="background: var(--late-color);"></span>
+                <span class="legend-label">Late</span>
+                <span class="legend-value" id="late-count">4 (13.3%)</span>
+            </div>
         </div>
     </div>
 
     <!-- Individual Student Predictions -->
-    <div class="prediction-card" id="prediction-card" style="display: none;">
+    <div class="prediction-card" id="student-prediction-card" style="display: none;">
         <div class="prediction-header">
-            <div class="table-title">Individual Student Predictions</div>
+            <div class="table-title">Individual Student Time Series Analysis</div>
+            <div class="alert alert-info">
+                <i class="fas fa-info-circle"></i>
+                <span>ARIMA model predictions based on historical attendance patterns</span>
+            </div>
         </div>
-        <div class="prediction-details" id="prediction-details"></div>
-        <div class="prediction-details" id="at-risk-status"></div>
+        
+        <div class="prediction-details" id="student-details"></div>
+        
+        <div class="chart-container">
+            <h3>Individual Forecast Chart</h3>
+            <canvas id="individual-forecast-chart"></canvas>
+        </div>
+
         <div class="pattern-table">
-            <h3>Analytics & Recommendations</h3>
+            <h3>Personal Analytics & AI Recommendations</h3>
+            <div id="student-recommendations"></div>
             <div class="table-responsive">
                 <table>
                     <thead>
                         <tr>
                             <th>Metric</th>
-                            <th>Value</th>
+                            <th>Current Value</th>
+                            <th>Forecast (Next Week)</th>
                             <th>Recommendation</th>
                         </tr>
                     </thead>
-                    <tbody id="student-analytics"></tbody>
+                    <tbody id="student-metrics"></tbody>
                 </table>
             </div>
         </div>
     </div>
 
-    <!-- Predictive Analytics Dashboard -->
+    <!-- Early Warning System -->
     <div class="pattern-table">
         <div class="table-header">
-            <div class="table-title">Predictive Analytics Dashboard</div>
+            <div class="table-title">AI-Powered Early Warning System</div>
+            <div class="alert alert-warning">
+                <i class="fas fa-bell"></i>
+                <span>Automated alerts based on time series anomaly detection</span>
+            </div>
         </div>
-        <h3>Early Warning System</h3>
         <div class="table-responsive">
             <table>
                 <thead>
                     <tr>
                         <th>Student</th>
-                        <th>Class/Section</th>
                         <th>Risk Level</th>
+                        <th>Predicted Attendance (7 days)</th>
                         <th>Recommended Action</th>
-                        <th>Urgency</th>
+                        <th>Priority</th>
                     </tr>
                 </thead>
-                <tbody id="early-warning"></tbody>
+                <tbody id="early-warning-table"></tbody>
             </table>
         </div>
     </div>
 
+    <!-- Attendance Trends Analysis -->
     <div class="pattern-table">
         <div class="table-header">
-            <div class="table-title">Subject-Specific Patterns</div>
+            <div class="table-title">Time Series Trends Analysis</div>
         </div>
         <div class="table-responsive">
             <table>
                 <thead>
                     <tr>
-                        <th>Subject</th>
-                        <th>Class/Section</th>
-                        <th>Average Attendance Rate</th>
+                        <th>Class</th>
+                        <th>Current Rate</th>
+                        <th>Risk Level</th>
+                        <th>Enhancement Strategy</th>
                     </tr>
                 </thead>
-                <tbody id="subject-patterns"></tbody>
+                <tbody id="trends-analysis-table"></tbody>
             </table>
         </div>
     </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/js/all.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0/dist/chartjs-plugin-datalabels.min.js"></script>
     <script>
-        // Data from Class Management
+        // Sample data structure for ARIMA-based time series
         let classes = [
             {
                 id: 1,
                 code: 'MATH-101-A',
-                sectionName: 'Diamond Section',
+                sectionName: 'Sampaguita',
                 subject: 'Mathematics',
-                gradeLevel: 'Grade 7',
+                gradeLevel: 'Grade 11',
                 room: 'Room 201',
-                attendancePercentage: 90,
+                attendancePercentage: 92.3,
                 schedule: {
                     monday: { start: '08:00', end: '09:30' },
                     wednesday: { start: '08:00', end: '09:30' },
                     friday: { start: '08:00', end: '09:30' }
                 },
                 status: 'active',
+                trend: 'stable',
+                seasonality: 'weekday_pattern',
+                forecastConfidence: 89.2,
                 students: [
-                    { id: 1, firstName: 'John', lastName: 'Doe', email: 'john.doe@email.com', attendanceRate: 92 },
-                    { id: 2, firstName: 'Jane', lastName: 'Smith', email: 'jane.smith@email.com', attendanceRate: 88 },
-                    { id: 3, firstName: 'Mike', lastName: 'Johnson', email: 'mike.johnson@email.com', attendanceRate: 95 }
+                    { 
+                        id: 1, 
+                        firstName: 'John', 
+                        lastName: 'Doe', 
+                        email: 'john.doe@email.com', 
+                        attendanceRate: 92,
+                        timeSeriesData: [92, 95, 89, 97, 93, 91, 96, 94, 88, 95, 93, 97, 92, 94],
+                        trend: 'stable',
+                        riskLevel: 'low',
+                        totalAbsences: 9,
+                        primaryAbsenceReason: 'Health Issue',
+                        chronicAbsenteeism: 5,
+                        attendanceStatus: { present: 20, absent: 6, late: 4 },
+                        behaviorPatterns: [{ pattern: 'Frequent Friday absences', frequency: 2 }]
+                    },
+                    { 
+                        id: 2, 
+                        firstName: 'Jane', 
+                        lastName: 'Smith', 
+                        email: 'jane.smith@email.com', 
+                        lrn: '304958671230',
+                        attendanceRate: 76.8,
+                        timeSeriesData: [85, 82, 75, 70, 68, 72, 74, 76, 78, 80, 77, 75, 78, 76],
+                        trend: 'declining',
+                        riskLevel: 'high',
+                        totalAbsences: 15,
+                        primaryAbsenceReason: 'Transportation',
+                        chronicAbsenteeism: 8,
+                        attendanceStatus: { present: 15, absent: 10, late: 5 },
+                        behaviorPatterns: [{ pattern: 'Monday absences', frequency: 3 }]
+                    },
+                    { 
+                        id: 3, 
+                        firstName: 'Mike', 
+                        lastName: 'Johnson', 
+                        email: 'mike.johnson@email.com', 
+                        lrn: '641902738459',
+                        attendanceRate: 87.2,
+                        timeSeriesData: [88, 85, 90, 87, 89, 86, 88, 87, 85, 89, 88, 86, 87, 88],
+                        trend: 'stable',
+                        riskLevel: 'medium',
+                        totalAbsences: 12,
+                        primaryAbsenceReason: 'Family Structure',
+                        chronicAbsenteeism: 6,
+                        attendanceStatus: { present: 18, absent: 8, late: 4 },
+                        behaviorPatterns: [{ pattern: 'Midweek absences', frequency: 2 }]
+                    }
                 ]
             },
             {
                 id: 2,
                 code: 'SCI-201-B',
-                sectionName: 'Einstein Section',
+                sectionName: 'Narra',
                 subject: 'Science',
                 gradeLevel: 'Grade 10',
                 room: 'Lab 1',
-                attendancePercentage: 85,
+                attendancePercentage: 89.7,
                 schedule: {
                     tuesday: { start: '10:00', end: '11:30' },
                     thursday: { start: '10:00', end: '11:30' }
                 },
                 status: 'active',
+                trend: 'stable',
+                seasonality: 'monthly_pattern',
+                forecastConfidence: 91.5,
                 students: [
-                    { id: 4, firstName: 'Alice', lastName: 'Brown', email: 'alice.brown@email.com', attendanceRate: 80 },
-                    { id: 5, firstName: 'Bob', lastName: 'Wilson', email: 'bob.wilson@email.com', attendanceRate: 90 }
+                    { 
+                        id: 4, 
+                        firstName: 'Alice', 
+                        lastName: 'Brown', 
+                        email: 'alice.brown@email.com', 
+                        attendanceRate: 91.3,
+                        timeSeriesData: [90, 92, 89, 93, 91, 90, 92, 91, 89, 93, 92, 90, 91, 92],
+                        trend: 'improving',
+                        riskLevel: 'low',
+                        totalAbsences: 8,
+                        primaryAbsenceReason: 'No Reason',
+                        chronicAbsenteeism: 4,
+                        attendanceStatus: { present: 22, absent: 5, late: 3 },
+                        behaviorPatterns: [{ pattern: 'Occasional absences', frequency: 1 }]
+                    },
+                    { 
+                        id: 5, 
+                        firstName: 'Bob', 
+                        lastName: 'Wilson', 
+                        email: 'bob.wilson@email.com', 
+                        attendanceRate: 83.4,
+                        timeSeriesData: [85, 84, 82, 85, 83, 84, 82, 83, 85, 82, 84, 83, 85, 84],
+                        trend: 'stable',
+                        riskLevel: 'medium',
+                        totalAbsences: 14,
+                        primaryAbsenceReason: 'Household Income',
+                        chronicAbsenteeism: 7,
+                        attendanceStatus: { present: 16, absent: 9, late: 5 },
+                        behaviorPatterns: [{ pattern: 'Thursday absences', frequency: 2 }]
+                    }
                 ]
             },
             {
                 id: 3,
                 code: 'ENG-301-C',
-                sectionName: 'Shakespeare Section',
-                subject: 'English Literature',
+                sectionName: 'Mahogany',
+                subject: 'English',
                 gradeLevel: 'Grade 12',
-                room: 'Room 305',
-                attendancePercentage: 88,
+                room: 'Room 202',
+                attendancePercentage: 90.1,
                 schedule: {
-                    monday: { start: '14:00', end: '15:30' },
-                    wednesday: { start: '14:00', end: '15:30' }
+                    monday: { start: '09:00', end: '10:30' },
+                    wednesday: { start: '09:00', end: '10:30' },
+                    friday: { start: '09:00', end: '10:30' }
                 },
-                status: 'inactive',
-                students: [
-                    { id: 6, firstName: 'Carol', lastName: 'Davis', email: 'carol.davis@email.com', attendanceRate: 85 },
-                    { id: 7, firstName: 'David', lastName: 'Miller', email: 'david.miller@email.com', attendanceRate: 87 },
-                    { id: 8, firstName: 'Emma', lastName: 'Garcia', email: 'emma.garcia@email.com', attendanceRate: 90 },
-                    { id: 9, firstName: 'Frank', lastName: 'Rodriguez', email: 'frank.rodriguez@email.com', attendanceRate: 82 }
-                ]
+                status: 'active',
+                trend: 'improving',
+                seasonality: 'no_significant_pattern',
+                forecastConfidence: 90.0,
+                students: []
             }
         ];
 
-        // Student data
-        let students = classes.flatMap(cls => cls.students.map(student => ({
-            id: student.id,
-            firstName: student.firstName,
-            lastName: student.lastName,
-            email: student.email || '',
-            fullName: `${student.firstName} ${student.lastName}`,
-            gender: student.gender || 'Male',
-            dob: student.dob || '2010-01-01',
-            gradeLevel: cls.gradeLevel,
-            class: cls.subject,
-            section: cls.sectionName,
-            address: student.address || '123 Sample St',
-            parentName: student.parentName || 'Parent Name',
-            emergencyContact: student.emergencyContact || '09234567890',
-            attendanceRate: student.attendanceRate || 90,
-            dateAdded: student.dateAdded || '2024-09-01',
-            photo: student.photo || 'https://via.placeholder.com/100',
-            absences: [
-                { month: 'Dec', reason: 'Health Issue', count: Math.floor(Math.random() * 5) },
-                { day: ['Monday', 'Friday'][Math.floor(Math.random() * 2)], count: Math.floor(Math.random() * 6) }
-            ],
-            consecutiveAbsences: Math.floor(Math.random() * 15)
-        })));
+        // Generate time series data for forecasting
+        function generateTimeSeriesData(days = 30) {
+            const data = [];
+            const labels = [];
+            const baseAttendance = 90;
+            
+            for (let i = days; i >= 0; i--) {
+                const date = new Date();
+                date.setDate(date.getDate() - i);
+                labels.push(date.toISOString().split('T')[0]);
+                
+                const dayOfWeek = date.getDay();
+                const weekendEffect = (dayOfWeek === 0 || dayOfWeek === 6) ? -5 : 0;
+                const mondayEffect = dayOfWeek === 1 ? -3 : 0;
+                const fridayEffect = dayOfWeek === 5 ? -2 : 0;
+                const randomVariation = (Math.random() - 0.5) * 4;
+                
+                const attendance = Math.max(70, Math.min(100, 
+                    baseAttendance + weekendEffect + mondayEffect + fridayEffect + randomVariation
+                ));
+                data.push(attendance);
+            }
+            
+            return { labels, data };
+        }
 
-        // Sample absence data
-        const absenceData = [
-            { month: 'December', reason: 'Health Issue', frequency: '12/year' },
-            { month: 'June', reason: 'Sick', frequency: '8/year' }
-        ];
-
-        // Sample attendance status data (base)
-        const baseAttendanceStatus = [
-            { status: 'Present', count: 350 },
-            { status: 'Absent', count: 30 },
-            { status: 'Late', count: 15 }
-        ];
+        // ARIMA forecasting simulation
+        function arimaForecast(historicalData, periods = 30) {
+            const forecast = [];
+            const lastValue = historicalData[historicalData.length - 1];
+            
+            for (let i = 1; i <= periods; i++) {
+                const trend = (historicalData[historicalData.length - 1] - historicalData[historicalData.length - 7]) / 7;
+                const seasonalEffect = Math.sin(i * Math.PI / 3.5) * 2;
+                const noise = (Math.random() - 0.5) * 1.5;
+                
+                const predictedValue = Math.max(70, Math.min(100, 
+                    lastValue + (trend * i) + seasonalEffect + noise
+                ));
+                forecast.push(predictedValue);
+            }
+            
+            return forecast;
+        }
 
         // DOM Elements
-        const gradeLevelFilter = document.getElementById('grade-level-filter');
-        const subjectFilter = document.getElementById('subject-filter');
-        const sectionFilter = document.getElementById('section-filter');
+        const classFilter = document.getElementById('class-filter');
         const studentFilter = document.getElementById('student-filter');
-        const timeFilter = document.getElementById('time-filter');
-        const startDate = document.getElementById('start-date');
-        const endDate = document.getElementById('end-date');
-        const predictionCard = document.getElementById('prediction-card');
-        const predictionDetails = document.getElementById('prediction-details');
-        const atRiskStatus = document.getElementById('at-risk-status');
-        const studentAnalytics = document.getElementById('student-analytics');
-        const behaviorPatterns = document.getElementById('behavior-patterns');
-        const earlyWarning = document.getElementById('early-warning');
-        const subjectPatterns = document.getElementById('subject-patterns');
-        const avgAttendanceRate = document.getElementById('avg-attendance-rate');
-        const atRiskStudents = document.getElementById('at-risk-students');
-        const topAbsenteeismFactor = document.getElementById('top-absenteeism-factor');
-        const predictionAccuracy = document.getElementById('prediction-accuracy');
-
-        // Chart Contexts
+        
+        // Chart contexts
+        const forecastChartCtx = document.getElementById('forecast-chart').getContext('2d');
         const attendanceStatusCtx = document.getElementById('attendance-status').getContext('2d');
-        const riskAnalysisChartCtx = document.getElementById('risk-analysis-chart').getContext('2d');
+        
+        // Chart instances
+        let forecastChart, attendanceStatusChart, individualForecastChart;
 
-        // Chart Instances
-        let attendanceStatusChart, riskAnalysis;
-
-        // Initialize Filters
+        // Initialize filters
         function initializeFilters() {
-            const gradeLevels = [...new Set(classes.map(c => c.gradeLevel))];
-            const subjects = [...new Set(classes.map(c => c.subject))];
-            const sections = [...new Set(classes.map(c => c.sectionName))];
-
-            gradeLevelFilter.innerHTML = '<option value="">All Grade Levels</option>';
-            subjects.forEach(subject => {
+            classes.forEach(cls => {
                 const option = document.createElement('option');
-                option.value = subject;
-                option.textContent = subject;
-                subjectFilter.appendChild(option);
+                option.value = cls.id;
+                option.textContent = `${cls.gradeLevel} – ${cls.sectionName} (${cls.subject})`;
+                classFilter.appendChild(option);
             });
-
-            sections.forEach(section => {
-                const option = document.createElement('option');
-                option.value = section;
-                option.textContent = section;
-                sectionFilter.appendChild(option);
-            });
-
-            gradeLevels.forEach(grade => {
-                const option = document.createElement('option');
-                option.value = grade;
-                option.textContent = grade;
-                gradeLevelFilter.appendChild(option);
-            });
-
+            
             updateStudentFilter();
         }
 
-        // Update Student Filter
         function updateStudentFilter() {
-            const selectedGradeLevel = gradeLevelFilter.value;
-            const selectedSubject = subjectFilter.value;
-            const selectedSection = sectionFilter.value;
+            const selectedClassId = classFilter.value;
 
-            let filteredStudents = students;
+            let filteredStudents = classes.flatMap(c => c.students.map(s => ({
+                ...s,
+                gradeLevel: c.gradeLevel,
+                subject: c.subject,
+                section: c.sectionName
+            })));
 
-            if (selectedGradeLevel) {
-                filteredStudents = filteredStudents.filter(s => s.gradeLevel === selectedGradeLevel);
-            }
-            if (selectedSubject) {
-                filteredStudents = filteredStudents.filter(s => s.class === selectedSubject);
-            }
-            if (selectedSection) {
-                filteredStudents = filteredStudents.filter(s => s.section === selectedSection);
+            if (selectedClassId) {
+                filteredStudents = filteredStudents.filter(s => s.section === classes.find(c => c.id == selectedClassId).sectionName);
             }
 
             studentFilter.innerHTML = '<option value="">All Students</option>';
             filteredStudents.forEach(student => {
                 const option = document.createElement('option');
                 option.value = student.id;
-                option.textContent = `${student.fullName} (${student.section})`;
+                option.textContent = `${student.firstName} ${student.lastName} (${student.section})`;
                 studentFilter.appendChild(option);
             });
-
-            // Reset prediction card if no specific student is selected
-            if (!studentFilter.value) {
-                predictionCard.style.display = 'none';
-                predictionDetails.innerHTML = '';
-                atRiskStatus.innerHTML = '';
-                studentAnalytics.innerHTML = '';
-            }
         }
 
-        // Initialize Charts
+        // Initialize charts
         function initializeCharts() {
-            if (attendanceStatusChart) attendanceStatusChart.destroy();
-            if (riskAnalysis) riskAnalysis.destroy();
+            const timeSeriesData = generateTimeSeriesData(30);
+            const forecastData = arimaForecast(timeSeriesData.data, 30);
+            
+            // Forecast Chart
+            forecastChart = new Chart(forecastChartCtx, {
+                type: 'line',
+                data: {
+                    labels: [...timeSeriesData.labels, ...Array(30).fill(0).map((_, i) => {
+                        const date = new Date();
+                        date.setDate(date.getDate() + i + 1);
+                        return date.toISOString().split('T')[0];
+                    })],
+                    datasets: [
+                        {
+                            label: 'Historical Data',
+                            data: [...timeSeriesData.data, ...Array(30).fill(null)],
+                            borderColor: '#3b82f6',
+                            backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                            fill: true,
+                            tension: 0.4
+                        },
+                        {
+                            label: 'ARIMA Forecast',
+                            data: [...Array(30).fill(null), ...forecastData],
+                            borderColor: '#ef4444',
+                            backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                            borderDash: [5, 5],
+                            fill: false,
+                            tension: 0.4
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: {
+                        intersect: false,
+                        mode: 'index'
+                    },
+                    plugins: {
+                        legend: {
+                            position: 'top'
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return `${context.dataset.label}: ${context.parsed.y.toFixed(1)}%`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: false,
+                            min: 70,
+                            max: 100,
+                            title: {
+                                display: true,
+                                text: 'Attendance Rate (%)'
+                            }
+                        },
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Date'
+                            }
+                        }
+                    }
+                }
+            });
 
+            // Attendance Status Chart
+            const attendanceData = [20, 6, 4];
+            const total = attendanceData.reduce((a, b) => a + b, 0);
             attendanceStatusChart = new Chart(attendanceStatusCtx, {
                 type: 'pie',
                 data: {
-                    labels: baseAttendanceStatus.map(s => s.status),
+                    labels: ['Present', 'Absent', 'Late'],
                     datasets: [{
-                        data: baseAttendanceStatus.map(s => s.count),
-                        backgroundColor: ['#22c55e', '#ef4444', '#f59e0b']
+                        data: attendanceData,
+                        backgroundColor: [
+                            '#22c55e', 
+                            '#ef4444', 
+                            '#f59e0b'
+                        ],
+                        borderWidth: 2,
+                        borderColor: '#ffffff',
+                        hoverOffset: 20
                     }]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
                     plugins: {
-                        tooltip: { enabled: true },
-                        legend: { position: 'top' }
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            enabled: true,
+                            callbacks: {
+                                label: function(context) {
+                                    const value = context.raw;
+                                    const percentage = ((value / total) * 100).toFixed(1);
+                                    return `${context.label}: ${value} (${percentage}%)`;
+                                }
+                            }
+                        },
+                        datalabels: {
+                            color: '#ffffff',
+                            formatter: (value, context) => {
+                                const percentage = ((value / total) * 100).toFixed(1);
+                                return `${value}\n(${percentage}%)`;
+                            },
+                            font: {
+                                weight: 'bold',
+                                size: 12,
+                                family: 'var(--font-family)'
+                            },
+                            textAlign: 'center',
+                            padding: 4,
+                            display: function(context) {
+                                const value = context.dataset.data[context.dataIndex];
+                                return value > 0; // Only show labels for non-zero values
+                            }
+                        }
+                    },
+                    animation: {
+                        animateScale: true,
+                        animateRotate: true
                     }
-                }
-            });
-
-            riskAnalysis = new Chart(riskAnalysisChartCtx, {
-                type: 'doughnut',
-                data: {
-                    labels: ['Low Risk', 'Medium Risk', 'High Risk'],
-                    datasets: [{
-                        data: [60, 25, 15],
-                        backgroundColor: ['#22c55e', '#f59e0b', '#ef4444']
-                    }]
                 },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: { position: 'top' },
-                        tooltip: { enabled: true }
-                    }
-                }
-            });
-        }
-
-        // Update Attendance Status Chart
-        function updateAttendanceStatusChart(selectedTime, startDateValue, endDateValue, selectedStudentId, filteredStudents) {
-            let filteredData = [...baseAttendanceStatus];
-            if (selectedStudentId) {
-                const student = students.find(s => s.id == selectedStudentId);
-                if (student) {
-                    filteredData = [
-                        { status: 'Present', count: Math.floor(student.attendanceRate * 4) },
-                        { status: 'Absent', count: Math.floor((100 - student.attendanceRate) * 0.3) },
-                        { status: 'Late', count: Math.floor((100 - student.attendanceRate) * 0.2) }
-                    ];
-                }
-            } else {
-                filteredData = baseAttendanceStatus.map(item => {
-                    const avgCount = filteredStudents.reduce((sum, s) => {
-                        const rate = s.attendanceRate;
-                        return sum + (item.status === 'Present' ? rate * 4 :
-                                     item.status === 'Absent' ? (100 - rate) * 0.3 :
-                                     item.status === 'Late' ? (100 - rate) * 0.2 :
-                                     (100 - rate) * 0.1);
-                    }, 0) / (filteredStudents.length || 1);
-                    return { status: item.status, count: Math.floor(avgCount) };
-                });
-            }
-
-            if (startDateValue && endDateValue) {
-                filteredData = filteredData.map(item => ({
-                    ...item,
-                    count: Math.floor(item.count * (Math.random() * 0.2 + 0.8))
-                }));
-            } else if (selectedTime) {
-                const multiplier = selectedTime === 'week' ? 0.95 : selectedTime === 'month' ? 0.9 : selectedTime === 'year' ? 0.85 : 1;
-                filteredData = filteredData.map(item => ({
-                    ...item,
-                    count: Math.floor(item.count * multiplier)
-                }));
-            }
-
-            attendanceStatusChart.data.labels = filteredData.map(s => s.status);
-            attendanceStatusChart.data.datasets[0].data = filteredData.map(s => s.count);
-            attendanceStatusChart.update();
-        }
-
-        // Update Risk Analysis Chart
-        function updateRiskAnalysisChart(selectedStudentId, filteredStudents) {
-            let riskData;
-            if (selectedStudentId) {
-                const student = students.find(s => s.id == selectedStudentId);
-                if (student) {
-                    const riskLevel = student.attendanceRate < 85 ? 'High' : student.attendanceRate < 90 ? 'Medium' : 'Low';
-                    riskData = {
-                        labels: ['Low Risk', 'Medium Risk', 'High Risk'],
-                        data: [
-                            riskLevel === 'Low' ? 100 : 0,
-                            riskLevel === 'Medium' ? 100 : 0,
-                            riskLevel === 'High' ? 100 : 0
-                        ]
-                    };
-                } else {
-                    riskData = {
-                        labels: ['Low Risk', 'Medium Risk', 'High Risk'],
-                        data: [60, 25, 15]
-                    };
-                }
-            } else {
-                const riskCounts = { low: 0, medium: 0, high: 0 };
-                filteredStudents.forEach(s => {
-                    if (s.attendanceRate < 85) riskCounts.high++;
-                    else if (s.attendanceRate < 90) riskCounts.medium++;
-                    else riskCounts.low++;
-                });
-                const total = filteredStudents.length || 1;
-                riskData = {
-                    labels: ['Low Risk', 'Medium Risk', 'High Risk'],
-                    data: [
-                        (riskCounts.low / total) * 100,
-                        (riskCounts.medium / total) * 100,
-                        (riskCounts.high / total) * 100
-                    ]
-                };
-            }
-
-            riskAnalysis.data.labels = riskData.labels;
-            riskAnalysis.data.datasets[0].data = riskData.data;
-            riskAnalysis.update();
-        }
-
-        // Update KPI Cards
-        function updateKPICards(selectedStudentId, filteredStudents, selectedTime, startDateValue, endDateValue) {
-            let avgAttendance, atRiskCount, topFactor, predAccuracy;
-
-            if (selectedStudentId) {
-                const student = students.find(s => s.id == selectedStudentId);
-                if (student) {
-                    avgAttendance = student.attendanceRate;
-                    atRiskCount = student.attendanceRate < 85 || student.consecutiveAbsences >= 10 ? 1 : 0;
-                    topFactor = student.absences[0]?.reason || 'Health Issue';
-                    predAccuracy = student.attendanceRate < 85 ? 80 : student.attendanceRate < 90 ? 85 : 90;
-                } else {
-                    avgAttendance = 90;
-                    atRiskCount = 0;
-                    topFactor = 'Health Issue';
-                    predAccuracy = 85;
-                }
-            } else {
-                avgAttendance = filteredStudents.reduce((sum, s) => sum + s.attendanceRate, 0) / filteredStudents.length || 90;
-                atRiskCount = filteredStudents.filter(s => s.attendanceRate < 85 || s.consecutiveAbsences >= 10).length;
-                const factorCounts = {};
-                filteredStudents.forEach(s => {
-                    const reason = s.absences[0]?.reason || 'Health Issue';
-                    factorCounts[reason] = (factorCounts[reason] || 0) + 1;
-                });
-                topFactor = Object.entries(factorCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || 'Health Issue';
-                predAccuracy = filteredStudents.length ? (filteredStudents.filter(s => s.attendanceRate >= 85).length / filteredStudents.length * 90).toFixed(1) : 85;
-            }
-
-            if (startDateValue && endDateValue) {
-                avgAttendance *= (Math.random() * 0.1 + 0.95);
-                predAccuracy *= (Math.random() * 0.05 + 0.95);
-            } else if (selectedTime) {
-                const multiplier = selectedTime === 'week' ? 0.98 : selectedTime === 'month' ? 0.95 : selectedTime === 'year' ? 0.90 : 1;
-                avgAttendance *= multiplier;
-                predAccuracy *= multiplier;
-            }
-
-            avgAttendanceRate.textContent = `${avgAttendance.toFixed(1)}%`;
-            atRiskStudents.textContent = atRiskCount;
-            topAbsenteeismFactor.textContent = topFactor;
-            predictionAccuracy.textContent = `${predAccuracy.toFixed(1)}%`;
-        }
-
-        // Update Data
-        function updateData() {
-            const selectedGradeLevel = gradeLevelFilter.value;
-            const selectedSubject = subjectFilter.value;
-            const selectedSection = sectionFilter.value;
-            const selectedStudentId = studentFilter.value;
-            const selectedTime = timeFilter.value;
-            const startDateValue = startDate.value;
-            const endDateValue = endDate.value;
-
-            let filteredStudents = students;
-            let filteredClasses = classes;
-
-            if (selectedGradeLevel) {
-                filteredStudents = filteredStudents.filter(s => s.gradeLevel === selectedGradeLevel);
-                filteredClasses = filteredClasses.filter(c => c.gradeLevel === selectedGradeLevel);
-            }
-            if (selectedSubject) {
-                filteredStudents = filteredStudents.filter(s => s.class === selectedSubject);
-                filteredClasses = filteredClasses.filter(c => c.subject === selectedSubject);
-            }
-            if (selectedSection) {
-                filteredStudents = filteredStudents.filter(s => s.section === selectedSection);
-                filteredClasses = filteredClasses.filter(c => c.sectionName === selectedSection);
-            }
-            if (selectedStudentId) {
-                filteredStudents = filteredStudents.filter(s => s.id == selectedStudentId);
-                showStudentPrediction(filteredStudents[0]);
-            } else {
-                predictionCard.style.display = 'none';
-                predictionDetails.innerHTML = '';
-                atRiskStatus.innerHTML = '';
-                studentAnalytics.innerHTML = '';
-            }
-
-            if (startDateValue && endDateValue) {
-                const dateStart = new Date(startDateValue);
-                const dateEnd = new Date(endDateValue);
-                if (dateStart > dateEnd) {
-                    alert('Start date must be before end date.');
-                    return;
-                }
-                filteredStudents = filteredStudents.map(s => ({
-                    ...s,
-                    attendanceRate: s.attendanceRate * (Math.random() * 0.1 + 0.95)
-                }));
-            } else if (selectedTime) {
-                const multiplier = selectedTime === 'week' ? 0.98 : selectedTime === 'month' ? 0.95 : selectedTime === 'year' ? 0.90 : 1;
-                filteredStudents = filteredStudents.map(s => ({
-                    ...s,
-                    attendanceRate: s.attendanceRate * multiplier
-                }));
-            }
-
-            updateKPICards(selectedStudentId, filteredStudents, selectedTime, startDateValue, endDateValue);
-
-            behaviorPatterns.innerHTML = '';
-            const behaviorData = filteredStudents.map(s => ({
-                student: s.fullName,
-                pattern: s.absences.find(a => a.day) ? `Frequent ${s.absences.find(a => a.day).day} absences` : 'None',
-                frequency: s.absences.find(a => a.day) ? s.absences.find(a => a.day).count : 0
-            }));
-            behaviorData.forEach(data => {
-                const row = document.createElement('tr');
-                row.innerHTML = `<td>${data.student}</td><td>${data.pattern}</td><td>${data.frequency}</td>`;
-                behaviorPatterns.appendChild(row);
+                plugins: [ChartDataLabels]
             });
 
-            earlyWarning.innerHTML = '';
-            const earlyWarningData = filteredStudents.map(s => {
-                const riskLevel = s.attendanceRate < 85 ? 'High' : s.attendanceRate < 90 ? 'Medium' : 'Low';
-                const action = riskLevel === 'High' ? 'Parent Meeting' : riskLevel === 'Medium' ? 'Counseling' : 'Monitor';
-                const urgency = riskLevel === 'High' ? '1 week' : riskLevel === 'Medium' ? '2 weeks' : '1 month';
-                return {
-                    student: s.fullName,
-                    classSection: `${s.class} (${s.section})`,
-                    riskLevel,
-                    action,
-                    urgency
-                };
-            });
-            earlyWarningData.forEach(data => {
+            // Update legend counts
+            document.getElementById('present-count').textContent = `${attendanceData[0]} (${((attendanceData[0] / total) * 100).toFixed(1)}%)`;
+            document.getElementById('absent-count').textContent = `${attendanceData[1]} (${((attendanceData[1] / total) * 100).toFixed(1)}%)`;
+            document.getElementById('late-count').textContent = `${attendanceData[2]} (${((attendanceData[2] / total) * 100).toFixed(1)}%)`;
+        }
+
+        // Update early warning table
+        function updateEarlyWarningTable() {
+            const earlyWarningTable = document.getElementById('early-warning-table');
+            earlyWarningTable.innerHTML = '';
+            
+            const allStudents = classes.flatMap(c => c.students.map(s => ({
+                ...s,
+                subject: c.subject,
+                section: c.sectionName
+            })));
+            
+            const atRiskStudents = allStudents.filter(s => s.riskLevel !== 'low');
+            
+            atRiskStudents.forEach(student => {
+                const forecast = arimaForecast(student.timeSeriesData, 7);
+                const avgForecast = forecast.reduce((a, b) => a + b, 0) / forecast.length;
+                
                 const row = document.createElement('tr');
                 row.innerHTML = `
-                    <td>${data.student}</td>
-                    <td>${data.classSection}</td>
-                    <td><span class="risk-${data.riskLevel.toLowerCase()}">${data.riskLevel}</span></td>
-                    <td>${data.action}</td>
-                    <td>${data.urgency}</td>
+                    <td>${student.firstName} ${student.lastName}</td>
+                    <td><span class="risk-${student.riskLevel}">${student.riskLevel.charAt(0).toUpperCase() + student.riskLevel.slice(1)}</span></td>
+                    <td>${avgForecast.toFixed(1)}%</td>
+                    <td>${student.riskLevel === 'high' ? 'Immediate parent conference' : 'Monitor closely + automated reminders'}</td>
+                    <td>${student.riskLevel === 'high' ? 'High' : 'Medium'}</td>
                 `;
-                earlyWarning.appendChild(row);
+                earlyWarningTable.appendChild(row);
             });
-
-            subjectPatterns.innerHTML = '';
-            const subjectData = filteredClasses.map(c => ({
-                name: c.subject,
-                classSection: c.sectionName,
-                attendanceRate: c.attendancePercentage
-            }));
-            subjectData.forEach(subject => {
-                const row = document.createElement('tr');
-                row.innerHTML = `
-                    <td>${subject.name}</td>
-                    <td>${subject.classSection}</td>
-                    <td>${subject.attendanceRate}%</td>
-                `;
-                subjectPatterns.appendChild(row);
-            });
-
-            updateAttendanceStatusChart(selectedTime, startDateValue, endDateValue, selectedStudentId, filteredStudents);
-            updateRiskAnalysisChart(selectedStudentId, filteredStudents);
         }
 
-        // Show Student Prediction
-        function showStudentPrediction(student) {
-            if (!student) return;
+        // Update trends analysis table
+        function updateTrendsAnalysisTable() {
+            const trendsTable = document.getElementById('trends-analysis-table');
+            trendsTable.innerHTML = '';
+            
+            classes.forEach(cls => {
+                const row = document.createElement('tr');
+                const strategy = cls.attendancePercentage < 85 ? 'Enhanced engagement activities' : 
+                               cls.attendancePercentage < 90 ? 'Monitor and maintain' : 'Continue current approach';
+                const riskLevel = cls.attendancePercentage < 85 ? 'High' : cls.attendancePercentage < 90 ? 'Medium' : 'Low';
+                
+                row.innerHTML = `
+                    <td>${cls.gradeLevel} – ${cls.sectionName} (${cls.subject})</td>
+                    <td>${cls.attendancePercentage}%</td>
+                    <td><span class="risk-${riskLevel.toLowerCase()}">${riskLevel}</span></td>
+                    <td>${strategy}</td>
+                `;
+                trendsTable.appendChild(row);
+            });
+        }
 
-            predictionCard.style.display = 'block';
-
-            const avgAttendanceRate = student.attendanceRate;
-            const riskLevel = student.attendanceRate < 85 ? 'High' : student.attendanceRate < 90 ? 'Medium' : 'Low';
-            const predictedAttendance = Math.min(100, student.attendanceRate);
-            const probabilityPresentTomorrow = Math.min(100, Math.max(0, student.attendanceRate));
-            const chronicAbsenteeism = Math.min(100, ((student.consecutiveAbsences / 180) * 100).toFixed(1));
-
-            predictionDetails.innerHTML = `
+        // Show individual student prediction
+        function showStudentPrediction(studentId) {
+            const student = classes.flatMap(c => c.students.map(s => ({
+                ...s,
+                subject: c.subject,
+                section: c.sectionName,
+                gradeLevel: c.gradeLevel
+            }))).find(s => s.id == studentId);
+            
+            if (!student) {
+                document.getElementById('student-prediction-card').style.display = 'none';
+                return;
+            }
+            
+            document.getElementById('student-prediction-card').style.display = 'block';
+            
+            const forecast = arimaForecast(student.timeSeriesData, 30);
+            const avgForecast = forecast.reduce((a, b) => a + b, 0) / forecast.length;
+            
+            // Update student details
+            const studentDetails = document.getElementById('student-details');
+            studentDetails.innerHTML = `
                 <div class="detail-item">
-                    <strong>Student Name:</strong> ${student.fullName}
+                    <strong>Class:</strong> ${student.subject} (${student.section})
+                </div>
+                <div class="detail-item">
+                    <strong>LRN:</strong> ${student.lrn || 'N/A'}
+                </div>
+                <div class="detail-item">
+                    <strong>Student:</strong> ${student.firstName} ${student.lastName}
                 </div>
                 <div class="detail-item">
                     <strong>Current Attendance Rate:</strong> ${student.attendanceRate}%
                 </div>
-                <div class="detail-item">
-                    <strong>Predicted Next Month:</strong> ${predictedAttendance.toFixed(1)}%
+                <div class="detail-item risk-${student.riskLevel}">
+                    <strong>Risk Level:</strong> ${student.riskLevel.charAt(0).toUpperCase() + student.riskLevel.slice(1)}
                 </div>
                 <div class="detail-item">
-                    <strong>Risk Level:</strong> <span class="risk-${riskLevel.toLowerCase()}">${riskLevel}</span>
+                    <strong>Predicted Next Month:</strong> ${avgForecast.toFixed(1)}%
                 </div>
                 <div class="detail-item">
-                    <strong>Total Absences:</strong> ${student.consecutiveAbsences}
+                    <strong>Total Absences:</strong> ${student.totalAbsences}
                 </div>
                 <div class="detail-item">
-                    <strong>Primary Absence Reason:</strong> ${student.absences[0]?.reason || 'N/A'}
-                </div>
-                <div class="detail-item">
-                    <strong>Chronic Absenteeism:</strong> ${chronicAbsenteeism}%
-                </div>
-                <div class="detail-item">
-                    <strong>Probability of Being Present Tomorrow:</strong> ${probabilityPresentTomorrow.toFixed(1)}%
+                    <strong>Chronic Absenteeism:</strong> ${student.chronicAbsenteeism}%
                 </div>
             `;
+            
+            // Generate recommendations
+            const recommendations = generateRecommendations(student);
+            const recDiv = document.getElementById('student-recommendations');
+            recDiv.innerHTML = recommendations.map(rec => 
+                `<div class="alert alert-${rec.type}">
+                    <i class="fas fa-${rec.icon}"></i>
+                    <span>${rec.message}</span>
+                </div>`
+            ).join('');
+            
+            // Update metrics table
+            const metricsTable = document.getElementById('student-metrics');
+            metricsTable.innerHTML = `
+                <tr>
+                    <td>Attendance Rate</td>
+                    <td>${student.attendanceRate}%</td>
+                    <td>${avgForecast.toFixed(1)}%</td>
+                    <td>${avgForecast < student.attendanceRate ? 'Implement intervention plan' : 'Continue monitoring'}</td>
+                </tr>
+                <tr>
+                    <td>Total Absences</td>
+                    <td>${student.totalAbsences}</td>
+                    <td>-</td>
+                    <td>${student.totalAbsences > 10 ? 'Contact parents' : 'Review absence patterns'}</td>
+                </tr>
+                <tr>
+                    <td>Chronic Absenteeism</td>
+                    <td>${student.chronicAbsenteeism}%</td>
+                    <td>-</td>
+                    <td>${student.chronicAbsenteeism > 10 ? 'Implement attendance plan' : 'Monitor attendance'}</td>
+                </tr>
+            `;
+            
+            // Create individual forecast chart
+            createIndividualForecastChart(student);
+            
+            // Update attendance status chart for selected student
+            if (attendanceStatusChart) {
+                const studentData = [
+                    student.attendanceStatus.present,
+                    student.attendanceStatus.absent,
+                    student.attendanceStatus.late
+                ];
+                const studentTotal = studentData.reduce((a, b) => a + b, 0);
+                attendanceStatusChart.data.datasets[0].data = studentData;
+                attendanceStatusChart.update();
 
-            atRiskStatus.innerHTML = riskLevel === 'High' ? `
-                <div class="detail-item risk-high">
-                    <strong>Status:</strong> At Risk
-                </div>
-            ` : '';
-
-            studentAnalytics.innerHTML = '';
-            const analyticsData = [
-                {
-                    metric: 'Attendance Rate',
-                    value: `${student.attendanceRate}%`,
-                    recommendation: riskLevel === 'High' ? 'Schedule immediate intervention' : 'Continue monitoring'
-                },
-                {
-                    metric: 'Total Absences',
-                    value: student.consecutiveAbsences,
-                    recommendation: student.consecutiveAbsences > 10 ? 'Contact parents' : 'Review absence patterns'
-                },
-                {
-                    metric: 'Primary Absence Reason',
-                    value: student.absences[0]?.reason || 'N/A',
-                    recommendation: student.absences[0]?.reason === 'Sick' ? 'Health check-up' : 'Address specific issue'
-                },
-                {
-                    metric: 'Chronic Absenteeism',
-                    value: `${chronicAbsenteeism}%`,
-                    recommendation: chronicAbsenteeism > 10 ? 'Implement attendance plan' : 'Monitor attendance'
+                // Update legend counts for selected student
+                document.getElementById('present-count').textContent = `${studentData[0]} (${((studentData[0] / studentTotal) * 100).toFixed(1)}%)`;
+                document.getElementById('absent-count').textContent = `${studentData[1]} (${((studentData[1] / studentTotal) * 100).toFixed(1)}%)`;
+                document.getElementById('late-count').textContent = `${studentData[2]} (${((studentData[2] / studentTotal) * 100).toFixed(1)}%)`;
+            }
+        }
+        
+        function generateRecommendations(student) {
+            const recommendations = [];
+            
+            if (student.riskLevel === 'high') {
+                recommendations.push({
+                    type: 'danger',
+                    icon: 'exclamation-triangle',
+                    message: `Critical: Schedule immediate parent conference to address ${student.primaryAbsenceReason.toLowerCase()} issues`
+                });
+                recommendations.push({
+                    type: 'warning',
+                    icon: 'phone',
+                    message: 'Enable daily automated SMS reminders and check-ins'
+                });
+                if (student.primaryAbsenceReason === 'Transportation') {
+                    recommendations.push({
+                        type: 'info',
+                        icon: 'bus',
+                        message: 'Provide bus pass subsidies if available'
+                    });
                 }
-            ];
-            analyticsData.forEach(data => {
-                const row = document.createElement('tr');
-                row.innerHTML = `
-                    <td>${data.metric}</td>
-                    <td>${data.value}</td>
-                    <td>${data.recommendation}</td>
-                `;
-                studentAnalytics.appendChild(row);
+            } else if (student.riskLevel === 'medium') {
+                recommendations.push({
+                    type: 'warning',
+                    icon: 'bell',
+                    message: 'Moderate risk: Implement peer support system and weekly progress reviews'
+                });
+                recommendations.push({
+                    type: 'info',
+                    icon: 'users',
+                    message: 'Provide resources for family engagement workshops'
+                });
+            } else {
+                recommendations.push({
+                    type: 'info',
+                    icon: 'thumbs-up',
+                    message: 'Good attendance: Continue current engagement strategies'
+                });
+            }
+            
+            if (student.trend === 'declining') {
+                recommendations.push({
+                    type: 'warning',
+                    icon: 'chart-line-down',
+                    message: 'Declining trend detected: Investigate underlying causes and adjust approach'
+                });
+            }
+            
+            return recommendations;
+        }
+        
+        function createIndividualForecastChart(student) {
+            const ctx = document.getElementById('individual-forecast-chart');
+            if (!ctx) return;
+            
+            if (individualForecastChart) {
+                individualForecastChart.destroy();
+            }
+            
+            const forecast = arimaForecast(student.timeSeriesData, 30);
+            const labels = [...Array(14).fill(0).map((_, i) => `Day ${i-6}`), ...Array(30).fill(0).map((_, i) => `Day +${i+1}`)];
+            
+            individualForecastChart = new Chart(ctx.getContext('2d'), {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'Historical',
+                            data: [...student.timeSeriesData, ...Array(30).fill(null)],
+                            borderColor: '#3b82f6',
+                            backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                            fill: true
+                        },
+                        {
+                            label: 'Forecast',
+                            data: [...Array(14).fill(null), ...forecast],
+                            borderColor: '#ef4444',
+                            borderDash: [5, 5],
+                            fill: false
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: false,
+                            min: 60,
+                            max: 100,
+                            title: { display: true, text: 'Attendance Rate (%)' }
+                        }
+                    }
+                }
             });
         }
 
-        // Clear Filters
-        function clearFilters() {
-            gradeLevelFilter.value = '';
-            subjectFilter.value = '';
-            sectionFilter.value = '';
+        // Event listeners
+        classFilter.addEventListener('change', updateStudentFilter);
+        
+        studentFilter.addEventListener('change', (e) => {
+            if (e.target.value) {
+                showStudentPrediction(e.target.value);
+            } else {
+                document.getElementById('student-prediction-card').style.display = 'none';
+                // Reset attendance status chart to default
+                if (attendanceStatusChart) {
+                    const defaultData = [20, 6, 4];
+                    const total = defaultData.reduce((a, b) => a + b, 0);
+                    attendanceStatusChart.data.datasets[0].data = defaultData;
+                    attendanceStatusChart.update();
+                    document.getElementById('present-count').textContent = `${defaultData[0]} (${((defaultData[0] / total) * 100).toFixed(1)}%)`;
+                    document.getElementById('absent-count').textContent = `${defaultData[1]} (${((defaultData[1] / total) * 100).toFixed(1)}%)`;
+                    document.getElementById('late-count').textContent = `${defaultData[2]} (${((defaultData[2] / total) * 100).toFixed(1)}%)`;
+                }
+            }
+        });
+
+        document.getElementById('refresh-data').addEventListener('click', () => {
+            forecastChart.destroy();
+            attendanceStatusChart.destroy();
+            initializeCharts();
+            updateEarlyWarningTable();
+            updateTrendsAnalysisTable();
+        });
+
+        document.getElementById('clear-filters').addEventListener('click', () => {
+            classFilter.value = '';
             studentFilter.value = '';
-            timeFilter.value = '';
-            startDate.value = '';
-            endDate.value = '';
             updateStudentFilter();
-            updateData();
-        }
-
-        // Event Listeners
-        gradeLevelFilter.addEventListener('change', () => {
-            updateStudentFilter();
-            updateData();
+            document.getElementById('student-prediction-card').style.display = 'none';
+            // Reset charts to default
+            if (attendanceStatusChart) {
+                const defaultData = [20, 6, 4];
+                const total = defaultData.reduce((a, b) => a + b, 0);
+                attendanceStatusChart.data.datasets[0].data = defaultData;
+                attendanceStatusChart.update();
+                document.getElementById('present-count').textContent = `${defaultData[0]} (${((defaultData[0] / total) * 100).toFixed(1)}%)`;
+                document.getElementById('absent-count').textContent = `${defaultData[1]} (${((defaultData[1] / total) * 100).toFixed(1)}%)`;
+                document.getElementById('late-count').textContent = `${defaultData[2]} (${((defaultData[2] / total) * 100).toFixed(1)}%)`;
+            }
         });
-        subjectFilter.addEventListener('change', () => {
-            updateStudentFilter();
-            updateData();
-        });
-        sectionFilter.addEventListener('change', () => {
-            updateStudentFilter();
-            updateData();
-        });
-        studentFilter.addEventListener('change', updateData);
-        timeFilter.addEventListener('change', updateData);
-        startDate.addEventListener('change', updateData);
-        endDate.addEventListener('change', updateData);
-        document.getElementById('clear-filters').addEventListener('change', clearFilters);
-
-        document.getElementById('refresh-data').addEventListener('click', updateData);
 
         document.getElementById('export-chart').addEventListener('click', () => {
-            const canvas = document.getElementById('attendance-status');
-            const link = document.createElement('a');
-            link.download = 'attendance-status-chart.png';
-            link.href = canvas.toDataURL();
-            link.click();
+            const charts = [forecastChart, attendanceStatusChart];
+            charts.forEach((chart, index) => {
+                if (chart) {
+                    const link = document.createElement('a');
+                    link.href = chart.toBase64Image();
+                    link.download = `chart-${index + 1}.png`;
+                    link.click();
+                }
+            });
         });
 
-        document.getElementById('clear-filters').addEventListener('click', clearFilters);
+        // Chart filter buttons
+        document.querySelectorAll('.filter-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const parent = this.closest('.chart-filter');
+                parent.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+                
+                const period = this.dataset.period;
+                
+                if (period) {
+                    const periods = { 'monthly': 30 };
+                    const forecastData = arimaForecast(generateTimeSeriesData(30).data, periods[period]);
+                    forecastChart.data.datasets[1].data = [...Array(30).fill(null), ...forecastData];
+                    forecastChart.data.labels = [...generateTimeSeriesData(30).labels, ...Array(periods[period]).fill(0).map((_, i) => {
+                        const date = new Date();
+                        date.setDate(date.getDate() + i + 1);
+                        return date.toISOString().split('T')[0];
+                    })];
+                    forecastChart.update();
+                }
+            });
+        });
 
-        // Initialize
+        // Initialize everything
         document.addEventListener('DOMContentLoaded', () => {
             initializeFilters();
             initializeCharts();
-            updateData();
+            updateEarlyWarningTable();
+            updateTrendsAnalysisTable();
         });
     </script>
 </body>

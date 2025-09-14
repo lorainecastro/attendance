@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Time Series Analytics & Predictions - Student Attendance System</title>
+    <title>Analytics & Predictions - Student Attendance System</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         :root {
@@ -70,7 +70,7 @@
         }
 
         body {
-            background-color: var(--background);
+            background-color: var(--card-bg);
             color: var(--blackfont-color);
             padding: 20px;
         }
@@ -411,11 +411,9 @@
 
         .table-header {
             display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: var(--spacing-md);
-            flex-wrap: wrap;
+            flex-direction: column;
             gap: var(--spacing-sm);
+            margin-bottom: var(--spacing-md);
         }
 
         .table-title {
@@ -588,7 +586,7 @@
     </style>
 </head>
 <body>
-    <h1>Time Series Analytics & Predictions</h1>
+    <h1>Analytics & Predictions</h1>
 
     <!-- Filters -->
     <div class="controls">
@@ -614,7 +612,7 @@
                     <div class="card-value" id="current-attendance-rate">92.3%</div>
                     <div class="card-trend trend-up">
                         <i class="fas fa-arrow-up"></i>
-                        <span>+2.1% vs last week</span>
+                        <span>+2.1% vs last month</span>
                     </div>
                 </div>
                 <div class="card-icon bg-green">
@@ -644,7 +642,7 @@
                     <div class="card-value" id="at-risk-count">8</div>
                     <div class="card-trend trend-down">
                         <i class="fas fa-arrow-down"></i>
-                        <span>-3 vs last week</span>
+                        <span>-3 vs last month</span>
                     </div>
                 </div>
                 <div class="card-icon bg-pink">
@@ -754,11 +752,11 @@
             <table>
                 <thead>
                     <tr>
+                        <th>Class</th>
                         <th>Student</th>
+                        <th>Predicted Next Month</th>
                         <th>Risk Level</th>
-                        <th>Predicted Attendance (7 days)</th>
-                        <th>Recommended Action</th>
-                        <th>Priority</th>
+                        <th>Recommendation</th>
                     </tr>
                 </thead>
                 <tbody id="early-warning-table"></tbody>
@@ -770,6 +768,10 @@
     <div class="pattern-table">
         <div class="table-header">
             <div class="table-title">Time Series Trends Analysis</div>
+            <div class="alert alert-info">
+                <i class="fas fa-info-circle"></i>
+                <span>Trends and patterns based on class-level attendance data</span>
+            </div>
         </div>
         <div class="table-responsive">
             <table>
@@ -1169,22 +1171,23 @@
             const allStudents = classes.flatMap(c => c.students.map(s => ({
                 ...s,
                 subject: c.subject,
-                section: c.sectionName
+                section: c.sectionName,
+                gradeLevel: c.gradeLevel
             })));
             
             const atRiskStudents = allStudents.filter(s => s.riskLevel !== 'low');
             
             atRiskStudents.forEach(student => {
-                const forecast = arimaForecast(student.timeSeriesData, 7);
+                const forecast = arimaForecast(student.timeSeriesData, 30);
                 const avgForecast = forecast.reduce((a, b) => a + b, 0) / forecast.length;
                 
                 const row = document.createElement('tr');
                 row.innerHTML = `
+                    <td>${student.gradeLevel} – ${student.section} (${student.subject})</td>
                     <td>${student.firstName} ${student.lastName}</td>
-                    <td><span class="risk-${student.riskLevel}">${student.riskLevel.charAt(0).toUpperCase() + student.riskLevel.slice(1)}</span></td>
                     <td>${avgForecast.toFixed(1)}%</td>
+                    <td><span class="risk-${student.riskLevel}">${student.riskLevel.charAt(0).toUpperCase() + student.riskLevel.slice(1)}</span></td>
                     <td>${student.riskLevel === 'high' ? 'Immediate parent conference' : 'Monitor closely + automated reminders'}</td>
-                    <td>${student.riskLevel === 'high' ? 'High' : 'Medium'}</td>
                 `;
                 earlyWarningTable.appendChild(row);
             });
@@ -1290,6 +1293,12 @@
                     <td>-</td>
                     <td>${student.chronicAbsenteeism > 10 ? 'Implement attendance plan' : 'Monitor attendance'}</td>
                 </tr>
+                <tr>
+                    <td>Risk Level</td>
+                    <td><span class="risk-${student.riskLevel}">${student.riskLevel.charAt(0).toUpperCase() + student.riskLevel.slice(1)}</span></td>
+                    <td>-</td>
+                    <td>${student.riskLevel === 'high' ? 'Schedule parent conference' : student.riskLevel === 'medium' ? 'Implement peer support' : 'Continue current strategies'}</td>
+                </tr>
             `;
             
             // Create individual forecast chart
@@ -1372,8 +1381,25 @@
                 individualForecastChart.destroy();
             }
             
-            const forecast = arimaForecast(student.timeSeriesData, 30);
-            const labels = [...Array(14).fill(0).map((_, i) => `Day ${i-6}`), ...Array(30).fill(0).map((_, i) => `Day +${i+1}`)];
+            const historicalDays = student.timeSeriesData.length;
+            const forecastDays = 30; // Match ARIMA Time Series Forecast monthly period
+            const labels = [];
+            
+            // Generate historical date labels (past days)
+            for (let i = historicalDays - 1; i >= 0; i--) {
+                const date = new Date();
+                date.setDate(date.getDate() - i);
+                labels.push(date.toISOString().split('T')[0]);
+            }
+            
+            // Generate forecast date labels (future days)
+            for (let i = 1; i <= forecastDays; i++) {
+                const date = new Date();
+                date.setDate(date.getDate() + i);
+                labels.push(date.toISOString().split('T')[0]);
+            }
+            
+            const forecast = arimaForecast(student.timeSeriesData, forecastDays);
             
             individualForecastChart = new Chart(ctx.getContext('2d'), {
                 type: 'line',
@@ -1381,30 +1407,58 @@
                     labels: labels,
                     datasets: [
                         {
-                            label: 'Historical',
-                            data: [...student.timeSeriesData, ...Array(30).fill(null)],
+                            label: 'Historical Data',
+                            data: [...student.timeSeriesData, ...Array(forecastDays).fill(null)],
                             borderColor: '#3b82f6',
                             backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                            fill: true
+                            fill: true,
+                            tension: 0.4
                         },
                         {
-                            label: 'Forecast',
-                            data: [...Array(14).fill(null), ...forecast],
+                            label: 'ARIMA Forecast',
+                            data: [...Array(historicalDays).fill(null), ...forecast],
                             borderColor: '#ef4444',
+                            backgroundColor: 'rgba(239, 68, 68, 0.1)',
                             borderDash: [5, 5],
-                            fill: false
+                            fill: false,
+                            tension: 0.4
                         }
                     ]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
+                    interaction: {
+                        intersect: false,
+                        mode: 'index'
+                    },
+                    plugins: {
+                        legend: {
+                            position: 'top'
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return `${context.dataset.label}: ${context.parsed.y.toFixed(1)}%`;
+                                }
+                            }
+                        }
+                    },
                     scales: {
                         y: {
                             beginAtZero: false,
-                            min: 60,
+                            min: 70,
                             max: 100,
-                            title: { display: true, text: 'Attendance Rate (%)' }
+                            title: {
+                                display: true,
+                                text: 'Attendance Rate (%)'
+                            }
+                        },
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Date'
+                            }
                         }
                     }
                 }

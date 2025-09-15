@@ -122,310 +122,6 @@ function getHistoricalAttendanceData($pdo, $class_id, $start_date, $end_date, $l
     return $time_series;
 }
 
-// Alternative: More conservative forecasting approach
-// function conservativeForecast($data, $periods = 30) {
-//     if (count($data) < 2) {
-//         $baseline = count($data) > 0 ? end($data) : 85.0;
-//         return array_fill(0, $periods, $baseline);
-//     }
-    
-//     $values = array_values($data);
-//     $n = count($values);
-    
-//     // Calculate recent average (last 3-5 data points)
-//     $recentCount = min(5, $n);
-//     $recentAvg = array_sum(array_slice($values, -$recentCount)) / $recentCount;
-    
-//     // Calculate simple trend from first half to second half
-//     $midpoint = intval($n / 2);
-//     $firstHalf = array_sum(array_slice($values, 0, $midpoint)) / max(1, $midpoint);
-//     $secondHalf = array_sum(array_slice($values, $midpoint)) / max(1, $n - $midpoint);
-//     $overallTrend = ($secondHalf - $firstHalf) / max(1, $n - $midpoint);
-    
-//     // Dampen the trend significantly
-//     $overallTrend = $overallTrend * 0.1; // Only 10% of calculated trend
-//     $overallTrend = max(-0.2, min(0.2, $overallTrend)); // Cap at ±0.2% per period
-    
-//     // Generate conservative forecast
-//     $forecast = [];
-//     $currentValue = $recentAvg;
-    
-//     for ($i = 0; $i < $periods; $i++) {
-//         $currentValue += $overallTrend;
-        
-//         // Add minimal noise
-//         $noise = (mt_rand(-50, 50) / 100.0) * 0.5; // ±0.5% noise
-//         $predicted = $currentValue + $noise;
-        
-//         // Strict bounds
-//         $predicted = max(max(0, min($values) - 5), min(100, max($values) + 5));
-        
-//         $forecast[] = round($predicted, 2);
-//     }
-    
-//     return $forecast;
-// }
-
-function realisticAttendanceForecast($data, $periods = 30) {
-    if (count($data) < 1) {
-        return array_fill(0, $periods, 0.0); // Default baseline if no data
-    }
-
-    $values = array_values($data);
-    $n = count($values);
-    
-    // Calculate current baseline (weighted average favoring recent data)
-    $weights = [];
-    $weightedSum = 0;
-    $totalWeight = 0;
-    
-    for ($i = 0; $i < $n; $i++) {
-        // More weight to recent data points
-        $weight = ($i + 1) / $n;
-        $weights[] = $weight;
-        $weightedSum += $values[$i] * $weight;
-        $totalWeight += $weight;
-    }
-    
-    $baseline = $weightedSum / $totalWeight;
-    
-    // Calculate trend only if we have sufficient data
-    $trend = 0;
-    if ($n >= 3) {
-        $recentData = array_slice($values, -min(3, $n));
-        $oldData = array_slice($values, 0, min(3, $n));
-        
-        $recentAvg = array_sum($recentData) / count($recentData);
-        $oldAvg = array_sum($oldData) / count($oldData);
-        
-        // Calculate per-period trend, but make it very conservative
-        $periodsSpanned = max(1, $n - 1);
-        $trend = ($recentAvg - $oldAvg) / $periodsSpanned;
-        
-        // Severely limit trend - attendance doesn't change dramatically
-        $trend = max(-0.5, min(0.5, $trend)); // Maximum ±0.5% per period
-        
-        // If attendance is very low, trend should be slightly positive but not dramatic
-        if ($baseline < 50) {
-            $trend = max($trend, -0.1); // Prevent further decline below 50%
-            $trend = min($trend, 0.3);  // Cap improvement to 0.3% per period
-        }
-        
-        // If attendance is very high, trend should be slightly negative (regression to mean)
-        if ($baseline > 90) {
-            $trend = min($trend, 0.1);  // Cap improvement when already high
-            $trend = max($trend, -0.2); // Allow slight decline from very high levels
-        }
-    }
-    
-    // Calculate realistic volatility based on historical variance
-    $volatility = 1.0; // Default small volatility
-    if ($n >= 2) {
-        $variance = 0;
-        $mean = array_sum($values) / $n;
-        
-        foreach ($values as $value) {
-            $variance += pow($value - $mean, 2);
-        }
-        $variance = $variance / $n;
-        $volatility = sqrt($variance);
-        
-        // Cap volatility to reasonable levels
-        $volatility = min($volatility, 3.0); // Max 3% standard deviation
-        $volatility = max($volatility, 0.5); // Min 0.5% for some variation
-    }
-    
-    // Generate realistic forecast
-    $forecast = [];
-    $currentValue = $baseline;
-    $currentTrend = $trend;
-    
-    for ($i = 0; $i < $periods; $i++) {
-        // Apply trend with exponential decay (trend weakens over time)
-        $trendDecay = exp(-$i * 0.1); // Trend decays by ~10% each period
-        $adjustedTrend = $currentTrend * $trendDecay;
-        $currentValue += $adjustedTrend;
-        
-        // Add small random variation based on historical volatility
-        $randomFactor = (mt_rand(-100, 100) / 100.0);
-        $noise = $randomFactor * ($volatility * 0.3); // Use only 30% of historical volatility
-        
-        $predicted = $currentValue + $noise;
-        
-        // Apply strict realistic bounds
-        $predicted = max(0, min(100, $predicted));
-        
-        // Prevent unrealistic jumps from one period to the next
-        if (!empty($forecast)) {
-            $lastValue = end($forecast);
-            $maxChange = 2.0; // Maximum 2% change per period
-            
-            if ($predicted > $lastValue + $maxChange) {
-                $predicted = $lastValue + $maxChange;
-            } elseif ($predicted < $lastValue - $maxChange) {
-                $predicted = $lastValue - $maxChange;
-            }
-        } else {
-            // First prediction shouldn't deviate much from current baseline
-            $maxInitialChange = 3.0; // Maximum 3% change from baseline
-            if ($predicted > $baseline + $maxInitialChange) {
-                $predicted = $baseline + $maxInitialChange;
-            } elseif ($predicted < $baseline - $maxInitialChange) {
-                $predicted = $baseline - $maxInitialChange;
-            }
-        }
-        
-        // Additional constraint: If student has very poor attendance, 
-        // don't predict dramatic improvements without intervention
-        if ($baseline < 50 && $predicted > $baseline + 10) {
-            $predicted = $baseline + min(10, ($i + 1) * 0.5); // Gradual improvement only
-        }
-        
-        $forecast[] = round($predicted, 2);
-    }
-    
-    return $forecast;
-}
-
-// function movingAverageForecast($data, $periods = 30) {
-//     if (count($data) < 1) {
-//         return array_fill(0, $periods, 0.0);
-//     }
-    
-//     $values = array_values($data);
-//     $n = count($values);
-    
-//     // Use last 3-5 data points for moving average
-//     $windowSize = min(5, max(1, $n));
-//     $recentValues = array_slice($values, -$windowSize);
-//     $movingAvg = array_sum($recentValues) / count($recentValues);
-    
-//     // Add minimal trend
-//     $trend = 0;
-//     if ($n >= 2) {
-//         $trend = ($values[$n-1] - $values[0]) / ($n - 1);
-//         $trend = max(-0.1, min(0.1, $trend)); // Very conservative trend
-//     }
-    
-//     $forecast = [];
-//     for ($i = 0; $i < $periods; $i++) {
-//         $predicted = $movingAvg + ($trend * $i);
-        
-//         // Add minimal noise
-//         $noise = (mt_rand(-50, 50) / 100.0) * 0.5;
-//         $predicted += $noise;
-        
-//         // Bounds
-//         $predicted = max(0, min(100, $predicted));
-        
-//         $forecast[] = round($predicted, 2);
-//     }
-    
-//     return $forecast;
-// }
-
-function balancedAttendanceForecast($data, $periods = 30) {
-    if (count($data) < 1) {
-        return array_fill(0, $periods, 85.0); // Default baseline
-    }
-
-    $values = array_values($data);
-    $n = count($values);
-    $stdDev = calculateStandardDeviation($values);
-    $mean = array_sum($values) / $n;
-
-    // Calculate recent baseline (last ~20% of data)
-    $recentCount = max(3, intval($n / 5));
-    $recentValues = array_slice($values, -$recentCount);
-    $baseline = array_sum($recentValues) / count($recentValues);
-
-    // Calculate overall average for stability
-    $overallAverage = $mean;
-
-    // Determine trend dynamically
-    $trend = 0;
-    $minDataPoints = max(3, intval($n / 5)); // Dynamic threshold: ~20% of data
-    if ($n >= $minDataPoints) {
-        $quarterSize = max(2, intval($n / 5)); // Dynamic quarter size
-        $recentQuarter = array_slice($values, -$quarterSize);
-        $earlierQuarter = array_slice($values, 0, $quarterSize);
-
-        $recentAvg = array_sum($recentQuarter) / count($recentQuarter);
-        $earlierAvg = array_sum($earlierQuarter) / count($earlierQuarter);
-
-        // Calculate trend per period
-        $periodsSpanned = max(1, $n - $quarterSize);
-        $rawTrend = ($recentAvg - $earlierAvg) / $periodsSpanned;
-
-        // Dynamic trend scaling based on baseline
-        $trendMultiplier = max(0.3, min(0.5, 1.0 - ($stdDev / ($mean + 0.01)))); // Scale based on volatility
-        $trend = $rawTrend * $trendMultiplier;
-
-        // Dynamic trend bounds based on baseline and std dev
-        $trendMin = -$stdDev * 0.05; // Cap decline at 5% of std dev
-        $trendMax = $stdDev * 0.05;  // Cap increase at 5% of std dev
-        if ($baseline < ($mean - $stdDev)) { // Low attendance
-            $trendMin = -$stdDev * 0.03; // More conservative decline
-            $trendMax = $stdDev * 0.06;  // Allow slight improvement
-        } elseif ($baseline > ($mean + $stdDev)) { // High attendance
-            $trendMin = -$stdDev * 0.04; // Allow slight decline
-            $trendMax = $stdDev * 0.04;  // Conservative increase
-        }
-        $trend = max($trendMin, min($trendMax, $trend));
-    }
-
-    // Calculate stability factor
-    $stability = max(0.5, min(2.0, $stdDev / max(10, $n))); // Scale by data size
-
-    // Generate forecast
-    $forecast = [];
-    $currentValue = $baseline;
-
-    for ($i = 0; $i < $periods; $i++) {
-        // Apply trend with dynamic decay
-        $trendDecay = exp(-$i * ($stdDev / ($mean + 0.01) * 0.1)); // Decay based on volatility
-        $appliedTrend = $trend * $trendDecay;
-        $currentValue += $appliedTrend;
-
-        // Add controlled random variation
-        $noise = (mt_rand(-100, 100) / 100.0) * ($stability * 0.5); // 50% of stability
-        $predicted = $currentValue + $noise;
-
-        // Apply bounds
-        $predicted = max(0, min(100, $predicted));
-
-        // Prevent unrealistic period-to-period changes
-        $maxChange = $stdDev * 0.3; // 30% of std dev
-        if (!empty($forecast)) {
-            $lastValue = end($forecast);
-            if ($predicted > $lastValue + $maxChange) {
-                $predicted = $lastValue + $maxChange;
-            } elseif ($predicted < $lastValue - $maxChange) {
-                $predicted = $lastValue - $maxChange;
-            }
-        } else {
-            // First prediction close to baseline
-            $maxInitialChange = $stdDev * 0.5; // 50% of std dev
-            if ($predicted > $baseline + $maxInitialChange) {
-                $predicted = $baseline + $maxInitialChange;
-            } elseif ($predicted < $baseline - $maxInitialChange) {
-                $predicted = $baseline - $maxInitialChange;
-            }
-        }
-
-        // Regression to mean for extreme values
-        if ($predicted < ($mean - $stdDev)) {
-            $predicted += ($mean - $stdDev - $predicted) * 0.05; // Pull toward mean - std dev
-        } elseif ($predicted > ($mean + $stdDev)) {
-            $predicted -= ($predicted - ($mean + $stdDev)) * 0.05; // Pull toward mean + std dev
-        }
-
-        $forecast[] = round($predicted, 2);
-    }
-
-    return $forecast;
-}
-
 // Function to calculate standard deviation
 function calculateStandardDeviation($data) {
     $n = count($data);
@@ -438,17 +134,15 @@ function calculateStandardDeviation($data) {
     return sqrt($variance / $n);
 }
 
-// Simple ARIMA(1,1,1) forecasting function without hardcoded values
+// Simple ARIMA(1,1,1) forecasting function using example parameters
 function arimaForecast($data, $periods = 30) {
-    if (count($data) < 3) {
-        // If insufficient data, return 0.0 with small variation
-        $lastValue = count($data) > 0 ? end($data) : 0.0;
+    if (count($data) < 2) {
+        // Fallback for insufficient data
+        $lastValue = count($data) > 0 ? end($data) : 85.0; // Default to 85% if no data
         $stdDev = count($data) > 1 ? calculateStandardDeviation($data) : 1.0;
-        $coefVariation = ($lastValue > 0) ? $stdDev / $lastValue : 1.0; // Use last value as proxy for mean
         $forecast = [];
         for ($i = 0; $i < $periods; $i++) {
-            $noiseScale = $coefVariation * min(0.2, $stdDev / max(10, count($data))); // Scale with data size
-            $noise = (mt_rand(-100, 100) / 100.0) * ($stdDev * $noiseScale);
+            $noise = (mt_rand(-50, 50) / 100.0) * ($stdDev * 0.1); // Minimal noise
             $predicted = max(0, min(100, $lastValue + $noise));
             $forecast[] = round($predicted, 2);
         }
@@ -456,154 +150,130 @@ function arimaForecast($data, $periods = 30) {
     }
 
     $values = array_values($data);
+    $dates = array_keys($data);
     $n = count($values);
+
+    // Calculate standard deviation for bounds
     $stdDev = calculateStandardDeviation($values);
-    $mean = array_sum($values) / $n;
-    $coefVariation = ($mean > 0) ? $stdDev / $mean : 1.0; // Avoid division by zero
 
-    // Calculate moving average to establish trend
-    $windowSize = max(2, intval($n / 5)); // Dynamic window size: ~20% of data
-    $movingAvg = [];
-    for ($i = $windowSize - 1; $i < $n; $i++) {
-        $sum = 0;
-        for ($j = $i - $windowSize + 1; $j <= $i; $j++) {
-            $sum += $values[$j];
-        }
-        $movingAvg[] = $sum / $windowSize;
-    }
+    // Determine dynamic periods: two months ago to one month ago, and one month ago to today
+    $today = date('Y-m-d');
+    $one_month_ago = date('Y-m-d', strtotime('-1 month', strtotime($today)));
+    $two_months_ago = date('Y-m-d', strtotime('-2 months', strtotime($today)));
 
-    // Calculate trend (slope of recent data)
-    $recentCount = max(3, intval($n / 3)); // Use ~33% of recent data
-    $recentValues = array_slice($values, -$recentCount);
-    $trend = 0;
-    if (count($recentValues) >= 2) {
-        $x = range(0, count($recentValues) - 1);
-        $y = $recentValues;
-        $n_trend = count($recentValues);
-
-        $sum_x = array_sum($x);
-        $sum_y = array_sum($y);
-        $sum_xy = 0;
-        $sum_x2 = 0;
-
-        for ($i = 0; $i < $n_trend; $i++) {
-            $sum_xy += $x[$i] * $y[$i];
-            $sum_x2 += $x[$i] * $x[$i];
-        }
-
-        if ($sum_x2 != $sum_x * $sum_x / $n_trend) {
-            $trend = ($sum_xy - $sum_x * $sum_y / $n_trend) / ($sum_x2 - $sum_x * $sum_x / $n_trend);
+    // Filter data for the two periods
+    $period1_data = []; // Two months ago to one month ago
+    $period2_data = []; // One month ago to today
+    foreach ($dates as $index => $date) {
+        if ($date >= $two_months_ago && $date < $one_month_ago) {
+            $period1_data[] = $values[$index];
+        } elseif ($date >= $one_month_ago && $date <= $today) {
+            $period2_data[] = $values[$index];
         }
     }
 
-    // Constrain trend dynamically based on standard deviation
-    $trend = max(-$stdDev * $coefVariation * 0.1, min($stdDev * $coefVariation * 0.1, $trend));
+    // Calculate average rates for each period
+    $period1_avg = !empty($period1_data) ? array_sum($period1_data) / count($period1_data) : 85.0; // Default if empty
+    $period2_avg = !empty($period2_data) ? array_sum($period2_data) / count($period2_data) : $period1_avg;
 
-    // Get baseline value (recent average)
-    $recentCount = min(5, $n);
-    $baseline = array_sum(array_slice($values, -$recentCount)) / $recentCount;
+    // Calculate Δy (change between periods)
+    $delta_y = $period2_avg - $period1_avg;
 
-    // Calculate volatility dynamically
-    $volatility = min($stdDev, $mean * $coefVariation * 0.1); // Volatility scaled by coefficient of variation
+    // ARIMA(1,1,1) parameters from example
+    $phi = 0.5; // AR parameter
+    $theta = -0.3; // MA parameter (unused in example calculation)
 
-    // Generate forecast
+    // Calculate forecast for next period
     $forecast = [];
-    $currentValue = $baseline;
-    $currentTrend = $trend;
+    $currentValue = $period2_avg; // Start from most recent period rate
 
-    // Dynamic damping factor based on data volatility
-    $dampingFactor = max(0.9, min(0.99, 1.0 - ($stdDev / ($mean + 0.01)))); // Avoid division by zero
+    // First forecast value using example formula: next_rate = current_rate + φ * Δy
+    $first_forecast = $currentValue + $phi * $delta_y;
+    $first_forecast = max(0, min(100, $first_forecast)); // Enforce bounds
+    $forecast[] = round($first_forecast, 2);
 
-    for ($i = 0; $i < $periods; $i++) {
-        // Apply trend with damping
-        $currentValue += $currentTrend;
-        $currentTrend *= $dampingFactor;
+    // Generate remaining forecast values with minimal variation
+    for ($i = 1; $i < $periods; $i++) {
+        // Add small noise based on historical volatility
+        $noise = (mt_rand(-50, 50) / 100.0) * ($stdDev * 0.1);
+        $predicted = $first_forecast + $noise;
+        $predicted = max(0, min(100, $predicted)); // Enforce bounds
 
-        // Dynamic noise scaling
-        $noiseScale = $coefVariation * min(0.2, $stdDev / max(10, $n)); // Scale with data size
-        $noise = (mt_rand(-100, 100) / 100.0) * ($volatility * $noiseScale);
-        $predicted = $currentValue + $noise;
-
-        // Apply realistic constraints
-        $predicted = max(0, min(100, $predicted));
-
-        // Dynamic max change
-        $maxChange = $stdDev * max(0.3, min(0.5, $coefVariation)); // Scale between 0.3 and 0.5
-        if (!empty($forecast)) {
-            $lastForecast = end($forecast);
-            if (abs($predicted - $lastForecast) > $maxChange) {
-                $predicted = $lastForecast + ($predicted > $lastForecast ? $maxChange : -$maxChange);
-            }
-        } elseif ($n > 0) {
-            // Dynamic max initial change
-            $maxInitialChange = $stdDev * max(0.5, min(0.8, $coefVariation * 1.2)); // Slightly larger than maxChange
-            $lastKnown = end($values);
-            if (abs($predicted - $lastKnown) > $maxInitialChange) {
-                $predicted = $lastKnown + ($predicted > $lastKnown ? $maxInitialChange : -$maxInitialChange);
-            }
+        // Limit period-to-period changes
+        $maxChange = $stdDev * 0.3; // Consistent with original code
+        if ($predicted > $forecast[$i-1] + $maxChange) {
+            $predicted = $forecast[$i-1] + $maxChange;
+        } elseif ($predicted < $forecast[$i-1] - $maxChange) {
+            $predicted = $forecast[$i-1] - $maxChange;
         }
 
         $forecast[] = round($predicted, 2);
-        $currentValue = $predicted;
     }
 
     return $forecast;
 }
 
-// Mean reversion forecasting without hardcoded values
+// Mean reversion forecasting without random noise
 function meanReversionForecast($data, $periods = 30) {
     if (count($data) < 1) {
-        return array_fill(0, $periods, 85.0);
+        return array_fill(0, $periods, 0.0);
     }
 
     $values = array_values($data);
     $n = count($values);
     $stdDev = calculateStandardDeviation($values);
     $mean = array_sum($values) / $n;
+    $coefVariation = ($mean > 0) ? $stdDev / $mean : 0.5;
 
-    // Calculate coefficient of variation to scale parameters
-    $coefVariation = ($mean > 0) ? $stdDev / $mean : 1.0; // Avoid division by zero
-
-    // Calculate weighted average with more weight on recent data
+    // Use weighted average for baseline, favoring recent data
     $weights = [];
     $weightedSum = 0;
     $totalWeight = 0;
-
     for ($i = 0; $i < $n; $i++) {
-        $weight = ($i + 1) / $n; // Linear weight increase
+        $weight = 1 + ($i / $n); // Linear weight increase
+        $weights[] = $weight;
         $weightedSum += $values[$i] * $weight;
         $totalWeight += $weight;
     }
+    $baseline = $weightedSum / $totalWeight;
 
-    $weightedAverage = $weightedSum / $totalWeight;
-    $target = ($weightedAverage * 0.7) + ($mean * 0.3); // Kept as is, since weighting is a model choice
+    // Dynamic reversion rate scaled by volatility
+    $reversionRate = max(0.02, min(0.08, $coefVariation * 0.15));
 
-    // Dynamic reversion rate based on data volatility
-    $reversionRate = max(0.01, min(0.05, $coefVariation * 0.1)); // Scale with coefficient of variation
+    // Dynamic max change per period based on historical volatility
+    $maxChange = $stdDev * max(0.2, min(0.4, $coefVariation));
 
     $forecast = [];
-    $currentValue = $values[$n - 1]; // Start from last known value
+    $currentValue = end($values); // Start from last known value
 
     for ($i = 0; $i < $periods; $i++) {
-        // Move gradually toward target
-        $moveTowardTarget = ($target - $currentValue) * $reversionRate;
-        $currentValue += $moveTowardTarget;
+        // Gradual reversion to mean
+        $moveTowardMean = ($mean - $currentValue) * $reversionRate;
+        $currentValue += $moveTowardMean;
 
-        // Dynamic noise scaling based on coefficient of variation
-        $noiseScale = $coefVariation * min(0.2, $stdDev / max(10, $n)); // Scale noise with data size
-        $noise = (mt_rand(-100, 100) / 100.0) * ($stdDev * $noiseScale);
+        // Set predicted value deterministically
+        $predicted = $currentValue;
 
-        $predicted = $currentValue + $noise;
+        // Enforce strict bounds based on historical data
+        $minBound = max(0, $mean - $stdDev * 1.5);
+        $maxBound = min(100, $mean + $stdDev * 1.5);
+        $predicted = max($minBound, min($maxBound, $predicted));
 
-        // Bounds
-        $predicted = max(0, min(100, $predicted));
-
-        // Dynamic max change based on data volatility
-        $maxChange = $stdDev * max(0.3, min(0.5, $coefVariation)); // Scale between 0.3 and 0.5
+        // Limit period-to-period changes
         if (!empty($forecast)) {
             $lastValue = end($forecast);
-            if (abs($predicted - $lastValue) > $maxChange) {
-                $predicted = $lastValue + ($predicted > $lastValue ? $maxChange : -$maxChange);
+            if ($predicted > $lastValue + $maxChange) {
+                $predicted = $lastValue + $maxChange;
+            } elseif ($predicted < $lastValue - $maxChange) {
+                $predicted = $lastValue - $maxChange;
+            }
+        } else {
+            // Limit initial deviation from last historical value
+            $lastHistorical = end($values);
+            if ($predicted > $lastHistorical + $maxChange) {
+                $predicted = $lastHistorical + $maxChange;
+            } elseif ($predicted < $lastHistorical - $maxChange) {
+                $predicted = $lastHistorical - $maxChange;
             }
         }
 
@@ -612,36 +282,6 @@ function meanReversionForecast($data, $periods = 30) {
     }
 
     return $forecast;
-}
-
-// Hybrid forecasting that chooses the most appropriate method
-function hybridForecast($data, $periods = 30) {
-    if (count($data) < 3) {
-        return meanReversionForecast($data, $periods);
-    }
-
-    $values = array_values($data);
-    $n = count($values);
-    $stdDev = calculateStandardDeviation($values);
-    $mean = array_sum($values) / $n;
-
-    // Analyze data characteristics
-    $firstHalf = array_slice($values, 0, intval($n/2));
-    $secondHalf = array_slice($values, intval($n/2));
-    $firstAvg = array_sum($firstHalf) / count($firstHalf);
-    $secondAvg = array_sum($secondHalf) / count($secondHalf);
-    $trendStrength = abs($secondAvg - $firstAvg) / $mean;
-
-    // Choose method based on characteristics
-    $stabilityThreshold = $stdDev * 0.5; // Dynamic threshold: 50% of std dev
-    $trendThreshold = 0.1; // Relative change threshold
-    if ($stdDev < $stabilityThreshold && $trendStrength < $trendThreshold) {
-        // Stable data - use mean reversion
-        return meanReversionForecast($data, $periods);
-    } else {
-        // Variable or trending data - use balanced approach
-        return balancedAttendanceForecast($data, $periods);
-    }
 }
 
 // Updated main forecasting function with better logic
@@ -662,9 +302,7 @@ function generateForecast($pdo, $class_id, $lrn = null) {
         $forecast_dates[] = $date->format('Y-m-d');
     }
 
-    // Use hybrid approach for best results
-    // $forecast_values = hybridForecast($historical_data, 30);
-    $forecast_values = realisticAttendanceForecast($historical_data, 30);
+    $forecast_values = arimaForecast($historical_data, 30);
 
     // Validate forecast reasonableness
     if (!empty($historical_data)) {
@@ -682,8 +320,6 @@ function generateForecast($pdo, $class_id, $lrn = null) {
         'forecast' => array_combine($forecast_dates, $forecast_values)
     ];
 }
-
-
 
 // Function to validate forecast reasonableness
 function validateForecast($historical_data, $forecast_data) {
@@ -2198,102 +1834,119 @@ if ($classes_json === false) {
         }
         
         function createIndividualForecastChart(student) {
-    const ctx = document.getElementById('individual-forecast-chart');
-    if (!ctx) {
-        console.error('Individual forecast chart canvas not found');
-        return;
-    }
-    console.log('Creating chart for student:', student.id);
-    console.log('Historical Data:', student.timeSeriesData);
-    console.log('Forecast Data:', student.forecast);
-    console.log('Historical Dates:', student.historical_dates);
-    console.log('Forecast Dates:', student.forecast_dates);
+            const ctx = document.getElementById('individual-forecast-chart');
+            if (!ctx) {
+                console.error('Individual forecast chart canvas not found');
+                return;
+            }
+            console.log('Creating chart for student:', student.id);
+            console.log('Historical Data:', student.timeSeriesData);
+            console.log('Forecast Data:', student.forecast);
+            console.log('Historical Dates:', student.historical_dates);
+            console.log('Forecast Dates:', student.forecast_dates);
 
-    // Validate data
-    if (!student.timeSeriesData || !student.forecast || !student.historical_dates || !student.forecast_dates) {
-        console.error('Invalid or missing student data:', {
-            timeSeriesData: student.timeSeriesData,
-            forecast: student.forecast,
-            historical_dates: student.historical_dates,
-            forecast_dates: student.forecast_dates
-        });
-        return;
-    }
-    if (student.historical_dates.length !== student.timeSeriesData.length) {
-        console.error('Mismatch between historical dates and data');
-        return;
-    }
-    if (student.forecast_dates.length !== student.forecast.length) {
-        console.error('Mismatch between forecast dates and data');
-        return;
-    }
+            // Validate data
+            if (!student.timeSeriesData || !student.forecast || !student.historical_dates || !student.forecast_dates) {
+                console.error('Invalid or missing student data:', {
+                    timeSeriesData: student.timeSeriesData,
+                    forecast: student.forecast,
+                    historical_dates: student.historical_dates,
+                    forecast_dates: student.forecast_dates
+                });
+                return;
+            }
+            if (student.historical_dates.length !== student.timeSeriesData.length) {
+                console.error('Mismatch between historical dates and data');
+                return;
+            }
+            if (student.forecast_dates.length !== student.forecast.length) {
+                console.error('Mismatch between forecast dates and data');
+                return;
+            }
 
-    // Ensure data is numeric
-    const validatedTimeSeries = student.timeSeriesData.map(val => isNaN(val) ? 0 : Number(val));
-    const validatedForecast = student.forecast.map(val => isNaN(val) ? 0 : Number(val));
+            // Ensure data is numeric
+            const validatedTimeSeries = student.timeSeriesData.map(val => isNaN(val) ? 0 : Number(val));
+            const validatedForecast = student.forecast.map(val => isNaN(val) ? 0 : Number(val));
 
-    try {
-        if (individualForecastChart) {
-            individualForecastChart.destroy();
-        }
-        individualForecastChart = new Chart(ctx.getContext('2d'), {
-            type: 'line',
-            data: {
-                labels: [...student.historical_dates, ...student.forecast_dates],
-                datasets: [
-                    {
-                        label: 'Historical Data',
-                        data: [...validatedTimeSeries, ...Array(student.forecast.length).fill(null)],
-                        borderColor: '#3b82f6',
-                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                        fill: true,
-                        tension: 0.4
-                    },
-                    {
-                        label: 'ARIMA Forecast',
-                        data: [...Array(student.timeSeriesData.length).fill(null), ...validatedForecast],
-                        borderColor: '#ef4444',
-                        backgroundColor: 'rgba(239, 68, 68, 0.1)',
-                        borderDash: [], // Solid line for visibility
-                        fill: false,
-                        tension: 0.4
-                    }
-                ]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                interaction: {
-                    intersect: false,
-                    mode: 'index'
-                },
-                plugins: {
-                    legend: { position: 'top' },
-                    tooltip: {
-                        callbacks: {
-                            label: function(context) {
-                                return `${context.dataset.label}: ${context.parsed.y.toFixed(1)}%`;
-                            }
-                        }
-                    }
-                },
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        min: Math.min(...validatedTimeSeries, ...validatedForecast) - 5,
-                        max: Math.max(...validatedTimeSeries, ...validatedForecast) + 5,
-                        title: { display: true, text: 'Attendance Rate (%)' }
-                    },
-                    x: { title: { display: true, text: 'Date' } }
+            // Ensure the forecast starts close to the last historical value
+            if (validatedForecast.length > 0 && validatedTimeSeries.length > 0) {
+                const lastHistorical = validatedTimeSeries[validatedTimeSeries.length - 1];
+                const firstForecast = validatedForecast[0];
+                const stdDev = validatedTimeSeries.length > 1 ? Math.sqrt(
+                    validatedTimeSeries.reduce((sum, val) => sum + Math.pow(val - (validatedTimeSeries.reduce((a, b) => a + b, 0) / validatedTimeSeries.length), 2), 0) / validatedTimeSeries.length
+                ) : 1.0;
+                const maxChange = stdDev * 0.3; // Same as PHP arimaForecast
+                if (firstForecast > lastHistorical + maxChange) {
+                    validatedForecast[0] = lastHistorical + maxChange;
+                } else if (firstForecast < lastHistorical - maxChange) {
+                    validatedForecast[0] = lastHistorical - maxChange;
                 }
             }
-        });
-        console.log('Individual forecast chart created successfully');
-    } catch (error) {
-        console.error('Error creating individual forecast chart:', error);
-    }
-}
-        classFilter.addEventListener('change', () => {
+
+            try {
+                if (individualForecastChart) {
+                    individualForecastChart.destroy();
+                }
+                individualForecastChart = new Chart(ctx.getContext('2d'), {
+                    type: 'line',
+                    data: {
+                        labels: [...student.historical_dates, ...student.forecast_dates],
+                        datasets: [
+                            {
+                                label: 'Historical Data',
+                                data: [...validatedTimeSeries, ...Array(student.forecast.length).fill(null)],
+                                borderColor: '#3b82f6',
+                                backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                                fill: true,
+                                tension: 0.4
+                            },
+                            {
+                                label: 'ARIMA Forecast',
+                                data: [...Array(student.timeSeriesData.length).fill(null), ...validatedForecast],
+                                borderColor: '#ef4444',
+                                backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                                borderDash: [5, 5], // Match main chart's dashed forecast line
+                                fill: false,
+                                tension: 0.4
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        interaction: {
+                            intersect: false,
+                            mode: 'index'
+                        },
+                        plugins: {
+                            legend: { position: 'top' },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        return `${context.dataset.label}: ${context.parsed.y.toFixed(1)}%`;
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: false,
+                                min: Math.max(0, Math.min(...validatedTimeSeries, ...validatedForecast) - 5),
+                                max: Math.min(100, Math.max(...validatedTimeSeries, ...validatedForecast) + 5),
+                                title: { display: true, text: 'Attendance Rate (%)' }
+                            },
+                            x: { title: { display: true, text: 'Date' } }
+                        }
+                    }
+                });
+                console.log('Individual forecast chart created successfully');
+            } catch (error) {
+                console.error('Error creating individual forecast chart:', error);
+            }
+        }
+
+        
+    classFilter.addEventListener('change', () => {
             updateStudentFilter();
             if (forecastChart) forecastChart.destroy();
             if (attendanceStatusChart) attendanceStatusChart.destroy();

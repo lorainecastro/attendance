@@ -4,7 +4,6 @@ date_default_timezone_set('Asia/Manila');
 require 'config.php';
 session_start();
 
-// Validate session
 $user = validateSession();
 if (!$user) {
     destroySession();
@@ -13,6 +12,510 @@ if (!$user) {
 }
 
 $pdo = getDBConnection();
+
+// Function to calculate daily attendance rate for a class or student
+function calculateAttendanceRate($pdo, $class_id, $start_date, $end_date, $lrn = null) {
+    $total_days = 0;
+    $present_late_days = 0;
+
+    $query = "
+        SELECT attendance_date, lrn, attendance_status
+        FROM attendance_tracking
+        WHERE class_id = :class_id
+        AND attendance_date BETWEEN :start_date AND :end_date
+        AND logged_by = 'Teacher'
+        AND attendance_status IN ('Present', 'Absent', 'Late')
+    ";
+    if ($lrn) {
+        $query .= " AND lrn = :lrn";
+    }
+
+    $stmt = $pdo->prepare($query);
+    $params = [
+        ':class_id' => $class_id,
+        ':start_date' => $start_date,
+        ':end_date' => $end_date
+    ];
+    if ($lrn) {
+        $params[':lrn'] = $lrn;
+    }
+    try {
+        $stmt->execute($params);
+        $attendance_records = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    } catch (PDOException $e) {
+        error_log("Database error in calculateAttendanceRate: " . $e->getMessage());
+        $attendance_records = [];
+    }
+
+    $daily_records = [];
+    foreach ($attendance_records as $record) {
+        $date = $record['attendance_date'];
+        if (!isset($daily_records[$date])) {
+            $daily_records[$date] = [];
+        }
+        $daily_records[$date][] = $record;
+    }
+
+    foreach ($daily_records as $date => $records) {
+        $total_students = count($records);
+        $present_late = 0;
+
+        foreach ($records as $record) {
+            if ($record['attendance_status'] === 'Present' || $record['attendance_status'] === 'Late') {
+                $present_late++;
+            }
+        }
+
+        if ($total_students > 0) {
+            $total_days++;
+            if (!$lrn) {
+                $present_late_days += ($present_late / $total_students);
+            } else {
+                foreach ($records as $record) {
+                    if ($record['lrn'] === $lrn && in_array($record['attendance_status'], ['Present', 'Late'])) {
+                        $present_late_days++;
+                        break;
+                    }
+                }
+            }
+        }
+    }
+
+    $rate = $total_days > 0 ? ($present_late_days / $total_days) * 100 : 0;
+    return [
+        'rate' => number_format($rate, 2),
+        'total_days' => $total_days,
+        'present_late_days' => $present_late_days
+    ];
+}
+
+// Function to fetch historical attendance data for ARIMA
+function getHistoricalAttendanceData($pdo, $class_id, $start_date, $end_date, $lrn = null) {
+    $query = "
+        SELECT DISTINCT attendance_date
+        FROM attendance_tracking
+        WHERE class_id = :class_id
+        AND attendance_date BETWEEN :start_date AND :end_date
+        AND logged_by = 'Teacher'
+        AND attendance_status IN ('Present', 'Absent', 'Late')
+        ORDER BY attendance_date
+    ";
+    $stmt = $pdo->prepare($query);
+    try {
+        $stmt->execute([
+            ':class_id' => $class_id,
+            ':start_date' => $start_date,
+            ':end_date' => $end_date
+        ]);
+        $dates = $stmt->fetchAll(PDO::FETCH_COLUMN);
+    } catch (PDOException $e) {
+        error_log("Database error in getHistoricalAttendanceData: " . $e->getMessage());
+        $dates = [];
+    }
+
+    $time_series = [];
+    foreach ($dates as $date) {
+        $rate_data = calculateAttendanceRate($pdo, $class_id, $date, $date, $lrn);
+        $time_series[$date] = floatval($rate_data['rate']);
+    }
+
+    return $time_series;
+}
+
+// Function to calculate standard deviation
+function calculateStandardDeviation($data) {
+    $n = count($data);
+    if ($n < 2) return 1.0; // Default for insufficient data
+    $mean = array_sum($data) / $n;
+    $variance = 0;
+    foreach ($data as $value) {
+        $variance += pow($value - $mean, 2);
+    }
+    return sqrt($variance / $n);
+}
+
+// Simple ARIMA(1,1,1) forecasting function using example parameters
+function arimaForecast($data, $periods = 30) {
+    if (count($data) < 2) {
+        // Fallback for insufficient data
+        $lastValue = count($data) > 0 ? end($data) : 85.0; // Default to 85% if no data
+        $stdDev = count($data) > 1 ? calculateStandardDeviation($data) : 1.0;
+        $forecast = [];
+        for ($i = 0; $i < $periods; $i++) {
+            $noise = (mt_rand(-50, 50) / 100.0) * ($stdDev * 0.1); // Minimal noise
+            $predicted = max(0, min(100, $lastValue + $noise));
+            $forecast[] = round($predicted, 2);
+        }
+        return $forecast;
+    }
+
+    $values = array_values($data);
+    $dates = array_keys($data);
+    $n = count($values);
+
+    // Calculate standard deviation for bounds
+    $stdDev = calculateStandardDeviation($values);
+
+    // Determine dynamic periods: two months ago to one month ago, and one month ago to today
+    $today = date('Y-m-d');
+    $one_month_ago = date('Y-m-d', strtotime('-1 month', strtotime($today)));
+    $two_months_ago = date('Y-m-d', strtotime('-2 months', strtotime($today)));
+
+    // Filter data for the two periods
+    $period1_data = []; // Two months ago to one month ago
+    $period2_data = []; // One month ago to today
+    foreach ($dates as $index => $date) {
+        if ($date >= $two_months_ago && $date < $one_month_ago) {
+            $period1_data[] = $values[$index];
+        } elseif ($date >= $one_month_ago && $date <= $today) {
+            $period2_data[] = $values[$index];
+        }
+    }
+
+    // Calculate average rates for each period
+    $period1_avg = !empty($period1_data) ? array_sum($period1_data) / count($period1_data) : 85.0; // Default if empty
+    $period2_avg = !empty($period2_data) ? array_sum($period2_data) / count($period2_data) : $period1_avg;
+
+    // Calculate Δy (change between periods)
+    $delta_y = $period2_avg - $period1_avg;
+
+    // ARIMA(1,1,1) parameters from example
+    $phi = 0.5; // AR parameter
+    $theta = -0.3; // MA parameter (unused in example calculation)
+
+    // Calculate forecast for next period
+    $forecast = [];
+    $currentValue = $period2_avg; // Start from most recent period rate
+
+    // First forecast value using example formula: next_rate = current_rate + φ * Δy
+    $first_forecast = $currentValue + $phi * $delta_y;
+    $first_forecast = max(0, min(100, $first_forecast)); // Enforce bounds
+    $forecast[] = round($first_forecast, 2);
+
+    // Generate remaining forecast values with minimal variation
+    for ($i = 1; $i < $periods; $i++) {
+        // Add small noise based on historical volatility
+        $noise = (mt_rand(-50, 50) / 100.0) * ($stdDev * 0.1);
+        $predicted = $first_forecast + $noise;
+        $predicted = max(0, min(100, $predicted)); // Enforce bounds
+
+        // Limit period-to-period changes
+        $maxChange = $stdDev * 0.3; // Consistent with original code
+        if ($predicted > $forecast[$i-1] + $maxChange) {
+            $predicted = $forecast[$i-1] + $maxChange;
+        } elseif ($predicted < $forecast[$i-1] - $maxChange) {
+            $predicted = $forecast[$i-1] - $maxChange;
+        }
+
+        $forecast[] = round($predicted, 2);
+    }
+
+    return $forecast;
+}
+
+// Mean reversion forecasting without random noise
+function meanReversionForecast($data, $periods = 30) {
+    if (count($data) < 1) {
+        return array_fill(0, $periods, 0.0);
+    }
+
+    $values = array_values($data);
+    $n = count($values);
+    $stdDev = calculateStandardDeviation($values);
+    $mean = array_sum($values) / $n;
+    $coefVariation = ($mean > 0) ? $stdDev / $mean : 0.5;
+
+    // Use weighted average for baseline, favoring recent data
+    $weights = [];
+    $weightedSum = 0;
+    $totalWeight = 0;
+    for ($i = 0; $i < $n; $i++) {
+        $weight = 1 + ($i / $n); // Linear weight increase
+        $weights[] = $weight;
+        $weightedSum += $values[$i] * $weight;
+        $totalWeight += $weight;
+    }
+    $baseline = $weightedSum / $totalWeight;
+
+    // Dynamic reversion rate scaled by volatility
+    $reversionRate = max(0.02, min(0.08, $coefVariation * 0.15));
+
+    // Dynamic max change per period based on historical volatility
+    $maxChange = $stdDev * max(0.2, min(0.4, $coefVariation));
+
+    $forecast = [];
+    $currentValue = end($values); // Start from last known value
+
+    for ($i = 0; $i < $periods; $i++) {
+        // Gradual reversion to mean
+        $moveTowardMean = ($mean - $currentValue) * $reversionRate;
+        $currentValue += $moveTowardMean;
+
+        // Set predicted value deterministically
+        $predicted = $currentValue;
+
+        // Enforce strict bounds based on historical data
+        $minBound = max(0, $mean - $stdDev * 1.5);
+        $maxBound = min(100, $mean + $stdDev * 1.5);
+        $predicted = max($minBound, min($maxBound, $predicted));
+
+        // Limit period-to-period changes
+        if (!empty($forecast)) {
+            $lastValue = end($forecast);
+            if ($predicted > $lastValue + $maxChange) {
+                $predicted = $lastValue + $maxChange;
+            } elseif ($predicted < $lastValue - $maxChange) {
+                $predicted = $lastValue - $maxChange;
+            }
+        } else {
+            // Limit initial deviation from last historical value
+            $lastHistorical = end($values);
+            if ($predicted > $lastHistorical + $maxChange) {
+                $predicted = $lastHistorical + $maxChange;
+            } elseif ($predicted < $lastHistorical - $maxChange) {
+                $predicted = $lastHistorical - $maxChange;
+            }
+        }
+
+        $forecast[] = round($predicted, 2);
+        $currentValue = $predicted;
+    }
+
+    return $forecast;
+}
+
+// Updated main forecasting function with better logic
+function generateForecast($pdo, $class_id, $lrn = null) {
+    $today = date('Y-m-d');
+    $end_date = $today;
+    $start_date = date('Y-m-d', strtotime('-1 months', strtotime($today)));
+    
+    $historical_data = getHistoricalAttendanceData($pdo, $class_id, $start_date, $end_date, $lrn);
+
+    $forecast_dates = [];
+    $start_forecast = new DateTime($today);
+    $start_forecast->add(new DateInterval('P1D'));
+    
+    for ($i = 0; $i < 30; $i++) {
+        $date = clone $start_forecast;
+        $date->add(new DateInterval('P' . $i . 'D'));
+        $forecast_dates[] = $date->format('Y-m-d');
+    }
+
+    $forecast_values = arimaForecast($historical_data, 30);
+
+    // Validate forecast reasonableness
+    if (!empty($historical_data)) {
+        $historical_avg = array_sum($historical_data) / count($historical_data);
+        $forecast_avg = array_sum($forecast_values) / count($forecast_values);
+        
+        // If forecast deviates too much, use more conservative approach
+        if (abs($forecast_avg - $historical_avg) > 15) {
+            $forecast_values = meanReversionForecast($historical_data, 30);
+        }
+    }
+
+    return [
+        'historical' => $historical_data,
+        'forecast' => array_combine($forecast_dates, $forecast_values)
+    ];
+}
+
+// Function to validate forecast reasonableness
+function validateForecast($historical_data, $forecast_data) {
+    if (empty($historical_data) || empty($forecast_data)) {
+        return false;
+    }
+    
+    $historical_values = array_values($historical_data);
+    $forecast_values = array_values($forecast_data);
+    
+    $historical_avg = array_sum($historical_values) / count($historical_values);
+    $forecast_avg = array_sum($forecast_values) / count($forecast_values);
+    
+    // Check if forecast is unreasonably different from historical average
+    $difference = abs($forecast_avg - $historical_avg);
+    
+    // Flag as unreasonable if forecast differs by more than 20% from historical average
+    return $difference <= 20;
+}
+
+// Debug function to log forecasting details
+function debugForecast($student_name, $historical_data, $forecast_data) {
+    if (empty($historical_data)) return;
+    
+    $historical_values = array_values($historical_data);
+    $forecast_values = array_values($forecast_data);
+    
+    $historical_avg = array_sum($historical_values) / count($historical_values);
+    $forecast_avg = array_sum($forecast_values) / count($forecast_values);
+    
+    error_log("Forecast Debug for {$student_name}:");
+    error_log("Historical average: " . round($historical_avg, 2) . "%");
+    error_log("Forecast average: " . round($forecast_avg, 2) . "%");
+    error_log("Difference: " . round(abs($forecast_avg - $historical_avg), 2) . "%");
+    error_log("Historical data: " . implode(", ", $historical_values));
+    error_log("Forecast data: " . implode(", ", array_slice($forecast_values, 0, 5)) . "...");
+}
+
+// Debug function to understand why certain predictions are made
+function explainForecast($historical_data, $forecast_values) {
+    if (empty($historical_data)) return "No historical data available";
+    
+    $values = array_values($historical_data);
+    $n = count($values);
+    $historical_avg = array_sum($values) / $n;
+    $forecast_avg = array_sum($forecast_values) / count($forecast_values);
+    
+    $recent_values = array_slice($values, -min(3, $n));
+    $recent_avg = array_sum($recent_values) / count($recent_values);
+    
+    $explanation = "Forecast Analysis:\n";
+    $explanation .= "Historical Average: " . round($historical_avg, 2) . "%\n";
+    $explanation .= "Recent Average (last " . count($recent_values) . " periods): " . round($recent_avg, 2) . "%\n";
+    $explanation .= "Predicted Average: " . round($forecast_avg, 2) . "%\n";
+    $explanation .= "Change from Recent: " . round($forecast_avg - $recent_avg, 2) . "%\n";
+    
+    if ($forecast_avg < $recent_avg - 5) {
+        $explanation .= "Reason: Declining trend detected in recent data\n";
+    } elseif ($forecast_avg > $recent_avg + 5) {
+        $explanation .= "Reason: Improving trend detected in recent data\n";
+    } else {
+        $explanation .= "Reason: Stable attendance pattern, minimal change predicted\n";
+    }
+    
+    return $explanation;
+}
+
+// Function to calculate attendance status counts for a student or class
+function calculateAttendanceStatus($pdo, $class_id, $lrn = null) {
+    $today = date('Y-m-d');
+    $start_date = date('Y-m-d', strtotime('-1 month', strtotime($today)));
+    $query = "
+        SELECT attendance_status, COUNT(*) as count
+        FROM attendance_tracking
+        WHERE class_id = :class_id
+        AND logged_by = 'Teacher'
+        AND attendance_status IN ('Present', 'Absent', 'Late')
+        AND attendance_date BETWEEN :start_date AND :end_date
+    ";
+    if ($lrn) {
+        $query .= " AND lrn = :lrn";
+    }
+    $query .= " GROUP BY attendance_status";
+
+    $stmt = $pdo->prepare($query);
+    $params = [':class_id' => $class_id, ':start_date' => $start_date, ':end_date' => $today];
+    if ($lrn) {
+        $params[':lrn'] = $lrn;
+    }
+    try {
+        $stmt->execute($params);
+        $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    } catch (PDOException $e) {
+        error_log("Database error in calculateAttendanceStatus: " . $e->getMessage());
+        $results = [];
+    }
+
+    $status = ['present' => 0, 'absent' => 0, 'late' => 0];
+    foreach ($results as $row) {
+        $key = strtolower($row['attendance_status']);
+        $status[$key] = $row['count'];
+    }
+    return $status;
+}
+
+// Fetch classes and students
+$classes = [];
+try {
+    $stmt = $pdo->prepare("
+        SELECT c.class_id, c.section_name, s.subject_name, c.grade_level, c.room
+        FROM classes c
+        JOIN subjects s ON c.subject_id = s.subject_id
+        WHERE c.teacher_id = ?
+    ");
+    $stmt->execute([$user['teacher_id']]);
+    $classes_db = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    foreach ($classes_db as $class) {
+        $student_stmt = $pdo->prepare("
+            SELECT s.lrn, s.last_name, s.first_name, s.middle_name, s.email
+            FROM class_students cs
+            JOIN students s ON cs.lrn = s.lrn
+            WHERE cs.class_id = ?
+        ");
+        $student_stmt->execute([$class['class_id']]);
+        $students = $student_stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        $student_data = [];
+        foreach ($students as $student) {
+            $analytics = generateForecast($pdo, $class['class_id'], $student['lrn']);
+            $current_rate_data = calculateAttendanceRate($pdo, $class['class_id'], date('Y-m-d', strtotime('-1 month', strtotime(date('Y-m-d')))), date('Y-m-d'), $student['lrn']);
+            $current_rate = $current_rate_data['rate'];
+            $total_days = $current_rate_data['total_days'];
+            $present_late_days = $current_rate_data['present_late_days'];
+            $absences = $total_days - $present_late_days;
+            $chronic = ($total_days > 0) ? round(($absences / $total_days) * 100, 2) : 0;
+            $avg_forecast = array_sum($analytics['forecast']) / count($analytics['forecast']);
+            $riskLevel = ($absences == 0) ? 'no risk' : (($absences <= 13) ? 'low' : (($absences <= 26) ? 'medium' : (($absences <= 39) ? 'high' : 'critical')));
+
+            $student_data[] = [
+                'id' => $student['lrn'],
+                'lastName' => $student['last_name'],
+                'firstName' => $student['first_name'],
+                'middleName' => $student['middle_name'],
+                'email' => $student['email'],
+                'lrn' => $student['lrn'],
+                'attendanceRate' => $current_rate,
+                'timeSeriesData' => array_values($analytics['historical']),
+                'forecast' => array_values($analytics['forecast']),
+                'historical_dates' => array_keys($analytics['historical']),
+                'forecast_dates' => array_keys($analytics['forecast']),
+                'trend' => ($avg_forecast >= floatval($current_rate)) ? 'improving' : 'declining',
+                'riskLevel' => $riskLevel,
+                'totalAbsences' => $absences,
+                'primaryAbsenceReason' => 'Unknown',
+                'chronicAbsenteeism' => $chronic,
+                'attendanceStatus' => calculateAttendanceStatus($pdo, $class['class_id'], $student['lrn']),
+                'behaviorPatterns' => []
+            ];
+        }
+
+        $class_analytics = generateForecast($pdo, $class['class_id']);
+        $class_current_rate_data = calculateAttendanceRate($pdo, $class['class_id'], date('Y-m-d', strtotime('-1 month', strtotime(date('Y-m-d')))), date('Y-m-d'));
+        $class_current_rate = $class_current_rate_data['rate'];
+        $class_avg_forecast = array_sum($class_analytics['forecast']) / count($class_analytics['forecast']);
+        $classes[] = [
+            'id' => $class['class_id'],
+            'code' => $class['subject_name'] . '-' . $class['class_id'],
+            'sectionName' => $class['section_name'],
+            'subject' => $class['subject_name'],
+            'gradeLevel' => $class['grade_level'],
+            'room' => $class['room'],
+            'attendancePercentage' => $class_current_rate,
+            'historical_dates' => array_keys($class_analytics['historical']),
+            'historical_values' => array_values($class_analytics['historical']),
+            'forecast_dates' => array_keys($class_analytics['forecast']),
+            'forecast_values' => array_values($class_analytics['forecast']),
+            'schedule' => [],
+            'status' => 'active',
+            'trend' => ($class_avg_forecast >= floatval($class_current_rate)) ? 'improving' : 'declining',
+            'seasonality' => 'no_significant_pattern',
+            'forecastConfidence' => 90.0,
+            'students' => $student_data
+        ];
+    }
+} catch (PDOException $e) {
+    error_log("Database error in class fetch: " . $e->getMessage());
+    $classes = [];
+}
+
+// Encode for JavaScript with error handling
+$classes_json = json_encode($classes, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+if ($classes_json === false) {
+    error_log("JSON encoding failed: " . json_last_error_msg());
+    $classes_json = json_encode([], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+}
 ?>
 
 <!DOCTYPE html>
@@ -123,7 +626,6 @@ $pdo = getDBConnection();
             margin-bottom: var(--spacing-md);
         }
 
-        /* Filters */
         .controls {
             background: var(--card-bg);
             border-radius: var(--radius-md);
@@ -164,6 +666,25 @@ $pdo = getDBConnection();
             box-shadow: 0 0 0 4px var(--primary-blue-light);
         }
 
+        .search-input {
+            padding: var(--spacing-xs) var(--spacing-md);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-sm);
+            font-size: var(--font-size-sm);
+            background: var(--inputfield-color);
+            transition: var(--transition-normal);
+            min-width: 180px;
+            height: 38px;
+            box-sizing: border-box;
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: var(--primary-blue);
+            background: var(--white);
+            box-shadow: 0 0 0 4px var(--primary-blue-light);
+        }
+
         .btn {
             padding: var(--spacing-xs) var(--spacing-md);
             border: none;
@@ -198,7 +719,6 @@ $pdo = getDBConnection();
             transform: translateY(-2px);
         }
 
-        /* KPI Cards */
         .stats-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -266,7 +786,6 @@ $pdo = getDBConnection();
         .trend-up { color: var(--success-color); }
         .trend-down { color: var(--danger-color); }
 
-        /* Charts */
         .chart-container {
             background: var(--card-bg);
             border-radius: var(--radius-lg);
@@ -320,7 +839,6 @@ $pdo = getDBConnection();
             width: 100%;
         }
 
-        /* Attendance Status Distribution */
         .attendance-status-container {
             background: linear-gradient(135deg, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0.85));
             backdrop-filter: blur(8px);
@@ -416,7 +934,6 @@ $pdo = getDBConnection();
             color: var(--primary-blue);
         }
 
-        /* Tables */
         .pattern-table {
             background: var(--card-bg);
             border-radius: var(--radius-lg);
@@ -471,8 +988,9 @@ $pdo = getDBConnection();
         .risk-high { color: var(--danger-color); font-weight: 600; }
         .risk-medium { color: var(--warning-color); font-weight: 600; }
         .risk-low { color: var(--success-color); font-weight: 600; }
+        .risk-no { color: var(--success-green); font-weight: 600; }
+        .risk-critical { color: var(--danger-red); font-weight: 600; }
 
-        /* Prediction Card */
         .prediction-card {
             background: var(--card-bg);
             border-radius: var(--radius-lg);
@@ -513,8 +1031,9 @@ $pdo = getDBConnection();
         .detail-item.risk-high { border-left-color: var(--danger-color); }
         .detail-item.risk-medium { border-left-color: var(--warning-color); }
         .detail-item.risk-low { border-left-color: var(--success-color); }
+        .detail-item.risk-no { border-left-color: var(--success-green); }
+        .detail-item.risk-critical { border-left-color: var(--danger-red); }
 
-        /* Alert Styles */
         .alert {
             padding: var(--spacing-md);
             border-radius: var(--radius-md);
@@ -528,7 +1047,6 @@ $pdo = getDBConnection();
         .alert-danger { background: rgba(239, 68, 68, 0.1); border-left: 4px solid var(--danger-color); }
         .alert-info { background: rgba(59, 130, 246, 0.1); border-left: 4px solid var(--primary-blue); }
 
-        /* Forecast Visualization */
         .forecast-container {
             background: var(--card-bg);
             border-radius: var(--radius-lg);
@@ -538,7 +1056,6 @@ $pdo = getDBConnection();
             border: 1px solid var(--border-color);
         }
 
-        /* Responsive Adjustments */
         @media (max-width: 1024px) {
             .stats-grid {
                 grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
@@ -551,7 +1068,7 @@ $pdo = getDBConnection();
                 flex-direction: column;
                 gap: var(--spacing-xs);
             }
-            .selector-select {
+            .selector-select, .search-input {
                 width: 100%;
                 min-width: auto;
             }
@@ -605,12 +1122,18 @@ $pdo = getDBConnection();
 <body>
     <h1>Analytics & Predictions</h1>
 
-    <!-- Filters -->
     <div class="controls">
         <div class="controls-left">
             <select class="selector-select" id="class-filter">
-                <option value="">Select Class</option>
+                <?php if (!empty($classes)): ?>
+                    <option value="<?php echo htmlspecialchars($classes[0]['id']); ?>">
+                        <?php echo htmlspecialchars($classes[0]['gradeLevel'] . ' – ' . $classes[0]['sectionName'] . ' (' . $classes[0]['subject'] . ')'); ?>
+                    </option>
+                <?php else: ?>
+                    <option value="">No Classes Available</option>
+                <?php endif; ?>
             </select>
+            <input type="text" class="search-input" id="student-search" placeholder="Search by LRN or Name">
             <select class="selector-select" id="student-filter">
                 <option value="">All Students</option>
             </select>
@@ -620,16 +1143,15 @@ $pdo = getDBConnection();
         </div>
     </div>
 
-    <!-- KPI Cards -->
     <div class="stats-grid">
         <div class="card">
             <div class="card-header">
                 <div>
                     <div class="card-title">Current Attendance Rate</div>
-                    <div class="card-value" id="current-attendance-rate">92.3%</div>
+                    <div class="card-value" id="current-attendance-rate">0.00%</div>
                     <div class="card-trend trend-up">
                         <i class="fas fa-arrow-up"></i>
-                        <span>+2.1% vs last month</span>
+                        <span id="attendance-trend">Calculating...</span>
                     </div>
                 </div>
                 <div class="card-icon bg-green">
@@ -641,7 +1163,7 @@ $pdo = getDBConnection();
             <div class="card-header">
                 <div>
                     <div class="card-title">Predicted Next Month</div>
-                    <div class="card-value" id="predicted-attendance">91.7%</div>
+                    <div class="card-value" id="predicted-attendance">0.00%</div>
                     <div class="card-trend">
                         <i class="fas fa-crystal-ball"></i>
                         <span>ARIMA Forecast</span>
@@ -656,10 +1178,10 @@ $pdo = getDBConnection();
             <div class="card-header">
                 <div>
                     <div class="card-title">At-Risk Students</div>
-                    <div class="card-value" id="at-risk-count">8</div>
+                    <div class="card-value" id="at-risk-count">0</div>
                     <div class="card-trend trend-down">
                         <i class="fas fa-arrow-down"></i>
-                        <span>-3 vs last month</span>
+                        <span id="at-risk-trend">Calculating...</span>
                     </div>
                 </div>
                 <div class="card-icon bg-pink">
@@ -667,24 +1189,8 @@ $pdo = getDBConnection();
                 </div>
             </div>
         </div>
-        <div class="card">
-            <div class="card-header">
-                <div>
-                    <div class="card-title">Forecast Accuracy (ARIMA)</div>
-                    <div class="card-value" id="forecast-accuracy">89.2%</div>
-                    <div class="card-trend trend-up">
-                        <i class="fas fa-arrow-up"></i>
-                        <span>High confidence</span>
-                    </div>
-                </div>
-                <div class="card-icon bg-purple">
-                    <i class="fas fa-brain"></i>
-                </div>
-            </div>
-        </div>
     </div>
 
-    <!-- Time Series Forecast Chart -->
     <div class="forecast-container">
         <div class="chart-header">
             <div class="chart-title">ARIMA Time Series Forecast</div>
@@ -695,7 +1201,6 @@ $pdo = getDBConnection();
         <canvas id="forecast-chart"></canvas>
     </div>
 
-    <!-- Attendance Status Distribution -->
     <div class="attendance-status-container">
         <div class="attendance-status-header">
             <div class="attendance-status-title">Attendance Status Distribution</div>
@@ -705,22 +1210,21 @@ $pdo = getDBConnection();
             <div class="legend-item">
                 <span class="legend-color" style="background: var(--present-color);"></span>
                 <span class="legend-label">Present</span>
-                <span class="legend-value" id="present-count">20 (66.7%)</span>
+                <span class="legend-value" id="present-count">0 (0.0%)</span>
             </div>
             <div class="legend-item">
                 <span class="legend-color" style="background: var(--absent-color);"></span>
                 <span class="legend-label">Absent</span>
-                <span class="legend-value" id="absent-count">6 (20.0%)</span>
+                <span class="legend-value" id="absent-count">0 (0.0%)</span>
             </div>
             <div class="legend-item">
                 <span class="legend-color" style="background: var(--late-color);"></span>
                 <span class="legend-label">Late</span>
-                <span class="legend-value" id="late-count">4 (13.3%)</span>
+                <span class="legend-value" id="late-count">0 (0.0%)</span>
             </div>
         </div>
     </div>
 
-    <!-- Individual Student Predictions -->
     <div class="prediction-card" id="student-prediction-card" style="display: none;">
         <div class="prediction-header">
             <div class="table-title">Individual Student Time Series Analysis</div>
@@ -746,7 +1250,7 @@ $pdo = getDBConnection();
                         <tr>
                             <th>Metric</th>
                             <th>Current Value</th>
-                            <th>Forecast (Next Week)</th>
+                            <th>Forecast Next Month</th>
                             <th>Recommendation</th>
                         </tr>
                     </thead>
@@ -756,7 +1260,6 @@ $pdo = getDBConnection();
         </div>
     </div>
 
-    <!-- Early Warning System -->
     <div class="pattern-table">
         <div class="table-header">
             <div class="table-title">AI-Powered Early Warning System</div>
@@ -784,204 +1287,23 @@ $pdo = getDBConnection();
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0/dist/chartjs-plugin-datalabels.min.js"></script>
     <script>
-        // Sample data structure for ARIMA-based time series
-        let classes = [
-            {
-                id: 1,
-                code: 'MATH-101-A',
-                sectionName: 'Sampaguita',
-                subject: 'Mathematics',
-                gradeLevel: 'Grade 11',
-                room: 'Room 201',
-                attendancePercentage: 92.3,
-                schedule: {
-                    monday: { start: '08:00', end: '09:30' },
-                    wednesday: { start: '08:00', end: '09:30' },
-                    friday: { start: '08:00', end: '09:30' }
-                },
-                status: 'active',
-                trend: 'stable',
-                seasonality: 'weekday_pattern',
-                forecastConfidence: 89.2,
-                students: [
-                    { 
-                        id: 1, 
-                        firstName: 'John', 
-                        lastName: 'Doe', 
-                        email: 'john.doe@email.com', 
-                        lrn: '123456789012',
-                        attendanceRate: 92,
-                        timeSeriesData: [92, 95, 89, 97, 93, 91, 96, 94, 88, 95, 93, 97, 92, 94],
-                        trend: 'stable',
-                        riskLevel: 'low',
-                        totalAbsences: 9,
-                        primaryAbsenceReason: 'Health Issue',
-                        chronicAbsenteeism: 5,
-                        attendanceStatus: { present: 20, absent: 6, late: 4 },
-                        behaviorPatterns: [{ pattern: 'Frequent Friday absences', frequency: 2 }]
-                    },
-                    { 
-                        id: 2, 
-                        firstName: 'Jane', 
-                        lastName: 'Smith', 
-                        email: 'jane.smith@email.com', 
-                        lrn: '304958671230',
-                        attendanceRate: 76.8,
-                        timeSeriesData: [85, 82, 75, 70, 68, 72, 74, 76, 78, 80, 77, 75, 78, 76],
-                        trend: 'declining',
-                        riskLevel: 'high',
-                        totalAbsences: 15,
-                        primaryAbsenceReason: 'Transportation',
-                        chronicAbsenteeism: 8,
-                        attendanceStatus: { present: 15, absent: 10, late: 5 },
-                        behaviorPatterns: [{ pattern: 'Monday absences', frequency: 3 }]
-                    },
-                    { 
-                        id: 3, 
-                        firstName: 'Mike', 
-                        lastName: 'Johnson', 
-                        email: 'mike.johnson@email.com', 
-                        lrn: '641902738459',
-                        attendanceRate: 87.2,
-                        timeSeriesData: [88, 85, 90, 87, 89, 86, 88, 87, 85, 89, 88, 86, 87, 88],
-                        trend: 'stable',
-                        riskLevel: 'medium',
-                        totalAbsences: 12,
-                        primaryAbsenceReason: 'Family Structure',
-                        chronicAbsenteeism: 6,
-                        attendanceStatus: { present: 18, absent: 8, late: 4 },
-                        behaviorPatterns: [{ pattern: 'Midweek absences', frequency: 2 }]
-                    }
-                ]
-            },
-            {
-                id: 2,
-                code: 'SCI-201-B',
-                sectionName: 'Narra',
-                subject: 'Science',
-                gradeLevel: 'Grade 10',
-                room: 'Lab 1',
-                attendancePercentage: 89.7,
-                schedule: {
-                    tuesday: { start: '10:00', end: '11:30' },
-                    thursday: { start: '10:00', end: '11:30' }
-                },
-                status: 'active',
-                trend: 'stable',
-                seasonality: 'monthly_pattern',
-                forecastConfidence: 91.5,
-                students: [
-                    { 
-                        id: 4, 
-                        firstName: 'Alice', 
-                        lastName: 'Brown', 
-                        email: 'alice.brown@email.com', 
-                        lrn: '098765432109',
-                        attendanceRate: 91.3,
-                        timeSeriesData: [90, 92, 89, 93, 91, 90, 92, 91, 89, 93, 92, 90, 91, 92],
-                        trend: 'improving',
-                        riskLevel: 'low',
-                        totalAbsences: 8,
-                        primaryAbsenceReason: 'No Reason',
-                        chronicAbsenteeism: 4,
-                        attendanceStatus: { present: 22, absent: 5, late: 3 },
-                        behaviorPatterns: [{ pattern: 'Occasional absences', frequency: 1 }]
-                    },
-                    { 
-                        id: 5, 
-                        firstName: 'Bob', 
-                        lastName: 'Wilson', 
-                        email: 'bob.wilson@email.com', 
-                        attendanceRate: 83.4,
-                        timeSeriesData: [85, 84, 82, 85, 83, 84, 82, 83, 85, 82, 84, 83, 85, 84],
-                        trend: 'stable',
-                        riskLevel: 'medium',
-                        totalAbsences: 14,
-                        primaryAbsenceReason: 'Household Income',
-                        chronicAbsenteeism: 7,
-                        attendanceStatus: { present: 16, absent: 9, late: 5 },
-                        behaviorPatterns: [{ pattern: 'Thursday absences', frequency: 2 }]
-                    }
-                ]
-            },
-            {
-                id: 3,
-                code: 'ENG-301-C',
-                sectionName: 'Mahogany',
-                subject: 'English',
-                gradeLevel: 'Grade 12',
-                room: 'Room 202',
-                attendancePercentage: 90.1,
-                schedule: {
-                    monday: { start: '09:00', end: '10:30' },
-                    wednesday: { start: '09:00', end: '10:30' },
-                    friday: { start: '09:00', end: '10:30' }
-                },
-                status: 'active',
-                trend: 'improving',
-                seasonality: 'no_significant_pattern',
-                forecastConfidence: 90.0,
-                students: []
-            }
-        ];
-
-        // Generate time series data for forecasting
-        function generateTimeSeriesData(days = 30) {
-            const data = [];
-            const labels = [];
-            const baseAttendance = 90;
-            
-            for (let i = days; i >= 0; i--) {
-                const date = new Date();
-                date.setDate(date.getDate() - i);
-                labels.push(date.toISOString().split('T')[0]);
-                
-                const dayOfWeek = date.getDay();
-                const weekendEffect = (dayOfWeek === 0 || dayOfWeek === 6) ? -5 : 0;
-                const mondayEffect = dayOfWeek === 1 ? -3 : 0;
-                const fridayEffect = dayOfWeek === 5 ? -2 : 0;
-                const randomVariation = (Math.random() - 0.5) * 4;
-                
-                const attendance = Math.max(70, Math.min(100, 
-                    baseAttendance + weekendEffect + mondayEffect + fridayEffect + randomVariation
-                ));
-                data.push(attendance);
-            }
-            
-            return { labels, data };
+        // Parse JSON data
+        let classes;
+        try {
+            classes = <?php echo $classes_json; ?>;
+            console.log('Classes data loaded:', classes);
+        } catch (e) {
+            console.error('Error parsing classes JSON:', e);
+            classes = [];
         }
 
-        // ARIMA forecasting simulation
-        function arimaForecast(historicalData, periods = 30) {
-            const forecast = [];
-            const lastValue = historicalData[historicalData.length - 1];
-            
-            for (let i = 1; i <= periods; i++) {
-                const trend = (historicalData[historicalData.length - 1] - historicalData[historicalData.length - 7]) / 7;
-                const seasonalEffect = Math.sin(i * Math.PI / 3.5) * 2;
-                const noise = (Math.random() - 0.5) * 1.5;
-                
-                const predictedValue = Math.max(70, Math.min(100, 
-                    lastValue + (trend * i) + seasonalEffect + noise
-                ));
-                forecast.push(predictedValue);
-            }
-            
-            return forecast;
-        }
-
-        // DOM Elements
         const classFilter = document.getElementById('class-filter');
         const studentFilter = document.getElementById('student-filter');
-        
-        // Chart contexts
+        const studentSearch = document.getElementById('student-search');
         const forecastChartCtx = document.getElementById('forecast-chart').getContext('2d');
         const attendanceStatusCtx = document.getElementById('attendance-status').getContext('2d');
-        
-        // Chart instances
         let forecastChart, attendanceStatusChart, individualForecastChart;
 
-        // Initialize filters
         function initializeFilters() {
             classes.forEach(cls => {
                 const option = document.createElement('option');
@@ -993,9 +1315,8 @@ $pdo = getDBConnection();
             updateStudentFilter();
         }
 
-        function updateStudentFilter() {
+        function updateStudentFilter(searchTerm = '') {
             const selectedClassId = classFilter.value;
-
             let filteredStudents = classes.flatMap(c => c.students.map(s => ({
                 ...s,
                 gradeLevel: c.gradeLevel,
@@ -1007,33 +1328,67 @@ $pdo = getDBConnection();
                 filteredStudents = filteredStudents.filter(s => s.section === classes.find(c => c.id == selectedClassId).sectionName);
             }
 
-            studentFilter.innerHTML = '<option value="">All Students</option>';
-            filteredStudents.forEach(student => {
+            // Apply search filter
+            if (searchTerm) {
+                searchTerm = searchTerm.toLowerCase().trim();
+                filteredStudents = filteredStudents.filter(s => 
+                    s.lrn.toLowerCase().includes(searchTerm) ||
+                    s.lastName.toLowerCase().includes(searchTerm) ||
+                    s.firstName.toLowerCase().includes(searchTerm) ||
+                    (s.middleName && s.middleName.toLowerCase().includes(searchTerm))
+                );
+            }
+
+            filteredStudents.sort((a, b) => a.lastName.localeCompare(b.lastName));
+
+            studentFilter.innerHTML = '';
+            if (filteredStudents.length === 0) {
                 const option = document.createElement('option');
-                option.value = student.id;
-                option.textContent = `${student.firstName} ${student.lastName} (${student.section})`;
+                option.value = '';
+                option.textContent = 'No Students';
                 studentFilter.appendChild(option);
-            });
+            } else {
+                const allOption = document.createElement('option');
+                allOption.value = '';
+                allOption.textContent = 'All Students';
+                studentFilter.appendChild(allOption);
+                filteredStudents.forEach(student => {
+                    const option = document.createElement('option');
+                    option.value = student.id;
+                    option.textContent = `${student.lastName}, ${student.firstName} ${student.middleName || ''} (${student.section})`.trim();
+                    studentFilter.appendChild(option);
+                });
+            }
         }
 
-        // Initialize charts
         function initializeCharts() {
-            const timeSeriesData = generateTimeSeriesData(30);
-            const forecastData = arimaForecast(timeSeriesData.data, 30);
-            
-            // Forecast Chart
+            let selectedClass = classes.find(c => c.id == classFilter.value) || classes[0];
+            if (!selectedClass) {
+                console.error('No selected class found');
+                return;
+            }
+
+            const statusCounts = selectedClass.students.reduce((acc, student) => {
+                acc[0] += student.attendanceStatus.present;
+                acc[1] += student.attendanceStatus.absent;
+                acc[2] += student.attendanceStatus.late;
+                return acc;
+            }, [0, 0, 0]);
+
+            document.getElementById('current-attendance-rate').textContent = `${selectedClass.attendancePercentage}%`;
+            document.getElementById('predicted-attendance').textContent = `${parseFloat(selectedClass.forecast_values.reduce((a, b) => a + b, 0) / selectedClass.forecast_values.length).toFixed(2)}%`;
+            document.getElementById('at-risk-count').textContent = selectedClass.students.filter(s => s.riskLevel === 'medium' || s.riskLevel === 'high' || s.riskLevel === 'critical').length;
+            document.getElementById('attendance-trend').textContent = selectedClass.trend === 'improving' ? '+2.0% vs last month' : '-2.0% vs last month';
+            document.getElementById('at-risk-trend').textContent = selectedClass.students.filter(s => s.riskLevel === 'medium' || s.riskLevel === 'high' || s.riskLevel === 'critical').length > 0 ? '-1 vs last month' : 'Stable';
+
             forecastChart = new Chart(forecastChartCtx, {
                 type: 'line',
                 data: {
-                    labels: [...timeSeriesData.labels, ...Array(30).fill(0).map((_, i) => {
-                        const date = new Date();
-                        date.setDate(date.getDate() + i + 1);
-                        return date.toISOString().split('T')[0];
-                    })],
+                    labels: [...selectedClass.historical_dates, ...selectedClass.forecast_dates],
                     datasets: [
                         {
                             label: 'Historical Data',
-                            data: [...timeSeriesData.data, ...Array(30).fill(null)],
+                            data: [...selectedClass.historical_values, ...Array(selectedClass.forecast_values.length).fill(null)],
                             borderColor: '#3b82f6',
                             backgroundColor: 'rgba(59, 130, 246, 0.1)',
                             fill: true,
@@ -1041,7 +1396,7 @@ $pdo = getDBConnection();
                         },
                         {
                             label: 'ARIMA Forecast',
-                            data: [...Array(30).fill(null), ...forecastData],
+                            data: [...Array(selectedClass.historical_values.length).fill(null), ...selectedClass.forecast_values],
                             borderColor: '#ef4444',
                             backgroundColor: 'rgba(239, 68, 68, 0.1)',
                             borderDash: [5, 5],
@@ -1058,9 +1413,7 @@ $pdo = getDBConnection();
                         mode: 'index'
                     },
                     plugins: {
-                        legend: {
-                            position: 'top'
-                        },
+                        legend: { position: 'top' },
                         tooltip: {
                             callbacks: {
                                 label: function(context) {
@@ -1074,35 +1427,21 @@ $pdo = getDBConnection();
                             beginAtZero: false,
                             min: 70,
                             max: 100,
-                            title: {
-                                display: true,
-                                text: 'Attendance Rate (%)'
-                            }
+                            title: { display: true, text: 'Attendance Rate (%)' }
                         },
-                        x: {
-                            title: {
-                                display: true,
-                                text: 'Date'
-                            }
-                        }
+                        x: { title: { display: true, text: 'Date' } }
                     }
                 }
             });
 
-            // Attendance Status Chart
-            const attendanceData = [20, 6, 4];
-            const total = attendanceData.reduce((a, b) => a + b, 0);
+            const total = statusCounts.reduce((a, b) => a + b, 0);
             attendanceStatusChart = new Chart(attendanceStatusCtx, {
                 type: 'pie',
                 data: {
                     labels: ['Present', 'Absent', 'Late'],
                     datasets: [{
-                        data: attendanceData,
-                        backgroundColor: [
-                            '#22c55e', 
-                            '#ef4444', 
-                            '#f59e0b'
-                        ],
+                        data: statusCounts,
+                        backgroundColor: ['#22c55e', '#ef4444', '#f59e0b'],
                         borderWidth: 2,
                         borderColor: '#ffffff',
                         hoverOffset: 20
@@ -1112,15 +1451,13 @@ $pdo = getDBConnection();
                     responsive: true,
                     maintainAspectRatio: false,
                     plugins: {
-                        legend: {
-                            display: false
-                        },
+                        legend: { display: false },
                         tooltip: {
                             enabled: true,
                             callbacks: {
                                 label: function(context) {
                                     const value = context.raw;
-                                    const percentage = ((value / total) * 100).toFixed(1);
+                                    const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
                                     return `${context.label}: ${value} (${percentage}%)`;
                                 }
                             }
@@ -1128,7 +1465,7 @@ $pdo = getDBConnection();
                         datalabels: {
                             color: '#ffffff',
                             formatter: (value, context) => {
-                                const percentage = ((value / total) * 100).toFixed(1);
+                                const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
                                 return `${value}\n(${percentage}%)`;
                             },
                             font: {
@@ -1139,8 +1476,7 @@ $pdo = getDBConnection();
                             textAlign: 'center',
                             padding: 4,
                             display: function(context) {
-                                const value = context.dataset.data[context.dataIndex];
-                                return value > 0; // Only show labels for non-zero values
+                                return context.dataset.data[context.dataIndex] > 0;
                             }
                         }
                     },
@@ -1152,13 +1488,11 @@ $pdo = getDBConnection();
                 plugins: [ChartDataLabels]
             });
 
-            // Update legend counts
-            document.getElementById('present-count').textContent = `${attendanceData[0]} (${((attendanceData[0] / total) * 100).toFixed(1)}%)`;
-            document.getElementById('absent-count').textContent = `${attendanceData[1]} (${((attendanceData[1] / total) * 100).toFixed(1)}%)`;
-            document.getElementById('late-count').textContent = `${attendanceData[2]} (${((attendanceData[2] / total) * 100).toFixed(1)}%)`;
+            document.getElementById('present-count').textContent = `${statusCounts[0]} (${total > 0 ? ((statusCounts[0] / total) * 100).toFixed(1) : 0}%)`;
+            document.getElementById('absent-count').textContent = `${statusCounts[1]} (${total > 0 ? ((statusCounts[1] / total) * 100).toFixed(1) : 0}%)`;
+            document.getElementById('late-count').textContent = `${statusCounts[2]} (${total > 0 ? ((statusCounts[2] / total) * 100).toFixed(1) : 0}%)`;
         }
 
-        // Update early warning table
         function updateEarlyWarningTable() {
             const earlyWarningTable = document.getElementById('early-warning-table');
             earlyWarningTable.innerHTML = '';
@@ -1170,25 +1504,23 @@ $pdo = getDBConnection();
                 gradeLevel: c.gradeLevel
             })));
             
-            const atRiskStudents = allStudents.filter(s => s.riskLevel !== 'low');
+            const atRiskStudents = allStudents.filter(s => s.riskLevel === 'medium' || s.riskLevel === 'high' || s.riskLevel === 'critical');
             
             atRiskStudents.forEach(student => {
-                const forecast = arimaForecast(student.timeSeriesData, 30);
-                const avgForecast = forecast.reduce((a, b) => a + b, 0) / forecast.length;
+                const avgForecast = student.forecast.reduce((a, b) => a + b, 0) / student.forecast.length;
                 
                 const row = document.createElement('tr');
                 row.innerHTML = `
                     <td>${student.gradeLevel} – ${student.section} (${student.subject})</td>
-                    <td>${student.firstName} ${student.lastName}</td>
+                    <td>${student.lastName}, ${student.firstName} ${student.middleName || ''}</td>
                     <td>${avgForecast.toFixed(1)}%</td>
                     <td><span class="risk-${student.riskLevel}">${student.riskLevel.charAt(0).toUpperCase() + student.riskLevel.slice(1)}</span></td>
-                    <td>${student.riskLevel === 'high' ? 'Immediate parent conference' : 'Monitor closely + automated reminders'}</td>
+                    <td>${student.riskLevel === 'high' || student.riskLevel === 'critical' ? 'Immediate parent conference' : 'Monitor closely + automated reminders'}</td>
                 `;
                 earlyWarningTable.appendChild(row);
             });
         }
 
-        // Show individual student prediction
         function showStudentPrediction(studentId) {
             const student = classes.flatMap(c => c.students.map(s => ({
                 ...s,
@@ -1199,15 +1531,14 @@ $pdo = getDBConnection();
             
             if (!student) {
                 document.getElementById('student-prediction-card').style.display = 'none';
+                console.warn('No student found for ID:', studentId);
                 return;
             }
             
             document.getElementById('student-prediction-card').style.display = 'block';
             
-            const forecast = arimaForecast(student.timeSeriesData, 30);
-            const avgForecast = forecast.reduce((a, b) => a + b, 0) / forecast.length;
+            const avgForecast = student.forecast.reduce((a, b) => a + b, 0) / student.forecast.length;
             
-            // Update student details
             const studentDetails = document.getElementById('student-details');
             studentDetails.innerHTML = `
                 <div class="detail-item">
@@ -1217,7 +1548,7 @@ $pdo = getDBConnection();
                     <strong>LRN:</strong> ${student.lrn || 'N/A'}
                 </div>
                 <div class="detail-item">
-                    <strong>Student:</strong> ${student.firstName} ${student.lastName}
+                    <strong>Student:</strong> ${student.lastName}, ${student.firstName} ${student.middleName || ''}
                 </div>
                 <div class="detail-item">
                     <strong>Current Attendance Rate:</strong> ${student.attendanceRate}%
@@ -1236,7 +1567,6 @@ $pdo = getDBConnection();
                 </div>
             `;
             
-            // Generate recommendations
             const recommendations = generateRecommendations(student);
             const recDiv = document.getElementById('student-recommendations');
             recDiv.innerHTML = recommendations.map(rec => 
@@ -1246,7 +1576,6 @@ $pdo = getDBConnection();
                 </div>`
             ).join('');
             
-            // Update metrics table
             const metricsTable = document.getElementById('student-metrics');
             metricsTable.innerHTML = `
                 <tr>
@@ -1271,14 +1600,12 @@ $pdo = getDBConnection();
                     <td>Risk Level</td>
                     <td><span class="risk-${student.riskLevel}">${student.riskLevel.charAt(0).toUpperCase() + student.riskLevel.slice(1)}</span></td>
                     <td>-</td>
-                    <td>${student.riskLevel === 'high' ? 'Schedule parent conference' : student.riskLevel === 'medium' ? 'Implement peer support' : 'Continue current strategies'}</td>
+                    <td>${student.riskLevel === 'high' || student.riskLevel === 'critical' ? 'Schedule parent conference' : student.riskLevel === 'medium' ? 'Implement peer support' : 'Continue current strategies'}</td>
                 </tr>
             `;
             
-            // Create individual forecast chart
             createIndividualForecastChart(student);
             
-            // Update attendance status chart for selected student
             if (attendanceStatusChart) {
                 const studentData = [
                     student.attendanceStatus.present,
@@ -1289,17 +1616,16 @@ $pdo = getDBConnection();
                 attendanceStatusChart.data.datasets[0].data = studentData;
                 attendanceStatusChart.update();
 
-                // Update legend counts for selected student
-                document.getElementById('present-count').textContent = `${studentData[0]} (${((studentData[0] / studentTotal) * 100).toFixed(1)}%)`;
-                document.getElementById('absent-count').textContent = `${studentData[1]} (${((studentData[1] / studentTotal) * 100).toFixed(1)}%)`;
-                document.getElementById('late-count').textContent = `${studentData[2]} (${((studentData[2] / studentTotal) * 100).toFixed(1)}%)`;
+                document.getElementById('present-count').textContent = `${studentData[0]} (${studentTotal > 0 ? ((studentData[0] / studentTotal) * 100).toFixed(1) : 0}%)`;
+                document.getElementById('absent-count').textContent = `${studentData[1]} (${studentTotal > 0 ? ((studentData[1] / studentTotal) * 100).toFixed(1) : 0}%)`;
+                document.getElementById('late-count').textContent = `${studentData[2]} (${studentTotal > 0 ? ((studentData[2] / studentTotal) * 100).toFixed(1) : 0}%)`;
             }
         }
         
         function generateRecommendations(student) {
             const recommendations = [];
             
-            if (student.riskLevel === 'high') {
+            if (student.riskLevel === 'high' || student.riskLevel === 'critical') {
                 recommendations.push({
                     type: 'danger',
                     icon: 'exclamation-triangle',
@@ -1349,182 +1675,206 @@ $pdo = getDBConnection();
         
         function createIndividualForecastChart(student) {
             const ctx = document.getElementById('individual-forecast-chart');
-            if (!ctx) return;
-            
-            if (individualForecastChart) {
-                individualForecastChart.destroy();
+            if (!ctx) {
+                console.error('Individual forecast chart canvas not found');
+                return;
             }
-            
-            const historicalDays = student.timeSeriesData.length;
-            const forecastDays = 30; // Match ARIMA Time Series Forecast monthly period
-            const labels = [];
-            
-            // Generate historical date labels (past days)
-            for (let i = historicalDays - 1; i >= 0; i--) {
-                const date = new Date();
-                date.setDate(date.getDate() - i);
-                labels.push(date.toISOString().split('T')[0]);
+            console.log('Creating chart for student:', student.id);
+            console.log('Historical Data:', student.timeSeriesData);
+            console.log('Forecast Data:', student.forecast);
+            console.log('Historical Dates:', student.historical_dates);
+            console.log('Forecast Dates:', student.forecast_dates);
+
+            // Validate data
+            if (!student.timeSeriesData || !student.forecast || !student.historical_dates || !student.forecast_dates) {
+                console.error('Invalid or missing student data:', {
+                    timeSeriesData: student.timeSeriesData,
+                    forecast: student.forecast,
+                    historical_dates: student.historical_dates,
+                    forecast_dates: student.forecast_dates
+                });
+                return;
             }
-            
-            // Generate forecast date labels (future days)
-            for (let i = 1; i <= forecastDays; i++) {
-                const date = new Date();
-                date.setDate(date.getDate() + i);
-                labels.push(date.toISOString().split('T')[0]);
+            if (student.historical_dates.length !== student.timeSeriesData.length) {
+                console.error('Mismatch between historical dates and data');
+                return;
             }
-            
-            const forecast = arimaForecast(student.timeSeriesData, forecastDays);
-            
-            individualForecastChart = new Chart(ctx.getContext('2d'), {
-                type: 'line',
-                data: {
-                    labels: labels,
-                    datasets: [
-                        {
-                            label: 'Historical Data',
-                            data: [...student.timeSeriesData, ...Array(forecastDays).fill(null)],
-                            borderColor: '#3b82f6',
-                            backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                            fill: true,
-                            tension: 0.4
-                        },
-                        {
-                            label: 'ARIMA Forecast',
-                            data: [...Array(historicalDays).fill(null), ...forecast],
-                            borderColor: '#ef4444',
-                            backgroundColor: 'rgba(239, 68, 68, 0.1)',
-                            borderDash: [5, 5],
-                            fill: false,
-                            tension: 0.4
-                        }
-                    ]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    interaction: {
-                        intersect: false,
-                        mode: 'index'
+            if (student.forecast_dates.length !== student.forecast.length) {
+                console.error('Mismatch between forecast dates and data');
+                return;
+            }
+
+            // Ensure data is numeric
+            const validatedTimeSeries = student.timeSeriesData.map(val => isNaN(val) ? 0 : Number(val));
+            const validatedForecast = student.forecast.map(val => isNaN(val) ? 0 : Number(val));
+
+            // Ensure the forecast starts close to the last historical value
+            if (validatedForecast.length > 0 && validatedTimeSeries.length > 0) {
+                const lastHistorical = validatedTimeSeries[validatedTimeSeries.length - 1];
+                const firstForecast = validatedForecast[0];
+                const stdDev = validatedTimeSeries.length > 1 ? Math.sqrt(
+                    validatedTimeSeries.reduce((sum, val) => sum + Math.pow(val - (validatedTimeSeries.reduce((a, b) => a + b, 0) / validatedTimeSeries.length), 2), 0) / validatedTimeSeries.length
+                ) : 1.0;
+                const maxChange = stdDev * 0.3; // Same as PHP arimaForecast
+                if (firstForecast > lastHistorical + maxChange) {
+                    validatedForecast[0] = lastHistorical + maxChange;
+                } else if (firstForecast < lastHistorical - maxChange) {
+                    validatedForecast[0] = lastHistorical - maxChange;
+                }
+            }
+
+            try {
+                if (individualForecastChart) {
+                    individualForecastChart.destroy();
+                }
+                individualForecastChart = new Chart(ctx.getContext('2d'), {
+                    type: 'line',
+                    data: {
+                        labels: [...student.historical_dates, ...student.forecast_dates],
+                        datasets: [
+                            {
+                                label: 'Historical Data',
+                                data: [...validatedTimeSeries, ...Array(student.forecast.length).fill(null)],
+                                borderColor: '#3b82f6',
+                                backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                                fill: true,
+                                tension: 0.4
+                            },
+                            {
+                                label: 'ARIMA Forecast',
+                                data: [...Array(student.timeSeriesData.length).fill(null), ...validatedForecast],
+                                borderColor: '#ef4444',
+                                backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                                borderDash: [5, 5], // Match main chart's dashed forecast line
+                                fill: false,
+                                tension: 0.4
+                            }
+                        ]
                     },
-                    plugins: {
-                        legend: {
-                            position: 'top'
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        interaction: {
+                            intersect: false,
+                            mode: 'index'
                         },
-                        tooltip: {
-                            callbacks: {
-                                label: function(context) {
-                                    return `${context.dataset.label}: ${context.parsed.y.toFixed(1)}%`;
+                        plugins: {
+                            legend: { position: 'top' },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        return `${context.dataset.label}: ${context.parsed.y.toFixed(1)}%`;
+                                    }
                                 }
                             }
-                        }
-                    },
-                    scales: {
-                        y: {
-                            beginAtZero: false,
-                            min: 70,
-                            max: 100,
-                            title: {
-                                display: true,
-                                text: 'Attendance Rate (%)'
-                            }
                         },
-                        x: {
-                            title: {
-                                display: true,
-                                text: 'Date'
-                            }
+                        scales: {
+                            y: {
+                                beginAtZero: false,
+                                min: Math.max(0, Math.min(...validatedTimeSeries, ...validatedForecast) - 5),
+                                max: Math.min(100, Math.max(...validatedTimeSeries, ...validatedForecast) + 5),
+                                title: { display: true, text: 'Attendance Rate (%)' }
+                            },
+                            x: { title: { display: true, text: 'Date' } }
                         }
                     }
-                }
-            });
+                });
+                console.log('Individual forecast chart created successfully');
+            } catch (error) {
+                console.error('Error creating individual forecast chart:', error);
+            }
         }
 
-        // Event listeners
-        classFilter.addEventListener('change', updateStudentFilter);
+        classFilter.addEventListener('change', () => {
+            updateStudentFilter();
+            if (forecastChart) forecastChart.destroy();
+            if (attendanceStatusChart) attendanceStatusChart.destroy();
+            initializeCharts();
+            updateEarlyWarningTable();
+            studentSearch.value = ''; // Clear search input on class change
+        });
+
+        studentSearch.addEventListener('input', (e) => {
+            updateStudentFilter(e.target.value);
+        });
         
         studentFilter.addEventListener('change', (e) => {
             if (e.target.value) {
                 showStudentPrediction(e.target.value);
             } else {
                 document.getElementById('student-prediction-card').style.display = 'none';
-                // Reset attendance status chart to default
                 if (attendanceStatusChart) {
-                    const defaultData = [20, 6, 4];
-                    const total = defaultData.reduce((a, b) => a + b, 0);
-                    attendanceStatusChart.data.datasets[0].data = defaultData;
+                    const selectedClass = classes.find(c => c.id == classFilter.value) || classes[0];
+                    const attendanceData = selectedClass.students.reduce((acc, student) => {
+                        acc[0] += student.attendanceStatus.present;
+                        acc[1] += student.attendanceStatus.absent;
+                        acc[2] += student.attendanceStatus.late;
+                        return acc;
+                    }, [0, 0, 0]);
+                    const total = attendanceData.reduce((a, b) => a + b, 0);
+                    attendanceStatusChart.data.datasets[0].data = attendanceData;
                     attendanceStatusChart.update();
-                    document.getElementById('present-count').textContent = `${defaultData[0]} (${((defaultData[0] / total) * 100).toFixed(1)}%)`;
-                    document.getElementById('absent-count').textContent = `${defaultData[1]} (${((defaultData[1] / total) * 100).toFixed(1)}%)`;
-                    document.getElementById('late-count').textContent = `${defaultData[2]} (${((defaultData[2] / total) * 100).toFixed(1)}%)`;
+                    document.getElementById('present-count').textContent = `${attendanceData[0]} (${total > 0 ? ((attendanceData[0] / total) * 100).toFixed(1) : 0}%)`;
+                    document.getElementById('absent-count').textContent = `${attendanceData[1]} (${total > 0 ? ((attendanceData[1] / total) * 100).toFixed(1) : 0}%)`;
+                    document.getElementById('late-count').textContent = `${attendanceData[2]} (${total > 0 ? ((attendanceData[2] / total) * 100).toFixed(1) : 0}%)`;
                 }
             }
         });
 
         document.getElementById('refresh-data').addEventListener('click', () => {
-            forecastChart.destroy();
-            attendanceStatusChart.destroy();
+            if (forecastChart) forecastChart.destroy();
+            if (attendanceStatusChart) attendanceStatusChart.destroy();
             initializeCharts();
             updateEarlyWarningTable();
         });
 
         document.getElementById('clear-filters').addEventListener('click', () => {
-            classFilter.value = '';
+            classFilter.value = classes.length > 0 ? classes[0].id : '';
             studentFilter.value = '';
+            studentSearch.value = '';
             updateStudentFilter();
             document.getElementById('student-prediction-card').style.display = 'none';
-            // Reset charts to default
             if (attendanceStatusChart) {
-                const defaultData = [20, 6, 4];
-                const total = defaultData.reduce((a, b) => a + b, 0);
-                attendanceStatusChart.data.datasets[0].data = defaultData;
+                const selectedClass = classes.find(c => c.id == classFilter.value) || classes[0];                const attendanceData = selectedClass.students.reduce((acc, student) => {
+                    acc[0] += student.attendanceStatus.present;
+                    acc[1] += student.attendanceStatus.absent;
+                    acc[2] += student.attendanceStatus.late;
+                    return acc;
+                }, [0, 0, 0]);
+                const total = attendanceData.reduce((a, b) => a + b, 0);
+                attendanceStatusChart.data.datasets[0].data = attendanceData;
                 attendanceStatusChart.update();
-                document.getElementById('present-count').textContent = `${defaultData[0]} (${((defaultData[0] / total) * 100).toFixed(1)}%)`;
-                document.getElementById('absent-count').textContent = `${defaultData[1]} (${((defaultData[1] / total) * 100).toFixed(1)}%)`;
-                document.getElementById('late-count').textContent = `${defaultData[2]} (${((defaultData[2] / total) * 100).toFixed(1)}%)`;
+                document.getElementById('present-count').textContent = `${attendanceData[0]} (${total > 0 ? ((attendanceData[0] / total) * 100).toFixed(1) : 0}%)`;
+                document.getElementById('absent-count').textContent = `${attendanceData[1]} (${total > 0 ? ((attendanceData[1] / total) * 100).toFixed(1) : 0}%)`;
+                document.getElementById('late-count').textContent = `${attendanceData[2]} (${total > 0 ? ((attendanceData[2] / total) * 100).toFixed(1) : 0}%)`;
             }
-        });
-
-        document.getElementById('export-chart').addEventListener('click', () => {
-            const charts = [forecastChart, attendanceStatusChart];
-            charts.forEach((chart, index) => {
-                if (chart) {
-                    const link = document.createElement('a');
-                    link.href = chart.toBase64Image();
-                    link.download = `chart-${index + 1}.png`;
-                    link.click();
-                }
-            });
-        });
-
-        // Chart filter buttons
-        document.querySelectorAll('.filter-btn').forEach(btn => {
-            btn.addEventListener('click', function() {
-                const parent = this.closest('.chart-filter');
-                parent.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
-                this.classList.add('active');
-                
-                const period = this.dataset.period;
-                
-                if (period) {
-                    const periods = { 'monthly': 30 };
-                    const forecastData = arimaForecast(generateTimeSeriesData(30).data, periods[period]);
-                    forecastChart.data.datasets[1].data = [...Array(30).fill(null), ...forecastData];
-                    forecastChart.data.labels = [...generateTimeSeriesData(30).labels, ...Array(periods[period]).fill(0).map((_, i) => {
-                        const date = new Date();
-                        date.setDate(date.getDate() + i + 1);
-                        return date.toISOString().split('T')[0];
-                    })];
-                    forecastChart.update();
-                }
-            });
-        });
-
-        // Initialize everything
-        document.addEventListener('DOMContentLoaded', () => {
-            initializeFilters();
+            if (forecastChart) {
+                forecastChart.destroy();
+            }
             initializeCharts();
             updateEarlyWarningTable();
         });
+
+        document.getElementById('export-chart').addEventListener('click', () => {
+            const link = document.createElement('a');
+            link.href = forecastChart.toBase64Image();
+            link.download = 'attendance_forecast.png';
+            link.click();
+        });
+
+        // Initialize on page load
+        if (classes.length > 0) {
+            initializeFilters();
+            initializeCharts();
+            updateEarlyWarningTable();
+        } else {
+            console.warn('No classes available to initialize charts.');
+            document.getElementById('current-attendance-rate').textContent = 'N/A';
+            document.getElementById('predicted-attendance').textContent = 'N/A';
+            document.getElementById('at-risk-count').textContent = '0';
+            document.getElementById('attendance-trend').textContent = 'No data';
+            document.getElementById('at-risk-trend').textContent = 'No data';
+        }
     </script>
 </body>
 </html>

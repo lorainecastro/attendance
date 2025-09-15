@@ -44,7 +44,7 @@ function calculateAttendanceRate($pdo, $class_id, $start_date, $end_date, $lrn =
         $attendance_records = $stmt->fetchAll(PDO::FETCH_ASSOC);
     } catch (PDOException $e) {
         error_log("Database error in calculateAttendanceRate: " . $e->getMessage());
-        $attendance_records = []; // Fallback to empty
+        $attendance_records = [];
     }
 
     $daily_records = [];
@@ -425,7 +425,7 @@ function calculateAttendanceStatus($pdo, $class_id, $lrn = null) {
     return $status;
 }
 
-// Fetch classes and students with fallback sample data
+// Fetch classes and students
 $classes = [];
 try {
     $stmt = $pdo->prepare("
@@ -437,18 +437,6 @@ try {
     $stmt->execute([$user['teacher_id']]);
     $classes_db = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    if (empty($classes_db)) {
-        $classes_db = [
-            [
-                'class_id' => '1',
-                'section_name' => 'A',
-                'subject_name' => 'Math',
-                'grade_level' => 'Grade 1',
-                'room' => '101'
-            ]
-        ];
-    }
-
     foreach ($classes_db as $class) {
         $student_stmt = $pdo->prepare("
             SELECT s.lrn, s.last_name, s.first_name, s.middle_name, s.email
@@ -458,13 +446,6 @@ try {
         ");
         $student_stmt->execute([$class['class_id']]);
         $students = $student_stmt->fetchAll(PDO::FETCH_ASSOC);
-
-        if (empty($students)) {
-            $students = [
-                ['lrn' => '1001', 'last_name' => 'Smith', 'first_name' => 'John', 'middle_name' => '', 'email' => 'john@example.com'],
-                ['lrn' => '1002', 'last_name' => 'Doe', 'first_name' => 'Jane', 'middle_name' => 'Marie', 'email' => 'jane@example.com']
-            ];
-        }
 
         $student_data = [];
         foreach ($students as $student) {
@@ -526,82 +507,14 @@ try {
     }
 } catch (PDOException $e) {
     error_log("Database error in class fetch: " . $e->getMessage());
-    $today = date('Y-m-d');
-    $start_date = date('Y-m-d', strtotime('-1 month', strtotime($today)));
-    $classes = [
-        [
-            'id' => '1',
-            'code' => 'Math-1',
-            'sectionName' => 'A',
-            'subject' => 'Math',
-            'gradeLevel' => 'Grade 1',
-            'room' => '101',
-            'attendancePercentage' => '95.00',
-            'historical_dates' => [$start_date, date('Y-m-d', strtotime('+1 day', strtotime($start_date))), date('Y-m-d', strtotime('+2 days', strtotime($start_date)))],
-            'historical_values' => [95, 96, 94],
-            'forecast_dates' => [date('Y-m-d', strtotime('+1 day', strtotime($today))), date('Y-m-d', strtotime('+2 days', strtotime($today))), date('Y-m-d', strtotime('+3 days', strtotime($today))), date('Y-m-d', strtotime('+4 days', strtotime($today))), date('Y-m-d', strtotime('+5 days', strtotime($today)))],
-            'forecast_values' => [94.5, 95.2, 93.8, 94.1, 95.0],
-            'schedule' => [],
-            'status' => 'active',
-            'trend' => 'improving',
-            'seasonality' => 'no_significant_pattern',
-            'forecastConfidence' => 90.0,
-            'students' => [
-                [
-                    'id' => '1001',
-                    'lastName' => 'Smith',
-                    'firstName' => 'John',
-                    'middleName' => '',
-                    'email' => 'john@example.com',
-                    'lrn' => '1001',
-                    'attendanceRate' => '95.00',
-                    'timeSeriesData' => [95, 96, 94],
-                    'forecast' => [94.5, 95.2, 93.8, 94.1, 95.0],
-                    'historical_dates' => [$start_date, date('Y-m-d', strtotime('+1 day', strtotime($start_date))), date('Y-m-d', strtotime('+2 days', strtotime($start_date)))],
-                    'forecast_dates' => [date('Y-m-d', strtotime('+1 day', strtotime($today))), date('Y-m-d', strtotime('+2 days', strtotime($today))), date('Y-m-d', strtotime('+3 days', strtotime($today))), date('Y-m-d', strtotime('+4 days', strtotime($today))), date('Y-m-d', strtotime('+5 days', strtotime($today)))],
-                    'trend' => 'improving',
-                    'riskLevel' => 'low',
-                    'totalAbsences' => 0,
-                    'primaryAbsenceReason' => 'Unknown',
-                    'chronicAbsenteeism' => 0,
-                    'attendanceStatus' => ['present' => 3, 'absent' => 0, 'late' => 0],
-                    'behaviorPatterns' => []
-                ]
-            ]
-        ]
-    ];
+    $classes = [];
 }
 
 // Encode for JavaScript with error handling
 $classes_json = json_encode($classes, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
 if ($classes_json === false) {
     error_log("JSON encoding failed: " . json_last_error_msg());
-    $today = date('Y-m-d');
-    $start_date = date('Y-m-d', strtotime('-1 month', strtotime($today)));
-    $classes_json = json_encode([
-        [
-            'id' => '1',
-            'code' => 'Math-1',
-            'sectionName' => 'A',
-            'subject' => 'Math',
-            'gradeLevel' => 'Grade 1',
-            'room' => '101',
-            'attendancePercentage' => '95.00',
-            'historical_dates' => [$start_date, date('Y-m-d', strtotime('+1 day', strtotime($start_date))), date('Y-m-d', strtotime('+2 days', strtotime($start_date)))],
-            'historical_values' => [95, 96, 94],
-            'forecast_dates' => [date('Y-m-d', strtotime('+1 day', strtotime($today))), date('Y-m-d', strtotime('+2 days', strtotime($today))), date('Y-m-d', strtotime('+3 days', strtotime($today))), date('Y-m-d', strtotime('+4 days', strtotime($today))), date('Y-m-d', strtotime('+5 days', strtotime($today)))],
-            'forecast_values' => [94.5, 95.2, 93.8, 94.1, 95.0],
-            'schedule' => [],
-            'status' => 'active',
-            'trend' => 'improving',
-            'seasonality' => 'no_significant_pattern',
-            'forecastConfidence' => 90.0,
-            'students' => [
-                ['id' => '1001', 'lastName' => 'Smith', 'firstName' => 'John', 'middleName' => '', 'attendanceRate' => '95.00'],
-                ['id' => '1002', 'lastName' => 'Doe', 'firstName' => 'Jane', 'middleName' => 'Marie', 'attendanceRate' => '96.00']
-            ]
-        ]
-    ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+    $classes_json = json_encode([], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
 }
 ?>
 
@@ -747,6 +660,25 @@ if ($classes_json === false) {
         }
 
         .selector-select:focus {
+            outline: none;
+            border-color: var(--primary-blue);
+            background: var(--white);
+            box-shadow: 0 0 0 4px var(--primary-blue-light);
+        }
+
+        .search-input {
+            padding: var(--spacing-xs) var(--spacing-md);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-sm);
+            font-size: var(--font-size-sm);
+            background: var(--inputfield-color);
+            transition: var(--transition-normal);
+            min-width: 180px;
+            height: 38px;
+            box-sizing: border-box;
+        }
+
+        .search-input:focus {
             outline: none;
             border-color: var(--primary-blue);
             background: var(--white);
@@ -1136,7 +1068,7 @@ if ($classes_json === false) {
                 flex-direction: column;
                 gap: var(--spacing-xs);
             }
-            .selector-select {
+            .selector-select, .search-input {
                 width: 100%;
                 min-width: auto;
             }
@@ -1193,8 +1125,15 @@ if ($classes_json === false) {
     <div class="controls">
         <div class="controls-left">
             <select class="selector-select" id="class-filter">
-                <option value="">Select Class</option>
+                <?php if (!empty($classes)): ?>
+                    <option value="<?php echo htmlspecialchars($classes[0]['id']); ?>">
+                        <?php echo htmlspecialchars($classes[0]['gradeLevel'] . ' – ' . $classes[0]['sectionName'] . ' (' . $classes[0]['subject'] . ')'); ?>
+                    </option>
+                <?php else: ?>
+                    <option value="">No Classes Available</option>
+                <?php endif; ?>
             </select>
+            <input type="text" class="search-input" id="student-search" placeholder="Search by LRN or Name">
             <select class="selector-select" id="student-filter">
                 <option value="">All Students</option>
             </select>
@@ -1247,21 +1186,6 @@ if ($classes_json === false) {
                 </div>
                 <div class="card-icon bg-pink">
                     <i class="fas fa-exclamation-triangle"></i>
-                </div>
-            </div>
-        </div>
-        <div class="card">
-            <div class="card-header">
-                <div>
-                    <div class="card-title">Forecast Accuracy (ARIMA)</div>
-                    <div class="card-value" id="forecast-accuracy">90.0%</div>
-                    <div class="card-trend trend-up">
-                        <i class="fas fa-arrow-up"></i>
-                        <span>High confidence</span>
-                    </div>
-                </div>
-                <div class="card-icon bg-purple">
-                    <i class="fas fa-brain"></i>
                 </div>
             </div>
         </div>
@@ -1363,121 +1287,19 @@ if ($classes_json === false) {
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0/dist/chartjs-plugin-datalabels.min.js"></script>
     <script>
-        // Parse JSON data or use fallback
+        // Parse JSON data
         let classes;
         try {
-            classes = <?php echo $classes_json; ?> || [
-                {
-                    id: '1',
-                    code: 'Math-1',
-                    sectionName: 'A',
-                    subject: 'Math',
-                    gradeLevel: 'Grade 1',
-                    room: '101',
-                    attendancePercentage: '95.00',
-                    historical_dates: ['2025-08-15', '2025-08-16', '2025-08-17'],
-                    historical_values: [95, 96, 94],
-                    forecast_dates: ['2025-09-16', '2025-09-17', '2025-09-18', '2025-09-19', '2025-09-20'],
-                    forecast_values: [94.5, 95.2, 93.8, 94.1, 95.0],
-                    schedule: [],
-                    status: 'active',
-                    trend: 'improving',
-                    seasonality: 'no_significant_pattern',
-                    forecastConfidence: 90.0,
-                    students: [
-                        {
-                            id: '1001',
-                            lastName: 'Smith',
-                            firstName: 'John',
-                            middleName: '',
-                            email: 'john@example.com',
-                            lrn: '1001',
-                            attendanceRate: '95.00',
-                            timeSeriesData: [95, 96, 94],
-                            forecast: [94.5, 95.2, 93.8, 94.1, 95.0],
-                            historical_dates: ['2025-08-15', '2025-08-16', '2025-08-17'],
-                            forecast_dates: ['2025-09-16', '2025-09-17', '2025-09-18', '2025-09-19', '2025-09-20'],
-                            trend: 'improving',
-                            riskLevel: 'low',
-                            totalAbsences: 0,
-                            primaryAbsenceReason: 'Unknown',
-                            chronicAbsenteeism: 0,
-                            attendanceStatus: { present: 3, absent: 0, late: 0 },
-                            behaviorPatterns: []
-                        }
-                    ]
-                }
-            ];
+            classes = <?php echo $classes_json; ?>;
             console.log('Classes data loaded:', classes);
         } catch (e) {
             console.error('Error parsing classes JSON:', e);
-            classes = [
-                {
-                    id: '1',
-                    code: 'Math-1',
-                    sectionName: 'A',
-                    subject: 'Math',
-                    gradeLevel: 'Grade 1',
-                    room: '101',
-                    attendancePercentage: '95.00',
-                    historical_dates: ['2025-08-15', '2025-08-16', '2025-08-17'],
-                    historical_values: [95, 96, 94],
-                    forecast_dates: ['2025-09-16', '2025-09-17', '2025-09-18', '2025-09-19', '2025-09-20'],
-                    forecast_values: [94.5, 95.2, 93.8, 94.1, 95.0],
-                    schedule: [],
-                    status: 'active',
-                    trend: 'improving',
-                    seasonality: 'no_significant_pattern',
-                    forecastConfidence: 90.0,
-                    students: [
-                        {
-                            id: '1001',
-                            lastName: 'Smith',
-                            firstName: 'John',
-                            middleName: '',
-                            email: 'john@example.com',
-                            lrn: '1001',
-                            attendanceRate: '95.00',
-                            timeSeriesData: [95, 96, 94],
-                            forecast: [94.5, 95.2, 93.8, 94.1, 95.0],
-                            historical_dates: ['2025-08-15', '2025-08-16', '2025-08-17'],
-                            forecast_dates: ['2025-09-16', '2025-09-17', '2025-09-18', '2025-09-19', '2025-09-20'],
-                            trend: 'improving',
-                            riskLevel: 'low',
-                            totalAbsences: 0,
-                            primaryAbsenceReason: 'Unknown',
-                            chronicAbsenteeism: 0,
-                            attendanceStatus: { present: 3, absent: 0, late: 0 },
-                            behaviorPatterns: []
-                        },
-                        {
-                            id: '1002',
-                            lastName: 'Doe',
-                            firstName: 'Jane',
-                            middleName: 'Marie',
-                            email: 'jane@example.com',
-                            lrn: '1002',
-                            attendanceRate: '96.00',
-                            timeSeriesData: [96, 97, 95],
-                            forecast: [95.5, 96.2, 94.8, 95.1, 96.0],
-                            historical_dates: ['2025-08-15', '2025-08-16', '2025-08-17'],
-                            forecast_dates: ['2025-09-16', '2025-09-17', '2025-09-18', '2025-09-19', '2025-09-20'],
-                            trend: 'improving',
-                            riskLevel: 'no',
-                            totalAbsences: 0,
-                            primaryAbsenceReason: 'Unknown',
-                            chronicAbsenteeism: 0,
-                            attendanceStatus: { present: 3, absent: 0, late: 0 },
-                            behaviorPatterns: []
-                        }
-                    ]
-                }
-            ];
-            console.log('Fallback classes data used:', classes);
+            classes = [];
         }
 
         const classFilter = document.getElementById('class-filter');
         const studentFilter = document.getElementById('student-filter');
+        const studentSearch = document.getElementById('student-search');
         const forecastChartCtx = document.getElementById('forecast-chart').getContext('2d');
         const attendanceStatusCtx = document.getElementById('attendance-status').getContext('2d');
         let forecastChart, attendanceStatusChart, individualForecastChart;
@@ -1493,7 +1315,7 @@ if ($classes_json === false) {
             updateStudentFilter();
         }
 
-        function updateStudentFilter() {
+        function updateStudentFilter(searchTerm = '') {
             const selectedClassId = classFilter.value;
             let filteredStudents = classes.flatMap(c => c.students.map(s => ({
                 ...s,
@@ -1506,23 +1328,41 @@ if ($classes_json === false) {
                 filteredStudents = filteredStudents.filter(s => s.section === classes.find(c => c.id == selectedClassId).sectionName);
             }
 
+            // Apply search filter
+            if (searchTerm) {
+                searchTerm = searchTerm.toLowerCase().trim();
+                filteredStudents = filteredStudents.filter(s => 
+                    s.lrn.toLowerCase().includes(searchTerm) ||
+                    s.lastName.toLowerCase().includes(searchTerm) ||
+                    s.firstName.toLowerCase().includes(searchTerm) ||
+                    (s.middleName && s.middleName.toLowerCase().includes(searchTerm))
+                );
+            }
+
             filteredStudents.sort((a, b) => a.lastName.localeCompare(b.lastName));
 
-            studentFilter.innerHTML = '<option value="">All Students</option>';
-            filteredStudents.forEach(student => {
+            studentFilter.innerHTML = '';
+            if (filteredStudents.length === 0) {
                 const option = document.createElement('option');
-                option.value = student.id;
-                option.textContent = `${student.lastName}, ${student.firstName} ${student.middleName || ''} (${student.section})`.trim();
+                option.value = '';
+                option.textContent = 'No Students';
                 studentFilter.appendChild(option);
-            });
+            } else {
+                const allOption = document.createElement('option');
+                allOption.value = '';
+                allOption.textContent = 'All Students';
+                studentFilter.appendChild(allOption);
+                filteredStudents.forEach(student => {
+                    const option = document.createElement('option');
+                    option.value = student.id;
+                    option.textContent = `${student.lastName}, ${student.firstName} ${student.middleName || ''} (${student.section})`.trim();
+                    studentFilter.appendChild(option);
+                });
+            }
         }
 
         function initializeCharts() {
-            let selectedClass = classes[0];
-            if (classFilter.value) {
-                selectedClass = classes.find(c => c.id == classFilter.value);
-            }
-
+            let selectedClass = classes.find(c => c.id == classFilter.value) || classes[0];
             if (!selectedClass) {
                 console.error('No selected class found');
                 return;
@@ -1945,13 +1785,17 @@ if ($classes_json === false) {
             }
         }
 
-        
-    classFilter.addEventListener('change', () => {
+        classFilter.addEventListener('change', () => {
             updateStudentFilter();
             if (forecastChart) forecastChart.destroy();
             if (attendanceStatusChart) attendanceStatusChart.destroy();
             initializeCharts();
             updateEarlyWarningTable();
+            studentSearch.value = ''; // Clear search input on class change
+        });
+
+        studentSearch.addEventListener('input', (e) => {
+            updateStudentFilter(e.target.value);
         });
         
         studentFilter.addEventListener('change', (e) => {
@@ -1985,56 +1829,52 @@ if ($classes_json === false) {
         });
 
         document.getElementById('clear-filters').addEventListener('click', () => {
-            classFilter.value = '';
+            classFilter.value = classes.length > 0 ? classes[0].id : '';
             studentFilter.value = '';
+            studentSearch.value = '';
             updateStudentFilter();
             document.getElementById('student-prediction-card').style.display = 'none';
             if (attendanceStatusChart) {
-                const defaultData = [20, 6, 4];
-                const total = defaultData.reduce((a, b) => a + b, 0);
-                attendanceStatusChart.data.datasets[0].data = defaultData;
+                const selectedClass = classes.find(c => c.id == classFilter.value) || classes[0];                const attendanceData = selectedClass.students.reduce((acc, student) => {
+                    acc[0] += student.attendanceStatus.present;
+                    acc[1] += student.attendanceStatus.absent;
+                    acc[2] += student.attendanceStatus.late;
+                    return acc;
+                }, [0, 0, 0]);
+                const total = attendanceData.reduce((a, b) => a + b, 0);
+                attendanceStatusChart.data.datasets[0].data = attendanceData;
                 attendanceStatusChart.update();
-                document.getElementById('present-count').textContent = `${defaultData[0]} (${((defaultData[0] / total) * 100).toFixed(1)}%)`;
-                document.getElementById('absent-count').textContent = `${defaultData[1]} (${((defaultData[1] / total) * 100).toFixed(1)}%)`;
-                document.getElementById('late-count').textContent = `${defaultData[2]} (${((defaultData[2] / total) * 100).toFixed(1)}%)`;
+                document.getElementById('present-count').textContent = `${attendanceData[0]} (${total > 0 ? ((attendanceData[0] / total) * 100).toFixed(1) : 0}%)`;
+                document.getElementById('absent-count').textContent = `${attendanceData[1]} (${total > 0 ? ((attendanceData[1] / total) * 100).toFixed(1) : 0}%)`;
+                document.getElementById('late-count').textContent = `${attendanceData[2]} (${total > 0 ? ((attendanceData[2] / total) * 100).toFixed(1) : 0}%)`;
             }
-        });
-
-        document.getElementById('export-chart').addEventListener('click', () => {
-            const charts = [forecastChart, attendanceStatusChart];
-            charts.forEach((chart, index) => {
-                if (chart) {
-                    const link = document.createElement('a');
-                    link.href = chart.toBase64Image();
-                    link.download = `chart-${index + 1}.png`;
-                    link.click();
-                }
-            });
-        });
-
-        document.querySelectorAll('.filter-btn').forEach(btn => {
-            btn.addEventListener('click', function() {
-                const parent = this.closest('.chart-filter');
-                parent.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
-                this.classList.add('active');
-                
-                const period = this.dataset.period;
-                
-                if (period) {
-                    const selectedClass = classes.find(c => c.id == classFilter.value) || classes[0];
-                    forecastChart.data.datasets[0].data = [...selectedClass.historical_values, ...Array(selectedClass.forecast_values.length).fill(null)];
-                    forecastChart.data.datasets[1].data = [...Array(selectedClass.historical_values.length).fill(null), ...selectedClass.forecast_values];
-                    forecastChart.data.labels = [...selectedClass.historical_dates, ...selectedClass.forecast_dates];
-                    forecastChart.update();
-                }
-            });
-        });
-
-        document.addEventListener('DOMContentLoaded', () => {
-            initializeFilters();
+            if (forecastChart) {
+                forecastChart.destroy();
+            }
             initializeCharts();
             updateEarlyWarningTable();
         });
+
+        document.getElementById('export-chart').addEventListener('click', () => {
+            const link = document.createElement('a');
+            link.href = forecastChart.toBase64Image();
+            link.download = 'attendance_forecast.png';
+            link.click();
+        });
+
+        // Initialize on page load
+        if (classes.length > 0) {
+            initializeFilters();
+            initializeCharts();
+            updateEarlyWarningTable();
+        } else {
+            console.warn('No classes available to initialize charts.');
+            document.getElementById('current-attendance-rate').textContent = 'N/A';
+            document.getElementById('predicted-attendance').textContent = 'N/A';
+            document.getElementById('at-risk-count').textContent = '0';
+            document.getElementById('attendance-trend').textContent = 'No data';
+            document.getElementById('at-risk-trend').textContent = 'No data';
+        }
     </script>
 </body>
 </html>

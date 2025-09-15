@@ -102,6 +102,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 
     if ($reportType === 'student') {
         $headers = ['Class', 'LRN', 'Name', 'Status', 'Time Checked'];
+    } elseif ($reportType === 'class') {
+        $headers = ['Class', 'Total Students', 'Present', 'Absent', 'Late', 'Average Attendance'];
     }
 
     try {
@@ -142,14 +144,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                     $value = htmlspecialchars($row[$header] ?? '');
                     $bgColor = '#ffffff';
                     $textColor = '#000000';
-                    if ($header === 'Status') {
-                        if ($value === 'Present' || $value === 'Excellent') {
+                    if ($header === 'Status' && $reportType === 'student') {
+                        if ($value === 'Present') {
                             $bgColor = '#dcfce7';
                             $textColor = '#166534';
-                        } elseif ($value === 'Late' || $value === 'Good' || $value === 'Fair') {
+                        } elseif ($value === 'Late') {
                             $bgColor = '#fef3c7';
                             $textColor = '#92400e';
-                        } elseif ($value === 'Absent' || $value === 'Poor') {
+                        } elseif ($value === 'Absent') {
                             $bgColor = '#fecaca';
                             $textColor = '#991b1b';
                         }
@@ -167,8 +169,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                 mkdir($exportDir, 0777, true);
                 chmod($exportDir, 0777);
             }
-            $pdf->Output(__DIR__ . "/$exportDir/$filename", 'F');
-            chmod(__DIR__ . "/$exportDir/$filename", 0644);
+            $pdf->Output("$exportDir/$filename", 'F');
+            chmod("$exportDir/$filename", 0644);
             echo json_encode(['success' => true, 'filename' => $filename]);
         } elseif ($format === 'excel') {
             $spreadsheet = new Spreadsheet();
@@ -192,18 +194,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                     } else {
                         $sheet->setCellValue($col . $row, $value);
                     }
-                    if ($header === 'Status') {
-                        if ($value === 'Present' || $value === 'Excellent') {
+                    if ($header === 'Status' && $reportType === 'student') {
+                        if ($value === 'Present') {
                             $sheet->getStyle($col . $row)->applyFromArray([
                                 'fill' => ['fillType' => Fill::FILL_SOLID, 'color' => ['argb' => 'DCFCE7']],
                                 'font' => ['color' => ['argb' => '166534']]
                             ]);
-                        } elseif ($value === 'Late' || $value === 'Good' || $value === 'Fair') {
+                        } elseif ($value === 'Late') {
                             $sheet->getStyle($col . $row)->applyFromArray([
                                 'fill' => ['fillType' => Fill::FILL_SOLID, 'color' => ['argb' => 'FEF3C7']],
                                 'font' => ['color' => ['argb' => '92400E']]
                             ]);
-                        } elseif ($value === 'Absent' || $value === 'Poor') {
+                        } elseif ($value === 'Absent') {
                             $sheet->getStyle($col . $row)->applyFromArray([
                                 'fill' => ['fillType' => Fill::FILL_SOLID, 'color' => ['argb' => 'FECACA']],
                                 'font' => ['color' => ['argb' => '991B1B']]
@@ -536,21 +538,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             color: var(--warning-color);
         }
 
-        .status-excellent {
-            background-color: var(--status-present-bg);
-            color: var(--success-color);
-        }
-
-        .status-good, .status-fair {
-            background-color: var(--status-late-bg);
-            color: var(--warning-color);
-        }
-
-        .status-poor {
-            background-color: var(--status-absent-bg);
-            color: var(--danger-color);
-        }
-
         @media (max-width: 1024px) {
             .stats-grid {
                 grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
@@ -779,7 +766,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                         <th>Absent</th>
                         <th>Late</th>
                         <th>Average Attendance</th>
-                        <th>Status</th>
                     </tr>
                 `;
 
@@ -796,12 +782,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                     const lateCount = filteredData.filter(record => record.status === 'Late').length;
                     const totalRecords = presentCount + absentCount + lateCount;
                     const attendanceRate = totalRecords ? (presentCount / totalRecords * 100).toFixed(2) : 0;
-                    const status = attendanceRate >= 90 ? 'Excellent' :
-                                   attendanceRate >= 80 ? 'Good' :
-                                   attendanceRate >= 70 ? 'Fair' : 'Poor';
-                    const statusClass = attendanceRate >= 90 ? 'status-excellent' :
-                                       attendanceRate >= 80 ? 'status-good' :
-                                       attendanceRate >= 70 ? 'status-fair' : 'status-poor';
                     const formattedClass = `${cls.gradeLevel} - ${cls.sectionName} (${cls.subject})`;
 
                     const row = document.createElement('tr');
@@ -812,7 +792,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                         <td>${absentCount}</td>
                         <td>${lateCount}</td>
                         <td>${attendanceRate}%</td>
-                        <td><span class="status-badge ${statusClass}">${status}</span></td>
                     `;
                     reportTbody.appendChild(row);
                 });
@@ -878,7 +857,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             for (let i = 1; i < rows.length; i++) {
                 const row = {};
                 rows[i].querySelectorAll('td').forEach((td, index) => {
-                    const text = td.textContent.trim().replace(/^.*?(Present|Late|Absent|Excellent|Good|Fair|Poor)$/g, '$1');
+                    const text = td.textContent.trim();
                     row[headers[index]] = text;
                 });
                 data.push(row);

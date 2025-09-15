@@ -43,7 +43,7 @@ $classes_db = $classes_stmt->fetchAll(PDO::FETCH_ASSOC);
 
 $classes_php = [];
 foreach ($classes_db as $cls) {
-    $students_stmt = $pdo->prepare("SELECT s.lrn AS id, s.last_name AS lastName, s.first_name AS firstName, s.email FROM students s JOIN class_students cs ON s.lrn = cs.lrn WHERE cs.class_id = :class_id");
+    $students_stmt = $pdo->prepare("SELECT s.lrn AS id, s.last_name AS lastName, s.first_name AS firstName, s.middle_name AS middleName, s.email FROM students s JOIN class_students cs ON s.lrn = cs.lrn WHERE cs.class_id = :class_id");
     $students_stmt->execute(['class_id' => $cls['class_id']]);
     $students = $students_stmt->fetchAll(PDO::FETCH_ASSOC);
 
@@ -169,8 +169,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                 mkdir($exportDir, 0777, true);
                 chmod($exportDir, 0777);
             }
-            $pdf->Output("$exportDir/$filename", 'F');
-            chmod("$exportDir/$filename", 0644);
+            $pdf->Output(__DIR__ . "/$exportDir/$filename", 'F');
+            chmod(__DIR__ . "/$exportDir/$filename", 0644);
+            // $pdf->Output("$exportDir/$filename", 'F');
+            // chmod("$exportDir/$filename", 0644);
             echo json_encode(['success' => true, 'filename' => $filename]);
         } elseif ($format === 'excel') {
             $spreadsheet = new Spreadsheet();
@@ -715,7 +717,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             cls.students.forEach(student => {
                 const option = document.createElement('option');
                 option.value = student.id;
-                option.textContent = `${student.lastName}, ${student.firstName}`;
+                option.textContent = `${student.lastName}, ${student.firstName} ${student.middleName || ''}`.trim();
                 studentFilter.appendChild(option);
             });
             filterStudents();
@@ -817,7 +819,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                     const student = cls.students.find(s => s.id == record.studentId);
                     if (!student) return;
                     const formattedClass = `${cls.gradeLevel} - ${cls.sectionName} (${cls.subject})`;
-                    const name = `${student.lastName}, ${student.firstName}`;
+                    const name = `${student.lastName}, ${student.firstName} ${student.middleName || ''}`.trim();
                     const statusClass = record.status === 'Present' ? 'status-present' :
                                        record.status === 'Late' ? 'status-late' : 'status-absent';
                     const row = document.createElement('tr');

@@ -2,6 +2,14 @@
 // Set timezone to Asia/Manila
 date_default_timezone_set('Asia/Manila');
 require 'config.php';
+require 'vendor/autoload.php';
+require_once 'vendor/tecnickcom/tcpdf/tcpdf.php';
+
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
+use PhpOffice\PhpSpreadsheet\Style\Fill;
+use PhpOffice\PhpSpreadsheet\Style\Color;
+
 session_start();
 
 $user = validateSession();
@@ -12,6 +20,230 @@ if (!$user) {
 }
 
 $pdo = getDBConnection();
+
+// Fetch total students
+$total_students_stmt = $pdo->prepare("SELECT COUNT(DISTINCT cs.lrn) FROM class_students cs JOIN classes c ON cs.class_id = c.class_id WHERE c.teacher_id = :teacher_id");
+$total_students_stmt->execute(['teacher_id' => $user['teacher_id']]);
+$total_students = $total_students_stmt->fetchColumn();
+
+// Fetch overall attendance (average)
+$overall_att_stmt = $pdo->prepare("SELECT AVG(attendance_percentage) FROM classes WHERE teacher_id = :teacher_id");
+$overall_att_stmt->execute(['teacher_id' => $user['teacher_id']]);
+$overall_attendance = round($overall_att_stmt->fetchColumn());
+
+// Fetch active classes count
+$active_classes_stmt = $pdo->prepare("SELECT COUNT(*) FROM classes WHERE teacher_id = :teacher_id AND status = 'active'");
+$active_classes_stmt->execute(['teacher_id' => $user['teacher_id']]);
+$active_classes = $active_classes_stmt->fetchColumn();
+
+// Fetch classes
+$classes_stmt = $pdo->prepare("SELECT c.*, sub.subject_code, sub.subject_name FROM classes c JOIN subjects sub ON c.subject_id = sub.subject_id WHERE c.teacher_id = :teacher_id");
+$classes_stmt->execute(['teacher_id' => $user['teacher_id']]);
+$classes_db = $classes_stmt->fetchAll(PDO::FETCH_ASSOC);
+
+$classes_php = [];
+foreach ($classes_db as $cls) {
+    $students_stmt = $pdo->prepare("SELECT s.lrn AS id, s.last_name AS lastName, s.first_name AS firstName, s.email FROM students s JOIN class_students cs ON s.lrn = cs.lrn WHERE cs.class_id = :class_id");
+    $students_stmt->execute(['class_id' => $cls['class_id']]);
+    $students = $students_stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    $schedules_stmt = $pdo->prepare("SELECT * FROM schedules WHERE class_id = :class_id");
+    $schedules_stmt->execute(['class_id' => $cls['class_id']]);
+    $schedules = $schedules_stmt->fetchAll(PDO::FETCH_ASSOC);
+    $schedule = [];
+    foreach ($schedules as $sch) {
+        $schedule[$sch['day']] = ['start' => $sch['start_time'], 'end' => $sch['end_time']];
+    }
+
+    $classes_php[] = [
+        'id' => $cls['class_id'],
+        'code' => $cls['subject_code'],
+        'sectionName' => $cls['section_name'],
+        'subject' => $cls['subject_name'],
+        'gradeLevel' => $cls['grade_level'],
+        'room' => $cls['room'],
+        'attendancePercentage' => $cls['attendance_percentage'],
+        'schedule' => $schedule,
+        'status' => $cls['status'],
+        'students' => $students
+    ];
+}
+
+// Fetch attendance data
+$attendance_stmt = $pdo->prepare("SELECT at.*, at.lrn AS studentId, at.class_id AS classId, at.time_checked AS timeChecked FROM attendance_tracking at JOIN classes c ON at.class_id = c.class_id WHERE c.teacher_id = :teacher_id");
+$attendance_stmt->execute(['teacher_id' => $user['teacher_id']]);
+$attendance_db = $attendance_stmt->fetchAll(PDO::FETCH_ASSOC);
+
+$attendance_php = [];
+foreach ($attendance_db as $att) {
+    $time_checked = $att['timeChecked'] ? date('M d Y h:i:s A', strtotime($att['timeChecked'])) : '--';
+    $attendance_php[] = [
+        'studentId' => $att['studentId'],
+        'classId' => $att['classId'],
+        'date' => $att['attendance_date'],
+        'status' => $att['attendance_status'],
+        'timeChecked' => $time_checked
+    ];
+}
+
+// Handle export requests
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'exportReport') {
+    header('Content-Type: application/json; charset=utf-8');
+    ob_clean();
+
+    $data = json_decode($_POST['data'], true);
+    $headers = $data['headers'];
+    $reportData = $data['data'];
+    $reportType = $data['reportType'];
+    $dateFrom = $data['dateFrom'];
+    $dateTo = $data['dateTo'];
+    $title = $data['title'];
+    $format = $_POST['format'];
+
+    if ($reportType === 'student') {
+        $headers = ['Class', 'LRN', 'Name', 'Status', 'Time Checked'];
+    }
+
+    try {
+        if ($format === 'pdf') {
+            class MYPDF extends TCPDF {
+                public function Header() {
+                    global $title, $dateFrom, $dateTo;
+                    $this->SetFont('helvetica', 'B', 16);
+                    $this->Cell(0, 10, $title, 0, 1, 'L');
+                    $this->SetFont('helvetica', '', 10);
+                    $this->Cell(0, 10, "Date Range: $dateFrom to $dateTo", 0, 1, 'L');
+                    $this->Ln(5);
+                }
+            }
+
+            $pdf = new MYPDF('P', 'mm', 'LETTER', true, 'UTF-8', false);
+            $pdf->SetCreator(PDF_CREATOR);
+            $pdf->SetAuthor('Student Attendance System');
+            $pdf->SetTitle($title);
+            $pdf->SetMargins(10, 30, 10);
+            $pdf->SetHeaderMargin(10);
+            $pdf->SetFooterMargin(10);
+            $pdf->SetAutoPageBreak(TRUE, 10);
+            $pdf->setFontSubsetting(true);
+            $pdf->SetFont('helvetica', '', 8);
+            $pdf->AddPage();
+
+            $tbl = '<table border="1" cellpadding="4" cellspacing="0">';
+            $tbl .= '<tr style="background-color:#2563eb;color:#ffffff;">';
+            foreach ($headers as $header) {
+                $tbl .= '<th>' . htmlspecialchars($header) . '</th>';
+            }
+            $tbl .= '</tr>';
+
+            foreach ($reportData as $row) {
+                $tbl .= '<tr>';
+                foreach ($headers as $header) {
+                    $value = htmlspecialchars($row[$header] ?? '');
+                    $bgColor = '#ffffff';
+                    $textColor = '#000000';
+                    if ($header === 'Status') {
+                        if ($value === 'Present' || $value === 'Excellent') {
+                            $bgColor = '#dcfce7';
+                            $textColor = '#166534';
+                        } elseif ($value === 'Late' || $value === 'Good' || $value === 'Fair') {
+                            $bgColor = '#fef3c7';
+                            $textColor = '#92400e';
+                        } elseif ($value === 'Absent' || $value === 'Poor') {
+                            $bgColor = '#fecaca';
+                            $textColor = '#991b1b';
+                        }
+                    }
+                    $tbl .= "<td style=\"background-color:$bgColor;color:$textColor;\">$value</td>";
+                }
+                $tbl .= '</tr>';
+            }
+            $tbl .= '</table>';
+
+            $pdf->writeHTML($tbl, true, false, true, false, '');
+            $filename = "{$reportType}-report-" . date('Y-m-d_H-i-s') . '.pdf';
+            $exportDir = 'exports';
+            if (!file_exists($exportDir)) {
+                mkdir($exportDir, 0777, true);
+                chmod($exportDir, 0777);
+            }
+            $pdf->Output(__DIR__ . "/$exportDir/$filename", 'F');
+            chmod(__DIR__ . "/$exportDir/$filename", 0644);
+            echo json_encode(['success' => true, 'filename' => $filename]);
+        } elseif ($format === 'excel') {
+            $spreadsheet = new Spreadsheet();
+            $sheet = $spreadsheet->getActiveSheet();
+            $sheet->setTitle($title);
+
+            $sheet->setCellValue('A1', $title);
+            $sheet->getStyle('A1')->getFont()->setBold(true)->setSize(16);
+            $sheet->setCellValue('A2', "Date Range: $dateFrom to $dateTo");
+            $sheet->getStyle('A2')->getFont()->setSize(10);
+
+            $sheet->fromArray($headers, null, 'A4');
+            $row = 5;
+            foreach ($reportData as $dataRow) {
+                $col = 'A';
+                foreach ($headers as $header) {
+                    $value = $dataRow[$header] ?? '';
+                    if ($header === 'LRN') {
+                        $sheet->setCellValue($col . $row, (int)$value);
+                        $sheet->getStyle($col . $row)->getNumberFormat()->setFormatCode('0');
+                    } else {
+                        $sheet->setCellValue($col . $row, $value);
+                    }
+                    if ($header === 'Status') {
+                        if ($value === 'Present' || $value === 'Excellent') {
+                            $sheet->getStyle($col . $row)->applyFromArray([
+                                'fill' => ['fillType' => Fill::FILL_SOLID, 'color' => ['argb' => 'DCFCE7']],
+                                'font' => ['color' => ['argb' => '166534']]
+                            ]);
+                        } elseif ($value === 'Late' || $value === 'Good' || $value === 'Fair') {
+                            $sheet->getStyle($col . $row)->applyFromArray([
+                                'fill' => ['fillType' => Fill::FILL_SOLID, 'color' => ['argb' => 'FEF3C7']],
+                                'font' => ['color' => ['argb' => '92400E']]
+                            ]);
+                        } elseif ($value === 'Absent' || $value === 'Poor') {
+                            $sheet->getStyle($col . $row)->applyFromArray([
+                                'fill' => ['fillType' => Fill::FILL_SOLID, 'color' => ['argb' => 'FECACA']],
+                                'font' => ['color' => ['argb' => '991B1B']]
+                            ]);
+                        }
+                    }
+                    $col++;
+                }
+                $row++;
+            }
+
+            $headerStyle = [
+                'fill' => ['fillType' => Fill::FILL_SOLID, 'color' => ['argb' => '2563EB']],
+                'font' => ['color' => ['argb' => 'FFFFFF'], 'bold' => true]
+            ];
+            $sheet->getStyle('A4:' . chr(65 + count($headers) - 1) . '4')->applyFromArray($headerStyle);
+
+            foreach (range('A', chr(65 + count($headers) - 1)) as $col) {
+                $sheet->getColumnDimension($col)->setAutoSize(true);
+            }
+
+            $filename = "{$reportType}-report-" . date('Y-m-d_H-i-s') . '.xlsx';
+            $exportDir = 'exports';
+            if (!file_exists($exportDir)) {
+                mkdir($exportDir, 0777, true);
+                chmod($exportDir, 0777);
+            }
+            $writer = new Xlsx($spreadsheet);
+            $writer->save("$exportDir/$filename");
+            chmod("$exportDir/$filename", 0644);
+            echo json_encode(['success' => true, 'filename' => $filename]);
+            $spreadsheet->disconnectWorksheets();
+            unset($spreadsheet);
+        }
+    } catch (Exception $e) {
+        error_log("Report export error: " . $e->getMessage());
+        echo json_encode(['success' => false, 'message' => 'Failed to generate report: ' . $e->getMessage()]);
+    }
+    exit();
+}
 ?>
 
 <!DOCTYPE html>
@@ -366,13 +598,12 @@ $pdo = getDBConnection();
 <body>
     <h1>Reports</h1>
 
-    <!-- Quick Stats -->
     <div class="stats-grid">
         <div class="card">
             <div class="card-header">
                 <div>
                     <div class="card-title">Total Students</div>
-                    <div class="card-value">9</div>
+                    <div class="card-value"><?php echo $total_students; ?></div>
                 </div>
                 <div class="card-icon bg-blue">
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 16 16">
@@ -387,7 +618,7 @@ $pdo = getDBConnection();
             <div class="card-header">
                 <div>
                     <div class="card-title">Overall Attendance</div>
-                    <div class="card-value">15%</div>
+                    <div class="card-value"><?php echo $overall_attendance . '%'; ?></div>
                 </div>
                 <div class="card-icon bg-green">
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 16 16">
@@ -401,7 +632,7 @@ $pdo = getDBConnection();
             <div class="card-header">
                 <div>
                     <div class="card-title">Active Classes</div>
-                    <div class="card-value">3</div>
+                    <div class="card-value"><?php echo $active_classes; ?></div>
                 </div>
                 <div class="card-icon bg-purple">
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 16 16">
@@ -411,43 +642,40 @@ $pdo = getDBConnection();
                 </div>
             </div>
         </div>
-        <div class="card">
-            <div class="card-header">
-                <div>
-                    <div class="card-title">Total Records</div>
-                    <div class="card-value">9</div>
-                </div>
-                <div class="card-icon bg-pink">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 16 16">
-                        <path d="M2 0a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2H2zm0 1h12a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1z"/>
-                        <path d="M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708z"/>
-                    </svg>
-                </div>
-            </div>
-        </div>
     </div>
 
-    <!-- Attendance Report Generator -->
     <div class="controls">
         <div class="controls-left">
             <select class="selector-select" id="class-filter">
-                <option value="">All Classes</option>
+                <?php if (!empty($classes_php)) : ?>
+                    <option value="<?php echo $classes_php[0]['id']; ?>">
+                        <?php echo "{$classes_php[0]['gradeLevel']} - {$classes_php[0]['sectionName']} ({$classes_php[0]['subject']})"; ?>
+                    </option>
+                    <?php foreach ($classes_php as $cls) : ?>
+                        <?php if ($cls['id'] !== $classes_php[0]['id']) : ?>
+                            <option value="<?php echo $cls['id']; ?>">
+                                <?php echo "{$cls['gradeLevel']} - {$cls['sectionName']} ({$cls['subject']})"; ?>
+                            </option>
+                        <?php endif; ?>
+                    <?php endforeach; ?>
+                <?php else : ?>
+                    <option value="">No Classes Available</option>
+                <?php endif; ?>
             </select>
             <input type="text" class="selector-input" id="student-search" placeholder="Search student...">
             <select class="selector-select" id="student-filter">
                 <option value="">All Students</option>
             </select>
+            <input type="date" class="selector-input" id="date-from">
+            <input type="date" class="selector-input" id="date-to">
             <select class="selector-select" id="report-type">
                 <option value="">Select Report Type</option>
-                <option value="student">Attendance History per Student</option>
+                <option value="student">Student Attendance History</option>
                 <option value="class">Attendance per Class</option>
             </select>
-            <input type="date" class="selector-input" id="date-from" value="2024-09-01">
-            <input type="date" class="selector-input" id="date-to" value="2024-12-31">
             <select class="selector-select" id="export-format">
                 <option value="">Select Export Format</option>
-                <option value="json">JSON</option>
-                <option value="csv">CSV</option>
+                <option value="excel">Excel</option>
                 <option value="pdf">PDF</option>
             </select>
             <button class="btn btn-primary" id="generate-report">
@@ -456,7 +684,6 @@ $pdo = getDBConnection();
         </div>
     </div>
 
-    <!-- Report Results -->
     <div class="attendance-grid" id="report-results">
         <div class="table-header">
             <div class="table-title" id="report-title">Attendance Report</div>
@@ -468,110 +695,25 @@ $pdo = getDBConnection();
             <table id="report-table">
                 <thead id="report-thead">
                     <tr>
+                        <th>Class</th>
                         <th>LRN</th>
                         <th>Name</th>
-                        <th>Class</th>
-                        <th>Date</th>
                         <th>Status</th>
-                        <th>Attendance Time</th>
+                        <th>Time Checked</th>
                     </tr>
                 </thead>
                 <tbody id="report-tbody">
-                    <!-- Data will be populated here -->
                 </tbody>
             </table>
         </div>
     </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.3/jspdf.plugin.autotable.min.js"></script>
     <script>
-        // Data from Class Management
-        const classes = [
-            {
-                id: 1,
-                code: 'MATH-101-A',
-                sectionName: 'Diamond Section',
-                subject: 'Mathematics',
-                gradeLevel: 'Grade 7',
-                room: 'Room 201',
-                attendancePercentage: 10,
-                schedule: {
-                    monday: { start: '08:00', end: '09:30' },
-                    wednesday: { start: '08:00', end: '09:30' },
-                    friday: { start: '08:00', end: '09:30' }
-                },
-                status: 'active',
-                students: [
-                    { id: 1, firstName: 'John', lastName: 'Doe', email: 'john.doe@email.com' },
-                    { id: 2, firstName: 'Jane', lastName: 'Smith', email: 'jane.smith@email.com' },
-                    { id: 3, firstName: 'Mike', lastName: 'Johnson', email: 'mike.johnson@email.com' }
-                ]
-            },
-            {
-                id: 2,
-                code: 'SCI-201-B',
-                sectionName: 'Einstein Section',
-                subject: 'Science',
-                gradeLevel: 'Grade 10',
-                room: 'Lab 1',
-                attendancePercentage: 15,
-                schedule: {
-                    tuesday: { start: '10:00', end: '11:30' },
-                    thursday: { start: '10:00', end: '11:30' }
-                },
-                status: 'active',
-                students: [
-                    { id: 4, firstName: 'Alice', lastName: 'Brown', email: 'alice.brown@email.com' },
-                    { id: 5, firstName: 'Bob', lastName: 'Wilson', email: 'bob.wilson@email.com' }
-                ]
-            },
-            {
-                id: 3,
-                code: 'ENG-301-C',
-                sectionName: 'Shakespeare Section',
-                subject: 'English Literature',
-                gradeLevel: 'Grade 12',
-                room: 'Room 305',
-                attendancePercentage: 20,
-                schedule: {
-                    monday: { start: '14:00', end: '15:30' },
-                    wednesday: { start: '14:00', end: '15:30' }
-                },
-                status: 'inactive',
-                students: [
-                    { id: 6, firstName: 'Carol', lastName: 'Davis', email: 'carol.davis@email.com' },
-                    { id: 7, firstName: 'David', lastName: 'Miller', email: 'david.miller@email.com' },
-                    { id: 8, firstName: 'Emma', lastName: 'Garcia', email: 'emma.garcia@email.com' },
-                    { id: 9, firstName: 'Frank', lastName: 'Rodriguez', email: 'frank.rodriguez@email.com' }
-                ]
-            }
-        ];
+        const classes = <?php echo json_encode($classes_php); ?>;
+        const attendanceData = <?php echo json_encode($attendance_php); ?>;
 
-        // Sample attendance data
-        const attendanceData = [
-            { studentId: 1, classId: 1, date: '2024-09-01', status: 'Present', timeIn: '08:00 AM', timeOut: '09:30 AM' },
-            { studentId: 2, classId: 1, date: '2024-09-01', status: 'Late', timeIn: '08:15 AM', timeOut: '09:30 AM' },
-            { studentId: 3, classId: 1, date: '2024-09-01', status: 'Present', timeIn: '08:00 AM', timeOut: '09:30 AM' },
-            { studentId: 4, classId: 2, date: '2024-09-01', status: 'Absent', timeIn: '--', timeOut: '--' },
-            { studentId: 5, classId: 2, date: '2024-09-01', status: 'Present', timeIn: '10:00 AM', timeOut: '11:30 AM' },
-            { studentId: 6, classId: 3, date: '2024-09-01', status: 'Present', timeIn: '14:00 PM', timeOut: '15:30 PM' },
-            { studentId: 7, classId: 3, date: '2024-09-01', status: 'Late', timeIn: '14:15 PM', timeOut: '15:30 PM' },
-            { studentId: 8, classId: 3, date: '2024-09-01', status: 'Present', timeIn: '14:00 PM', timeOut: '15:30 PM' },
-            { studentId: 9, classId: 3, date: '2024-09-01', status: 'Absent', timeIn: '--', timeOut: '--' }
-        ];
-
-        // Populate class filter
         const classFilter = document.getElementById('class-filter');
-        classes.forEach(cls => {
-            const option = document.createElement('option');
-            option.value = cls.id;
-            option.textContent = `${cls.gradeLevel} - ${cls.sectionName} (${cls.subject})`;
-            classFilter.appendChild(option);
-        });
-
-        // Event listeners
         classFilter.addEventListener('change', populateStudents);
         document.getElementById('student-search').addEventListener('input', filterStudents);
         document.getElementById('generate-report').addEventListener('click', generateReport);
@@ -589,7 +731,7 @@ $pdo = getDBConnection();
                 option.textContent = `${student.lastName}, ${student.firstName}`;
                 studentFilter.appendChild(option);
             });
-            filterStudents(); // Apply any current search
+            filterStudents();
         }
 
         function filterStudents() {
@@ -624,111 +766,93 @@ $pdo = getDBConnection();
             const reportThead = document.getElementById('report-thead');
             const reportTbody = document.getElementById('report-tbody');
 
-            // Clear previous results
             reportTbody.innerHTML = '';
-
-            // Set report title
-            let title = '';
-            switch (reportType) {
-                case 'student':
-                    title = 'Attendance History per Student';
-                    break;
-                case 'class':
-                    title = 'Attendance per Class';
-                    break;
-            }
+            let title = reportType === 'student' ? 'Student Attendance History' : 'Attendance per Class';
             reportTitle.textContent = title;
 
-            // Generate table headers based on report type
             if (reportType === 'class') {
                 reportThead.innerHTML = `
                     <tr>
                         <th>Class</th>
                         <th>Total Students</th>
+                        <th>Present</th>
+                        <th>Absent</th>
+                        <th>Late</th>
                         <th>Average Attendance</th>
                         <th>Status</th>
                     </tr>
                 `;
 
-                // Filter classes
-                let filteredClasses = classes;
-                if (classId) {
-                    filteredClasses = filteredClasses.filter(cls => cls.id == classId);
-                }
+                let filteredClasses = classId ? classes.filter(cls => cls.id == classId) : classes;
 
-                // Populate class report data
                 filteredClasses.forEach(cls => {
-                    const row = document.createElement('tr');
+                    let filteredData = attendanceData.filter(record => record.classId == cls.id);
+                    if (dateFrom) filteredData = filteredData.filter(record => record.date >= dateFrom);
+                    if (dateTo) filteredData = filteredData.filter(record => record.date <= dateTo);
+
                     const totalStudents = cls.students.length;
-                    const attendanceRate = cls.attendancePercentage;
-                    const status = attendanceRate >= 90 ? 'Excellent' : 
-                                  attendanceRate >= 80 ? 'Good' : 
-                                  attendanceRate >= 70 ? 'Fair' : 'Poor';
-                    const statusClass = attendanceRate >= 90 ? 'status-excellent' : 
-                                       attendanceRate >= 80 ? 'status-good' : 
+                    const presentCount = filteredData.filter(record => record.status === 'Present').length;
+                    const absentCount = filteredData.filter(record => record.status === 'Absent').length;
+                    const lateCount = filteredData.filter(record => record.status === 'Late').length;
+                    const totalRecords = presentCount + absentCount + lateCount;
+                    const attendanceRate = totalRecords ? (presentCount / totalRecords * 100).toFixed(2) : 0;
+                    const status = attendanceRate >= 90 ? 'Excellent' :
+                                   attendanceRate >= 80 ? 'Good' :
+                                   attendanceRate >= 70 ? 'Fair' : 'Poor';
+                    const statusClass = attendanceRate >= 90 ? 'status-excellent' :
+                                       attendanceRate >= 80 ? 'status-good' :
                                        attendanceRate >= 70 ? 'status-fair' : 'status-poor';
                     const formattedClass = `${cls.gradeLevel} - ${cls.sectionName} (${cls.subject})`;
-                    
+
+                    const row = document.createElement('tr');
                     row.innerHTML = `
                         <td>${formattedClass}</td>
                         <td>${totalStudents}</td>
+                        <td>${presentCount}</td>
+                        <td>${absentCount}</td>
+                        <td>${lateCount}</td>
                         <td>${attendanceRate}%</td>
                         <td><span class="status-badge ${statusClass}">${status}</span></td>
                     `;
                     reportTbody.appendChild(row);
                 });
             } else {
-                // Default student attendance table
                 reportThead.innerHTML = `
                     <tr>
+                        <th>Class</th>
                         <th>LRN</th>
                         <th>Name</th>
-                        <th>Class</th>
-                        <th>Date</th>
                         <th>Status</th>
-                        <th>Attendance Time</th>
+                        <th>Time Checked</th>
                     </tr>
                 `;
 
-                // Filter attendance data
                 let filteredData = attendanceData;
-                
-                if (classId) {
-                    filteredData = filteredData.filter(record => record.classId == classId);
-                }
-                if (studentId) {
-                    filteredData = filteredData.filter(record => record.studentId == studentId);
-                }
-                if (dateFrom) {
-                    filteredData = filteredData.filter(record => record.date >= dateFrom);
-                }
-                if (dateTo) {
-                    filteredData = filteredData.filter(record => record.date <= dateTo);
-                }
+                if (classId) filteredData = filteredData.filter(record => record.classId == classId);
+                if (studentId) filteredData = filteredData.filter(record => record.studentId == studentId);
+                if (dateFrom) filteredData = filteredData.filter(record => record.date >= dateFrom);
+                if (dateTo) filteredData = filteredData.filter(record => record.date <= dateTo);
 
-                // Populate student data
                 filteredData.forEach(record => {
-                    const cls = classes.find(c => c.id === record.classId);
-                    const student = cls.students.find(s => s.id === record.studentId);
-                    const row = document.createElement('tr');
-                    const statusClass = record.status === 'Present' ? 'status-present' : 
-                                       record.status === 'Late' ? 'status-late' : 'status-absent';
+                    const cls = classes.find(c => c.id == record.classId);
+                    const student = cls.students.find(s => s.id == record.studentId);
+                    if (!student) return;
                     const formattedClass = `${cls.gradeLevel} - ${cls.sectionName} (${cls.subject})`;
                     const name = `${student.lastName}, ${student.firstName}`;
-                    
+                    const statusClass = record.status === 'Present' ? 'status-present' :
+                                       record.status === 'Late' ? 'status-late' : 'status-absent';
+                    const row = document.createElement('tr');
                     row.innerHTML = `
+                        <td>${formattedClass}</td>
                         <td>${record.studentId}</td>
                         <td>${name}</td>
-                        <td>${formattedClass}</td>
-                        <td>${record.date}</td>
                         <td><span class="status-badge ${statusClass}">${record.status}</span></td>
-                        <td>${record.timeIn}</td>
+                        <td>${record.timeChecked}</td>
                     `;
                     reportTbody.appendChild(row);
                 });
             }
 
-            // Show report results
             reportResults.style.display = 'block';
             reportResults.scrollIntoView({ behavior: 'smooth' });
         }
@@ -736,25 +860,21 @@ $pdo = getDBConnection();
         function exportReport() {
             const format = document.getElementById('export-format').value;
             const reportType = document.getElementById('report-type').value;
-            
+
             if (!format) {
                 alert('Please select an export format');
                 return;
             }
 
-            // Get current report data
             const table = document.getElementById('report-table');
             const rows = table.querySelectorAll('tr');
-            
             let data = [];
-            const headers = [];
-            
-            // Get headers
+            let headers = [];
+
             rows[0].querySelectorAll('th').forEach(th => {
                 headers.push(th.textContent.trim());
             });
-            
-            // Get data rows
+
             for (let i = 1; i < rows.length; i++) {
                 const row = {};
                 rows[i].querySelectorAll('td').forEach((td, index) => {
@@ -764,113 +884,59 @@ $pdo = getDBConnection();
                 data.push(row);
             }
 
-            // Export based on format
-            switch (format) {
-                case 'json':
-                    exportJSON(data, reportType);
-                    break;
-                case 'csv':
-                    exportCSV(data, headers, reportType);
-                    break;
-                case 'pdf':
-                    exportPDF(data, headers, reportType);
-                    break;
-            }
-        }
+            const exportBtn = document.getElementById('export-report');
+            const originalText = exportBtn.innerHTML;
+            exportBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Exporting...';
+            exportBtn.disabled = true;
 
-        function exportJSON(data, reportType) {
-            const jsonData = JSON.stringify(data, null, 2);
-            const blob = new Blob([jsonData], { type: 'application/json' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `${reportType}-report-${new Date().toISOString().split('T')[0]}.json`;
-            a.click();
-            URL.revokeObjectURL(url);
-        }
-
-        function exportCSV(data, headers, reportType) {
-            let csv = headers.join(',') + '\n';
-            data.forEach(row => {
-                csv += headers.map(header => `"${row[header] || ''}"`).join(',') + '\n';
-            });
-            
-            const blob = new Blob([csv], { type: 'text/csv' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `${reportType}-report-${new Date().toISOString().split('T')[0]}.csv`;
-            a.click();
-            URL.revokeObjectURL(url);
-        }
-
-        function exportPDF(data, headers, reportType) {
-            const { jsPDF } = window.jspdf;
-            const doc = new jsPDF();
-            
-            // Set document properties
-            doc.setFont('helvetica', 'normal');
-            doc.setFontSize(16);
-            doc.text(document.getElementById('report-title').textContent, 14, 20);
-            
-            // Add date range
-            const dateFrom = document.getElementById('date-from').value;
-            const dateTo = document.getElementById('date-to').value;
-            doc.setFontSize(10);
-            doc.text(`Date Range: ${dateFrom} to ${dateTo}`, 14, 30);
-            
-            // Prepare table data
-            const tableData = data.map(row => headers.map(header => row[header] || ''));
-            
-            // Generate table using autoTable
-            doc.autoTable({
-                startY: 40,
-                head: [headers],
-                body: tableData,
-                theme: 'grid',
-                styles: {
-                    fontSize: 8,
-                    cellPadding: 2,
-                    overflow: 'linebreak',
-                    minCellHeight: 10
-                },
-                headStyles: {
-                    fillColor: [37, 99, 235],
-                    textColor: [255, 255, 255],
-                    fontStyle: 'bold'
-                },
-                columnStyles: {
-                    0: { cellWidth: reportType === 'class' ? 50 : 20 },
-                    1: { cellWidth: reportType === 'class' ? 30 : 30 },
-                    2: { cellWidth: reportType === 'class' ? 30 : 40 },
-                    3: { cellWidth: reportType === 'class' ? 30 : 20 },
-                    4: { cellWidth: 20 },
-                    5: { cellWidth: 20 }
-                },
-                didParseCell: function(data) {
-                    if (data.section === 'body' && data.column.index === headers.indexOf('Status')) {
-                        const status = data.cell.text[0];
-                        if (status === 'Present' || status === 'Excellent') {
-                            data.cell.styles.fillColor = [220, 252, 231];
-                            data.cell.styles.textColor = [22, 101, 52];
-                        } else if (status === 'Late' || status === 'Good' || status === 'Fair') {
-                            data.cell.styles.fillColor = [254, 243, 199];
-                            data.cell.styles.textColor = [146, 64, 14];
-                        } else if (status === 'Absent' || status === 'Poor') {
-                            data.cell.styles.fillColor = [254, 202, 202];
-                            data.cell.styles.textColor = [153, 27, 27];
-                        }
-                    }
+            fetch('', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: `action=exportReport&format=${encodeURIComponent(format)}&data=${encodeURIComponent(JSON.stringify({
+                    data: data,
+                    headers: headers,
+                    reportType: reportType,
+                    dateFrom: document.getElementById('date-from').value,
+                    dateTo: document.getElementById('date-to').value,
+                    title: document.getElementById('report-title').textContent
+                }))}`
+            })
+            .then(res => {
+                if (!res.ok) {
+                    return res.text().then(text => {
+                        console.error('Non-JSON response:', text);
+                        throw new Error(`HTTP error! Status: ${res.status}`);
+                    });
                 }
+                return res.json();
+            })
+            .then(data => {
+                if (data.success) {
+                    const downloadLink = document.createElement('a');
+                    downloadLink.href = `exports/${data.filename}`;
+                    downloadLink.download = data.filename;
+                    downloadLink.style.display = 'none';
+                    document.body.appendChild(downloadLink);
+                    downloadLink.click();
+                    document.body.removeChild(downloadLink);
+                    alert(`Report ${data.filename} exported successfully!`);
+                } else {
+                    alert(data.message || 'Failed to export report');
+                }
+            })
+            .catch(error => {
+                console.error('Export error:', error);
+                alert('An error occurred while exporting the report. Please check the console for details.');
+            })
+            .finally(() => {
+                exportBtn.innerHTML = originalText;
+                exportBtn.disabled = false;
             });
-            
-            // Save the PDF
-            doc.save(`${reportType}-report-${new Date().toISOString().split('T')[0]}.pdf`);
         }
 
-        // Initialize with default date range
-        document.getElementById('date-from').value = '2024-09-01';
-        document.getElementById('date-to').value = '2024-09-30';
+        document.getElementById('date-from').value = '<?php echo date('Y-m-d', strtotime('-1 month')); ?>';
+        document.getElementById('date-to').value = '<?php echo date('Y-m-d'); ?>';
+        populateStudents();
     </script>
 </body>
 </html>

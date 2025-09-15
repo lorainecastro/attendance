@@ -430,24 +430,10 @@ $pdo = getDBConnection();
     <!-- Attendance Report Generator -->
     <div class="controls">
         <div class="controls-left">
-            <select class="selector-select" id="grade-filter">
-                <option value="">All Grades</option>
-                <option value="Grade 7">Grade 7</option>
-                <option value="Grade 10">Grade 10</option>
-                <option value="Grade 12">Grade 12</option>
+            <select class="selector-select" id="class-filter">
+                <option value="">All Classes</option>
             </select>
-            <select class="selector-select" id="section-filter">
-                <option value="">All Sections</option>
-                <option value="Diamond Section">Diamond Section</option>
-                <option value="Einstein Section">Einstein Section</option>
-                <option value="Shakespeare Section">Shakespeare Section</option>
-            </select>
-            <select class="selector-select" id="subject-filter">
-                <option value="">All Subjects</option>
-                <option value="Mathematics">Mathematics</option>
-                <option value="Science">Science</option>
-                <option value="English Literature">English Literature</option>
-            </select>
+            <input type="text" class="selector-input" id="student-search" placeholder="Search student...">
             <select class="selector-select" id="student-filter">
                 <option value="">All Students</option>
             </select>
@@ -455,7 +441,6 @@ $pdo = getDBConnection();
                 <option value="">Select Report Type</option>
                 <option value="student">Attendance History per Student</option>
                 <option value="class">Attendance per Class</option>
-                <option value="all-class">All Class Report</option>
             </select>
             <input type="date" class="selector-input" id="date-from" value="2024-09-01">
             <input type="date" class="selector-input" id="date-to" value="2024-12-31">
@@ -483,15 +468,12 @@ $pdo = getDBConnection();
             <table id="report-table">
                 <thead id="report-thead">
                     <tr>
-                        <th>Student ID</th>
+                        <th>LRN</th>
                         <th>Name</th>
-                        <th>Grade</th>
-                        <th>Subject</th>
-                        <th>Section</th>
+                        <th>Class</th>
                         <th>Date</th>
                         <th>Status</th>
-                        <th>Time In</th>
-                        <th>Time Out</th>
+                        <th>Attendance Time</th>
                     </tr>
                 </thead>
                 <tbody id="report-tbody">
@@ -580,25 +562,55 @@ $pdo = getDBConnection();
             { studentId: 9, classId: 3, date: '2024-09-01', status: 'Absent', timeIn: '--', timeOut: '--' }
         ];
 
-        // Populate student filter
-        const studentFilter = document.getElementById('student-filter');
-        classes.flatMap(cls => cls.students).forEach(student => {
+        // Populate class filter
+        const classFilter = document.getElementById('class-filter');
+        classes.forEach(cls => {
             const option = document.createElement('option');
-            option.value = student.id;
-            option.textContent = `${student.firstName} ${student.lastName}`;
-            studentFilter.appendChild(option);
+            option.value = cls.id;
+            option.textContent = `${cls.gradeLevel} - ${cls.sectionName} (${cls.subject})`;
+            classFilter.appendChild(option);
         });
 
         // Event listeners
+        classFilter.addEventListener('change', populateStudents);
+        document.getElementById('student-search').addEventListener('input', filterStudents);
         document.getElementById('generate-report').addEventListener('click', generateReport);
         document.getElementById('export-report').addEventListener('click', exportReport);
 
+        function populateStudents() {
+            const classId = classFilter.value;
+            const studentFilter = document.getElementById('student-filter');
+            studentFilter.innerHTML = '<option value="">All Students</option>';
+            if (!classId) return;
+            const cls = classes.find(c => c.id == classId);
+            cls.students.forEach(student => {
+                const option = document.createElement('option');
+                option.value = student.id;
+                option.textContent = `${student.lastName}, ${student.firstName}`;
+                studentFilter.appendChild(option);
+            });
+            filterStudents(); // Apply any current search
+        }
+
+        function filterStudents() {
+            const search = document.getElementById('student-search').value.toLowerCase();
+            const studentFilter = document.getElementById('student-filter');
+            const options = studentFilter.querySelectorAll('option:not([value=""])');
+            options.forEach(opt => {
+                const text = opt.textContent.toLowerCase();
+                const stuId = opt.value;
+                if (text.includes(search) || stuId.includes(search)) {
+                    opt.style.display = '';
+                } else {
+                    opt.style.display = 'none';
+                }
+            });
+        }
+
         function generateReport() {
             const reportType = document.getElementById('report-type').value;
-            const gradeFilter = document.getElementById('grade-filter').value;
-            const subjectFilter = document.getElementById('subject-filter').value;
-            const sectionFilter = document.getElementById('section-filter').value;
-            const studentFilter = document.getElementById('student-filter').value;
+            const classId = document.getElementById('class-filter').value;
+            const studentId = document.getElementById('student-filter').value;
             const dateFrom = document.getElementById('date-from').value;
             const dateTo = document.getElementById('date-to').value;
 
@@ -624,19 +636,14 @@ $pdo = getDBConnection();
                 case 'class':
                     title = 'Attendance per Class';
                     break;
-                case 'all-class':
-                    title = 'All Class Report';
-                    break;
             }
             reportTitle.textContent = title;
 
             // Generate table headers based on report type
-            if (reportType === 'all-class') {
+            if (reportType === 'class') {
                 reportThead.innerHTML = `
                     <tr>
-                        <th>Subject</th>
-                        <th>Section</th>
-                        <th>Grade Level</th>
+                        <th>Class</th>
                         <th>Total Students</th>
                         <th>Average Attendance</th>
                         <th>Status</th>
@@ -645,14 +652,8 @@ $pdo = getDBConnection();
 
                 // Filter classes
                 let filteredClasses = classes;
-                if (gradeFilter) {
-                    filteredClasses = filteredClasses.filter(cls => cls.gradeLevel === gradeFilter);
-                }
-                if (subjectFilter) {
-                    filteredClasses = filteredClasses.filter(cls => cls.subject === subjectFilter);
-                }
-                if (sectionFilter) {
-                    filteredClasses = filteredClasses.filter(cls => cls.sectionName === sectionFilter);
+                if (classId) {
+                    filteredClasses = filteredClasses.filter(cls => cls.id == classId);
                 }
 
                 // Populate class report data
@@ -666,11 +667,10 @@ $pdo = getDBConnection();
                     const statusClass = attendanceRate >= 90 ? 'status-excellent' : 
                                        attendanceRate >= 80 ? 'status-good' : 
                                        attendanceRate >= 70 ? 'status-fair' : 'status-poor';
+                    const formattedClass = `${cls.gradeLevel} - ${cls.sectionName} (${cls.subject})`;
                     
                     row.innerHTML = `
-                        <td>${cls.subject}</td>
-                        <td>${cls.sectionName}</td>
-                        <td>${cls.gradeLevel}</td>
+                        <td>${formattedClass}</td>
                         <td>${totalStudents}</td>
                         <td>${attendanceRate}%</td>
                         <td><span class="status-badge ${statusClass}">${status}</span></td>
@@ -681,35 +681,23 @@ $pdo = getDBConnection();
                 // Default student attendance table
                 reportThead.innerHTML = `
                     <tr>
-                        <th>Student ID</th>
+                        <th>LRN</th>
                         <th>Name</th>
-                        <th>Grade</th>
-                        <th>Subject</th>
-                        <th>Section</th>
+                        <th>Class</th>
                         <th>Date</th>
                         <th>Status</th>
-                        <th>Time In</th>
-                        <th>Time Out</th>
+                        <th>Attendance Time</th>
                     </tr>
                 `;
 
                 // Filter attendance data
                 let filteredData = attendanceData;
                 
-                if (gradeFilter) {
-                    const classIds = classes.filter(cls => cls.gradeLevel === gradeFilter).map(cls => cls.id);
-                    filteredData = filteredData.filter(record => classIds.includes(record.classId));
+                if (classId) {
+                    filteredData = filteredData.filter(record => record.classId == classId);
                 }
-                if (subjectFilter) {
-                    const classIds = classes.filter(cls => cls.subject === subjectFilter).map(cls => cls.id);
-                    filteredData = filteredData.filter(record => classIds.includes(record.classId));
-                }
-                if (sectionFilter) {
-                    const classIds = classes.filter(cls => cls.sectionName === sectionFilter).map(cls => cls.id);
-                    filteredData = filteredData.filter(record => classIds.includes(record.classId));
-                }
-                if (studentFilter) {
-                    filteredData = filteredData.filter(record => record.studentId === parseInt(studentFilter));
+                if (studentId) {
+                    filteredData = filteredData.filter(record => record.studentId == studentId);
                 }
                 if (dateFrom) {
                     filteredData = filteredData.filter(record => record.date >= dateFrom);
@@ -725,17 +713,16 @@ $pdo = getDBConnection();
                     const row = document.createElement('tr');
                     const statusClass = record.status === 'Present' ? 'status-present' : 
                                        record.status === 'Late' ? 'status-late' : 'status-absent';
+                    const formattedClass = `${cls.gradeLevel} - ${cls.sectionName} (${cls.subject})`;
+                    const name = `${student.lastName}, ${student.firstName}`;
                     
                     row.innerHTML = `
                         <td>${record.studentId}</td>
-                        <td>${student.firstName} ${student.lastName}</td>
-                        <td>${cls.gradeLevel}</td>
-                        <td>${cls.subject}</td>
-                        <td>${cls.sectionName}</td>
+                        <td>${name}</td>
+                        <td>${formattedClass}</td>
                         <td>${record.date}</td>
                         <td><span class="status-badge ${statusClass}">${record.status}</span></td>
                         <td>${record.timeIn}</td>
-                        <td>${record.timeOut}</td>
                     `;
                     reportTbody.appendChild(row);
                 });
@@ -853,15 +840,12 @@ $pdo = getDBConnection();
                     fontStyle: 'bold'
                 },
                 columnStyles: {
-                    0: { cellWidth: reportType === 'all-class' ? 30 : 20 },
-                    1: { cellWidth: reportType === 'all-class' ? 30 : 30 },
-                    2: { cellWidth: reportType === 'all-class' ? 30 : 20 },
-                    3: { cellWidth: reportType === 'all-class' ? 30 : 30 },
-                    4: { cellWidth: reportType === 'all-class' ? 30 : 30 },
-                    5: { cellWidth: reportType === 'all-class' ? 30 : 20 },
-                    6: { cellWidth: reportType !== 'all-class' ? 20 : undefined },
-                    7: { cellWidth: reportType !== 'all-class' ? 20 : undefined },
-                    8: { cellWidth: reportType !== 'all-class' ? 20 : undefined }
+                    0: { cellWidth: reportType === 'class' ? 50 : 20 },
+                    1: { cellWidth: reportType === 'class' ? 30 : 30 },
+                    2: { cellWidth: reportType === 'class' ? 30 : 40 },
+                    3: { cellWidth: reportType === 'class' ? 30 : 20 },
+                    4: { cellWidth: 20 },
+                    5: { cellWidth: 20 }
                 },
                 didParseCell: function(data) {
                     if (data.section === 'body' && data.column.index === headers.indexOf('Status')) {

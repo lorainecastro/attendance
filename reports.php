@@ -1,3 +1,19 @@
+<?php
+// Set timezone to Asia/Manila
+date_default_timezone_set('Asia/Manila');
+require 'config.php';
+session_start();
+
+$user = validateSession();
+if (!$user) {
+    destroySession();
+    header("Location: index.php");
+    exit();
+}
+
+$pdo = getDBConnection();
+?>
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -485,66 +501,6 @@
         </div>
     </div>
 
-    <!-- Recent Activities -->
-    <div class="attendance-grid">
-        <div class="table-header">
-            <div class="table-title">Recent Activities</div>
-        </div>
-        <div class="table-responsive">
-            <table>
-                <thead>
-                    <tr>
-                        <th>Date</th>
-                        <th>Student</th>
-                        <th>Grade</th>
-                        <th>Subject</th>
-                        <th>Section</th>
-                        <th>Status</th>
-                        <th>Time</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td>2024-09-01</td>
-                        <td>John Doe</td>
-                        <td>Grade 7</td>
-                        <td>Mathematics</td>
-                        <td>Diamond Section</td>
-                        <td><span class="status-badge status-present">Present</span></td>
-                        <td>08:00 AM</td>
-                    </tr>
-                    <tr>
-                        <td>2024-09-01</td>
-                        <td>Jane Smith</td>
-                        <td>Grade 7</td>
-                        <td>Mathematics</td>
-                        <td>Diamond Section</td>
-                        <td><span class="status-badge status-late">Late</span></td>
-                        <td>08:15 AM</td>
-                    </tr>
-                    <tr>
-                        <td>2024-09-01</td>
-                        <td>Alice Brown</td>
-                        <td>Grade 10</td>
-                        <td>Science</td>
-                        <td>Einstein Section</td>
-                        <td><span class="status-badge status-absent">Absent</span></td>
-                        <td>--</td>
-                    </tr>
-                    <tr>
-                        <td>2024-09-01</td>
-                        <td>Carol Davis</td>
-                        <td>Grade 12</td>
-                        <td>English Literature</td>
-                        <td>Shakespeare Section</td>
-                        <td><span class="status-badge status-present">Present</span></td>
-                        <td>14:00 PM</td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
-    </div>
-
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.3/jspdf.plugin.autotable.min.js"></script>
@@ -737,8 +693,7 @@
                     </tr>
                 `;
 
-               quiz.html
-                <!-- Filter attendance data -->
+                // Filter attendance data
                 let filteredData = attendanceData;
                 
                 if (gradeFilter) {
@@ -763,7 +718,7 @@
                     filteredData = filteredData.filter(record => record.date <= dateTo);
                 }
 
-                // <!-- Populate student data -->
+                // Populate student data
                 filteredData.forEach(record => {
                     const cls = classes.find(c => c.id === record.classId);
                     const student = cls.students.find(s => s.id === record.studentId);
@@ -786,7 +741,7 @@
                 });
             }
 
-            // <!-- Show report results -->
+            // Show report results
             reportResults.style.display = 'block';
             reportResults.scrollIntoView({ behavior: 'smooth' });
         }
@@ -800,19 +755,19 @@
                 return;
             }
 
-            // <!-- Get current report data -->
+            // Get current report data
             const table = document.getElementById('report-table');
             const rows = table.querySelectorAll('tr');
             
             let data = [];
             const headers = [];
             
-            // <!-- Get headers -->
+            // Get headers
             rows[0].querySelectorAll('th').forEach(th => {
                 headers.push(th.textContent.trim());
             });
             
-            // <!-- Get data rows -->
+            // Get data rows
             for (let i = 1; i < rows.length; i++) {
                 const row = {};
                 rows[i].querySelectorAll('td').forEach((td, index) => {
@@ -822,7 +777,7 @@
                 data.push(row);
             }
 
-            // <!-- Export based on format -->
+            // Export based on format
             switch (format) {
                 case 'json':
                     exportJSON(data, reportType);
@@ -866,21 +821,21 @@
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF();
             
-            // <!-- Set document properties -->
+            // Set document properties
             doc.setFont('helvetica', 'normal');
             doc.setFontSize(16);
             doc.text(document.getElementById('report-title').textContent, 14, 20);
             
-            // <!-- Add date range -->
+            // Add date range
             const dateFrom = document.getElementById('date-from').value;
             const dateTo = document.getElementById('date-to').value;
             doc.setFontSize(10);
             doc.text(`Date Range: ${dateFrom} to ${dateTo}`, 14, 30);
             
-            // <!-- Prepare table data -->
+            // Prepare table data
             const tableData = data.map(row => headers.map(header => row[header] || ''));
             
-            // <!-- Generate table using autoTable -->
+            // Generate table using autoTable
             doc.autoTable({
                 startY: 40,
                 head: [headers],
@@ -925,11 +880,11 @@
                 }
             });
             
-            // <!-- Save the PDF -->
+            // Save the PDF
             doc.save(`${reportType}-report-${new Date().toISOString().split('T')[0]}.pdf`);
         }
 
-        // <!-- Initialize with default date range -->
+        // Initialize with default date range
         document.getElementById('date-from').value = '2024-09-01';
         document.getElementById('date-to').value = '2024-09-30';
     </script>

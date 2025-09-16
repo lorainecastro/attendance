@@ -138,7 +138,7 @@ function calculateStandardDeviation($data) {
 function arimaForecast($data, $periods = 30) {
     if (count($data) < 2) {
         // Fallback for insufficient data
-        $lastValue = count($data) > 0 ? end($data) : 0.0; // Default to 85% if no data
+        $lastValue = count($data) > 0 ? end($data) : 0.0; // Default to 0% if no data
         $stdDev = count($data) > 1 ? calculateStandardDeviation($data) : 1.0;
         $forecast = [];
         for ($i = 0; $i < $periods; $i++) {

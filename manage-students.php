@@ -1481,28 +1481,34 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
         .pagination {
             display: flex;
             justify-content: center;
-            gap: var(--spacing-sm);
-            margin-top: var(--spacing-lg);
+            gap: 10px;
+            margin-top: 20px;
         }
 
         .pagination-btn {
-            padding: var(--spacing-xs) var(--spacing-md);
-            border: none;
+            padding: 8px 16px;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-sm);
             background: var(--inputfield-color);
-            border-radius: var(--radius-md);
             cursor: pointer;
             transition: var(--transition-normal);
             font-size: var(--font-size-sm);
             min-width: 60px;
         }
 
-        .pagination-btn.active {
-            background: var(--primary-gradient);
-            color: var(--whitefont-color);
-        }
-
         .pagination-btn:hover:not(.active) {
             background: var(--inputfieldhover-color);
+        }
+
+        .pagination-btn.active {
+            background: var(--primary-blue);
+            color: var(--whitefont-color);
+            border-color: var(--primary-blue);
+        }
+
+        .pagination-btn:disabled {
+            cursor: not-allowed;
+            opacity: 0.5;
         }
 
         .bulk-actions {

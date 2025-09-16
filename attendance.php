@@ -535,6 +535,27 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
             background-color: var(--inputfieldhover-color); 
         }
 
+        #select-all {
+            width: 10px;
+            /* Fallback width */
+            height: 10px;
+            /* Fallback height */
+            transform: scale(1.5);
+            /* Scales the checkbox to 1.5x its default size */
+            vertical-align: middle;
+            /* Aligns with surrounding content */
+        }
+        input[type="checkbox"] {
+            width: 10px;
+            /* Fallback width */
+            height: 10px;
+            /* Fallback height */
+            transform: scale(1.5);
+            /* Scales the checkbox to 1.5x its default size */
+            vertical-align: middle;
+            /* Aligns with surrounding content */
+        }
+
         .student-photo { 
             width: 45px; 
             height: 45px; 

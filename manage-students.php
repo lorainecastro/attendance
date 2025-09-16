@@ -1743,21 +1743,17 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
 
         .controls-right .btn.btn-primary {
             order: 1;
-            /* Places "Add Student" button first */
         }
 
         .controls-right .view-toggle {
             order: 2;
-            /* Places view-toggle after the button */
         }
 
 
         .controls-right .btn.btn-primary,
         .controls-right .view-btn {
             height: 36px;
-            /* Uniform height */
             padding: 8px 12px;
-            /* Consistent padding */
             display: flex;
             align-items: center;
             justify-content: center;
@@ -1765,9 +1761,7 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
 
         .controls-right .view-btn {
             width: 38px;
-            /* Square buttons for view toggle */
             padding: 0;
-            /* Remove padding for icon-only buttons */
         }
 
         .controls-right .view-btn.active {
@@ -1780,7 +1774,6 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
             display: flex;
             flex-direction: column;
             align-items: flex-start;
-            /* Aligns items to the start */
             gap: var(--spacing-sm);
         }
 
@@ -1900,64 +1893,45 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
             display: flex;
             gap: 10px;
             flex-wrap: nowrap;
-            /* Prevents wrapping to new lines */
             align-items: center;
-            /* Vertically centers the buttons */
         }
 
         .student-actions .btn {
             white-space: nowrap;
-            /* Prevents text wrapping within buttons */
             min-width: auto;
-            /* Allows buttons to size naturally */
         }
 
         .table td .actions {
             display: flex;
             gap: 10px;
-            /* Consistent spacing between buttons */
             align-items: center;
-            /* Vertically centers the buttons */
         }
 
         .table td .actions .btn {
             white-space: nowrap;
-            /* Prevents text wrapping within buttons */
             padding: var(--spacing-xs) var(--spacing-sm);
-            /* Adjusted padding for consistency */
         }
     </style>
 
     <style>
         #selectAll {
             width: 10px;
-            /* Fallback width */
             height: 10px;
-            /* Fallback height */
             transform: scale(1.5);
-            /* Scales the checkbox to 1.5x its default size */
             vertical-align: middle;
-            /* Aligns with surrounding content */
         }
 
         #tableSelectAll {
             width: 10px;
-            /* Fallback width */
             height: 10px;
-            /* Fallback height */
             transform: scale(1.5);
-            /* Scales the checkbox to 1.5x its default size */
             vertical-align: middle;
-            /* Aligns with surrounding content */
         }
 
         .row-checkbox {
             width: 10px;
-            /* Fallback width */
             height: 10px;
-            /* Fallback height */
             transform: scale(1.5);
-            /* Scales the checkbox to 1.5x its default size */
             cursor: pointer;
         }
     </style>

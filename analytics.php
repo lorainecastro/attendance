@@ -138,7 +138,7 @@ function calculateStandardDeviation($data) {
 function arimaForecast($data, $periods = 30) {
     if (count($data) < 2) {
         // Fallback for insufficient data
-        $lastValue = count($data) > 0 ? end($data) : 85.0; // Default to 85% if no data
+        $lastValue = count($data) > 0 ? end($data) : 0.0; // Default to 85% if no data
         $stdDev = count($data) > 1 ? calculateStandardDeviation($data) : 1.0;
         $forecast = [];
         for ($i = 0; $i < $periods; $i++) {
@@ -173,7 +173,7 @@ function arimaForecast($data, $periods = 30) {
     }
 
     // Calculate average rates for each period
-    $period1_avg = !empty($period1_data) ? array_sum($period1_data) / count($period1_data) : 85.0; // Default if empty
+    $period1_avg = !empty($period1_data) ? array_sum($period1_data) / count($period1_data) : 0.0; // Default if empty
     $period2_avg = !empty($period2_data) ? array_sum($period2_data) / count($period2_data) : $period1_avg;
 
     // Calculate Δy (change between periods)

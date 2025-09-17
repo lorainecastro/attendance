@@ -211,7 +211,6 @@ function arimaForecast($data, $periods = 30) {
     return $forecast;
 }
 
-// Mean reversion forecasting without random noise
 function meanReversionForecast($data, $periods = 30) {
     if (count($data) < 1) {
         return array_fill(0, $periods, 0.0);
@@ -235,11 +234,16 @@ function meanReversionForecast($data, $periods = 30) {
     }
     $baseline = $weightedSum / $totalWeight;
 
-    // Dynamic reversion rate scaled by volatility
-    $reversionRate = max(0.02, min(0.08, $coefVariation * 0.15));
+    // Dynamic scaling factor for reversion rate based on data variability
+    $reversionScaling = max(0.1, min(0.5, $coefVariation * 0.5)); // Scales with coefVariation, bounded for stability
+    $reversionRate = $coefVariation * $reversionScaling; // Dynamic reversion rate
 
-    // Dynamic max change per period based on historical volatility
-    $maxChange = $stdDev * max(0.2, min(0.4, $coefVariation));
+    // Dynamic multiplier for max change based on data variability
+    $changeMultiplier = max(0.1, min(0.5, $coefVariation)); // Scales with coefVariation
+    $maxChange = $stdDev * $changeMultiplier; // Dynamic max change
+
+    // Dynamic bound multiplier based on coefficient of variation
+    $boundMultiplier = max(1.0, min(2.0, $coefVariation * 2.0)); // Dynamic bounds between 1.0 and 2.0
 
     $forecast = [];
     $currentValue = end($values); // Start from last known value
@@ -249,12 +253,12 @@ function meanReversionForecast($data, $periods = 30) {
         $moveTowardMean = ($mean - $currentValue) * $reversionRate;
         $currentValue += $moveTowardMean;
 
-        // Set predicted value deterministically
+        // Set predicted value
         $predicted = $currentValue;
 
-        // Enforce strict bounds based on historical data
-        $minBound = max(0, $mean - $stdDev * 1.5);
-        $maxBound = min(100, $mean + $stdDev * 1.5);
+        // Enforce bounds based on historical data
+        $minBound = max(0, $mean - $stdDev * $boundMultiplier);
+        $maxBound = min(100, $mean + $stdDev * $boundMultiplier);
         $predicted = max($minBound, min($maxBound, $predicted));
 
         // Limit period-to-period changes
@@ -281,6 +285,76 @@ function meanReversionForecast($data, $periods = 30) {
 
     return $forecast;
 }
+
+// function meanReversionForecast($data, $periods = 30) {
+//     if (count($data) < 1) {
+//         return array_fill(0, $periods, 0.0);
+//     }
+
+//     $values = array_values($data);
+//     $n = count($values);
+//     $stdDev = calculateStandardDeviation($values);
+//     $mean = array_sum($values) / $n;
+//     $coefVariation = ($mean > 0) ? $stdDev / $mean : 0.5;
+
+//     // Use weighted average for baseline, favoring recent data
+//     $weights = [];
+//     $weightedSum = 0;
+//     $totalWeight = 0;
+//     for ($i = 0; $i < $n; $i++) {
+//         $weight = 1 + ($i / $n); // Linear weight increase
+//         $weights[] = $weight;
+//         $weightedSum += $values[$i] * $weight;
+//         $totalWeight += $weight;
+//     }
+//     $baseline = $weightedSum / $totalWeight;
+
+//     // Dynamic reversion rate scaled by volatility, derived from data
+//     $reversionRate = $coefVariation * 0.15; // Scale based on coefficient of variation
+
+//     // // Dynamic max change per period based on historical volatility
+//     $maxChange = $stdDev * $coefVariation; // Scale based on standard deviation and coefficient of variation
+
+//     $forecast = [];
+//     $currentValue = end($values); // Start from last known value
+
+//     for ($i = 0; $i < $periods; $i++) {
+//         // Gradual reversion to mean
+//         $moveTowardMean = ($mean - $currentValue) * $reversionRate;
+//         $currentValue += $moveTowardMean;
+
+//         // Set predicted value
+//         $predicted = $currentValue;
+
+//         // Enforce bounds based on historical data
+//         $minBound = max(0, $mean - $stdDev);
+//         $maxBound = min(100, $mean + $stdDev);
+//         $predicted = max($minBound, min($maxBound, $predicted));
+
+//         // Limit period-to-period changes
+//         if (!empty($forecast)) {
+//             $lastValue = end($forecast);
+//             if ($predicted > $lastValue + $maxChange) {
+//                 $predicted = $lastValue + $maxChange;
+//             } elseif ($predicted < $lastValue - $maxChange) {
+//                 $predicted = $lastValue - $maxChange;
+//             }
+//         } else {
+//             // Limit initial deviation from last historical value
+//             $lastHistorical = end($values);
+//             if ($predicted > $lastHistorical + $maxChange) {
+//                 $predicted = $lastHistorical + $maxChange;
+//             } elseif ($predicted < $lastHistorical - $maxChange) {
+//                 $predicted = $lastHistorical - $maxChange;
+//             }
+//         }
+
+//         $forecast[] = round($predicted, 2);
+//         $currentValue = $predicted;
+//     }
+
+//     return $forecast;
+// }
 
 // Updated main forecasting function with better logic
 function generateForecast($pdo, $class_id, $lrn = null) {

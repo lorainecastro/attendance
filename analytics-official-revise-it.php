@@ -134,17 +134,27 @@ function calculateStandardDeviation($data) {
     return sqrt($variance / $n);
 }
 
-// Simple ARIMA(1,1,0) forecasting function using example parameters
+// Simple ARIMA(1,1,1) forecasting function using example parameters
 function arimaForecast($data, $periods = 30) {
     if (count($data) < 2) {
-        // Fallback for insufficient data: repeat last value or 0 if none
-        $lastValue = count($data) > 0 ? end($data) : 0.0;
-        return array_fill(0, $periods, round($lastValue, 2));
+        // Fallback for insufficient data
+        $lastValue = count($data) > 0 ? end($data) : 0.0; // Default to 0% if no data
+        $stdDev = count($data) > 1 ? calculateStandardDeviation($data) : 1.0;
+        $forecast = [];
+        for ($i = 0; $i < $periods; $i++) {
+            $noise = (mt_rand(-50, 50) / 100.0) * ($stdDev * 0.1); // Minimal noise
+            $predicted = max(0, min(100, $lastValue + $noise));
+            $forecast[] = round($predicted, 2);
+        }
+        return $forecast;
     }
 
     $values = array_values($data);
     $dates = array_keys($data);
     $n = count($values);
+
+    // Calculate standard deviation for bounds
+    $stdDev = calculateStandardDeviation($values);
 
     // Determine dynamic periods: two months ago to one month ago, and one month ago to today
     $today = date('Y-m-d');
@@ -163,49 +173,41 @@ function arimaForecast($data, $periods = 30) {
     }
 
     // Calculate average rates for each period
-    $period1_avg = !empty($period1_data) ? array_sum($period1_data) / count($period1_data) : 0.0;
+    $period1_avg = !empty($period1_data) ? array_sum($period1_data) / count($period1_data) : 0.0; // Default if empty
     $period2_avg = !empty($period2_data) ? array_sum($period2_data) / count($period2_data) : $period1_avg;
 
-    // Calculate differences for AR(1) coefficient
-    $differences = [];
-    for ($i = 1; $i < count($values); $i++) {
-        $differences[] = $values[$i] - $values[$i - 1];
-    }
+    // Calculate Δy (change between periods)
+    $delta_y = $period2_avg - $period1_avg;
 
-    // Calculate phi_1 using least squares for AR(1) on differences
-    $phi_1 = 0.5; // Default if insufficient data
-    if (count($differences) >= 2) {
-        $x = array_slice($differences, 0, -1); // ΔY_{t-1}
-        $y = array_slice($differences, 1);     // ΔY_t
-        $sum_xy = 0;
-        $sum_xx = 0;
-        for ($i = 0; $i < count($x); $i++) {
-            $sum_xy += $x[$i] * $y[$i];
-            $sum_xx += $x[$i] * $x[$i];
-        }
-        $phi_1 = $sum_xx > 0 ? $sum_xy / $sum_xx : 0.5;
-        // Bound phi_1 to prevent instability
-        $phi_1 = max(-1, min(1, $phi_1));
-    }
+    // ARIMA(1,1,1) parameters from example
+    $phi = 0.5; // AR parameter
+    $theta = -0.3; // MA parameter (unused in example calculation)
 
-    // Initialize forecast
+    // Calculate forecast for next period
     $forecast = [];
-    $currentValue = end($values); // Last historical value
-    $prevValue = count($values) > 1 ? $values[count($values) - 2] : $currentValue;
+    $currentValue = $period2_avg; // Start from most recent period rate
 
-    // Generate forecast using ARIMA(1,1,0)
-    for ($i = 0; $i < $periods; $i++) {
-        // ΔY_t = phi_1 * (Y_{t-1} - Y_{t-2})
-        $delta_y = $phi_1 * ($currentValue - $prevValue);
-        // Y_t = Y_{t-1} + ΔY_t
-        $predicted = $currentValue + $delta_y;
-        // Enforce bounds: 0% to 100%
-        $predicted = max(0, min(100, $predicted));
+    // First forecast value using example formula: next_rate = current_rate + φ * Δy
+    $first_forecast = $currentValue + $phi * $delta_y;
+    $first_forecast = max(0, min(100, $first_forecast)); // Enforce bounds
+    $forecast[] = round($first_forecast, 2);
+
+    // Generate remaining forecast values with minimal variation
+    for ($i = 1; $i < $periods; $i++) {
+        // Add small noise based on historical volatility
+        $noise = (mt_rand(-50, 50) / 100.0) * ($stdDev * 0.1);
+        $predicted = $first_forecast + $noise;
+        $predicted = max(0, min(100, $predicted)); // Enforce bounds
+
+        // Limit period-to-period changes
+        $maxChange = $stdDev * 0.3; // Consistent with original code
+        if ($predicted > $forecast[$i-1] + $maxChange) {
+            $predicted = $forecast[$i-1] + $maxChange;
+        } elseif ($predicted < $forecast[$i-1] - $maxChange) {
+            $predicted = $forecast[$i-1] - $maxChange;
+        }
+
         $forecast[] = round($predicted, 2);
-
-        // Update for next iteration
-        $prevValue = $currentValue;
-        $currentValue = $predicted;
     }
 
     return $forecast;
@@ -1673,66 +1675,77 @@ if ($classes_json === false) {
         
         function createIndividualForecastChart(student) {
             const ctx = document.getElementById('individual-forecast-chart');
-            if (!ctx) return console.error('Individual forecast chart canvas not found');
+            if (!ctx) {
+                console.error('Individual forecast chart canvas not found');
+                return;
+            }
             console.log('Creating chart for student:', student.id);
             console.log('Historical Data:', student.timeSeriesData);
             console.log('Forecast Data:', student.forecast);
             console.log('Historical Dates:', student.historical_dates);
             console.log('Forecast Dates:', student.forecast_dates);
 
+            // Validate data
             if (!student.timeSeriesData || !student.forecast || !student.historical_dates || !student.forecast_dates) {
-                return console.error('Invalid or missing student data');
+                console.error('Invalid or missing student data:', {
+                    timeSeriesData: student.timeSeriesData,
+                    forecast: student.forecast,
+                    historical_dates: student.historical_dates,
+                    forecast_dates: student.forecast_dates
+                });
+                return;
             }
-            if (student.historical_dates.length !== student.timeSeriesData.length || student.forecast_dates.length !== student.forecast.length) {
-                return console.error('Data length mismatch');
+            if (student.historical_dates.length !== student.timeSeriesData.length) {
+                console.error('Mismatch between historical dates and data');
+                return;
+            }
+            if (student.forecast_dates.length !== student.forecast.length) {
+                console.error('Mismatch between forecast dates and data');
+                return;
             }
 
+            // Ensure data is numeric
             const validatedTimeSeries = student.timeSeriesData.map(val => isNaN(val) ? 0 : Number(val));
             const validatedForecast = student.forecast.map(val => isNaN(val) ? 0 : Number(val));
 
+            // Ensure the forecast starts close to the last historical value
             if (validatedForecast.length > 0 && validatedTimeSeries.length > 0) {
                 const lastHistorical = validatedTimeSeries[validatedTimeSeries.length - 1];
-                const stdDev = validatedTimeSeries.length > 1 ? Math.sqrt(validatedTimeSeries.reduce((sum, val) => sum + Math.pow(val - (validatedTimeSeries.reduce((a, b) => a + b, 0) / validatedTimeSeries.length), 2), 0) / validatedTimeSeries.length) : 1.0;
-                const maxChange = stdDev * 0.3;
-                if (validatedForecast[0] > lastHistorical + maxChange) validatedForecast[0] = lastHistorical + maxChange;
-                else if (validatedForecast[0] < lastHistorical - maxChange) validatedForecast[0] = lastHistorical - maxChange;
+                const firstForecast = validatedForecast[0];
+                const stdDev = validatedTimeSeries.length > 1 ? Math.sqrt(
+                    validatedTimeSeries.reduce((sum, val) => sum + Math.pow(val - (validatedTimeSeries.reduce((a, b) => a + b, 0) / validatedTimeSeries.length), 2), 0) / validatedTimeSeries.length
+                ) : 1.0;
+                const maxChange = stdDev * 0.3; // Same as PHP arimaForecast
+                if (firstForecast > lastHistorical + maxChange) {
+                    validatedForecast[0] = lastHistorical + maxChange;
+                } else if (firstForecast < lastHistorical - maxChange) {
+                    validatedForecast[0] = lastHistorical - maxChange;
+                }
             }
 
-            let cumSum = 0;
-            const historicalCumAvgs = validatedTimeSeries.map((val, i) => {
-                cumSum += val;
-                return cumSum / (i + 1);
-            });
-
-            let lastCumAvg = historicalCumAvgs[historicalCumAvgs.length - 1] || 0;
-            let n = validatedTimeSeries.length;
-            const forecastCumAvgs = validatedForecast.map(val => {
-                lastCumAvg = (lastCumAvg * n + val) / (n + 1);
-                n++;
-                return lastCumAvg;
-            });
-
             try {
-                if (individualForecastChart) individualForecastChart.destroy();
+                if (individualForecastChart) {
+                    individualForecastChart.destroy();
+                }
                 individualForecastChart = new Chart(ctx.getContext('2d'), {
                     type: 'line',
                     data: {
                         labels: [...student.historical_dates, ...student.forecast_dates],
                         datasets: [
                             {
-                                label: 'Historical Average',
-                                data: [...historicalCumAvgs, ...Array(validatedForecast.length).fill(null)],
+                                label: 'Historical Data',
+                                data: [...validatedTimeSeries, ...Array(student.forecast.length).fill(null)],
                                 borderColor: '#3b82f6',
                                 backgroundColor: 'rgba(59, 130, 246, 0.1)',
                                 fill: true,
                                 tension: 0.4
                             },
                             {
-                                label: 'Forecast Average',
-                                data: [...Array(validatedTimeSeries.length).fill(null), ...forecastCumAvgs],
+                                label: 'ARIMA Forecast',
+                                data: [...Array(student.timeSeriesData.length).fill(null), ...validatedForecast],
                                 borderColor: '#ef4444',
                                 backgroundColor: 'rgba(239, 68, 68, 0.1)',
-                                borderDash: [5, 5],
+                                borderDash: [5, 5], // Match main chart's dashed forecast line
                                 fill: false,
                                 tension: 0.4
                             }
@@ -1741,18 +1754,25 @@ if ($classes_json === false) {
                     options: {
                         responsive: true,
                         maintainAspectRatio: false,
-                        interaction: { intersect: false, mode: 'index' },
+                        interaction: {
+                            intersect: false,
+                            mode: 'index'
+                        },
                         plugins: {
                             legend: { position: 'top' },
                             tooltip: {
-                                callbacks: { label: context => `${context.dataset.label}: ${context.parsed.y.toFixed(1)}%` }
+                                callbacks: {
+                                    label: function(context) {
+                                        return `${context.dataset.label}: ${context.parsed.y.toFixed(1)}%`;
+                                    }
+                                }
                             }
                         },
                         scales: {
                             y: {
                                 beginAtZero: false,
-                                min: Math.max(0, Math.min(...historicalCumAvgs, ...forecastCumAvgs) - 5),
-                                max: Math.min(100, Math.max(...historicalCumAvgs, ...forecastCumAvgs) + 5),
+                                min: Math.max(0, Math.min(...validatedTimeSeries, ...validatedForecast) - 5),
+                                max: Math.min(100, Math.max(...validatedTimeSeries, ...validatedForecast) + 5),
                                 title: { display: true, text: 'Attendance Rate (%)' }
                             },
                             x: { title: { display: true, text: 'Date' } }
@@ -1764,7 +1784,7 @@ if ($classes_json === false) {
                 console.error('Error creating individual forecast chart:', error);
             }
         }
-        
+
         classFilter.addEventListener('change', () => {
             updateStudentFilter();
             if (forecastChart) forecastChart.destroy();

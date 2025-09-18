@@ -166,9 +166,6 @@ function arimaForecast($data, $periods = 30) {
     $period1_avg = !empty($period1_data) ? array_sum($period1_data) / count($period1_data) : 0.0;
     $period2_avg = !empty($period2_data) ? array_sum($period2_data) / count($period2_data) : $period1_avg;
 
-    // Monthly trend (used as drift)
-    $monthly_trend = $period2_avg - $period1_avg;
-
     // Calculate differences for AR(1) coefficient
     $differences = [];
     for ($i = 1; $i < count($values); $i++) {
@@ -187,39 +184,32 @@ function arimaForecast($data, $periods = 30) {
             $sum_xx += $x[$i] * $x[$i];
         }
         $phi_1 = $sum_xx > 0 ? $sum_xy / $sum_xx : 0.5;
-        $phi_1 = max(-1, min(1, $phi_1)); // Bound for stability
-    } else {
-        // Fallback based on trend
-        if ($monthly_trend > 0) {
-            $phi_1 = 0.6;
-        } elseif ($monthly_trend < 0) {
-            $phi_1 = 0.4;
-        } else {
-            $phi_1 = 0.5;
-        }
+        // Bound phi_1 to prevent instability
+        $phi_1 = max(-1, min(1, $phi_1));
     }
 
-    // Forecast generation
+    // Initialize forecast
     $forecast = [];
     $currentValue = end($values); // Last historical value
     $prevValue = count($values) > 1 ? $values[count($values) - 2] : $currentValue;
 
+    // Generate forecast using ARIMA(1,1,0)
     for ($i = 0; $i < $periods; $i++) {
-        // Apply AR(1) and drift (0.2 multiplier to avoid overshooting)
-        $delta_y = $phi_1 * ($currentValue - $prevValue) + 0.2 * $monthly_trend;
+        // ΔY_t = phi_1 * (Y_{t-1} - Y_{t-2})
+        $delta_y = $phi_1 * ($currentValue - $prevValue);
+        // Y_t = Y_{t-1} + ΔY_t
         $predicted = $currentValue + $delta_y;
-        $predicted = max(0, min(100, $predicted)); // Clamp between 0% and 100%
-
+        // Enforce bounds: 0% to 100%
+        $predicted = max(0, min(100, $predicted));
         $forecast[] = round($predicted, 2);
 
-        // Update for next iteration // Update history
+        // Update for next iteration
         $prevValue = $currentValue;
         $currentValue = $predicted;
     }
 
     return $forecast;
 }
-
 
 function meanReversionForecast($data, $periods = 30) {
     if (count($data) < 1) {
@@ -295,6 +285,76 @@ function meanReversionForecast($data, $periods = 30) {
 
     return $forecast;
 }
+
+// function meanReversionForecast($data, $periods = 30) {
+//     if (count($data) < 1) {
+//         return array_fill(0, $periods, 0.0);
+//     }
+
+//     $values = array_values($data);
+//     $n = count($values);
+//     $stdDev = calculateStandardDeviation($values);
+//     $mean = array_sum($values) / $n;
+//     $coefVariation = ($mean > 0) ? $stdDev / $mean : 0.5;
+
+//     // Use weighted average for baseline, favoring recent data
+//     $weights = [];
+//     $weightedSum = 0;
+//     $totalWeight = 0;
+//     for ($i = 0; $i < $n; $i++) {
+//         $weight = 1 + ($i / $n); // Linear weight increase
+//         $weights[] = $weight;
+//         $weightedSum += $values[$i] * $weight;
+//         $totalWeight += $weight;
+//     }
+//     $baseline = $weightedSum / $totalWeight;
+
+//     // Dynamic reversion rate scaled by volatility, derived from data
+//     $reversionRate = $coefVariation * 0.15; // Scale based on coefficient of variation
+
+//     // // Dynamic max change per period based on historical volatility
+//     $maxChange = $stdDev * $coefVariation; // Scale based on standard deviation and coefficient of variation
+
+//     $forecast = [];
+//     $currentValue = end($values); // Start from last known value
+
+//     for ($i = 0; $i < $periods; $i++) {
+//         // Gradual reversion to mean
+//         $moveTowardMean = ($mean - $currentValue) * $reversionRate;
+//         $currentValue += $moveTowardMean;
+
+//         // Set predicted value
+//         $predicted = $currentValue;
+
+//         // Enforce bounds based on historical data
+//         $minBound = max(0, $mean - $stdDev);
+//         $maxBound = min(100, $mean + $stdDev);
+//         $predicted = max($minBound, min($maxBound, $predicted));
+
+//         // Limit period-to-period changes
+//         if (!empty($forecast)) {
+//             $lastValue = end($forecast);
+//             if ($predicted > $lastValue + $maxChange) {
+//                 $predicted = $lastValue + $maxChange;
+//             } elseif ($predicted < $lastValue - $maxChange) {
+//                 $predicted = $lastValue - $maxChange;
+//             }
+//         } else {
+//             // Limit initial deviation from last historical value
+//             $lastHistorical = end($values);
+//             if ($predicted > $lastHistorical + $maxChange) {
+//                 $predicted = $lastHistorical + $maxChange;
+//             } elseif ($predicted < $lastHistorical - $maxChange) {
+//                 $predicted = $lastHistorical - $maxChange;
+//             }
+//         }
+
+//         $forecast[] = round($predicted, 2);
+//         $currentValue = $predicted;
+//     }
+
+//     return $forecast;
+// }
 
 // Updated main forecasting function with better logic
 function generateForecast($pdo, $class_id, $lrn = null) {
@@ -467,6 +527,7 @@ try {
             $total_days = $current_rate_data['total_days'];
             $present_late_days = $current_rate_data['present_late_days'];
             $absences = $total_days - $present_late_days;
+            $chronic = ($total_days > 0) ? round(($absences / $total_days) * 100, 2) : 0;
             $avg_forecast = array_sum($analytics['forecast']) / count($analytics['forecast']);
             $riskLevel = ($absences == 0) ? 'no risk' : (($absences <= 13) ? 'low' : (($absences <= 26) ? 'medium' : (($absences <= 39) ? 'high' : 'critical')));
 
@@ -486,6 +547,7 @@ try {
                 'riskLevel' => $riskLevel,
                 'totalAbsences' => $absences,
                 'primaryAbsenceReason' => 'Unknown',
+                'chronicAbsenteeism' => $chronic,
                 'attendanceStatus' => calculateAttendanceStatus($pdo, $class['class_id'], $student['lrn']),
                 'behaviorPatterns' => []
             ];
@@ -514,52 +576,6 @@ try {
             'forecastConfidence' => 90.0,
             'students' => $student_data
         ];
-
-        $today = date('Y-m-d');
-        $current_start = date('Y-m-d', strtotime('-1 month', strtotime($today)));
-        $current_end = $today;
-        $previous_start = date('Y-m-d', strtotime('-2 months', strtotime($today)));
-        $previous_end = date('Y-m-d', strtotime('-1 day', strtotime($current_start)));
-
-        $previous_rate_data = calculateAttendanceRate($pdo, $class['class_id'], $previous_start, $previous_end);
-        $previous_rate = floatval($previous_rate_data['rate']);
-        $current_rate = floatval($class_current_rate_data['rate']);
-        $attendance_diff = $current_rate - $previous_rate;
-        $attendance_trend_direction = $attendance_diff > 0 ? 'up' : ($attendance_diff < 0 ? 'down' : 'stable');
-        if ($attendance_diff == 0) {
-            $attendance_trend_text = 'Stable';
-        } else {
-            $sign = $attendance_diff > 0 ? '+' : '-';
-            $value = abs($attendance_diff);
-            $attendance_trend_text = sprintf('%s%.1f%% vs last month', $sign, $value);
-        }
-
-        $current_at_risk = 0;
-        foreach ($student_data as $s) {
-            if ($s['totalAbsences'] > 13) $current_at_risk++;
-        }
-        $previous_at_risk = 0;
-        foreach ($students as $student) {
-            $prev_rate_data = calculateAttendanceRate($pdo, $class['class_id'], $previous_start, $previous_end, $student['lrn']);
-            $prev_absences = $prev_rate_data['total_days'] - $prev_rate_data['present_late_days'];
-            if ($prev_absences > 13) $previous_at_risk++;
-        }
-        $at_risk_diff = $current_at_risk - $previous_at_risk;
-        $at_risk_trend_direction = $at_risk_diff > 0 ? 'up' : ($at_risk_diff < 0 ? 'down' : 'stable');
-        if ($at_risk_diff == 0) {
-            $at_risk_trend_text = 'Stable';
-        } else {
-            $sign = $at_risk_diff > 0 ? '+' : '-';
-            $value = abs($at_risk_diff);
-            $at_risk_trend_text = sprintf('%s%d vs last month', $sign, $value);
-        }
-
-        // Add to class array
-        $classes[count($classes) - 1]['attendance_trend_text'] = $attendance_trend_text;
-        $classes[count($classes) - 1]['attendance_trend_direction'] = $attendance_trend_direction;
-        $classes[count($classes) - 1]['at_risk_trend_text'] = $at_risk_trend_text;
-        $classes[count($classes) - 1]['at_risk_trend_direction'] = $at_risk_trend_direction;
-        $classes[count($classes) - 1]['at_risk_count'] = $current_at_risk;
     }
 } catch (PDOException $e) {
     error_log("Database error in class fetch: " . $e->getMessage());
@@ -1433,14 +1449,9 @@ if ($classes_json === false) {
 
             document.getElementById('current-attendance-rate').textContent = `${selectedClass.attendancePercentage}%`;
             document.getElementById('predicted-attendance').textContent = `${parseFloat(selectedClass.forecast_values.reduce((a, b) => a + b, 0) / selectedClass.forecast_values.length).toFixed(2)}%`;
-            document.getElementById('at-risk-count').textContent = selectedClass.at_risk_count;
-
-
-            document.getElementById('current-attendance-rate').textContent = `${selectedClass.attendancePercentage}%`;
-            document.getElementById('predicted-attendance').textContent = `${parseFloat(selectedClass.forecast_values.reduce((a, b) => a + b, 0) / selectedClass.forecast_values.length).toFixed(2)}%`;
-            // document.getElementById('at-risk-count').textContent = selectedClass.students.filter(s => s.riskLevel === 'medium' || s.riskLevel === 'high' || s.riskLevel === 'critical').length;
-            // document.getElementById('attendance-trend').textContent = selectedClass.trend === 'improving' ? '+2.0% vs last month' : '-2.0% vs last month';
-            // document.getElementById('at-risk-trend').textContent = selectedClass.students.filter(s => s.riskLevel === 'medium' || s.riskLevel === 'high' || s.riskLevel === 'critical').length > 0 ? '-1 vs last month' : 'Stable';
+            document.getElementById('at-risk-count').textContent = selectedClass.students.filter(s => s.riskLevel === 'medium' || s.riskLevel === 'high' || s.riskLevel === 'critical').length;
+            document.getElementById('attendance-trend').textContent = selectedClass.trend === 'improving' ? '+2.0% vs last month' : '-2.0% vs last month';
+            document.getElementById('at-risk-trend').textContent = selectedClass.students.filter(s => s.riskLevel === 'medium' || s.riskLevel === 'high' || s.riskLevel === 'critical').length > 0 ? '-1 vs last month' : 'Stable';
 
             forecastChart = new Chart(forecastChartCtx, {
                 type: 'line',
@@ -1549,36 +1560,6 @@ if ($classes_json === false) {
                 plugins: [ChartDataLabels]
             });
 
-            const attendanceTrendSpan = document.getElementById('attendance-trend');
-            attendanceTrendSpan.textContent = selectedClass.attendance_trend_text;
-            const attendanceTrendDiv = attendanceTrendSpan.parentElement;
-            attendanceTrendDiv.classList.remove('trend-up', 'trend-down');
-            const attendanceIcon = attendanceTrendDiv.querySelector('i');
-            if (selectedClass.attendance_trend_direction !== 'stable') {
-                attendanceTrendDiv.classList.add(`trend-${selectedClass.attendance_trend_direction}`);
-                attendanceIcon.className = `fas fa-arrow-${selectedClass.attendance_trend_direction}`;
-            } else {
-                attendanceIcon.className = 'fas fa-minus';
-            }
-
-            const atRiskTrendSpan = document.getElementById('at-risk-trend');
-            atRiskTrendSpan.textContent = selectedClass.at_risk_trend_text;
-            const atRiskTrendDiv = atRiskTrendSpan.parentElement;
-            atRiskTrendDiv.classList.remove('trend-up', 'trend-down');
-            const atRiskIcon = atRiskTrendDiv.querySelector('i');
-            if (selectedClass.at_risk_trend_direction === 'up') {
-                atRiskTrendDiv.classList.add('trend-up');
-                atRiskTrendDiv.style.color = 'var(--danger-color)';
-                atRiskIcon.className = 'fas fa-arrow-up';
-            } else if (selectedClass.at_risk_trend_direction === 'down') {
-                atRiskTrendDiv.classList.add('trend-down');
-                atRiskTrendDiv.style.color = 'var(--success-color)';
-                atRiskIcon.className = 'fas fa-arrow-down';
-            } else {
-                atRiskTrendDiv.style.color = 'var(--grayfont-color)';
-                atRiskIcon.className = 'fas fa-minus';
-            }
-
             document.getElementById('present-count').textContent = `${statusCounts[0]} (${total > 0 ? ((statusCounts[0] / total) * 100).toFixed(1) : 0}%)`;
             document.getElementById('absent-count').textContent = `${statusCounts[1]} (${total > 0 ? ((statusCounts[1] / total) * 100).toFixed(1) : 0}%)`;
             document.getElementById('late-count').textContent = `${statusCounts[2]} (${total > 0 ? ((statusCounts[2] / total) * 100).toFixed(1) : 0}%)`;
@@ -1653,6 +1634,9 @@ if ($classes_json === false) {
                 <div class="detail-item">
                     <strong>Total Absences:</strong> ${student.totalAbsences}
                 </div>
+                <div class="detail-item">
+                    <strong>Chronic Absenteeism:</strong> ${student.chronicAbsenteeism}%
+                </div>
             `;
             
             const recommendations = generateRecommendations(student);
@@ -1677,6 +1661,12 @@ if ($classes_json === false) {
                     <td>${student.totalAbsences}</td>
                     <td>-</td>
                     <td>${student.totalAbsences > 10 ? 'Contact parents' : 'Review absence patterns'}</td>
+                </tr>
+                <tr>
+                    <td>Chronic Absenteeism</td>
+                    <td>${student.chronicAbsenteeism}%</td>
+                    <td>-</td>
+                    <td>${student.chronicAbsenteeism > 10 ? 'Implement attendance plan' : 'Monitor attendance'}</td>
                 </tr>
                 <tr>
                     <td>Risk Level</td>
@@ -1899,8 +1889,7 @@ if ($classes_json === false) {
             updateStudentFilter();
             document.getElementById('student-prediction-card').style.display = 'none';
             if (attendanceStatusChart) {
-                const selectedClass = classes.find(c => c.id == classFilter.value) || classes[0];
-                const attendanceData = selectedClass.students.reduce((acc, student) => {
+                const selectedClass = classes.find(c => c.id == classFilter.value) || classes[0];                const attendanceData = selectedClass.students.reduce((acc, student) => {
                     acc[0] += student.attendanceStatus.present;
                     acc[1] += student.attendanceStatus.absent;
                     acc[2] += student.attendanceStatus.late;
@@ -1923,7 +1912,7 @@ if ($classes_json === false) {
         document.getElementById('export-chart').addEventListener('click', () => {
             const link = document.createElement('a');
             link.href = forecastChart.toBase64Image();
-            link.download = 'attendance-forecast.png';
+            link.download = 'attendance_forecast.png';
             link.click();
         });
 

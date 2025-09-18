@@ -146,18 +146,20 @@ function arimaForecast($data, $periods = 30) {
     $dates = array_keys($data);
     $n = count($values);
 
-    // Determine dynamic periods: two months ago to one month ago, and one month ago to today
+    // Determine dynamic periods: July to August, and August to September
     $today = date('Y-m-d');
-    $one_month_ago = date('Y-m-d', strtotime('-1 month', strtotime($today)));
-    $two_months_ago = date('Y-m-d', strtotime('-2 months', strtotime($today)));
+    $period1_start = date('Y-m-01', strtotime('-2 months', strtotime($today)));
+    $period1_end = date('Y-m-t', strtotime('-1 month', strtotime($today)));
+    $period2_start = date('Y-m-01', strtotime('-1 month', strtotime($today)));
+    $period2_end = $today;
 
     // Filter data for the two periods
-    $period1_data = []; // Two months ago to one month ago
-    $period2_data = []; // One month ago to today
+    $period1_data = []; // July to August
+    $period2_data = []; // August to September
     foreach ($dates as $index => $date) {
-        if ($date >= $two_months_ago && $date < $one_month_ago) {
+        if ($date >= $period1_start && $date <= $period1_end) {
             $period1_data[] = $values[$index];
-        } elseif ($date >= $one_month_ago && $date <= $today) {
+        } elseif ($date >= $period2_start && $date <= $period2_end) {
             $period2_data[] = $values[$index];
         }
     }
@@ -300,36 +302,43 @@ function meanReversionForecast($data, $periods = 30) {
 function generateForecast($pdo, $class_id, $lrn = null) {
     $today = date('Y-m-d');
     $end_date = $today;
-    $start_date = date('Y-m-d', strtotime('-1 months', strtotime($today)));
+    $start_date = date('Y-m-01', strtotime('-2 months', strtotime($today)));
     
     $historical_data = getHistoricalAttendanceData($pdo, $class_id, $start_date, $end_date, $lrn);
 
-    $forecast_dates = [];
-    $start_forecast = new DateTime($today);
-    $start_forecast->add(new DateInterval('P1D'));
-    
-    for ($i = 0; $i < 30; $i++) {
-        $date = clone $start_forecast;
-        $date->add(new DateInterval('P' . $i . 'D'));
-        $forecast_dates[] = $date->format('Y-m-d');
-    }
+    $next_month_start = date('Y-m-01', strtotime('+1 month', strtotime($today)));
+    $next_month_days = (int)date('t', strtotime('+1 month', strtotime($today)));
+    $tomorrow = date('Y-m-d', strtotime('+1 day', strtotime($today)));
+    $current_month_end = date('Y-m-t', strtotime($today));
+    $days_to_end_current = (new DateTime($current_month_end))->diff(new DateTime($tomorrow))->days + 1;
+    $total_forecast_periods = $days_to_end_current + $next_month_days;
 
-    $forecast_values = arimaForecast($historical_data, 30);
+    $all_forecast = arimaForecast($historical_data, $total_forecast_periods);
 
     // Validate forecast reasonableness
     if (!empty($historical_data)) {
         $historical_avg = array_sum($historical_data) / count($historical_data);
-        $forecast_avg = array_sum($forecast_values) / count($forecast_values);
+        $forecast_avg = array_sum($all_forecast) / count($all_forecast);
         
         // If forecast deviates too much, use more conservative approach
         if (abs($forecast_avg - $historical_avg) > 15) {
-            $forecast_values = meanReversionForecast($historical_data, 30);
+            $all_forecast = meanReversionForecast($historical_data, $total_forecast_periods);
         }
+    }
+
+    $oct_forecast = array_slice($all_forecast, $days_to_end_current);
+
+    $forecast_dates = [];
+    $start_oct = new DateTime($next_month_start);
+    for ($i = 0; $i < $next_month_days; $i++) {
+        $date = clone $start_oct;
+        $date->add(new DateInterval('P' . $i . 'D'));
+        $forecast_dates[] = $date->format('Y-m-d');
     }
 
     return [
         'historical' => $historical_data,
-        'forecast' => array_combine($forecast_dates, $forecast_values)
+        'forecast' => array_combine($forecast_dates, $oct_forecast)
     ];
 }
 
@@ -1442,22 +1451,36 @@ if ($classes_json === false) {
             // document.getElementById('attendance-trend').textContent = selectedClass.trend === 'improving' ? '+2.0% vs last month' : '-2.0% vs last month';
             // document.getElementById('at-risk-trend').textContent = selectedClass.students.filter(s => s.riskLevel === 'medium' || s.riskLevel === 'high' || s.riskLevel === 'critical').length > 0 ? '-1 vs last month' : 'Stable';
 
+            const historical_values = selectedClass.historical_values;
+            let cumSum = 0;
+            const historicalCumAvgs = historical_values.map((val, i) => {
+                cumSum += val;
+                return cumSum / (i + 1);
+            });
+            let lastCumAvg = historicalCumAvgs[historicalCumAvgs.length - 1] || 0;
+            let n = historical_values.length;
+            const forecastCumAvgs = selectedClass.forecast_values.map(val => {
+                lastCumAvg = (lastCumAvg * n + val) / (n + 1);
+                n++;
+                return lastCumAvg;
+            });
+
             forecastChart = new Chart(forecastChartCtx, {
                 type: 'line',
                 data: {
                     labels: [...selectedClass.historical_dates, ...selectedClass.forecast_dates],
                     datasets: [
                         {
-                            label: 'Historical Data',
-                            data: [...selectedClass.historical_values, ...Array(selectedClass.forecast_values.length).fill(null)],
+                            label: 'Historical Average',
+                            data: [...historicalCumAvgs, ...Array(selectedClass.forecast_values.length).fill(null)],
                             borderColor: '#3b82f6',
                             backgroundColor: 'rgba(59, 130, 246, 0.1)',
                             fill: true,
                             tension: 0.4
                         },
                         {
-                            label: 'ARIMA Forecast',
-                            data: [...Array(selectedClass.historical_values.length).fill(null), ...selectedClass.forecast_values],
+                            label: 'ARIMA Forecast Average',
+                            data: [...Array(historical_values.length).fill(null), ...forecastCumAvgs],
                             borderColor: '#ef4444',
                             backgroundColor: 'rgba(239, 68, 68, 0.1)',
                             borderDash: [5, 5],

@@ -467,7 +467,7 @@ try {
             $analytics = generateForecast($pdo, $class['class_id'], $student['lrn']);
             $today = date('Y-m-d');
             $yesterday = date('Y-m-d', strtotime('-1 day'));
-            $current_start = date('Y-m-d', strtotime('-1 month', strtotime($today)));
+            $current_start = date('Y-m-d', strtotime('-2 months', strtotime($today)));
             $current_rate_data = calculateAttendanceRate($pdo, $class['class_id'], $current_start, $yesterday, $student['lrn']);
             $current_rate = $current_rate_data['rate'];
             $total_days = $current_rate_data['total_days'];
@@ -500,7 +500,7 @@ try {
         $class_analytics = generateForecast($pdo, $class['class_id']);
         $today = date('Y-m-d');
         $yesterday = date('Y-m-d', strtotime('-1 day'));
-        $current_start = date('Y-m-d', strtotime('-1 month', strtotime($today)));
+        $current_start = date('Y-m-d', strtotime('-2 months', strtotime($today)));
         $class_current_rate_data = calculateAttendanceRate($pdo, $class['class_id'], $current_start, $yesterday);
         $class_current_rate = $class_current_rate_data['rate'];
         $class_avg_forecast = array_sum($class_analytics['forecast']) / count($class_analytics['forecast']);
@@ -528,10 +528,10 @@ try {
         $yesterday = date('Y-m-d', strtotime('-1 day'));
         $one_month_ago = date('Y-m-d', strtotime('-1 month', strtotime($today)));
         $two_months_ago = date('Y-m-d', strtotime('-2 months', strtotime($today)));
-        $current_start = $one_month_ago;
+        $current_start = $two_months_ago;
         $current_end = $yesterday;
-        $previous_start = $two_months_ago;
-        $previous_end = date('Y-m-d', strtotime('-1 day', strtotime($one_month_ago)));
+        $previous_start = date('Y-m-d', strtotime('-3 months', strtotime($today)));
+        $previous_end = date('Y-m-d', strtotime('-1 day', strtotime($two_months_ago)));
 
         $previous_rate_data = calculateAttendanceRate($pdo, $class['class_id'], $previous_start, $previous_end);
         $previous_rate = floatval($previous_rate_data['rate']);
@@ -1271,7 +1271,7 @@ if ($classes_json === false) {
 
     <div class="attendance-status-container">
         <div class="attendance-status-header">
-            <div class="attendance-status-title">Attendance Status Distribution</div>
+            <div class="attendance-status-title" id="attendance-status-title">Attendance Status Distribution</div>
         </div>
         <canvas id="attendance-status" style="max-width: 350px; margin: 0 auto;"></canvas>
         <div class="attendance-status-legend">
@@ -1733,6 +1733,8 @@ if ($classes_json === false) {
                 document.getElementById('absent-count').textContent = `${studentData[1]} (${studentTotal > 0 ? ((studentData[1] / studentTotal) * 100).toFixed(1) : 0}%)`;
                 document.getElementById('late-count').textContent = `${studentData[2]} (${studentTotal > 0 ? ((studentData[2] / studentTotal) * 100).toFixed(1) : 0}%)`;
             }
+
+            document.getElementById('attendance-status-title').textContent = `Attendance Status Distribution for ${student.lastName}, ${student.firstName} ${student.middleName || ''}`;
         }
         
         function generateRecommendations(student) {
@@ -1887,6 +1889,7 @@ if ($classes_json === false) {
             initializeCharts();
             updateEarlyWarningTable();
             studentSearch.value = ''; // Clear search input on class change
+            document.getElementById('attendance-status-title').textContent = 'Attendance Status Distribution';
         });
 
         studentSearch.addEventListener('input', (e) => {
@@ -1913,6 +1916,7 @@ if ($classes_json === false) {
                     document.getElementById('absent-count').textContent = `${attendanceData[1]} (${total > 0 ? ((attendanceData[1] / total) * 100).toFixed(1) : 0}%)`;
                     document.getElementById('late-count').textContent = `${attendanceData[2]} (${total > 0 ? ((attendanceData[2] / total) * 100).toFixed(1) : 0}%)`;
                 }
+                document.getElementById('attendance-status-title').textContent = 'Attendance Status Distribution';
             }
         });
 
@@ -1949,6 +1953,7 @@ if ($classes_json === false) {
             }
             initializeCharts();
             updateEarlyWarningTable();
+            document.getElementById('attendance-status-title').textContent = 'Attendance Status Distribution';
         });
 
         document.getElementById('export-chart').addEventListener('click', () => {

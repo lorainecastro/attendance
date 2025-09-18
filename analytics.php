@@ -148,6 +148,7 @@ function arimaForecast($data, $periods = 30) {
 
     // Determine dynamic periods: two months ago to one month ago, and one month ago to today
     $today = date('Y-m-d');
+    $yesterday = date('Y-m-d', strtotime('-1 day'));
     $one_month_ago = date('Y-m-d', strtotime('-1 month', strtotime($today)));
     $two_months_ago = date('Y-m-d', strtotime('-2 months', strtotime($today)));
 
@@ -157,7 +158,7 @@ function arimaForecast($data, $periods = 30) {
     foreach ($dates as $index => $date) {
         if ($date >= $two_months_ago && $date < $one_month_ago) {
             $period1_data[] = $values[$index];
-        } elseif ($date >= $one_month_ago && $date <= $today) {
+        } elseif ($date >= $one_month_ago && $date <= $yesterday) {
             $period2_data[] = $values[$index];
         }
     }
@@ -299,8 +300,9 @@ function meanReversionForecast($data, $periods = 30) {
 // Updated main forecasting function with better logic
 function generateForecast($pdo, $class_id, $lrn = null) {
     $today = date('Y-m-d');
-    $end_date = $today;
-    $start_date = date('Y-m-d', strtotime('-1 months', strtotime($today)));
+    $yesterday = date('Y-m-d', strtotime('-1 day'));
+    $end_date = $yesterday;
+    $start_date = date('Y-m-d', strtotime('-2 months', strtotime($today)));
     
     $historical_data = getHistoricalAttendanceData($pdo, $class_id, $start_date, $end_date, $lrn);
 
@@ -402,7 +404,8 @@ function explainForecast($historical_data, $forecast_values) {
 // Function to calculate attendance status counts for a student or class
 function calculateAttendanceStatus($pdo, $class_id, $lrn = null) {
     $today = date('Y-m-d');
-    $start_date = date('Y-m-d', strtotime('-1 month', strtotime($today)));
+    $yesterday = date('Y-m-d', strtotime('-1 day'));
+    $start_date = date('Y-m-d', strtotime('-2 months', strtotime($today)));
     $query = "
         SELECT attendance_status, COUNT(*) as count
         FROM attendance_tracking
@@ -417,7 +420,7 @@ function calculateAttendanceStatus($pdo, $class_id, $lrn = null) {
     $query .= " GROUP BY attendance_status";
 
     $stmt = $pdo->prepare($query);
-    $params = [':class_id' => $class_id, ':start_date' => $start_date, ':end_date' => $today];
+    $params = [':class_id' => $class_id, ':start_date' => $start_date, ':end_date' => $yesterday];
     if ($lrn) {
         $params[':lrn'] = $lrn;
     }
@@ -462,7 +465,10 @@ try {
         $student_data = [];
         foreach ($students as $student) {
             $analytics = generateForecast($pdo, $class['class_id'], $student['lrn']);
-            $current_rate_data = calculateAttendanceRate($pdo, $class['class_id'], date('Y-m-d', strtotime('-1 month', strtotime(date('Y-m-d')))), date('Y-m-d'), $student['lrn']);
+            $today = date('Y-m-d');
+            $yesterday = date('Y-m-d', strtotime('-1 day'));
+            $current_start = date('Y-m-d', strtotime('-1 month', strtotime($today)));
+            $current_rate_data = calculateAttendanceRate($pdo, $class['class_id'], $current_start, $yesterday, $student['lrn']);
             $current_rate = $current_rate_data['rate'];
             $total_days = $current_rate_data['total_days'];
             $present_late_days = $current_rate_data['present_late_days'];
@@ -492,7 +498,10 @@ try {
         }
 
         $class_analytics = generateForecast($pdo, $class['class_id']);
-        $class_current_rate_data = calculateAttendanceRate($pdo, $class['class_id'], date('Y-m-d', strtotime('-1 month', strtotime(date('Y-m-d')))), date('Y-m-d'));
+        $today = date('Y-m-d');
+        $yesterday = date('Y-m-d', strtotime('-1 day'));
+        $current_start = date('Y-m-d', strtotime('-1 month', strtotime($today)));
+        $class_current_rate_data = calculateAttendanceRate($pdo, $class['class_id'], $current_start, $yesterday);
         $class_current_rate = $class_current_rate_data['rate'];
         $class_avg_forecast = array_sum($class_analytics['forecast']) / count($class_analytics['forecast']);
         $classes[] = [
@@ -516,10 +525,13 @@ try {
         ];
 
         $today = date('Y-m-d');
-        $current_start = date('Y-m-d', strtotime('-1 month', strtotime($today)));
-        $current_end = $today;
-        $previous_start = date('Y-m-d', strtotime('-2 months', strtotime($today)));
-        $previous_end = date('Y-m-d', strtotime('-1 day', strtotime($current_start)));
+        $yesterday = date('Y-m-d', strtotime('-1 day'));
+        $one_month_ago = date('Y-m-d', strtotime('-1 month', strtotime($today)));
+        $two_months_ago = date('Y-m-d', strtotime('-2 months', strtotime($today)));
+        $current_start = $one_month_ago;
+        $current_end = $yesterday;
+        $previous_start = $two_months_ago;
+        $previous_end = date('Y-m-d', strtotime('-1 day', strtotime($one_month_ago)));
 
         $previous_rate_data = calculateAttendanceRate($pdo, $class['class_id'], $previous_start, $previous_end);
         $previous_rate = floatval($previous_rate_data['rate']);
@@ -1424,6 +1436,7 @@ if ($classes_json === false) {
                 return;
             }
 
+            // Calculate status counts
             const statusCounts = selectedClass.students.reduce((acc, student) => {
                 acc[0] += student.attendanceStatus.present;
                 acc[1] += student.attendanceStatus.absent;
@@ -1431,33 +1444,47 @@ if ($classes_json === false) {
                 return acc;
             }, [0, 0, 0]);
 
+            // Update summary cards
             document.getElementById('current-attendance-rate').textContent = `${selectedClass.attendancePercentage}%`;
             document.getElementById('predicted-attendance').textContent = `${parseFloat(selectedClass.forecast_values.reduce((a, b) => a + b, 0) / selectedClass.forecast_values.length).toFixed(2)}%`;
             document.getElementById('at-risk-count').textContent = selectedClass.at_risk_count;
 
+            // Calculate cumulative averages for historical data
+            let cumSum = 0;
+            const historicalCumAvgs = selectedClass.historical_values.map((val, i) => {
+                cumSum += Number(val);
+                return cumSum / (i + 1);
+            });
 
-            document.getElementById('current-attendance-rate').textContent = `${selectedClass.attendancePercentage}%`;
-            document.getElementById('predicted-attendance').textContent = `${parseFloat(selectedClass.forecast_values.reduce((a, b) => a + b, 0) / selectedClass.forecast_values.length).toFixed(2)}%`;
-            // document.getElementById('at-risk-count').textContent = selectedClass.students.filter(s => s.riskLevel === 'medium' || s.riskLevel === 'high' || s.riskLevel === 'critical').length;
-            // document.getElementById('attendance-trend').textContent = selectedClass.trend === 'improving' ? '+2.0% vs last month' : '-2.0% vs last month';
-            // document.getElementById('at-risk-trend').textContent = selectedClass.students.filter(s => s.riskLevel === 'medium' || s.riskLevel === 'high' || s.riskLevel === 'critical').length > 0 ? '-1 vs last month' : 'Stable';
+            // Calculate cumulative averages for forecast data
+            let lastCumAvg = historicalCumAvgs[historicalCumAvgs.length - 1] || 0;
+            let n = selectedClass.historical_values.length;
+            const forecastCumAvgs = selectedClass.forecast_values.map(val => {
+                lastCumAvg = (lastCumAvg * n + Number(val)) / (n + 1);
+                n++;
+                return lastCumAvg;
+            });
 
+            // Destroy existing chart if it exists
+            if (forecastChart) forecastChart.destroy();
+
+            // Create new forecast chart with cumulative averages
             forecastChart = new Chart(forecastChartCtx, {
                 type: 'line',
                 data: {
                     labels: [...selectedClass.historical_dates, ...selectedClass.forecast_dates],
                     datasets: [
                         {
-                            label: 'Historical Data',
-                            data: [...selectedClass.historical_values, ...Array(selectedClass.forecast_values.length).fill(null)],
+                            label: 'Historical Average',
+                            data: [...historicalCumAvgs, ...Array(selectedClass.forecast_values.length).fill(null)],
                             borderColor: '#3b82f6',
                             backgroundColor: 'rgba(59, 130, 246, 0.1)',
                             fill: true,
                             tension: 0.4
                         },
                         {
-                            label: 'ARIMA Forecast',
-                            data: [...Array(selectedClass.historical_values.length).fill(null), ...selectedClass.forecast_values],
+                            label: 'Forecast Average',
+                            data: [...Array(selectedClass.historical_values.length).fill(null), ...forecastCumAvgs],
                             borderColor: '#ef4444',
                             backgroundColor: 'rgba(239, 68, 68, 0.1)',
                             borderDash: [5, 5],
@@ -1486,16 +1513,18 @@ if ($classes_json === false) {
                     scales: {
                         y: {
                             beginAtZero: false,
-                            min: 70,
-                            max: 100,
-                            title: { display: true, text: 'Attendance Rate (%)' }
+                            min: Math.max(0, Math.min(...historicalCumAvgs, ...forecastCumAvgs) - 5),
+                            max: Math.min(100, Math.max(...historicalCumAvgs, ...forecastCumAvgs) + 5),
+                            title: { display: true, text: 'Cumulative Attendance Rate (%)' }
                         },
                         x: { title: { display: true, text: 'Date' } }
                     }
                 }
             });
 
+            // Update attendance status chart
             const total = statusCounts.reduce((a, b) => a + b, 0);
+            if (attendanceStatusChart) attendanceStatusChart.destroy();
             attendanceStatusChart = new Chart(attendanceStatusCtx, {
                 type: 'pie',
                 data: {
@@ -1549,6 +1578,7 @@ if ($classes_json === false) {
                 plugins: [ChartDataLabels]
             });
 
+            // Update trend indicators
             const attendanceTrendSpan = document.getElementById('attendance-trend');
             attendanceTrendSpan.textContent = selectedClass.attendance_trend_text;
             const attendanceTrendDiv = attendanceTrendSpan.parentElement;
@@ -1579,11 +1609,12 @@ if ($classes_json === false) {
                 atRiskIcon.className = 'fas fa-minus';
             }
 
+            // Update attendance status legend
             document.getElementById('present-count').textContent = `${statusCounts[0]} (${total > 0 ? ((statusCounts[0] / total) * 100).toFixed(1) : 0}%)`;
             document.getElementById('absent-count').textContent = `${statusCounts[1]} (${total > 0 ? ((statusCounts[1] / total) * 100).toFixed(1) : 0}%)`;
             document.getElementById('late-count').textContent = `${statusCounts[2]} (${total > 0 ? ((statusCounts[2] / total) * 100).toFixed(1) : 0}%)`;
         }
-
+        
         function updateEarlyWarningTable() {
             const earlyWarningTable = document.getElementById('early-warning-table');
             earlyWarningTable.innerHTML = '';

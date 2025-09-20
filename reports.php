@@ -43,7 +43,7 @@ $classes_db = $classes_stmt->fetchAll(PDO::FETCH_ASSOC);
 
 $classes_php = [];
 foreach ($classes_db as $cls) {
-    $students_stmt = $pdo->prepare("SELECT s.lrn AS id, s.last_name AS lastName, s.first_name AS firstName, s.middle_name AS middleName, s.email FROM students s JOIN class_students cs ON s.lrn = cs.lrn WHERE cs.class_id = :class_id ORDER BY s.last_name ASC");
+    $students_stmt = $pdo->prepare("SELECT s.lrn AS id, CONCAT(s.last_name, ', ', s.first_name, ' ', COALESCE(s.middle_name, '')) AS fullName, s.email FROM students s JOIN class_students cs ON s.lrn = cs.lrn WHERE cs.class_id = :class_id ORDER BY s.last_name ASC, s.first_name ASC");
     $students_stmt->execute(['class_id' => $cls['class_id']]);
     $students = $students_stmt->fetchAll(PDO::FETCH_ASSOC);
 
@@ -65,12 +65,17 @@ foreach ($classes_db as $cls) {
         'attendancePercentage' => $cls['attendance_percentage'],
         'schedule' => $schedule,
         'status' => $cls['status'],
-        'students' => $students
+        'students' => array_map(function($student) {
+            return [
+                'id' => $student['id'],
+                'fullName' => trim($student['fullName'])
+            ];
+        }, $students)
     ];
 }
 
 // Fetch attendance data
-$attendance_stmt = $pdo->prepare("SELECT at.*, at.lrn AS studentId, at.class_id AS classId, at.time_checked AS timeChecked FROM attendance_tracking at JOIN classes c ON at.class_id = c.class_id WHERE c.teacher_id = :teacher_id ORDER BY at.time_checked DESC");
+$attendance_stmt = $pdo->prepare("SELECT at.*, at.lrn AS studentId, at.class_id AS classId, at.time_checked AS timeChecked, CONCAT(s.last_name, ', ', s.first_name, ' ', COALESCE(s.middle_name, '')) AS fullName FROM attendance_tracking at JOIN classes c ON at.class_id = c.class_id JOIN students s ON at.lrn = s.lrn WHERE c.teacher_id = :teacher_id ORDER BY s.last_name ASC, s.first_name ASC, at.time_checked DESC");
 $attendance_stmt->execute(['teacher_id' => $user['teacher_id']]);
 $attendance_db = $attendance_stmt->fetchAll(PDO::FETCH_ASSOC);
 
@@ -82,7 +87,8 @@ foreach ($attendance_db as $att) {
         'classId' => $att['classId'],
         'date' => $att['attendance_date'],
         'status' => $att['attendance_status'],
-        'timeChecked' => $time_checked
+        'timeChecked' => $time_checked,
+        'fullName' => trim($att['fullName'])
     ];
 }
 
@@ -683,7 +689,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                 <option value="">Select Report Type</option>
                 <option value="student">Student Attendance History</option>
                 <option value="class">Attendance per Class</option>
-                <option value="perfect">Perfect Attendance Recognition</option> <!-- NEW -->
+                <option value="perfect">Perfect Attendance Recognition</option>
             </select>
             <select class="selector-select" id="export-format">
                 <option value="">Select Export Format</option>
@@ -737,10 +743,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             studentFilter.innerHTML = '<option value="">All Students</option>';
             if (!classId) return;
             const cls = classes.find(c => c.id == classId);
-            cls.students.forEach(student => {
+            cls.students.sort((a, b) => a.fullName.localeCompare(b.fullName)).forEach(student => {
                 const option = document.createElement('option');
                 option.value = student.id;
-                option.textContent = `${student.lastName}, ${student.firstName} ${student.middleName || ''}`.trim();
+                option.textContent = student.fullName;
                 studentFilter.appendChild(option);
             });
             filterStudents();
@@ -835,7 +841,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                 let filteredClasses = classId ? classes.filter(cls => cls.id == classId) : classes;
                 filteredClasses.forEach(cls => {
                     let students = studentId ? cls.students.filter(s => s.id == studentId) : cls.students;
-                    students.forEach(student => {
+                    students.sort((a, b) => a.fullName.localeCompare(b.fullName)).forEach(student => {
                         let filteredData = attendanceData.filter(record => record.classId == cls.id && record.studentId == student.id);
                         if (dateFrom) filteredData = filteredData.filter(record => record.date >= dateFrom);
                         if (dateTo) filteredData = filteredData.filter(record => record.date <= dateTo);
@@ -853,14 +859,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                         }
 
                         const formattedClass = `${cls.gradeLevel} - ${cls.sectionName} (${cls.subject})`;
-                        const name = `${student.lastName}, ${student.firstName} ${student.middleName || ''}`.trim();
                         const statusClass = status === 'Recognized' ? 'status-present' : 'status-absent';
 
                         const row = document.createElement('tr');
                         row.innerHTML = `
                             <td>${formattedClass}</td>
                             <td>${student.id}</td>
-                            <td>${name}</td>
+                            <td>${student.fullName}</td>
                             <td><span class="status-badge ${statusClass}">${status}</span></td>
                             <td>${reason}</td>
                         `;
@@ -884,19 +889,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                 if (dateFrom) filteredData = filteredData.filter(record => record.date >= dateFrom);
                 if (dateTo) filteredData = filteredData.filter(record => record.date <= dateTo);
 
-                filteredData.forEach(record => {
+                filteredData.sort((a, b) => a.fullName.localeCompare(b.fullName)).forEach(record => {
                     const cls = classes.find(c => c.id == record.classId);
-                    const student = cls.students.find(s => s.id == record.studentId);
-                    if (!student) return;
                     const formattedClass = `${cls.gradeLevel} - ${cls.sectionName} (${cls.subject})`;
-                    const name = `${student.lastName}, ${student.firstName} ${student.middleName || ''}`.trim();
                     const statusClass = record.status === 'Present' ? 'status-present' :
                                        record.status === 'Late' ? 'status-late' : 'status-absent';
                     const row = document.createElement('tr');
                     row.innerHTML = `
                         <td>${formattedClass}</td>
                         <td>${record.studentId}</td>
-                        <td>${name}</td>
+                        <td>${record.fullName}</td>
                         <td><span class="status-badge ${statusClass}">${record.status}</span></td>
                         <td>${record.timeChecked}</td>
                     `;

@@ -1675,14 +1675,14 @@ if ($classes_json === false) {
                 <div class="detail-item">
                     <strong>Current Attendance Rate:</strong> ${student.attendanceRate}%
                 </div>
-                <div class="detail-item risk-${student.riskLevel}">
-                    <strong>Risk Level:</strong> ${student.riskLevel.charAt(0).toUpperCase() + student.riskLevel.slice(1)}
-                </div>
                 <div class="detail-item">
                     <strong>Predicted Next Month:</strong> ${avgForecast.toFixed(1)}%
                 </div>
                 <div class="detail-item">
                     <strong>Total Absences:</strong> ${student.totalAbsences}
+                </div>
+                                <div class="detail-item risk-${student.riskLevel}">
+                    <strong>Risk Level:</strong> ${student.riskLevel.charAt(0).toUpperCase() + student.riskLevel.slice(1)}
                 </div>
             `;
             

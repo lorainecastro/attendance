@@ -98,7 +98,6 @@
             border-radius: var(--radius-sm);
         }
 
-        /* Dashboard grid layout */
         .dashboard-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -155,7 +154,6 @@
             color: var(--blackfont-color);
         }
 
-        /* Charts row */
         .charts-row {
             display: grid;
             grid-template-columns: 2fr 1fr;
@@ -207,7 +205,6 @@
             background: var(--inputfieldhover-color);
         }
 
-        /* Quick Actions */
         .quick-actions {
             display: flex;
             gap: var(--spacing-sm);
@@ -236,7 +233,6 @@
             transform: translateY(-2px);
         }
 
-        /* Schedule Section */
         .schedule-card {
             background: var(--card-bg);
             border-radius: 12px;
@@ -310,59 +306,6 @@
             font-size: var(--font-size-lg);
         }
 
-        /* Recent Activity Section */
-        .activity-card {
-            background: var(--card-bg);
-            border-radius: 12px;
-            padding: 20px;
-            box-shadow: var(--shadow-md);
-            margin-bottom: 20px;
-            border: 1px solid var(--border-color);
-        }
-
-        .activity-list {
-            list-style: none;
-            padding: 0;
-        }
-
-        .activity-item {
-            display: flex;
-            align-items: center;
-            padding: 12px 0;
-            border-bottom: 1px solid var(--border-color);
-        }
-
-        .activity-item:last-child {
-            border-bottom: none;
-        }
-
-        .activity-icon {
-            width: 36px;
-            height: 36px;
-            border-radius: 8px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 18px;
-            color: var(--whitefont-color);
-            margin-right: 12px;
-        }
-
-        .activity-details {
-            flex: 1;
-        }
-
-        .activity-description {
-            font-size: 14px;
-            color: var(--blackfont-color);
-        }
-
-        .activity-time {
-            font-size: 12px;
-            color: var(--grayfont-color);
-        }
-
-        /* Responsive adjustments */
         @media (max-width: 1024px) {
             .charts-row {
                 grid-template-columns: 1fr;
@@ -407,7 +350,6 @@
 <body>
     <h1>Teacher Dashboard</h1>
 
-    <!-- Quick Actions -->
     <div class="quick-actions">
         <a href="attendance.php" class="action-btn">
             <i class="fas fa-check-circle"></i> Mark Attendance
@@ -420,7 +362,6 @@
         </a>
     </div>
 
-    <!-- Stats Cards -->
     <div class="dashboard-grid">
         <div class="card">
             <div class="card-header">
@@ -483,7 +424,6 @@
         </div>
     </div>
 
-    <!-- Charts Section -->
     <div class="charts-row">
         <div class="chart-card">
             <div class="chart-header">
@@ -512,7 +452,6 @@
         </div>
     </div>
 
-    <!-- Today's Schedule Section -->
     <div class="schedule-card">
         <div class="chart-header">
             <div class="chart-title">Today's Schedule</div>
@@ -536,17 +475,7 @@
         </div>
     </div>
 
-    <!-- Recent Activity Section -->
-    <div class="activity-card">
-        <div class="chart-header">
-            <div class="chart-title">Recent Activity</div>
-        </div>
-        <ul class="activity-list" id="activityList">
-        </ul>
-    </div>
-
     <script>
-        // Sample data for calculations
         const classes = [{
                 id: 1,
                 code: 'MATH-101-A',
@@ -742,7 +671,6 @@
                 updateDashboardStats();
                 initializeCharts();
                 renderTodaySchedule();
-                renderRecentActivity();
 
                 window.markAttendance = function() {
                     alert('Mark Attendance functionality to be implemented');
@@ -974,58 +902,6 @@ Students List: ${classItem.students.map(s => `${s.firstName} ${s.lastName}`).joi
                     </td>
                 `;
                 tbody.appendChild(row);
-            });
-        }
-
-        function renderRecentActivity() {
-            const activityList = document.getElementById('activityList');
-            const recentRecords = attendanceRecords
-                .slice()
-                .sort((a, b) => new Date(b.date) - new Date(a.date))
-                .slice(0, 5);
-
-            activityList.innerHTML = '';
-
-            if (recentRecords.length === 0) {
-                activityList.innerHTML = '<li class="no-schedule">No recent activity</li>';
-                return;
-            }
-
-            recentRecords.forEach(record => {
-                const student = classes
-                    .flatMap(c => c.students)
-                    .find(s => s.id === record.studentId);
-                if (!student) return;
-
-                const classItem = classes.find(c => c.students.some(s => s.id === record.studentId));
-                if (!classItem) return;
-
-                const statusColors = {
-                    present: 'bg-green',
-                    absent: 'bg-pink',
-                    late: 'bg-blue'
-                };
-
-                const statusIcons = {
-                    present: 'fa-check-circle',
-                    absent: 'fa-times-circle',
-                    late: 'fa-clock'
-                };
-
-                const li = document.createElement('li');
-                li.className = 'activity-item';
-                li.innerHTML = `
-                    <div class="activity-icon ${statusColors[record.status]}">
-                        <i class="fas ${statusIcons[record.status]}"></i>
-                    </div>
-                    <div class="activity-details">
-                        <div class="activity-description">
-                            ${student.firstName} ${student.lastName} marked as ${record.status} in ${classItem.code} (${classItem.subject})
-                        </div>
-                        <div class="activity-time">${formatDate(record.date)}</div>
-                    </div>
-                `;
-                activityList.appendChild(li);
             });
         }
 

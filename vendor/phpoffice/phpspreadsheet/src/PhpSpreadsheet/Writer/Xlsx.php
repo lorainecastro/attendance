@@ -5,6 +5,7 @@ namespace PhpOffice\PhpSpreadsheet\Writer;
 use PhpOffice\PhpSpreadsheet\Calculation\Calculation;
 use PhpOffice\PhpSpreadsheet\Calculation\Functions;
 use PhpOffice\PhpSpreadsheet\HashTable;
+use PhpOffice\PhpSpreadsheet\RichText\RichText;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Style\Borders;
 use PhpOffice\PhpSpreadsheet\Style\Conditional;
@@ -145,6 +146,8 @@ class Xlsx extends BaseWriter
     // Default changed from null in PhpSpreadsheet 4.0.0.
     private ?bool $forceFullCalc = self::DEFAULT_FORCE_FULL_CALC;
 
+    protected bool $restrictMaxColumnWidth = false;
+
     /**
      * Create a new Xlsx Writer.
      */
@@ -284,6 +287,19 @@ class Xlsx extends BaseWriter
     }
 
     /**
+     * @return (RichText|string)[] $stringTable
+     */
+    public function createStringTable(): array
+    {
+        $this->stringTable = [];
+        for ($i = 0; $i < $this->spreadSheet->getSheetCount(); ++$i) {
+            $this->stringTable = $this->getWriterPartStringTable()->createStringTable($this->spreadSheet->getSheet($i), $this->stringTable);
+        }
+
+        return $this->stringTable;
+    }
+
+    /**
      * Save PhpSpreadsheet to file.
      *
      * @param resource|string $filename
@@ -303,10 +319,7 @@ class Xlsx extends BaseWriter
         Functions::setReturnDateType(Functions::RETURNDATE_EXCEL);
 
         // Create string lookup table
-        $this->stringTable = [];
-        for ($i = 0; $i < $this->spreadSheet->getSheetCount(); ++$i) {
-            $this->stringTable = $this->getWriterPartStringTable()->createStringTable($this->spreadSheet->getSheet($i), $this->stringTable);
-        }
+        $this->createStringTable();
 
         // Create styles dictionaries
         $this->createStyleDictionaries();
@@ -806,5 +819,28 @@ class Xlsx extends BaseWriter
         $this->forceFullCalc = $forceFullCalc;
 
         return $this;
+    }
+
+    /**
+     * Excel has a nominal width limint of 255 for a column.
+     * Surprisingly, Xlsx can read and write larger values,
+     * and the file will appear as desired,
+     * but the User Interface does not allow you to set the width beyond 255,
+     * either directly or though auto-fit width.
+     * Xls sets its own value when the width is beyond 255.
+     * This method gets whether PhpSpreadsheet should restrict the
+     * column widths which it writes to the Excel limit, for formats
+     * which allow it to exceed 255.
+     */
+    public function setRestrictMaxColumnWidth(bool $restrictMaxColumnWidth): self
+    {
+        $this->restrictMaxColumnWidth = $restrictMaxColumnWidth;
+
+        return $this;
+    }
+
+    public function getRestrictMaxColumnWidth(): bool
+    {
+        return $this->restrictMaxColumnWidth;
     }
 }

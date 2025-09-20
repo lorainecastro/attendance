@@ -1,6 +1,6 @@
 {
     "require": {
-        "phpoffice/phpspreadsheet": "^4.5",
+        "phpoffice/phpspreadsheet": "^5.1",
         "endroid/qr-code": "^6.0",
         "tecnickcom/tcpdf": "^6.10"
     }

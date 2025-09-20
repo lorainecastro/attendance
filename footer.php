@@ -217,7 +217,7 @@
                     </div>
                     <div class="footer-logo-text">SAMS</div>
                 </div>
-                <p style="color: rgba(255, 255, 255, 0.8); font-size: 0.85rem;">
+                <p style="color: rgba(255, 255, 255, 0.8); font-size: 0.85rem; line-height: 1.8;">
                     SAMS empowers schools with smart attendance tracking and predictive analytics to boost student success.
                 </p>
             </div>

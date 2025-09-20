@@ -835,7 +835,7 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
                 const rate = calcAttendanceRate(student.class_id, student.lrn);
                 const row = document.createElement('tr');
                 row.innerHTML = `
-                    <td><img src="Uploads/${student.photo || 'no-icon.png'}" class="student-photo" alt="${student.name}"></td>
+                    <td><img src="uploads/${student.photo || 'no-icon.png'}" class="student-photo" alt="${student.name}"></td>
                     <td>${student.lrn}</td>
                     <td>${student.name}</td>
                     <td><span class="status-badge status-${statusClass}">${att.status || 'None'}</span></td>

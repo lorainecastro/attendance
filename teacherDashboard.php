@@ -4,8 +4,9 @@ session_start();
 
 $currentUser = validateSession();
 if (!$currentUser) {
+    destroySession();
     header("Location: index.php");
-    exit;
+    exit();
 }
 
 $profileImageUrl = $currentUser['picture'] ?? 'no-icon.png';
@@ -879,7 +880,7 @@ $profileName = htmlspecialchars($currentUser['firstname'] . ' ' . $currentUser['
     <!-- Main Content -->
     <main class="main-content" id="mainContent">
         <div class="dashboard-body">
-            <iframe id="dashboard-frame" src="./teacher/dashboard.php" frameborder="0"></iframe>
+            <iframe id="dashboard-frame" src="dashboard.php" frameborder="0"></iframe>
         </div>
     </main>
 

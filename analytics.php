@@ -1970,8 +1970,8 @@ if ($classes_json === false) {
             updateEarlyWarningTable();
         } else {
             console.warn('No classes available to initialize charts.');
-            document.getElementById('current-attendance-rate').textContent = 'N/A';
-            document.getElementById('predicted-attendance').textContent = 'N/A';
+            document.getElementById('current-attendance-rate').textContent = 'No data available';
+            document.getElementById('predicted-attendance').textContent = 'No data available';
             document.getElementById('at-risk-count').textContent = '0';
             document.getElementById('attendance-trend').textContent = 'No data';
             document.getElementById('at-risk-trend').textContent = 'No data';

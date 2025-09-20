@@ -968,7 +968,7 @@
         <div class="about-container">
             <div class="about-header">
                 <h2>About Our System</h2>
-                <p>Our Student Attendance Monitoring System, titled "Time Series Forecasting for Enhancing Student Attendance in Public School," is designed to address the critical issue of student absenteeism across public schools. By leveraging ARIMA-based Time Series Forecasting, our platform empowers teachers with a user-friendly, data-driven tool to track attendance trends, identify at-risk students, and implement timely interventions.</p>
+                <p>Our Student Attendance Monitoring System, titled "Time Series Forecasting for Monitoring and Enhancing Student Attendance in Public Schools", is designed to address the critical issue of student absenteeism across public schools. By leveraging ARIMA-based Time Series Forecasting, our platform empowers teachers with a user-friendly, data-driven tool to track attendance trends, identify at-risk students, and implement timely interventions.</p>
             </div>
 
             <div class="features-grid">

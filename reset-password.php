@@ -197,9 +197,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !isset($_POST['action'])) {
         body { font-family: var(--font-family); background: linear-gradient(135deg, var(--primary-blue-light) 0%, var(--background) 100%); min-height: 100vh; display: flex; flex-direction: column; }
         .header { background: linear-gradient(135deg, var(--white) 0%, rgba(37, 99, 235, 0.02) 100%); backdrop-filter: blur(10px); border-bottom: 1px solid var(--border-color); box-shadow: var(--shadow-md); position: sticky; top: 0; z-index: 1000; height: 70px; }
         .navbar { display: flex; justify-content: space-between; align-items: center; max-width: 1200px; margin: 0 auto; padding: 0 var(--spacing-lg); height: 100%; }
-        .logo { display: flex; align-items: center; gap: var(--spacing-sm); text-decoration: none; color: var(--primary-blue); font-weight: 700; font-size: var(--font-size-xl); transition: var(--transition); }
-        .logo i { font-size: 1.5rem; background: linear-gradient(135deg, var(--primary-blue), var(--info-cyan)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-        .logo:hover { transform: translateY(-1px); color: var(--primary-blue-hover); }
         .nav-links { display: flex; list-style: none; gap: var(--spacing-xl); align-items: center; }
         .nav-links a { text-decoration: none; color: var(--dark-gray); font-weight: 500; font-size: var(--font-size-base); padding: var(--spacing-sm) var(--spacing-md); border-radius: var(--radius-md); transition: var(--transition); position: relative; overflow: hidden; }
         .nav-links a::before { content: ''; position: absolute; top: 0; left: -100%; width: 100%; height: 100%; background: linear-gradient(90deg, transparent, rgba(37, 99, 235, 0.1), transparent); transition: var(--transition); }

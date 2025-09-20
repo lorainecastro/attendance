@@ -185,10 +185,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                 mkdir($exportDir, 0777, true);
                 chmod($exportDir, 0777);
             }
-            $pdf->Output(__DIR__ . "/$exportDir/$filename", 'F');
-            chmod(__DIR__ . "/$exportDir/$filename", 0644);
-            // $pdf->Output("$exportDir/$filename", 'F');
-            // chmod("$exportDir/$filename", 0644);
+            // $pdf->Output(__DIR__ . "/$exportDir/$filename", 'F');
+            // chmod(__DIR__ . "/$exportDir/$filename", 0644);
+            $pdf->Output("$exportDir/$filename", 'F');
+            chmod("$exportDir/$filename", 0644);
             echo json_encode(['success' => true, 'filename' => $filename]);
         } elseif ($format === 'excel') {
             $spreadsheet = new Spreadsheet();

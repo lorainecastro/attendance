@@ -570,9 +570,15 @@
         }
 
         .footer-logo .logo {
-            width: 36px;
-            height: 36px;
-            font-size: 16px;
+            width: 48px;
+            height: 48px;
+            background: var(--primary-blue);
+            border-radius: var(--radius);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 20px;
         }
 
         .footer-logo-text {

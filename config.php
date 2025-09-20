@@ -1,10 +1,21 @@
 <?php
-// Database configuration
-define('DB_HOST', '127.0.0.1');
-define('DB_PORT', '3307');
-define('DB_NAME', 'attendance');
-define('DB_USER', 'root');
-define('DB_PASS', '');
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
+
+if ($_SERVER['HTTP_HOST'] === 'localhost' || $_SERVER['HTTP_HOST'] === '127.0.0.1') {
+    define('DB_HOST', 'localhost');
+    define('DB_PORT', '3307');
+    define('DB_NAME', 'attendance');
+    define('DB_USER', 'root');
+    define('DB_PASS', '');
+} else {
+    define('DB_HOST', 'localhost');
+    define('DB_PORT', '3306');
+    define('DB_NAME', 'u220715996_attendance_db');
+    define('DB_USER', 'u220715996_attendance_db');
+    define('DB_PASS', 'sams.capstone@BULSU2025');
+}
 
 // Create database connection
 function getDBConnection()

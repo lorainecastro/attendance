@@ -191,29 +191,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             height: 100%;
         }
 
-        .logo {
-            display: flex;
-            align-items: center;
-            gap: var(--spacing-sm);
-            text-decoration: none;
-            color: var(--primary-blue);
-            font-weight: 700;
-            font-size: var(--font-size-xl);
-            transition: var(--transition);
-        }
-
-        .logo i {
-            font-size: 1.5rem;
-            background: linear-gradient(135deg, var(--primary-blue), var(--info-cyan));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-
-        .logo:hover {
-            transform: translateY(-1px);
-            color: var(--primary-blue-hover);
-        }
-
         .nav-links {
             display: flex;
             list-style: none;
@@ -912,51 +889,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     </style>
 </head>
 <body>
-    <header class="header">
-        <nav class="navbar">
-            <a href="index.php" class="logo">
-                <i class="fas fa-graduation-cap"></i>
-                <span>SAMS</span>
-            </a>
-            <ul class="nav-links">
-                <li><a href="index.php">Home</a></li>
-                <li><a href="index.php#about">About</a></li>
-                <li><a href="index.php#features">Features</a></li>
-                <li><a href="index.php#contact">Contact</a></li>
-            </ul>
-            <div class="auth-buttons">
-                <a href="sign-in.php" class="btn btn-outline">
-                    <i class="fas fa-sign-in-alt"></i>
-                    Sign In
-                </a>
-                <a href="sign-up.php" class="btn btn-primary">
-                    <i class="fas fa-user-plus"></i>
-                    Sign Up
-                </a>
-            </div>
-            <button class="mobile-menu-toggle" onclick="toggleMobileMenu()">
-                <i class="fas fa-bars"></i>
-            </button>
-        </nav>
-        <div class="mobile-menu" id="mobileMenu">
-            <div class="mobile-nav-links">
-                <a href="index.php" onclick="closeMobileMenu()">Home</a>
-                <a href="index.php#about" onclick="closeMobileMenu()">About</a>
-                <a href="index.php#features" onclick="closeMobileMenu()">Features</a>
-                <a href="index.php#contact" onclick="closeMobileMenu()">Contact</a>
-            </div>
-            <div class="mobile-auth-buttons">
-                <a href="sign-in.php" class="btn btn-outline" onclick="closeMobileMenu()">
-                    <i class="fas fa-sign-in-alt"></i>
-                    Sign In
-                </a>
-                <a href="sign-up.php" class="btn btn-primary" onclick="closeMobileMenu()">
-                    <i class="fas fa-user-plus"></i>
-                    Sign Up
-                </a>
-            </div>
-        </div>
-    </header>
+    <?php include('header.php'); ?>
 
     <div class="verify-container">
         <h2 class="form-title">Verify Your Email</h2>
@@ -990,67 +923,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         </form>
     </div>
 
-    <footer class="footer">
-        <div class="footer-content">
-            <div class="footer-grid">
-                <div class="footer-brand">
-                    <a href="#" class="footer-logo">
-                        <i class="fas fa-graduation-cap"></i>
-                        <span>SAMS</span>
-                    </a>
-                    <p class="footer-description">
-                        Revolutionizing attendance monitoring through advanced AI and data analytics.
-                        Empowering educational institutions to support student success and reduce absenteeism
-                        with intelligent, data-driven solutions.
-                    </p>
-                    <div class="social-links">
-                        <a href="#" class="social-link"><i class="fab fa-facebook-f"></i></a>
-                        <a href="#" class="social-link"><i class="fab fa-twitter"></i></a>
-                        <a href="#" class="social-link"><i class="fab fa-linkedin-in"></i></a>
-                        <a href="#" class="social-link"><i class="fab fa-instagram"></i></a>
-                    </div>
-                </div>
-                <div class="footer-section">
-                    <h4>Quick Links</h4>
-                    <ul class="footer-links">
-                        <li><a href="#home">Home</a></li>
-                        <li><a href="#about">About Us</a></li>
-                        <li><a href="#features">Features</a></li>
-                        <li><a href="#contact">Contact</a></li>
-                    </ul>
-                </div>
-                <div class="footer-section">
-                    <h4>Solutions</h4>
-                    <ul class="footer-links">
-                        <li><a href="#">Time Series Forecasting</a></li>
-                        <li><a href="#">Regression Analysis</a></li>
-                        <li><a href="#">Real-time Analytics</a></li>
-                        <li><a href="#">Predictive Insights</a></li>
-                        <li><a href="#">Custom Reports</a></li>
-                    </ul>
-                </div>
-                <div class="footer-section">
-                    <h4>Resources</h4>
-                    <ul class="footer-links">
-                        <li><a href="#">Documentation</a></li>
-                        <li><a href="#">API Reference</a></li>
-                        <li><a href="#">Support Center</a></li>
-                        <li><a href="#">System Status</a></li>
-                        <li><a href="#">Training Materials</a></li>
-                    </ul>
-                </div>
-            </div>
-            <div class="footer-divider"></div>
-            <div class="footer-bottom">
-                <p>&copy; 2025 SAMS - Student Attendance Monitoring System. All rights reserved.</p>
-                <div class="footer-bottom-links">
-                    <a href="#">Privacy Policy</a>
-                    <a href="#">Terms of Service</a>
-                    <a href="#">Cookie Policy</a>
-                </div>
-            </div>
-        </div>
-    </footer>
+    <?php include('footer.php'); ?>
 
     <script>
         // Mobile menu toggle

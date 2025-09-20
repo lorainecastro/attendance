@@ -244,24 +244,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             padding: 0 var(--spacing-lg);
             height: 100%;
         }
-        .logo {
-            display: flex;
-            align-items: center;
-            gap: var(--spacing-sm);
-            text-decoration: none;
-            color: var(--primary-blue);
-            font-weight: 700;
-            font-size: var(--font-size-xl);
-            transition: var(--transition-fast);
-        }
-        .logo i {
-            font-size: 1.5rem;
-            background: linear-gradient(135deg, var(--primary-blue), var(--info-cyan));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
-        .logo:hover { transform: translateY(-1px); color: var(--primary-blue-hover); }
         .nav-links {
             display: flex;
             list-style: none;
@@ -658,111 +640,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         .terms-checkbox label { font-size: var(--font-size-sm); color: var(--dark-gray); }
         .terms-checkbox a { color: var(--primary-blue); text-decoration: none; font-weight: 600; }
         .terms-checkbox a:hover { text-decoration: underline; }
-        .footer {
-            background: linear-gradient(135deg, var(--dark-gray), #1f2937);
-            color: var(--white);
-            padding: var(--spacing-2xl) 0 var(--spacing-lg);
-            position: relative;
-            overflow: hidden;
-        }
-        .footer::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 4px;
-            background: linear-gradient(90deg, var(--primary-blue), var(--info-cyan), var(--success-green), var(--warning-yellow));
-        }
-        .footer-content { max-width: 1200px; margin: 0 auto; padding: 0 var(--spacing-lg); }
-        .footer-grid {
-            display: grid;
-            grid-template-columns: 2fr 1fr 1fr 1fr;
-            gap: var(--spacing-2xl);
-            margin-bottom: var(--spacing-2xl);
-        }
-        .footer-brand { display: flex; flex-direction: column; gap: var(--spacing-md); }
-        .footer-logo {
-            display: flex;
-            align-items: center;
-            gap: var(--spacing-sm);
-            font-size: var(--font-size-xl);
-            font-weight: 700;
-            color: var(--white);
-            text-decoration: none;
-            margin-bottom: var(--spacing-md);
-        }
-        .footer-logo i {
-            font-size: 1.8rem;
-            background: linear-gradient(135deg, var(--primary-blue), var(--info-cyan));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
-        .footer-description { line-height: 1.8; color: #d1d5db; margin-bottom: var(--spacing-lg); }
-        .social-links { display: flex; gap: var(--spacing-md); }
-        .social-link {
-            width: 45px;
-            height: 45px;
-            background: linear-gradient(135deg, var(--primary-blue), var(--info-cyan));
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: var(--white);
-            text-decoration: none;
-            transition: var(--transition-normal);
-            font-size: 1.2rem;
-        }
-        .social-link:hover { transform: translateY(-3px); box-shadow: var(--shadow-lg); }
-        .footer-section h4 {
-            font-size: var(--font-size-lg);
-            margin-bottom: var(--spacing-lg);
-            color: var(--white);
-            position: relative;
-            padding-bottom: var(--spacing-sm);
-        }
-        .footer-section h4::after {
-            content: '';
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            width: 30px;
-            height: 2px;
-            background: linear-gradient(90deg, var(--primary-blue), var(--info-cyan));
-        }
-        .footer-links {
-            list-style: none;
-            display: flex;
-            flex-direction: column;
-            gap: var(--spacing-sm);
-        }
-        .footer-links a {
-            color: #d1d5db;
-            text-decoration: none;
-            transition: var(--transition-fast);
-            padding: var(--spacing-xs) 0;
-            display: inline-block;
-        }
-        .footer-links a:hover { color: var(--primary-blue); transform: translateX(5px); }
-        .footer-divider {
-            height: 1px;
-            background: linear-gradient(90deg, transparent, #4b5563, transparent);
-            margin: var(--spacing-xl) 0;
-        }
-        .footer-bottom {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap;
-            gap: var(--spacing-md);
-            padding-top: var(--spacing-lg);
-            border-top: 1px solid #374151;
-        }
-        .footer-bottom p { color: #9ca3af; margin: 0; }
-        .footer-bottom-links { display: flex; gap: var(--spacing-lg); }
-        .footer-bottom-links a { color: #9ca3af; text-decoration: none; transition: var(--transition-fast); }
-        .footer-bottom-links a:hover { color: var(--primary-blue); }
+        
         .modal {
             display: none;
             position: fixed;
@@ -834,6 +712,108 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             .signup-header h1 { font-size: var(--font-size-xl); }
             .signup-header p { font-size: var(--font-size-sm); }
         }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+        .modal-content {
+            background-color: var(--white);
+            padding: var(--spacing-xl);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-lg);
+            max-width: 600px;
+            width: 90%;
+            text-align: left;
+            max-height: 80vh;
+            overflow-y: auto;
+            scrollbar-width: thin;
+            scrollbar-color: var(--primary-blue) var(--light-gray);
+        }
+        .modal-content::-webkit-scrollbar { width: 8px; }
+        .modal-content::-webkit-scrollbar-track {
+            background: var(--light-gray);
+            border-radius: 10px;
+        }
+        .modal-content::-webkit-scrollbar-thumb {
+            background: var(--primary-blue);
+            border-radius: 10px;
+        }
+        .modal-content h1 {
+            font-size: var(--font-size-2xl);
+            font-weight: 700;
+            margin-bottom: var(--spacing-lg);
+            color: var(--primary-blue);
+        }
+        .modal-content h2 {
+            font-size: var(--font-size-lg);
+            font-weight: 600;
+            margin: var(--spacing-lg) 0 var(--spacing-md);
+        }
+        .modal-content p, .modal-content li {
+            font-size: var(--font-size-base);
+            margin-bottom: var(--spacing-md);
+        }
+        .modal-content ul {
+            list-style: disc;
+            margin-left: var(--spacing-xl);
+            margin-bottom: var(--spacing-md);
+        }
+        .modal-buttons { display: flex; justify-content: center; gap: var(--spacing-md); }
+        .modal-btn {
+            padding: var(--spacing-sm) var(--spacing-lg);
+            border-radius: var(--radius-md);
+            font-size: var(--font-size-base);
+            font-weight: 500;
+            cursor: pointer;
+            transition: var(--transition-normal);
+        }
+        .modal-btn-cancel {
+            background: transparent;
+            color: var(--medium-gray);
+            border: 1px solid var(--border-color);
+        }
+        .modal-btn-cancel:hover {
+            background-color: var(--light-gray);
+            transform: translateY(-2px);
+        }
+        .modal-btn-verify {
+            background: linear-gradient(135deg, var(--primary-blue) 0%, var(--primary-blue-hover) 100%);
+            color: var(--white);
+            border: none;
+        }
+        .modal-btn-verify:hover {
+            background: linear-gradient(135deg, var(--primary-blue-hover), var(--primary-blue));
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-lg);
+        }
+        @media (max-width: 768px) {
+            .nav-links, .auth-buttons { display: none; }
+            .mobile-menu-toggle { display: block; }
+            .navbar { padding: 0 var(--spacing-md); }
+            .main-content { padding: var(--spacing-md); }
+            .signup-container { flex-direction: column; max-width: 480px; }
+            .signup-header { flex: 0 0 auto; padding: var(--spacing-lg); }
+            .signup-form { padding: var(--spacing-lg); }
+            .form-row { flex-direction: column; gap: 0; }
+            .form-group { min-width: 100%; }
+            .footer-grid { grid-template-columns: 1fr; gap: var(--spacing-xl); }
+            .footer-bottom { flex-direction: column; text-align: center; }
+            .modal-content { max-width: 90%; padding: var(--spacing-lg); }
+        }
+        @media (max-width: 480px) {
+            .signup-header h1 { font-size: var(--font-size-xl); }
+            .signup-header p { font-size: var(--font-size-sm); }
+            .modal-content h1 { font-size: var(--font-size-xl); }
+        }
     </style>
 </head>
 <body>
@@ -843,37 +823,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if (emailInput) { emailInput.focus(); }
         });
     </script>
-    <header class="header">
-        <nav class="navbar">
-            <a href="index.php" class="logo">
-                <i class="fas fa-graduation-cap"></i>
-                <span>SAMS</span>
-            </a>
-            <ul class="nav-links">
-                <li><a href="index.php">Home</a></li>
-                <li><a href="index.php#about">About</a></li>
-                <li><a href="index.php#features">Features</a></li>
-                <li><a href="index.php#contact">Contact</a></li>
-            </ul>
-            <div class="auth-buttons">
-                <a href="sign-in.php" class="btn btn-outline"><i class="fas fa-sign-in-alt"></i> Sign In</a>
-                <a href="sign-up.php" class="btn btn-primary"><i class="fas fa-user-plus"></i> Sign Up</a>
-            </div>
-            <button class="mobile-menu-toggle" onclick="toggleMobileMenu()"><i class="fas fa-bars"></i></button>
-        </nav>
-        <div class="mobile-menu" id="mobileMenu">
-            <div class="mobile-nav-links">
-                <a href="index.php" onclick="closeMobileMenu()">Home</a>
-                <a href="index.php#about" onclick="closeMobileMenu()">About</a>
-                <a href="index.php#features" onclick="closeMobileMenu()">Features</a>
-                <a href="index.php#contact" onclick="closeMobileMenu()">Contact</a>
-            </div>
-            <div class="mobile-auth-buttons">
-                <a href="sign-in.php" class="btn btn-outline" onclick="closeMobileMenu()"><i class="fas fa-sign-in-alt"></i> Sign In</a>
-                <a href="sign-up.php" class="btn btn-primary" onclick="closeMobileMenu()"><i class="fas fa-user-plus"></i> Sign Up</a>
-            </div>
-        </div>
-    </header>
+    <?php include 'header.php'; ?>
     <div class="main-content">
         <div class="signup-container">
             <div class="signup-header">
@@ -942,7 +892,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     </div>
                     <div class="terms-checkbox">
                         <input type="checkbox" id="terms" name="terms" required>
-                        <label for="terms">I agree to the <a href="#">Terms of Service</a> and <a href="#">Privacy Policy</a></label>
+                        <label for="terms">I agree to the <a href="#" onclick="openModal('termsModal'); return false;">Terms of Service</a> and <a href="#" onclick="openModal('privacyModal'); return false;">Privacy Policy</a></label>
                     </div>
                     <button type="submit" class="signup-btn">
                         <span>Create Account</span>
@@ -955,69 +905,73 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             </div>
         </div>
     </div>
-    <footer class="footer">
-        <div class="footer-content">
-            <div class="footer-grid">
-                <div class="footer-brand">
-                    <a href="#" class="footer-logo"><i class="fas fa-graduation-cap"></i><span>SAMS</span></a>
-                    <p class="footer-description">
-                        Revolutionizing attendance monitoring through advanced AI and data analytics.
-                        Empowering educational institutions to support student success and reduce absenteeism
-                        with intelligent, data-driven solutions.
-                    </p>
-                    <div class="social-links">
-                        <a href="#" class="social-link"><i class="fab fa-facebook-f"></i></a>
-                        <a href="#" class="social-link"><i class="fab fa-twitter"></i></a>
-                        <a href="#" class="social-link"><i class="fab fa-linkedin-in"></i></a>
-                        <a href="#" class="social-link"><i class="fab fa-instagram"></i></a>
-                    </div>
-                </div>
-                <div class="footer-section">
-                    <h4>Quick Links</h4>
-                    <ul class="footer-links">
-                        <li><a href="#home">Home</a></li>
-                        <li><a href="#about">About Us</a></li>
-                        <li><a href="#features">Features</a></li>
-                        <li><a href="#contact">Contact</a></li>
-                    </ul>
-                </div>
-                <div class="footer-section">
-                    <h4>Solutions</h4>
-                    <ul class="footer-links">
-                        <li><a href="#">Time Series Forecasting</a></li>
-                        <li><a href="#">Regression Analysis</a></li>
-                        <li><a href="#">Real-time Analytics</a></li>
-                        <li><a href="#">Predictive Insights</a></li>
-                        <li><a href="#">Custom Reports</a></li>
-                    </ul>
-                </div>
-                <div class="footer-section">
-                    <h4>Resources</h4>
-                    <ul class="footer-links">
-                        <li><a href="#">Documentation</a></li>
-                        <li><a href="#">API Reference</a></li>
-                        <li><a href="#">Support Center</a></li>
-                        <li><a href="#">System Status</a></li>
-                        <li><a href="#">Training Materials</a></li>
-                    </ul>
-                </div>
-            </div>
-            <div class="footer-divider"></div>
-            <div class="footer-bottom">
-                <p>&copy; 2025 SAMS - Student Attendance Monitoring System. All rights reserved.</p>
-                <div class="footer-bottom-links">
-                    <a href="#">Privacy Policy</a>
-                    <a href="#">Terms of Service</a>
-                    <a href="#">Cookie Policy</a>
-                </div>
+    <?php include 'footer.php'; ?>
+    <!-- Terms of Service Modal -->
+    <div id="termsModal" class="modal">
+        <div class="modal-content">
+            <h1>Terms of Service</h1>
+            <p>Last updated: September 16, 2025</p>
+            <h2>1. Acceptance of Terms</h2>
+            <p>By accessing or using the Student Attendance Monitoring System (SAMS), you agree to be bound by these Terms of Service. If you do not agree, please do not use our services.</p>
+            <h2>2. Use of Services</h2>
+            <p>You agree to use SAMS only for lawful purposes and in a manner consistent with all applicable laws and regulations.</p>
+            <ul>
+                <li>You must provide accurate and complete information during registration.</li>
+                <li>You are responsible for maintaining the confidentiality of your account credentials.</li>
+                <li>You agree not to use SAMS to transmit any harmful or illegal content.</li>
+            </ul>
+            <h2>3. Account Responsibilities</h2>
+            <p>You are responsible for all activities that occur under your account. Notify us immediately of any unauthorized use.</p>
+            <h2>4. Termination</h2>
+            <p>We reserve the right to suspend or terminate your account if you violate these terms.</p>
+            <h2>5. Limitation of Liability</h2>
+            <p>SAMS is provided "as is" without warranties of any kind. We are not liable for any damages arising from your use of the service.</p>
+            <h2>6. Changes to Terms</h2>
+            <p>We may update these Terms of Service from time to time. You will be notified of significant changes via email or through the platform.</p>
+            <h2>7. Contact Us</h2>
+            <p>If you have any questions, please contact us at <a href="mailto:support@sams.com">support@sams.com</a>.</p>
+            <div class="modal-buttons">
+                <button class="modal-btn modal-btn-cancel" onclick="closeModal('termsModal')">Close</button>
             </div>
         </div>
-    </footer>
+    </div>
+    <!-- Privacy Policy Modal -->
+    <div id="privacyModal" class="modal">
+        <div class="modal-content">
+            <h1>Privacy Policy</h1>
+            <p>Last updated: September 16, 2025</p>
+            <h2>1. Information We Collect</h2>
+            <p>We collect personal information you provide, such as your name, email, username, and institution details, to provide and improve our services.</p>
+            <h2>2. How We Use Your Information</h2>
+            <p>Your information is used to:</p>
+            <ul>
+                <li>Manage your account and provide access to SAMS.</li>
+                <li>Send you OTPs and other account-related communications.</li>
+                <li>Improve our services and ensure security.</li>
+            </ul>
+            <h2>3. Data Sharing</h2>
+            <p>We do not sell your personal information. We may share it with service providers (e.g., email services) to operate SAMS, or as required by law.</p>
+            <h2>4. Data Security</h2>
+            <p>We use industry-standard measures to protect your data, but no method is 100% secure.</p>
+            <h2>5. Your Rights</h2>
+            <p>You have the right to access, correct, or delete your personal information. Contact us at <a href="mailto:support@sams.com">support@sams.com</a> to exercise these rights.</p>
+            <h2>6. Cookies</h2>
+            <p>We use cookies to enhance your experience. You can manage cookie preferences in your browser settings.</p>
+            <h2>7. Changes to This Policy</h2>
+            <p>We may update this Privacy Policy. Significant changes will be communicated via email or through the platform.</p>
+            <h2>8. Contact Us</h2>
+            <p>For questions, contact us at <a href="mailto:support@sams.com">support@sams.com</a>.</p>
+            <div class="modal-buttons">
+                <button class="modal-btn modal-btn-cancel" onclick="closeModal('privacyModal')">Close</button>
+            </div>
+        </div>
+    </div>
+    <!-- Existing Unverified Email Modal -->
     <div id="unverifiedModal" class="modal">
         <div class="modal-content">
             <p>This email is already registered but not verified. To continue, verify your account first.</p>
             <div class="modal-buttons">
-                <button class="modal-btn modal-btn-cancel" onclick="closeModal()">Cancel</button>
+                <button class="modal-btn modal-btn-cancel" onclick="closeModal('unverifiedModal')">Cancel</button>
                 <button class="modal-btn modal-btn-verify" onclick="verifyEmail()">Verify</button>
             </div>
         </div>
@@ -1036,6 +990,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             mobileMenu.classList.remove('active');
             toggleBtn.classList.remove('fa-times');
             toggleBtn.classList.add('fa-bars');
+        }
+        // Modal control functions
+        function openModal(modalId) {
+            document.getElementById(modalId).style.display = 'flex';
+        }
+        function closeModal(modalId) {
+            document.getElementById(modalId).style.display = 'none';
         }
         document.addEventListener('DOMContentLoaded', function() {
             const currentPage = window.location.pathname.split('/').pop() || 'index.php';
@@ -1167,8 +1128,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }, 800);
             }
         });
-        function closeModal() {
-            document.getElementById('unverifiedModal').style.display = 'none';
+        function closeModal(modalId) {
+            document.getElementById(modalId).style.display = 'none';
             document.getElementById('email').value = '';
         }
         function verifyEmail() {

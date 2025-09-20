@@ -257,26 +257,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             padding: 0 var(--spacing-lg);
             height: 100%;
         }
-        .logo {
-            display: flex;
-            align-items: center;
-            gap: var(--spacing-sm);
-            text-decoration: none;
-            color: var(--primary-blue);
-            font-weight: 700;
-            font-size: var(--font-size-xl);
-            transition: var(--transition);
-        }
-        .logo i {
-            font-size: 1.5rem;
-            background: linear-gradient(135deg, var(--primary-blue), var(--info-cyan));
-            background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-        .logo:hover {
-            transform: translateY(-1px);
-            color: var(--primary-blue-hover);
-        }
+        
         .nav-links {
             display: flex;
             list-style: none;

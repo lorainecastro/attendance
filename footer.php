@@ -235,8 +235,8 @@
                 <ul>
                     <li><a href="#support">Support</a></li>
                     <li><a href="#help">Help Center</a></li>
-                    <li><a href="#privacy">Privacy Policy</a></li>
-                    <li><a href="#terms">Terms of Service</a></li>
+                    <li><a href="terms.php">Privacy Policy</a></li>
+                    <li><a href="terms.php">Terms of Service</a></li>
                 </ul>
             </div>
             <div class="footer-column">

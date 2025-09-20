@@ -346,11 +346,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             font-family: var(--font-family);
         }
 
-        html, body {
-            height: 100%;
-            margin: 0;
-        }
-
         body {
             background-color: var(--card-bg);
             color: var(--blackfont-color);

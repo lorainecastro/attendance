@@ -261,15 +261,16 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
             --status-none-bg: #f8fafc;
         }
 
-        * { margin: 0; padding: 0; box-sizing: border-box; font-family: var(--font-family); }
-        html, body {
-            height: 100%;
+        * {
             margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: var(--font-family);
         }
 
         body {
-            background-color: var(--card-bg); 
-            color: var(--blackfont-color); 
+            background-color: var(--card-bg);
+            color: var(--blackfont-color);
             padding: 20px;
         }
 

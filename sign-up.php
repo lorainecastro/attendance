@@ -814,6 +814,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             .signup-header p { font-size: var(--font-size-sm); }
             .modal-content h1 { font-size: var(--font-size-xl); }
         }
+
+        .required-asterisk {
+            color: red;
+            font-size: 1.2em;
+            vertical-align: top;
+        }
     </style>
 </head>
 <body>
@@ -836,13 +842,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <form id="signupForm" action="sign-up.php" method="POST">
                     <div class="form-row">
                         <div class="form-group">
-                            <label for="email" class="form-label">Email Address</label>
+                            <label for="email" class="form-label">Email Address <span class="required-asterisk">*</span></label>
                             <div class="input-icon email-icon">
                                 <input type="email" id="email" name="email" class="form-input" placeholder="Enter your email address" value="<?php echo htmlspecialchars($email, ENT_QUOTES, 'UTF-8'); ?>" required>
                             </div>
                         </div>
                         <div class="form-group">
-                            <label for="username" class="form-label">Username</label>
+                            <label for="username" class="form-label">Username <span class="required-asterisk">*</span></label>
                             <div class="input-icon username-icon">
                                 <input type="text" id="username" name="username" class="form-input" placeholder="Choose a username" value="<?php echo htmlspecialchars($username, ENT_QUOTES, 'UTF-8'); ?>" required>
                             </div>
@@ -851,7 +857,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     </div>
                     <div class="form-row">
                         <div class="form-group">
-                            <label for="institution" class="form-label">Institution Name</label>
+                            <label for="institution" class="form-label">Institution Name (Optional)</label>
                             <div class="input-icon institution-icon">
                                 <input type="text" id="institution" name="institution" class="form-input" placeholder="Enter your institution name" value="<?php echo htmlspecialchars($institution, ENT_QUOTES, 'UTF-8'); ?>">
                             </div>
@@ -859,13 +865,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     </div>
                     <div class="form-row">
                         <div class="form-group">
-                            <label for="firstname" class="form-label">First Name</label>
+                            <label for="firstname" class="form-label">First Name <span class="required-asterisk">*</span></label>
                             <div class="input-icon user-icon">
                                 <input type="text" id="firstname" name="firstname" class="form-input" placeholder="Enter your first name" value="<?php echo htmlspecialchars($firstname, ENT_QUOTES, 'UTF-8'); ?>" required>
                             </div>
                         </div>
                         <div class="form-group">
-                            <label for="lastname" class="form-label">Last Name</label>
+                            <label for="lastname" class="form-label">Last Name <span class="required-asterisk">*</span></label>
                             <div class="input-icon user-icon">
                                 <input type="text" id="lastname" name="lastname" class="form-input" placeholder="Enter your last name" value="<?php echo htmlspecialchars($lastname, ENT_QUOTES, 'UTF-8'); ?>" required>
                             </div>
@@ -873,14 +879,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     </div>
                     <div class="form-row">
                         <div class="form-group">
-                            <label for="password" class="form-label">Password</label>
+                            <label for="password" class="form-label">Password <span class="required-asterisk">*</span></label>
                             <div class="input-icon password-icon">
                                 <input type="password" id="password" name="password" class="form-input" placeholder="Create a password" required>
                             </div>
                             <div id="passwordStrength" class="password-strength"></div>
                         </div>
                         <div class="form-group">
-                            <label for="confirmPassword" class="form-label">Confirm Password</label>
+                            <label for="confirmPassword" class="form-label">Confirm Password <span class="required-asterisk">*</span></label>
                             <div class="input-icon confirm-password-icon">
                                 <input type="password" id="confirmPassword" name="confirmPassword" class="form-input" placeholder="Confirm your password" required>
                             </div>

@@ -1475,7 +1475,7 @@ if ($classes_json === false) {
                     labels: [...selectedClass.historical_dates, ...selectedClass.forecast_dates],
                     datasets: [
                         {
-                            label: 'Historical Average',
+                            label: 'Historical Data',
                             data: [...historicalCumAvgs, ...Array(selectedClass.forecast_values.length).fill(null)],
                             borderColor: '#3b82f6',
                             backgroundColor: 'rgba(59, 130, 246, 0.1)',
@@ -1837,7 +1837,7 @@ if ($classes_json === false) {
                         labels: [...student.historical_dates, ...student.forecast_dates],
                         datasets: [
                             {
-                                label: 'Historical Average',
+                                label: 'Historical Data',
                                 data: [...historicalCumAvgs, ...Array(validatedForecast.length).fill(null)],
                                 borderColor: '#3b82f6',
                                 backgroundColor: 'rgba(59, 130, 246, 0.1)',

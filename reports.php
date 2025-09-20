@@ -104,6 +104,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         $headers = ['Class', 'LRN', 'Name', 'Status', 'Time Checked'];
     } elseif ($reportType === 'class') {
         $headers = ['Class', 'Total Students', 'Present', 'Absent', 'Late', 'Average Attendance'];
+    } elseif ($reportType === 'perfect') {
+        $headers = ['Class', 'LRN', 'Name', 'Status', 'Reason'];
     }
 
     try {
@@ -152,6 +154,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                             $bgColor = '#fef3c7';
                             $textColor = '#92400e';
                         } elseif ($value === 'Absent') {
+                            $bgColor = '#fecaca';
+                            $textColor = '#991b1b';
+                        }
+                    } elseif ($header === 'Status' && $reportType === 'perfect') {
+                        if ($value === 'Recognized') {
+                            $bgColor = '#dcfce7';
+                            $textColor = '#166534';
+                        } else {
                             $bgColor = '#fecaca';
                             $textColor = '#991b1b';
                         }
@@ -208,6 +218,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                                 'font' => ['color' => ['argb' => '92400E']]
                             ]);
                         } elseif ($value === 'Absent') {
+                            $sheet->getStyle($col . $row)->applyFromArray([
+                                'fill' => ['fillType' => Fill::FILL_SOLID, 'color' => ['argb' => 'FECACA']],
+                                'font' => ['color' => ['argb' => '991B1B']]
+                            ]);
+                        }
+                    } elseif ($header === 'Status' && $reportType === 'perfect') {
+                        if ($value === 'Recognized') {
+                            $sheet->getStyle($col . $row)->applyFromArray([
+                                'fill' => ['fillType' => Fill::FILL_SOLID, 'color' => ['argb' => 'DCFCE7']],
+                                'font' => ['color' => ['argb' => '166534']]
+                            ]);
+                        } else {
                             $sheet->getStyle($col . $row)->applyFromArray([
                                 'fill' => ['fillType' => Fill::FILL_SOLID, 'color' => ['argb' => 'FECACA']],
                                 'font' => ['color' => ['argb' => '991B1B']]
@@ -757,7 +779,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             const reportTbody = document.getElementById('report-tbody');
 
             reportTbody.innerHTML = '';
-            let title = reportType === 'student' ? 'Student Attendance History' : 'Attendance per Class';
+            let title = reportType === 'student' ? 'Student Attendance History' :
+                        reportType === 'class' ? 'Attendance per Class' : 'Perfect Attendance Recognition';
             reportTitle.textContent = title;
 
             if (reportType === 'class') {
@@ -797,6 +820,52 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                         <td>${attendanceRate}%</td>
                     `;
                     reportTbody.appendChild(row);
+                });
+            } else if (reportType === 'perfect') {
+                reportThead.innerHTML = `
+                    <tr>
+                        <th>Class</th>
+                        <th>LRN</th>
+                        <th>Name</th>
+                        <th>Status</th>
+                        <th>Reason</th>
+                    </tr>
+                `;
+
+                let filteredClasses = classId ? classes.filter(cls => cls.id == classId) : classes;
+                filteredClasses.forEach(cls => {
+                    let students = studentId ? cls.students.filter(s => s.id == studentId) : cls.students;
+                    students.forEach(student => {
+                        let filteredData = attendanceData.filter(record => record.classId == cls.id && record.studentId == student.id);
+                        if (dateFrom) filteredData = filteredData.filter(record => record.date >= dateFrom);
+                        if (dateTo) filteredData = filteredData.filter(record => record.date <= dateTo);
+
+                        const presentCount = filteredData.filter(record => record.status === 'Present').length;
+                        const absentCount = filteredData.filter(record => record.status === 'Absent').length;
+                        const lateCount = filteredData.filter(record => record.status === 'Late').length;
+                        const status = (absentCount === 0 && lateCount === 0 && presentCount > 0) ? 'Recognized' : 'Not Recognized';
+                        let reason = '';
+                        if (status === 'Not Recognized') {
+                            let reasons = [];
+                            if (lateCount > 0) reasons.push(`${lateCount} Late`);
+                            if (absentCount > 0) reasons.push(`${absentCount} Absent`);
+                            reason = reasons.join(' and ');
+                        }
+
+                        const formattedClass = `${cls.gradeLevel} - ${cls.sectionName} (${cls.subject})`;
+                        const name = `${student.lastName}, ${student.firstName} ${student.middleName || ''}`.trim();
+                        const statusClass = status === 'Recognized' ? 'status-present' : 'status-absent';
+
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                            <td>${formattedClass}</td>
+                            <td>${student.id}</td>
+                            <td>${name}</td>
+                            <td><span class="status-badge ${statusClass}">${status}</span></td>
+                            <td>${reason}</td>
+                        `;
+                        reportTbody.appendChild(row);
+                    });
                 });
             } else {
                 reportThead.innerHTML = `

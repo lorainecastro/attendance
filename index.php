@@ -3,66 +3,29 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SAMS - Student Attendance Monitoring System</title>
+    <title>Student Attendance Monitoring System</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         :root {
-            /* Primary Colors */
-            --primary-blue: #3b82f6;
-            --primary-blue-hover: #2563eb;
+            --primary-blue: #2563eb;
+            --primary-blue-hover: #1d4ed8;
             --primary-blue-light: #dbeafe;
-            
-            /* Status Colors */
-            --success-green: #16a34a;
-            --warning-yellow: #ca8a04;
+            --success-green: #059669;
+            --warning-yellow: #d97706;
             --danger-red: #dc2626;
-            --info-cyan: #0891b2;
-            
-            /* Neutral Colors */
-            --dark-gray: #374151;
+            --dark-gray: #1f2937;
             --medium-gray: #6b7280;
-            --light-gray: #d1d5db;
-            --background: #f9fafb;
+            --light-gray: #f8fafc;
+            --background: #ffffff;
             --white: #ffffff;
             --border-color: #e5e7eb;
-            
-            /* Typography */
-            --font-family: 'Inter', sans-serif;
-            --font-size-sm: 0.875rem;
-            --font-size-base: 1rem;
-            --font-size-lg: 1.125rem;
-            --font-size-xl: 1.25rem;
-            --font-size-2xl: 1.5rem;
-            
-            /* Spacing */
-            --spacing-xs: 0.25rem;
-            --spacing-sm: 0.5rem;
-            --spacing-md: 1rem;
-            --spacing-lg: 1.5rem;
-            --spacing-xl: 2rem;
-            --spacing-2xl: 3rem;
-            
-            /* Layout */
-            --sidebar-width: 280px;
-            --sidebar-collapsed-width: 70px;
-            --header-height: 70px;
-            
-            /* Shadows */
-            --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-            
-            /* Border Radius */
-            --radius-sm: 0.25rem;
-            --radius-md: 0.5rem;
-            --radius-lg: 0.75rem;
-            --radius-xl: 1rem;
-            
-            /* Transitions */
-            --transition-fast: 0.15s ease-in-out;
-            --transition-normal: 0.3s ease-in-out;
-            --transition-slow: 0.5s ease-in-out;
+            --text-primary: #111827;
+            --text-secondary: #4b5563;
+            --shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+            --shadow-lg: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            --radius: 12px;
+            --transition: all 0.3s ease;
         }
 
         * {
@@ -72,252 +35,169 @@
         }
 
         body {
-            font-family: var(--font-family);
+            font-family: 'Inter', sans-serif;
             background-color: var(--background);
-            color: var(--dark-gray);
+            color: var(--text-primary);
             line-height: 1.6;
         }
 
-        .header {
-            background: linear-gradient(135deg, var(--white) 0%, rgba(37, 99, 235, 0.02) 100%);
-            backdrop-filter: blur(10px);
-            border-bottom: 1px solid var(--border-color);
-            box-shadow: var(--shadow-md);
-            position: sticky;
-            top: 0;
-            z-index: 1000;
-            height: var(--header-height);
+        /* Top Bar */
+        .top-bar {
+            background: var(--primary-blue);
+            padding: 8px 0;
+            font-size: 0.875rem;
+            color: white;
         }
 
-        .navbar {
+        .top-bar-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
             display: flex;
             justify-content: space-between;
             align-items: center;
+        }
+
+        .top-bar-left {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .top-bar-right {
+            display: flex;
+            gap: 20px;
+        }
+
+        .top-bar-link {
+            color: rgba(255, 255, 255, 0.9);
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: var(--transition);
+        }
+
+        .top-bar-link:hover {
+            color: white;
+        }
+
+        /* Header */
+        .header {
+            background: white;
+            box-shadow: var(--shadow);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+
+        .nav-container {
             max-width: 1200px;
             margin: 0 auto;
-            padding: 0 var(--spacing-lg);
-            height: 100%;
+            padding: 0 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            height: 70px;
+        }
+
+        .logo-section {
+            display: flex;
+            align-items: center;
+            gap: 12px;
         }
 
         .logo {
+            width: 48px;
+            height: 48px;
+            background: var(--primary-blue);
+            border-radius: var(--radius);
             display: flex;
             align-items: center;
-            gap: var(--spacing-sm);
-            text-decoration: none;
-            color: var(--primary-blue);
+            justify-content: center;
+            color: white;
+            font-size: 20px;
+        }
+
+        .logo-text {
+            font-size: 1.25rem;
             font-weight: 700;
-            font-size: var(--font-size-xl);
-            transition: var(--transition-fast);
+            color: var(--text-primary);
         }
 
-        .logo i {
-            font-size: 1.5rem;
-            background: linear-gradient(135deg, var(--primary-blue), var(--info-cyan));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
+        .logo-subtext {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            font-weight: 400;
         }
 
-        .logo:hover {
-            transform: translateY(-1px);
-            color: var(--primary-blue-hover);
-        }
-
-        .nav-links {
+        /* Navigation */
+        .nav-menu {
             display: flex;
             list-style: none;
-            gap: var(--spacing-xl);
+            gap: 32px;
             align-items: center;
         }
 
-        .nav-links a {
+        .nav-link {
             text-decoration: none;
-            color: var(--dark-gray);
+            color: var(--text-secondary);
             font-weight: 500;
-            font-size: var(--font-size-base);
-            padding: var(--spacing-sm) var(--spacing-md);
-            border-radius: var(--radius-md);
-            transition: var(--transition-normal);
-            position: relative;
-            overflow: hidden;
+            font-size: 0.95rem;
+            padding: 8px 16px;
+            border-radius: var(--radius);
+            transition: var(--transition);
         }
 
-        .nav-links a::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: -100%;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(37, 99, 235, 0.1), transparent);
-            transition: var(--transition-normal);
-        }
-
-        .nav-links a:hover::before {
-            left: 100%;
-        }
-
-        .nav-links a:hover {
+        .nav-link:hover,
+        .nav-link.active {
             color: var(--primary-blue);
             background-color: var(--primary-blue-light);
-            transform: translateY(-2px);
         }
 
-        .nav-links a.active {
-            color: var(--primary-blue);
-            background-color: var(--primary-blue-light);
-            border: 1px solid rgba(37, 99, 235, 0.2);
-        }
-
+        /* Buttons */
         .auth-buttons {
             display: flex;
-            gap: var(--spacing-md);
+            gap: 12px;
             align-items: center;
         }
 
         .btn {
-            padding: var(--spacing-sm) var(--spacing-lg);
-            border: none;
-            border-radius: var(--radius-md);
-            font-family: var(--font-family);
-            font-size: var(--font-size-base);
+            padding: 10px 20px;
+            border-radius: var(--radius);
             font-weight: 500;
-            cursor: pointer;
-            transition: var(--transition-normal);
+            font-size: 0.9rem;
             text-decoration: none;
-            display: inline-flex;
-            align-items: center;
-            gap: var(--spacing-xs);
-            position: relative;
-            overflow: hidden;
+            transition: var(--transition);
+            cursor: pointer;
+            border: none;
         }
 
-        .btn::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: -100%;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
-            transition: var(--transition-fast);
-        }
-
-        .btn:hover::before {
-            left: 100%;
-        }
-
-        .btn-outline {
+        .btn-signin {
+            color: var(--primary-blue);
             background: transparent;
-            color: var(--primary-blue);
-            border: 1px solid var(--primary-blue);
+            border: 1px solid var(--border-color);
         }
 
-        .btn-outline:hover {
-            background-color: var(--primary-blue);
-            color: var(--white);
-            transform: translateY(-2px);
-            box-shadow: var(--shadow-lg);
+        .btn-signin:hover {
+            border-color: var(--primary-blue);
+            background: var(--primary-blue-light);
         }
 
-        .btn-primary {
-            background: linear-gradient(135deg, var(--primary-blue), var(--primary-blue-hover));
-            color: var(--white);
-            border: 1px solid transparent;
+        .btn-signup {
+            background: var(--primary-blue);
+            color: white;
         }
 
-        .btn-primary:hover {
-            background: linear-gradient(135deg, var(--primary-blue-hover), var(--primary-blue));
-            transform: translateY(-2px);
-            box-shadow: var(--shadow-lg);
-        }
-
-        .mobile-menu-toggle {
-            display: none;
-            background: none;
-            border: none;
-            font-size: var(--font-size-xl);
-            color: var(--dark-gray);
-            cursor: pointer;
-            padding: var(--spacing-sm);
-            border-radius: var(--radius-md);
-            transition: var(--transition-fast);
-        }
-
-        .mobile-menu-toggle:hover {
-            color: var(--primary-blue);
-            background-color: var(--primary-blue-light);
-        }
-
-        .mobile-menu {
-            position: fixed;
-            top: var(--header-height);
-            left: -100%;
-            width: 100%;
-            height: calc(100vh - var(--header-height));
-            background: var(--white);
-            z-index: 999;
-            transition: var(--transition-normal);
-            overflow-y: auto;
-            box-shadow: var(--shadow-lg);
-        }
-
-        .mobile-menu.active {
-            left: 0;
-        }
-
-        .mobile-nav-links {
-            display: flex;
-            flex-direction: column;
-            padding: var(--spacing-xl);
-            gap: var(--spacing-md);
-        }
-
-        .mobile-nav-links a {
-            text-decoration: none;
-            color: var(--dark-gray);
-            font-weight: 500;
-            font-size: var(--font-size-lg);
-            padding: var(--spacing-md);
-            border-radius: var(--radius-md);
-            transition: var(--transition-fast);
-            border-left: 4px solid transparent;
-        }
-
-        .mobile-nav-links a:hover,
-        .mobile-nav-links a.active {
-            background-color: var(--primary-blue-light);
-            color: var(--primary-blue);
-            border-left-color: var(--primary-blue);
-        }
-
-        .mobile-auth-buttons {
-            display: flex;
-            flex-direction: column;
-            gap: var(--spacing-md);
-            padding: var(--spacing-xl);
-            border-top: 1px solid var(--border-color);
-        }
-
-        @media (max-width: 768px) {
-            .nav-links,
-            .auth-buttons {
-                display: none;
-            }
-
-            .mobile-menu-toggle {
-                display: block;
-            }
-
-            .navbar {
-                padding: 0 var(--spacing-md);
-            }
+        .btn-signup:hover {
+            background: var(--primary-blue-hover);
         }
 
         /* Hero Section */
-        .hero-container {
+        .hero-section {
             position: relative;
-            height: 70vh;
+            height: 80vh;
+            min-height: 600px;
             overflow: hidden;
         }
 
@@ -329,11 +209,9 @@
             height: 100%;
             opacity: 0;
             transition: opacity 1s ease-in-out;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            text-align: center;
-            color: var(--white);
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
         }
 
         .hero-slide.active {
@@ -341,749 +219,561 @@
         }
 
         .hero-slide:nth-child(1) {
-            background: linear-gradient(135deg, rgba(37, 99, 235, 0.95), rgba(8, 145, 178, 0.85)), 
-                        radial-gradient(ellipse at top left, rgba(37, 99, 235, 0.3), transparent),
-                        radial-gradient(ellipse at bottom right, rgba(8, 145, 178, 0.3), transparent);
-            background-size: cover;
-            background-position: center;
+            background-image: url('https://images.unsplash.com/photo-1523240795612-9a054b0db644?ixlib=rb-4.0.3&auto=format&fit=crop&w=1950&q=80');
+            background-color: var(--primary-blue);
         }
 
         .hero-slide:nth-child(2) {
-            background: linear-gradient(135deg, rgba(22, 163, 74, 0.95), rgba(37, 99, 235, 0.85)), 
-                        radial-gradient(ellipse at top right, rgba(22, 163, 74, 0.3), transparent),
-                        radial-gradient(ellipse at bottom left, rgba(37, 99, 235, 0.3), transparent);
-            background-size: cover;
-            background-position: center;
+            background-image: url('https://images.unsplash.com/photo-1434030216411-0b793f4b4173?ixlib=rb-4.0.3&auto=format&fit=crop&w=1950&q=80');
+            background-color: var(--success-green);
         }
 
         .hero-slide:nth-child(3) {
-            background: linear-gradient(135deg, rgba(202, 138, 4, 0.95), rgba(220, 38, 38, 0.85)), 
-                        radial-gradient(ellipse at center, rgba(202, 138, 4, 0.3), transparent),
-                        radial-gradient(ellipse at top, rgba(220, 38, 38, 0.3), transparent);
-            background-size: cover;
-            background-position: center;
+            background-image: url('https://images.unsplash.com/photo-1509062522246-3755977927d7?ixlib=rb-4.0.3&auto=format&fit=crop&w=1950&q=80');
+            background-color: var(--warning-yellow);
+        }
+
+        .hero-slide::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.4);
+            z-index: 1;
         }
 
         .hero-content {
-            max-width: 800px;
-            padding: var(--spacing-xl);
-            animation: fadeInUp 1s ease-out;
-        }
-
-        @keyframes fadeInUp {
-            from {
-                opacity: 0;
-                transform: translateY(30px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            color: white;
+            max-width: 900px;
+            padding: 40px;
+            z-index: 2;
         }
 
         .hero-content h1 {
             font-size: 3.5rem;
             font-weight: 700;
-            margin-bottom: var(--spacing-lg);
-            line-height: 1.2;
+            margin-bottom: 24px;
+            line-height: 1.1;
         }
 
         .hero-content p {
-            font-size: var(--font-size-xl);
-            margin-bottom: var(--spacing-xl);
-            opacity: 0.9;
+            font-size: 1.3rem;
+            margin-bottom: 32px;
+            opacity: 0.95;
             line-height: 1.6;
         }
 
         .hero-buttons {
             display: flex;
-            gap: var(--spacing-lg);
+            gap: 20px;
             justify-content: center;
             flex-wrap: wrap;
         }
 
-        .hero-buttons .btn {
-            padding: var(--spacing-md) var(--spacing-xl);
-            font-size: var(--font-size-lg);
-            border-radius: var(--radius-lg);
+        .hero-btn {
+            padding: 16px 32px;
+            font-size: 1rem;
+            font-weight: 600;
+            border-radius: var(--radius);
+            text-decoration: none;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            gap: 8px;
         }
 
+        .hero-btn-primary {
+            background: white;
+            color: var(--primary-blue);
+        }
+
+        .hero-btn-primary:hover {
+            background: var(--light-gray);
+            transform: translateY(-2px);
+        }
+
+        .hero-btn-outline {
+            background: transparent;
+            color: white;
+            border: 2px solid white;
+        }
+
+        .hero-btn-outline:hover {
+            background: white;
+            color: var(--primary-blue);
+        }
+
+        /* Navigation dots */
         .hero-nav {
             position: absolute;
-            bottom: var(--spacing-xl);
+            bottom: 30px;
             left: 50%;
             transform: translateX(-50%);
             display: flex;
-            gap: var(--spacing-md);
+            gap: 12px;
         }
 
         .hero-nav-dot {
             width: 12px;
             height: 12px;
             border-radius: 50%;
-            background: rgba(255, 255, 255, 0.5);
+            background: rgba(255, 255, 255, 0.4);
             cursor: pointer;
-            transition: var(--transition-fast);
+            transition: var(--transition);
         }
 
         .hero-nav-dot.active {
-            background: var(--white);
+            background: white;
             transform: scale(1.2);
         }
 
-        /* Section Styles */
-        .section {
-            padding: var(--spacing-2xl) 0;
+        /* About Section */
+        .about-section {
+            background: var(--light-gray);
+            padding: 100px 0;
+        }
+
+        .about-container {
             max-width: 1200px;
             margin: 0 auto;
-            padding-left: var(--spacing-lg);
-            padding-right: var(--spacing-lg);
+            padding: 0 20px;
         }
 
-        .section-header {
+        .about-header {
             text-align: center;
-            margin-bottom: var(--spacing-2xl);
+            margin-bottom: 80px;
         }
 
-        .section-title {
-            font-size: 2.5rem;
-            color: var(--primary-blue);
-            margin-bottom: var(--spacing-md);
+        .about-header h2 {
+            font-size: 3rem;
             font-weight: 700;
+            margin-bottom: 24px;
+            color: var(--text-primary);
         }
 
-        .section-subtitle {
-            font-size: var(--font-size-xl);
-            color: var(--medium-gray);
-            max-width: 600px;
+        .about-header p {
+            font-size: 1.2rem;
+            color: var(--text-secondary);
+            max-width: 900px;
             margin: 0 auto;
-            line-height: 1.6;
-        }
-
-        /* About Section */
-        .about-content {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: var(--spacing-2xl);
-            align-items: center;
-        }
-
-        .about-text {
-            font-size: var(--font-size-lg);
             line-height: 1.8;
-            color: var(--dark-gray);
-        }
-
-        .about-text h3 {
-            color: var(--primary-blue);
-            margin-bottom: var(--spacing-md);
-            font-size: var(--font-size-xl);
-        }
-
-        .about-stats {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: var(--spacing-lg);
-        }
-
-        .stat-card {
-            background: var(--white);
-            padding: var(--spacing-lg);
-            border-radius: var(--radius-lg);
-            box-shadow: var(--shadow-md);
-            text-align: center;
-            transition: var(--transition-normal);
-        }
-
-        .stat-card:hover {
-            transform: translateY(-5px);
-            box-shadow: var(--shadow-lg);
-        }
-
-        .stat-number {
-            font-size: 2rem;
-            font-weight: 700;
-            color: var(--primary-blue);
-        }
-
-        .stat-label {
-            color: var(--medium-gray);
-            font-size: var(--font-size-sm);
-            margin-top: var(--spacing-xs);
         }
 
         /* Features Section */
+        .features-section {
+            padding: 100px 0;
+            background: var(--white);
+        }
+
+        .features-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        .features-header {
+            text-align: center;
+            margin-bottom: 80px;
+        }
+
+        .features-header h2 {
+            font-size: 3rem;
+            font-weight: 700;
+            margin-bottom: 24px;
+            color: var(--text-primary);
+        }
+
+        .features-header p {
+            font-size: 1.2rem;
+            color: var(--text-secondary);
+            max-width: 900px;
+            margin: 0 auto;
+            line-height: 1.8;
+        }
+
         .features-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: var(--spacing-xl);
-            margin-top: var(--spacing-2xl);
+            grid-template-columns: repeat(2, 1fr);
+            gap: 32px;
         }
 
         .feature-card {
-            background: var(--white);
-            padding: var(--spacing-xl);
-            border-radius: var(--radius-lg);
-            box-shadow: var(--shadow-md);
-            text-align: center;
-            transition: var(--transition-normal);
-            border: 1px solid var(--border-color);
+            background: white;
+            padding: 32px;
+            border-radius: var(--radius);
+            box-shadow: var(--shadow-lg);
+            transition: var(--transition);
+            display: flex;
+            align-items: flex-start;
+            gap: 24px;
         }
 
         .feature-card:hover {
-            transform: translateY(-10px);
-            box-shadow: var(--shadow-lg);
-            border-color: var(--primary-blue);
+            transform: translateY(-6px);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
         }
 
-        .feature-icon {
-            width: 80px;
-            height: 80px;
-            margin: 0 auto var(--spacing-lg);
-            background: linear-gradient(135deg, var(--primary-blue), var(--info-cyan));
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 2rem;
-            color: var(--white);
-        }
-
-        .feature-card h3 {
+        .feature-card i {
+            font-size: 2.5rem;
             color: var(--primary-blue);
-            margin-bottom: var(--spacing-md);
-            font-size: var(--font-size-xl);
+            flex-shrink: 0;
         }
 
-        .feature-card p {
-            color: var(--medium-gray);
-            line-height: 1.6;
+        .feature-content h3 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 12px;
+            color: var(--text-primary);
+        }
+
+        .feature-content p {
+            color: var(--text-secondary);
+            line-height: 1.7;
         }
 
         /* Contact Section */
+        .contact-section {
+            padding: 100px 0;
+            background: var(--light-gray);
+        }
+
         .contact-container {
-            background: var(--background);
-            padding: var(--spacing-2xl);
-            border-radius: var(--radius-xl);
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        .contact-header {
+            text-align: center;
+            margin-bottom: 80px;
+        }
+
+        .contact-header h2 {
+            font-size: 3rem;
+            font-weight: 700;
+            margin-bottom: 24px;
+            color: var(--text-primary);
+        }
+
+        .contact-header p {
+            font-size: 1.2rem;
+            color: var(--text-secondary);
+            max-width: 900px;
+            margin: 0 auto;
+            line-height: 1.8;
         }
 
         .contact-content {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: var(--spacing-2xl);
-        }
-
-        .contact-info h3 {
-            color: var(--primary-blue);
-            margin-bottom: var(--spacing-lg);
-            font-size: var(--font-size-xl);
-        }
-
-        .contact-item {
-            display: flex;
-            align-items: center;
-            gap: var(--spacing-md);
-            margin-bottom: var(--spacing-lg);
-        }
-
-        .contact-item i {
-            width: 40px;
-            height: 40px;
-            background: var(--primary-blue);
-            color: var(--white);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .contact-form {
-            background: var(--white);
-            padding: var(--spacing-xl);
-            border-radius: var(--radius-lg);
-            box-shadow: var(--shadow-md);
-        }
-
-        .form-group {
-            margin-bottom: var(--spacing-lg);
-        }
-
-        .form-group label {
-            display: block;
-            margin-bottom: var(--spacing-xs);
-            color: var(--dark-gray);
-            font-weight: 500;
-        }
-
-        .form-group input,
-        .form-group textarea {
-            width: 100%;
-            padding: var(--spacing-md);
-            border: 1px solid var(--border-color);
-            border-radius: var(--radius-md);
-            font-family: var(--font-family);
-            font-size: var(--font-size-base);
-            transition: var(--transition-fast);
-        }
-
-        .form-group input:focus,
-        .form-group textarea:focus {
-            outline: none;
-            border-color: var(--primary-blue);
-            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
-        }
-
-        .form-group textarea {
-            resize: vertical;
-            min-height: 120px;
-        }
-
-        .submit-btn {
-            width: 100%;
-            padding: var(--spacing-md);
-            background: var(--primary-blue);
-            color: var(--white);
-            border: none;
-            border-radius: var(--radius-md);
-            font-size: var(--font-size-lg);
-            font-weight: 500;
-            cursor: pointer;
-            transition: var(--transition-normal);
-        }
-
-        .submit-btn:hover {
-            background: var(--primary-blue-hover);
-            transform: translateY(-2px);
-        }
-
-        /* About Section Enhancement */
-        .about-section {
-            background: linear-gradient(135deg, var(--white), var(--primary-blue-light));
-            border-radius: var(--radius-xl);
-            padding: var(--spacing-2xl);
-            margin: var(--spacing-xl) 0;
-        }
-
-        .about-text {
-            font-size: var(--font-size-lg);
-            line-height: 1.8;
-            color: var(--dark-gray);
-        }
-
-        .about-text h3 {
-            color: var(--primary-blue);
-            margin-bottom: var(--spacing-md);
-            font-size: var(--font-size-xl);
-            position: relative;
-            padding-bottom: var(--spacing-sm);
-        }
-
-        .about-text h3::after {
-            content: '';
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            width: 50px;
-            height: 3px;
-            background: linear-gradient(90deg, var(--primary-blue), var(--info-cyan));
-            border-radius: 2px;
-        }
-
-        .about-text p {
-            margin-bottom: var(--spacing-lg);
-            text-align: justify;
-        }
-
-        .about-visual {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            position: relative;
-        }
-
-        .about-image-placeholder {
-            width: 100%;
-            height: 400px;
-            background: linear-gradient(135deg, var(--primary-blue), var(--info-cyan));
-            border-radius: var(--radius-xl);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: var(--white);
-            font-size: 4rem;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .about-image-placeholder::before {
-            content: '';
-            position: absolute;
-            top: -50%;
-            left: -50%;
-            width: 200%;
-            height: 200%;
-            background: repeating-linear-gradient(
-                45deg,
-                transparent,
-                transparent 10px,
-                rgba(255, 255, 255, 0.1) 10px,
-                rgba(255, 255, 255, 0.1) 20px
-            );
-            animation: move 10s linear infinite;
-        }
-
-        @keyframes move {
-            0% { transform: translate(-50%, -50%) rotate(0deg); }
-            100% { transform: translate(-50%, -50%) rotate(360deg); }
-        }
-
-        .floating-elements {
-            position: absolute;
-            width: 100%;
-            height: 100%;
-            pointer-events: none;
-        }
-
-        .floating-element {
-            position: absolute;
-            width: 20px;
-            height: 20px;
-            background: rgba(255, 255, 255, 0.3);
-            border-radius: 50%;
-            animation: float 6s ease-in-out infinite;
-        }
-
-        .floating-element:nth-child(1) { top: 20%; left: 10%; animation-delay: 0s; }
-        .floating-element:nth-child(2) { top: 60%; left: 85%; animation-delay: 2s; }
-        .floating-element:nth-child(3) { top: 80%; left: 20%; animation-delay: 4s; }
-
-        @keyframes float {
-            0%, 100% { transform: translateY(0px); }
-            50% { transform: translateY(-20px); }
-        }
-
-        /* Features Section Enhancement */
-        .features-section {
-            background: var(--background);
-            padding: var(--spacing-2xl);
-            margin: var(--spacing-xl) 0;
-        }
-
-        .feature-card {
-            background: var(--white);
-            padding: var(--spacing-xl);
-            border-radius: var(--radius-xl);
-            box-shadow: var(--shadow-md);
-            text-align: center;
-            transition: var(--transition-normal);
-            border: 1px solid var(--border-color);
-            position: relative;
-            overflow: hidden;
-        }
-
-        .feature-card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: -100%;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(37, 99, 235, 0.1), transparent);
-            transition: var(--transition-normal);
-        }
-
-        .feature-card:hover::before {
-            left: 100%;
-        }
-
-        .feature-card:hover {
-            transform: translateY(-15px);
-            box-shadow: var(--shadow-lg);
-            border-color: var(--primary-blue);
-        }
-
-        .feature-icon {
-            width: 90px;
-            height: 90px;
-            margin: 0 auto var(--spacing-lg);
-            background: linear-gradient(135deg, var(--primary-blue), var(--info-cyan));
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 2.2rem;
-            color: var(--white);
-            position: relative;
-            overflow: hidden;
-        }
-
-        .feature-icon::before {
-            content: '';
-            position: absolute;
-            top: -50%;
-            left: -50%;
-            width: 200%;
-            height: 200%;
-            background: linear-gradient(45deg, transparent, rgba(255, 255, 255, 0.3), transparent);
-            animation: shimmer 3s ease-in-out infinite;
-        }
-
-        @keyframes shimmer {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-
-        /* Contact Section Enhancement */
-        .contact-section {
-            background: linear-gradient(135deg, var(--primary-blue-light), var(--background));
-            padding: var(--spacing-2xl);
-            margin: var(--spacing-xl) 0;
-        }
-
-        .contact-form {
-            background: var(--white);
-            padding: var(--spacing-2xl);
-            border-radius: var(--radius-xl);
-            box-shadow: var(--shadow-lg);
-            position: relative;
-            overflow: hidden;
-        }
-
-        .contact-form::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 4px;
-            background: linear-gradient(90deg, var(--primary-blue), var(--info-cyan), var(--success-green));
+            gap: 48px;
         }
 
         .contact-info {
-            background: var(--white);
-            padding: var(--spacing-2xl);
-            border-radius: var(--radius-xl);
-            box-shadow: var(--shadow-md);
-            height: fit-content;
+            padding: 40px;
         }
 
-        .contact-item {
+        .contact-info h3 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 24px;
+            color: var(--text-primary);
+        }
+
+        .contact-info-item {
             display: flex;
-            align-items: center;
-            gap: var(--spacing-md);
-            margin-bottom: var(--spacing-xl);
-            padding: var(--spacing-md);
-            border-radius: var(--radius-lg);
-            transition: var(--transition-fast);
+            align-items: flex-start;
+            gap: 16px;
+            margin-bottom: 24px;
         }
 
-        .contact-item:hover {
-            background: var(--primary-blue-light);
-            transform: translateX(5px);
+        .contact-info-item i {
+            font-size: 1.5rem;
+            color: var(--primary-blue);
+            margin-top: 4px;
         }
 
-        .contact-item i {
-            width: 50px;
-            height: 50px;
-            background: linear-gradient(135deg, var(--primary-blue), var(--info-cyan));
-            color: var(--white);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.2rem;
+        .contact-info-item div h4 {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 8px;
         }
 
-        /* Enhanced Footer */
+        .contact-info-item div p {
+            color: var(--text-secondary);
+            line-height: 1.7;
+        }
+
+        .contact-map {
+            padding: 40px;
+        }
+
+        .contact-map h3 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 24px;
+            color: var(--text-primary);
+        }
+
+        .contact-map iframe {
+            width: 100%;
+            height: 400px;
+            border: none;
+            border-radius: var(--radius);
+            box-shadow: var(--shadow-lg);
+        }
+
+        /* Footer Section */
         .footer {
-            background: linear-gradient(135deg, var(--dark-gray), #1f2937);
-            color: var(--white);
-            padding: var(--spacing-2xl) 0 var(--spacing-lg);
+            background: linear-gradient(180deg, var(--dark-gray) 0%, #111827 100%);
+            color: white;
+            padding: 64px 0 32px;
             position: relative;
             overflow: hidden;
         }
 
-        .footer::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 4px;
-            background: linear-gradient(90deg, var(--primary-blue), var(--info-cyan), var(--success-green), var(--warning-yellow));
-        }
-
-        .footer-content {
+        .footer-container {
             max-width: 1200px;
             margin: 0 auto;
-            padding: 0 var(--spacing-lg);
-        }
-
-        .footer-grid {
+            padding: 0 20px;
             display: grid;
-            grid-template-columns: 2fr 1fr 1fr 1fr;
-            gap: var(--spacing-2xl);
-            margin-bottom: var(--spacing-2xl);
+            grid-template-columns: repeat(4, 1fr);
+            gap: 32px;
+            position: relative;
+            z-index: 2;
         }
 
-        .footer-brand {
+        .footer-column {
             display: flex;
             flex-direction: column;
-            gap: var(--spacing-md);
+        }
+
+        .footer-logo-section {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
         }
 
         .footer-logo {
             display: flex;
             align-items: center;
-            gap: var(--spacing-sm);
-            font-size: var(--font-size-xl);
+            gap: 10px;
+            margin-bottom: 16px;
+        }
+
+        .footer-logo .logo {
+            width: 36px;
+            height: 36px;
+            font-size: 16px;
+        }
+
+        .footer-logo-text {
+            font-size: 1.3rem;
             font-weight: 700;
-            color: var(--white);
-            text-decoration: none;
-            margin-bottom: var(--spacing-md);
+            color: white;
         }
 
-        .footer-logo i {
-            font-size: 1.8rem;
-            background: linear-gradient(135deg, var(--primary-blue), var(--info-cyan));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
-
-        .footer-description {
-            line-height: 1.8;
-            color: #d1d5db;
-            margin-bottom: var(--spacing-lg);
-        }
-
-        .social-links {
-            display: flex;
-            gap: var(--spacing-md);
-        }
-
-        .social-link {
-            width: 45px;
-            height: 45px;
-            background: linear-gradient(135deg, var(--primary-blue), var(--info-cyan));
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: var(--white);
-            text-decoration: none;
-            transition: var(--transition-normal);
-            font-size: 1.2rem;
-        }
-
-        .social-link:hover {
-            transform: translateY(-3px);
-            box-shadow: var(--shadow-lg);
-        }
-
-        .footer-section h4 {
-            font-size: var(--font-size-lg);
-            margin-bottom: var(--spacing-lg);
-            color: var(--white);
+        .footer-column h3 {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 16px;
+            color: white;
             position: relative;
-            padding-bottom: var(--spacing-sm);
+            padding-bottom: 6px;
         }
 
-        .footer-section h4::after {
+        .footer-column h3::after {
             content: '';
             position: absolute;
             bottom: 0;
             left: 0;
             width: 30px;
             height: 2px;
-            background: linear-gradient(90deg, var(--primary-blue), var(--info-cyan));
+            background: var(--primary-blue);
         }
 
-        .footer-links {
+        .footer-column ul {
             list-style: none;
-            display: flex;
-            flex-direction: column;
-            gap: var(--spacing-sm);
         }
 
-        .footer-links a {
-            color: #d1d5db;
+        .footer-column ul li {
+            margin-bottom: 12px;
+        }
+
+        .footer-column ul li a {
+            color: rgba(255, 255, 255, 0.8);
             text-decoration: none;
-            transition: var(--transition-fast);
-            padding: var(--spacing-xs) 0;
+            font-size: 0.85rem;
+            transition: var(--transition);
             display: inline-block;
         }
 
-        .footer-links a:hover {
-            color: var(--primary-blue);
-            transform: translateX(5px);
+        .footer-column ul li a:hover {
+            color: white;
+            transform: translateX(4px);
         }
 
-        .footer-divider {
-            height: 1px;
-            background: linear-gradient(90deg, transparent, #4b5563, transparent);
-            margin: var(--spacing-xl) 0;
+        .footer-column .contact-info-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        .footer-column .contact-info-item i {
+            font-size: 1.2rem;
+            color: var(--primary-blue);
+            margin-top: 2px;
+            flex-shrink: 0;
+        }
+
+        .footer-column .contact-info-item div h4 {
+            font-size: 0.95rem;
+            font-weight: 500;
+            color: white;
+            margin-bottom: 4px;
+        }
+
+        .footer-column .contact-info-item div p {
+            font-size: 0.85rem;
+            color: rgba(255, 255, 255, 0.8);
+            line-height: 1.5;
         }
 
         .footer-bottom {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap;
-            gap: var(--spacing-md);
-            padding-top: var(--spacing-lg);
-            border-top: 1px solid #374151;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            margin-top: 32px;
+            padding-top: 16px;
+            text-align: center;
+            font-size: 0.8rem;
+            color: rgba(255, 255, 255, 0.6);
+            position: relative;
+            z-index: 2;
         }
 
-        .footer-bottom p {
-            color: #9ca3af;
-            margin: 0;
-        }
-
-        .footer-bottom-links {
-            display: flex;
-            gap: var(--spacing-lg);
-        }
-
-        .footer-bottom-links a {
-            color: #9ca3af;
-            text-decoration: none;
-            transition: var(--transition-fast);
-        }
-
-        .footer-bottom-links a:hover {
+        .footer-bottom a {
             color: var(--primary-blue);
+            text-decoration: none;
+            transition: var(--transition);
         }
 
-        /* Responsive Design */
-        @media (max-width: 768px) {
-            .footer-grid {
+        .footer-bottom a:hover {
+            color: white;
+        }
+
+        /* Footer Background Decoration */
+        .footer::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle at 20% 80%, rgba(37, 99, 235, 0.2) 0%, transparent 50%);
+            z-index: 1;
+        }
+
+        /* Mobile Responsive */
+        .mobile-toggle {
+            display: none;
+            flex-direction: column;
+            cursor: pointer;
+            padding: 8px;
+        }
+
+        .mobile-toggle span {
+            width: 22px;
+            height: 2px;
+            background: var(--text-secondary);
+            margin: 3px 0;
+            transition: var(--transition);
+            border-radius: 1px;
+        }
+
+        @media (max-width: 1024px) {
+            .features-grid {
                 grid-template-columns: 1fr;
-                gap: var(--spacing-xl);
+                gap: 24px;
             }
 
-            .footer-bottom {
+            .contact-content {
+                grid-template-columns: 1fr;
+            }
+
+            .footer-container {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 768px) {
+            .top-bar-container {
+                padding: 0 16px;
+            }
+
+            .top-bar-right a:not(:first-child) {
+                display: none;
+            }
+
+            .nav-container {
+                padding: 0 16px;
+            }
+
+            .logo-text {
+                font-size: 1.1rem;
+            }
+
+            .logo-subtext {
+                display: none;
+            }
+
+            .nav-menu {
+                position: fixed;
+                left: -100%;
+                top: 118px;
                 flex-direction: column;
+                background: white;
+                width: 100%;
+                text-align: center;
+                transition: left 0.3s ease;
+                box-shadow: var(--shadow-lg);
+                padding: 40px 0;
+                gap: 20px;
+            }
+
+            .nav-menu.active {
+                left: 0;
+            }
+
+            .mobile-toggle {
+                display: flex;
+            }
+
+            .auth-buttons {
+                flex-direction: column;
+                width: 100%;
+                gap: 16px;
+                padding: 0 40px;
+            }
+
+            .btn {
+                width: 100%;
                 text-align: center;
             }
 
-            .about-content {
-                grid-template-columns: 1fr;
-            }
-
-            .about-image-placeholder {
-                height: 250px;
-            }
-        }
-
-        /* Responsive Design */
-        @media (max-width: 768px) {
             .hero-content h1 {
                 font-size: 2.5rem;
             }
 
             .hero-content p {
-                font-size: var(--font-size-lg);
+                font-size: 1.125rem;
             }
 
             .hero-buttons {
@@ -1091,126 +781,181 @@
                 align-items: center;
             }
 
-            .about-content,
-            .contact-content {
-                grid-template-columns: 1fr;
+            .hero-btn {
+                width: 100%;
+                max-width: 300px;
+                justify-content: center;
             }
 
-            .section-title {
-                font-size: 2rem;
+            .about-container,
+            .features-container,
+            .contact-container {
+                padding: 0 16px;
             }
 
-            .about-stats {
-                grid-template-columns: 1fr;
+            .about-header h2,
+            .features-header h2,
+            .contact-header h2 {
+                font-size: 2.2rem;
             }
 
             .features-grid {
                 grid-template-columns: 1fr;
+                gap: 24px;
+            }
+
+            .feature-card {
+                flex-direction: column;
+                text-align: center;
+            }
+
+            .feature-card i {
+                margin-bottom: 16px;
+            }
+
+            .contact-content {
+                grid-template-columns: 1fr;
+            }
+
+            .contact-info,
+            .contact-map {
+                padding: 24px;
+            }
+
+            .contact-map iframe {
+                height: 300px;
+            }
+
+            .footer-container {
+                grid-template-columns: 1fr;
+                text-align: center;
+            }
+
+            .footer-logo {
+                justify-content: center;
+            }
+
+            .footer-column h3::after {
+                left: 50%;
+                transform: translateX(-50%);
+            }
+
+            .footer-column .contact-info-item {
+                justify-content: center;
             }
         }
     </style>
 </head>
 <body>
-    <header class="header">
-        <nav class="navbar">
-            <a href="#" class="logo">
+    <!-- Top Bar -->
+    <div class="top-bar">
+        <div class="top-bar-container">
+            <div class="top-bar-left">
                 <i class="fas fa-graduation-cap"></i>
-                <span>SAMS</span>
-            </a>
+                <span>Student Attendance Monitoring System</span>
+            </div>
+            <div class="top-bar-right">
+                <a href="#support" class="top-bar-link">
+                    <i class="fas fa-headset"></i>
+                    Support
+                </a>
+                <a href="#help" class="top-bar-link">
+                    <i class="fas fa-question-circle"></i>
+                    Help
+                </a>
+                <a href="#contact" class="top-bar-link">
+                    <i class="fas fa-phone"></i>
+                    Contact
+                </a>
+            </div>
+        </div>
+    </div>
 
-            <ul class="nav-links">
-                <li><a href="#home" class="active">Home</a></li>
-                <li><a href="#about">About</a></li>
-                <li><a href="#features">Features</a></li>
-                <li><a href="#contact">Contact</a></li>
+    <!-- Header -->
+    <header class="header">
+        <div class="nav-container">
+            <div class="logo-section">
+                <div class="logo">
+                    <i class="fas fa-user-graduate"></i>
+                </div>
+                <div>
+                    <div class="logo-text">SAMS</div>
+                    <div class="logo-subtext">Student Attendance Monitoring System</div>
+                </div>
+            </div>
+
+            <ul class="nav-menu" id="nav-menu">
+                <li><a href="#home" class="nav-link active">Home</a></li>
+                <li><a href="#about" class="nav-link">About</a></li>
+                <li><a href="#features" class="nav-link">Features</a></li>
+                <li><a href="#contact" class="nav-link">Contact</a></li>
+                <div class="auth-buttons">
+                    <a href="sign-in.php" class="btn btn-signin">Sign In</a>
+                    <a href="sign-up.php" class="btn btn-signup">Sign Up</a>
+                </div>
             </ul>
 
-            <div class="auth-buttons">
-                <a href="sign-in.php" class="btn btn-outline">
-                    <i class="fas fa-sign-in-alt"></i>
-                    Sign In
-                </a>
-                <a href="sign-up.php" class="btn btn-primary">
-                    <i class="fas fa-user-plus"></i>
-                    Sign Up
-                </a>
-            </div>
-
-            <button class="mobile-menu-toggle" onclick="toggleMobileMenu()">
-                <i class="fas fa-bars"></i>
-            </button>
-        </nav>
-
-        <div class="mobile-menu" id="mobileMenu">
-            <div class="mobile-nav-links">
-                <a href="#home" class="active" onclick="closeMobileMenu()">Home</a>
-                <a href="#about" onclick="closeMobileMenu()">About</a>
-                <a href="#features" onclick="closeMobileMenu()">Features</a>
-                <a href="#contact" onclick="closeMobileMenu()">Contact</a>
-            </div>
-            <div class="mobile-auth-buttons">
-                <a href="sign-in.php" class="btn btn-outline" onclick="closeMobileMenu()">
-                    <i class="fas fa-sign-in-alt"></i>
-                    Sign In
-                </a>
-                <a href="sign-up.php" class="btn btn-primary" onclick="closeMobileMenu()">
-                    <i class="fas fa-user-plus"></i>
-                    Sign Up
-                </a>
+            <div class="mobile-toggle" id="mobile-toggle">
+                <span></span>
+                <span></span>
+                <span></span>
             </div>
         </div>
     </header>
 
     <!-- Hero Section -->
-    <section class="hero-container">
+    <section class="hero-section" id="home">
         <div class="hero-slide active">
             <div class="hero-content">
-                <h1>Smart Attendance Monitoring</h1>
-                <p>Revolutionize attendance tracking with AI-powered insights and data-driven solutions for educational institutions</p>
+                <h1>Smart QR Code Attendance</h1>
+                <p>Modern attendance tracking through QR code scanning and manual marking options, designed for seamless data collection and monitoring</p>
                 <div class="hero-buttons">
-                    <a href="#features" class="btn btn-primary">
-                        <i class="fas fa-rocket"></i>
-                        Get Started
+                    <a href="#features" class="hero-btn hero-btn-primary">
+                        <i class="fas fa-qrcode"></i>
+                        Start Scanning
                     </a>
-                    <a href="#about" class="btn btn-outline" style="color: white; border-color: white;">
+                    <a href="#about" class="hero-btn hero-btn-outline">
                         <i class="fas fa-play"></i>
                         Learn More
                     </a>
                 </div>
             </div>
         </div>
+
         <div class="hero-slide">
             <div class="hero-content">
-                <h1>Data-Driven Insights</h1>
-                <p>Harness the power of Time Series Forecasting and Regression Analysis to predict attendance patterns and improve student outcomes</p>
+                <h1>ARIMA Time Series Forecasting</h1>
+                <p>Advanced predictive analytics using ARIMA methodology to forecast attendance patterns and identify trends in your centralized database</p>
                 <div class="hero-buttons">
-                    <a href="#features" class="btn btn-primary">
+                    <a href="#analytics" class="hero-btn hero-btn-primary">
                         <i class="fas fa-chart-line"></i>
+                        View Forecasts
+                    </a>
+                    <a href="#contact" class="hero-btn hero-btn-outline">
+                        <i class="fas fa-database"></i>
+                        Explore Data
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div class="hero-slide">
+            <div class="hero-content">
+                <h1>Early Risk Identification</h1>
+                <p>Clear visualizations and forecast-driven insights help teachers identify at-risk students and implement timely interventions for better learning outcomes</p>
+                <div class="hero-buttons">
+                    <a href="#intervention" class="hero-btn hero-btn-primary">
+                        <i class="fas fa-users"></i>
+                        Monitor Students
+                    </a>
+                    <a href="#features" class="hero-btn hero-btn-outline">
+                        <i class="fas fa-eye"></i>
                         View Analytics
                     </a>
-                    <a href="#contact" class="btn btn-outline" style="color: white; border-color: white;">
-                        <i class="fas fa-envelope"></i>
-                        Contact Us
-                    </a>
                 </div>
             </div>
         </div>
-        <div class="hero-slide">
-            <div class="hero-content">
-                <h1>Early Intervention System</h1>
-                <p>Identify students at risk of chronic absenteeism and provide timely support to enhance learning achievement</p>
-                <div class="hero-buttons">
-                    <a href="#about" class="btn btn-primary">
-                        <i class="fas fa-users"></i>
-                        Support Students
-                    </a>
-                    <a href="#features" class="btn btn-outline" style="color: white; border-color: white;">
-                        <i class="fas fa-cogs"></i>
-                        Explore Features
-                    </a>
-                </div>
-            </div>
-        </div>
+
         <div class="hero-nav">
             <div class="hero-nav-dot active" onclick="currentSlide(1)"></div>
             <div class="hero-nav-dot" onclick="currentSlide(2)"></div>
@@ -1219,444 +964,272 @@
     </section>
 
     <!-- About Section -->
-    <section id="about" class="section">
-        <div class="about-section">
-            <div class="section-header">
-                <h2 class="section-title">About Our Mission</h2>
-                <p class="section-subtitle">Addressing the critical challenge of student absenteeism through innovative technology and data-driven solutions</p>
+    <section class="about-section" id="about">
+        <div class="about-container">
+            <div class="about-header">
+                <h2>About Our System</h2>
+                <p>Our Student Attendance Monitoring System, titled "Time Series Forecasting for Enhancing Student Attendance in Public School," is designed to address the critical issue of student absenteeism across public schools. By leveraging ARIMA-based Time Series Forecasting, our platform empowers teachers with a user-friendly, data-driven tool to track attendance trends, identify at-risk students, and implement timely interventions.</p>
             </div>
-            <div class="about-content">
-                <div class="about-text">
-                    <h3>The Challenge</h3>
-                    <p>Student absenteeism in educational institutions has become a significant concern, contributing to low academic performance and hindering learning outcomes. Traditional manual attendance tracking methods are inefficient and fail to identify patterns that could predict chronic absenteeism.</p>
-                    
-                    <h3>Our Solution</h3>
-                    <p>SAMS leverages advanced Time Series Forecasting and Regression Analysis to transform how educational institutions monitor and manage student attendance. Our system doesn't just track attendance—it predicts patterns, identifies at-risk students, and provides actionable insights for timely intervention.</p>
-                    
-                    <h3>Key Factors We Analyze</h3>
-                    <p>Our system considers multiple attributes that influence attendance including geographical location, family structure, health conditions, and socioeconomic factors to provide comprehensive insights and personalized recommendations.</p>
+
+            <div class="features-grid">
+                <div class="feature-card">
+                    <i class="fas fa-chalkboard-teacher"></i>
+                    <h3>Empowering Teachers</h3>
+                    <p>Provides an intuitive platform for teachers to monitor attendance, access AI-driven insights, and receive actionable recommendations to reduce absenteeism and boost student performance.</p>
                 </div>
-                <div class="about-visual">
-                    <div class="about-image-placeholder">
-                        <i class="fas fa-chart-line"></i>
-                        <div class="floating-elements">
-                            <div class="floating-element"></div>
-                            <div class="floating-element"></div>
-                            <div class="floating-element"></div>
-                        </div>
-                    </div>
+                <div class="feature-card">
+                    <i class="fas fa-user-graduate"></i>
+                    <h3>Supporting Students</h3>
+                    <p>Enables early identification of attendance issues, fostering timely interventions that promote responsibility and improve academic and social outcomes.</p>
+                </div>
+                <div class="feature-card">
+                    <i class="fas fa-school"></i>
+                    <h3>Enhancing Schools</h3>
+                    <p>Supports public schools in adopting data-driven attendance tracking, aligning with digital transformation goals and improving student success and accreditation standards.</p>
+                </div>
+                <div class="feature-card">
+                    <i class="fas fa-chart-line"></i>
+                    <h3>Advanced Analytics</h3>
+                    <p>Utilizes ARIMA-based Time Series Forecasting to detect attendance patterns, predict risks, and provide clear visualizations for informed decision-making.</p>
                 </div>
             </div>
+        </div>
     </section>
 
     <!-- Features Section -->
-    <section id="features" class="section">
-        <div class="features-section">
-            <div class="section-header">
-                <h2 class="section-title">Comprehensive Features</h2>
-                <p class="section-subtitle">Powerful tools designed to enhance attendance monitoring and support student success</p>
+    <section class="features-section" id="features">
+        <div class="features-container">
+            <div class="features-header">
+                <h2>Our Features</h2>
+                <p>Discover the powerful tools and features that make our Student Attendance Monitoring System the ideal choice for schools aiming to enhance attendance and student outcomes.</p>
             </div>
             <div class="features-grid">
                 <div class="feature-card">
-                    <div class="feature-icon">
-                        <i class="fas fa-chart-line"></i>
+                    <i class="fas fa-qrcode"></i>
+                    <div class="feature-content">
+                        <h3>Real-time QR Code Scanning</h3>
+                        <p>Quick attendance marking with instant data sync, enabling seamless and efficient tracking of student presence in real-time.</p>
                     </div>
-                    <h3>Time Series Forecasting</h3>
-                    <p>Advanced predictive analytics using machine learning algorithms to forecast attendance patterns and identify trends before they become problematic.</p>
                 </div>
                 <div class="feature-card">
-                    <div class="feature-icon">
-                        <i class="fas fa-calculator"></i>
+                    <i class="fas fa-chart-line"></i>
+                    <div class="feature-content">
+                        <h3>ARIMA Predictive Analytics</h3>
+                        <p>Forecast attendance patterns and identify trends using advanced ARIMA methodology for data-driven decision-making.</p>
                     </div>
-                    <h3>Regression Analysis</h3>
-                    <p>Sophisticated statistical analysis to understand the relationship between various factors and student attendance, enabling targeted interventions.</p>
                 </div>
                 <div class="feature-card">
-                    <div class="feature-icon">
-                        <i class="fas fa-file-alt"></i>
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <div class="feature-content">
+                        <h3>Student Risk Assessment</h3>
+                        <p>Early warning system for at-risk students, providing actionable insights to support timely interventions and improve outcomes.</p>
                     </div>
-                    <h3>Intelligent Reports</h3>
-                    <p>Generate comprehensive reports with AI-powered recommendations for improving attendance and supporting students at risk of chronic absenteeism.</p>
                 </div>
                 <div class="feature-card">
-                    <div class="feature-icon">
-                        <i class="fas fa-bell"></i>
+                    <i class="fas fa-tachometer-alt"></i>
+                    <div class="feature-content">
+                        <h3>Teacher Dashboard</h3>
+                        <p>Comprehensive analytics and reporting tools to empower teachers with clear, actionable data for attendance management.</p>
                     </div>
-                    <h3>Real-Time Notifications</h3>
-                    <p>Instant alerts and notifications for teachers and administrators when attendance patterns indicate potential issues requiring immediate attention.</p>
-                </div>
-                <div class="feature-card">
-                    <div class="feature-icon">
-                        <i class="fas fa-analytics"></i>
-                    </div>
-                    <h3>Class Analytics Dashboard</h3>
-                    <p>Interactive dashboards providing comprehensive attendance analytics with visual representations of patterns, trends, and actionable insights.</p>
-                </div>
-                <div class="feature-card">
-                    <div class="feature-icon">
-                        <i class="fas fa-download"></i>
-                    </div>
-                    <h3>Exportable Reports</h3>
-                    <p>Generate and export detailed attendance reports in multiple formats for administrative purposes, parent communication, and academic planning.</p>
-                </div>
-                <div class="feature-card">
-                    <div class="feature-icon">
-                        <i class="fas fa-users"></i>
-                    </div>
-                    <h3>Multi-Factor Analysis</h3>
-                    <p>Analyze attendance patterns considering gender, geographical location, family structure, health conditions, and socioeconomic factors.</p>
-                </div>
-                <div class="feature-card">
-                    <div class="feature-icon">
-                        <i class="fas fa-shield-alt"></i>
-                    </div>
-                    <h3>ISO 25010 Compliance</h3>
-                    <p>Built with highest quality standards ensuring functionality, performance efficiency, usability, reliability, security, and maintainability.</p>
                 </div>
             </div>
         </div>
     </section>
 
     <!-- Contact Section -->
-    <section id="contact" class="section">
-        <div class="contact-section">
-            <div class="section-header">
-                <h2 class="section-title">Get in Touch</h2>
-                <p class="section-subtitle">Ready to transform your attendance monitoring? Contact us to learn more about SAMS</p>
-            </div>
-            <div class="contact-content">
-                <div class="contact-info">
-                    <h3>Contact Information</h3>
-                    <div class="contact-item">
-                        <i class="fas fa-envelope"></i>
-                        <div>
-                            <strong>Email</strong><br>
-                            info@sams-system.com
-                        </div>
-                    </div>
-                    <div class="contact-item">
-                        <i class="fas fa-phone"></i>
-                        <div>
-                            <strong>Phone</strong><br>
-                            +63 (02) 123-4567
-                        </div>
-                    </div>
-                    <div class="contact-item">
-                        <i class="fas fa-map-marker-alt"></i>
-                        <div>
-                            <strong>Address</strong><br>
-                            Metro Manila, Philippines
-                        </div>
-                    </div>
-                    <div class="contact-item">
-                        <i class="fas fa-clock"></i>
-                        <div>
-                            <strong>Business Hours</strong><br>
-                            Monday - Friday: 8:00 AM - 6:00 PM
-                        </div>
-                    </div>
-                </div>
-                <div class="contact-form">
-                    <form id="contactForm">
-                        <div class="form-group">
-                            <label for="name">Full Name</label>
-                            <input type="text" id="name" name="name" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="email">Email Address</label>
-                            <input type="email" id="email" name="email" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="institution">Institution/Organization</label>
-                            <input type="text" id="institution" name="institution">
-                        </div>
-                        <div class="form-group">
-                            <label for="subject">Subject</label>
-                            <input type="text" id="subject" name="subject" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="message">Message</label>
-                            <textarea id="message" name="message" placeholder="Tell us about your attendance monitoring needs..." required></textarea>
-                        </div>
-                        <button type="submit" class="submit-btn">
-                            <i class="fas fa-paper-plane"></i>
-                            Send Message
-                        </button>
-                    </form>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <div class="stat-card">
-                    <div class="stat-number">24/7</div>
-                    <div class="stat-label">Real-time Monitoring</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-number">100%</div>
-                    <div class="stat-label">Data-Driven Insights</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-number">ISO</div>
-                    <div class="stat-label">25010 Compliant</div>
-                </div>
-            </div>
-        </div>
-    </section>
-
- 
-
-    <!-- Contact Section -->
-    <section id="contact" class="section">
-        <div class="section-header">
-            <h2 class="section-title">Get in Touch</h2>
-            <p class="section-subtitle">Ready to transform your attendance monitoring? Contact us to learn more about SAMS</p>
-        </div>
+    <section class="contact-section" id="contact">
         <div class="contact-container">
+            <div class="contact-header">
+                <h2>Contact Us</h2>
+                <p>We're here to help! Reach out with any questions, feedback, or support inquiries, and our team will get back to you promptly.</p>
+            </div>
             <div class="contact-content">
                 <div class="contact-info">
                     <h3>Contact Information</h3>
-                    <div class="contact-item">
+                    <div class="contact-info-item">
                         <i class="fas fa-envelope"></i>
                         <div>
-                            <strong>Email</strong><br>
-                            info@sams-system.com
+                            <h4>Email</h4>
+                            <p>student.attendance.monitoring.sys@gmail.com</p>
                         </div>
                     </div>
-                    <div class="contact-item">
+                    <div class="contact-info-item">
                         <i class="fas fa-phone"></i>
                         <div>
-                            <strong>Phone</strong><br>
-                            +63 (02) 123-4567
+                            <h4>Phone</h4>
+                            <p>0910-031-0621</p>
                         </div>
                     </div>
-                    <div class="contact-item">
+                    <div class="contact-info-item">
                         <i class="fas fa-map-marker-alt"></i>
                         <div>
-                            <strong>Address</strong><br>
-                            Metro Manila, Philippines
-                        </div>
-                    </div>
-                    <div class="contact-item">
-                        <i class="fas fa-clock"></i>
-                        <div>
-                            <strong>Business Hours</strong><br>
-                            Monday - Friday: 8:00 AM - 6:00 PM
+                            <h4>Address</h4>
+                            <p>Bulacan State University<br>(Bustos Campus)</p>
                         </div>
                     </div>
                 </div>
-                <div class="contact-form">
-                    <form id="contactForm">
-                        <div class="form-group">
-                            <label for="name">Full Name</label>
-                            <input type="text" id="name" name="name" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="email">Email Address</label>
-                            <input type="email" id="email" name="email" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="institution">Institution/Organization</label>
-                            <input type="text" id="institution" name="institution">
-                        </div>
-                        <div class="form-group">
-                            <label for="subject">Subject</label>
-                            <input type="text" id="subject" name="subject" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="message">Message</label>
-                            <textarea id="message" name="message" placeholder="Tell us about your attendance monitoring needs..." required></textarea>
-                        </div>
-                        <button type="submit" class="submit-btn">
-                            <i class="fas fa-paper-plane"></i>
-                            Send Message
-                        </button>
-                    </form>
-                </div>
+                <div class="contact-map">
+    <h3>Our Location</h3>
+    <iframe 
+        src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3856.912401235189!2d120.9099939!3d14.9547300!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x33970009c8e60931%3A0xee163fa5b5612c18!2sBulacan%20State%20University%20-%20Bustos%20Campus!5e0!3m2!1sen!2sph!4v1726758900000!5m2!1sen!2sph" 
+        width="100%" 
+        height="400" 
+        style="border:0;" 
+        allowfullscreen="" 
+        loading="lazy" 
+        referrerpolicy="no-referrer-when-downgrade">
+    </iframe>
+   
             </div>
         </div>
     </section>
 
-       <!-- Footer -->
+    <!-- Footer Section -->
     <footer class="footer">
-        <div class="footer-content">
-            <div class="footer-grid">
-                <div class="footer-brand">
-                    <a href="#" class="footer-logo">
-                        <i class="fas fa-graduation-cap"></i>
-                        <span>SAMS</span>
-                    </a>
-                    <p class="footer-description">
-                        Revolutionizing attendance monitoring through advanced AI and data analytics. 
-                        Empowering educational institutions to support student success and reduce absenteeism 
-                        with intelligent, data-driven solutions.
-                    </p>
-                    <div class="social-links">
-                        <a href="#" class="social-link"><i class="fab fa-facebook-f"></i></a>
-                        <a href="#" class="social-link"><i class="fab fa-twitter"></i></a>
-                        <a href="#" class="social-link"><i class="fab fa-linkedin-in"></i></a>
-                        <a href="#" class="social-link"><i class="fab fa-instagram"></i></a>
+        <div class="footer-container">
+            <div class="footer-column footer-logo-section">
+                <div class="footer-logo">
+                    <div class="logo">
+                        <i class="fas fa-user-graduate"></i>
                     </div>
+                    <div class="footer-logo-text">SAMS</div>
                 </div>
-                
-                <div class="footer-section">
-                    <h4>Quick Links</h4>
-                    <ul class="footer-links">
-                        <li><a href="#home">Home</a></li>
-                        <li><a href="#about">About Us</a></li>
-                        <li><a href="#features">Features</a></li>
-                        <li><a href="#contact">Contact</a></li>
-                    </ul>
-                </div>
-                
-                <div class="footer-section">
-                    <h4>Solutions</h4>
-                    <ul class="footer-links">
-                        <li><a href="#">Time Series Forecasting</a></li>
-                        <li><a href="#">Regression Analysis</a></li>
-                        <li><a href="#">Real-time Analytics</a></li>
-                        <li><a href="#">Predictive Insights</a></li>
-                        <li><a href="#">Custom Reports</a></li>
-                    </ul>
-                </div>
-                
-                <div class="footer-section">
-                    <h4>Resources</h4>
-                    <ul class="footer-links">
-                        <li><a href="#">Documentation</a></li>
-                        <li><a href="#">API Reference</a></li>
-                        <li><a href="#">Support Center</a></li>
-                        <li><a href="#">System Status</a></li>
-                        <li><a href="#">Training Materials</a></li>
-                    </ul>
-                </div>
+                <p style="color: rgba(255, 255, 255, 0.8); font-size: 0.85rem;">
+                    SAMS empowers schools with smart attendance tracking and predictive analytics to boost student success.
+                </p>
             </div>
-            
-            <div class="footer-divider"></div>
-            
-            <div class="footer-bottom">
-                <p>&copy; 2024 SAMS - Student Attendance Monitoring System. All rights reserved.</p>
-                <div class="footer-bottom-links">
-                    <a href="#">Privacy Policy</a>
-                    <a href="#">Terms of Service</a>
-                    <a href="#">Cookie Policy</a>
-                </div>
+            <div class="footer-column">
+                <h3>Quick Links</h3>
+                <ul>
+                    <li><a href="#home">Home</a></li>
+                    <li><a href="#about">About</a></li>
+                    <li><a href="#features">Features</a></li>
+                    <li><a href="#contact">Contact</a></li>
+                </ul>
+            </div>
+            <div class="footer-column">
+                <h3>Resources</h3>
+                <ul>
+                    <li><a href="#support">Support</a></li>
+                    <li><a href="#help">Help Center</a></li>
+                    <li><a href="terms.php">Privacy Policy</a></li>
+                    <li><a href="terms.php">Terms of Service</a></li>
+                </ul>
+            </div>
+            <div class="footer-column">
+                <h3>Contact Us</h3>
+                <ul>
+                    <li>
+                        <div class="contact-info-item">
+                            <i class="fas fa-envelope"></i>
+                            <div>
+                               
+                                <p>student.attendance.monitoring.sys@gmail.com</p>
+                            </div>
+                        </div>
+                    </li>
+                    <li>
+                        <div class="contact-info-item">
+                            <i class="fas fa-phone"></i>
+                            <div>
+                               
+                                <p>0910-031-0321</p>
+                            </div>
+                        </div>
+                    </li>
+                    <li>
+                        <div class="contact-info-item">
+                            <i class="fas fa-map-marker-alt"></i>
+                            <div>
+                                
+                                <p>Bulacan State University<br>(Bustos Campus)</p>
+                            </div>
+                        </div>
+                    </li>
+                </ul>
             </div>
         </div>
-    </footer>  
-    
+        <div class="footer-bottom">
+    <p>&copy; 2025 Student Attendance Monitoring System | A Capstone Project of BSIT Students, BulSU Bustos Campus</p>
+</div>
+
+    </footer>
+
     <script>
-        // Hero slider functionality
-        let currentSlideIndex = 0;
-        const slides = document.querySelectorAll('.hero-slide');
-        const dots = document.querySelectorAll('.hero-nav-dot');
-        
-        function showSlide(index) {
-            slides.forEach(slide => slide.classList.remove('active'));
-            dots.forEach(dot => dot.classList.remove('active'));
-            
-            slides[index].classList.add('active');
-            dots[index].classList.add('active');
-        }
-        
-        function nextSlide() {
-            currentSlideIndex = (currentSlideIndex + 1) % slides.length;
-            showSlide(currentSlideIndex);
-        }
-        
-        function currentSlide(index) {
-            currentSlideIndex = index - 1;
-            showSlide(currentSlideIndex);
-        }
-        
-        // Auto-advance slides
-        setInterval(nextSlide, 5000);
+        // Mobile menu toggle
+        const mobileToggle = document.getElementById('mobile-toggle');
+        const navMenu = document.getElementById('nav-menu');
 
-        // Mobile menu toggle functionality
-        function toggleMobileMenu() {
-            const mobileMenu = document.getElementById('mobileMenu');
-            const toggleBtn = document.querySelector('.mobile-menu-toggle i');
-            
-            mobileMenu.classList.toggle('active');
-            
-            // Change icon based on menu state
-            if (mobileMenu.classList.contains('active')) {
-                toggleBtn.classList.remove('fa-bars');
-                toggleBtn.classList.add('fa-times');
+        mobileToggle.addEventListener('click', () => {
+            navMenu.classList.toggle('active');
+            mobileToggle.classList.toggle('active');
+            // Animate hamburger to X
+            if (mobileToggle.classList.contains('active')) {
+                mobileToggle.children[0].style.transform = 'rotate(45deg) translate(5px, 5px)';
+                mobileToggle.children[1].style.opacity = '0';
+                mobileToggle.children[2].style.transform = 'rotate(-45deg) translate(5px, -5px)';
             } else {
-                toggleBtn.classList.remove('fa-times');
-                toggleBtn.classList.add('fa-bars');
+                mobileToggle.children[0].style.transform = 'none';
+                mobileToggle.children[1].style.opacity = '1';
+                mobileToggle.children[2].style.transform = 'none';
             }
-        }
+        });
 
-        function closeMobileMenu() {
-            const mobileMenu = document.getElementById('mobileMenu');
-            const toggleBtn = document.querySelector('.mobile-menu-toggle i');
-            
-            mobileMenu.classList.remove('active');
-            toggleBtn.classList.remove('fa-times');
-            toggleBtn.classList.add('fa-bars');
-        }
+        // Update active nav link based on scroll position
+        const sections = document.querySelectorAll('section');
+        const navLinks = document.querySelectorAll('.nav-link');
 
-        // Navigation active state management
-        document.addEventListener('DOMContentLoaded', function() {
-            const navLinks = document.querySelectorAll('.nav-links a, .mobile-nav-links a');
-            
+        window.addEventListener('scroll', () => {
+            let current = '';
+            sections.forEach(section => {
+                const sectionTop = section.offsetTop;
+                const sectionHeight = section.clientHeight;
+                if (pageYOffset >= sectionTop - 100) {
+                    current = section.getAttribute('id');
+                }
+            });
+
             navLinks.forEach(link => {
-                link.addEventListener('click', function(e) {
-                    e.preventDefault();
-                    
-                    // Remove active class from all links
-                    navLinks.forEach(l => l.classList.remove('active'));
-                    
-                    // Add active class to clicked link
-                    this.classList.add('active');
-                    
-                    // Find corresponding link in mobile/desktop menu and sync
-                    const href = this.getAttribute('href');
-                    const correspondingLink = document.querySelector(
-                        this.closest('.mobile-nav-links') ? 
-                        `.nav-links a[href="${href}"]` : 
-                        `.mobile-nav-links a[href="${href}"]`
-                    );
-                    
-                    if (correspondingLink) {
-                        correspondingLink.classList.add('active');
-                    }
-                });
+                link.classList.remove('active');
+                if (link.getAttribute('href').slice(1) === current) {
+                    link.classList.add('active');
+                }
             });
         });
 
-        // Contact form submission
-        document.getElementById('contactForm').addEventListener('submit', function(e) {
-            e.preventDefault();
+        // Hero slideshow
+        let slideIndex = 1;
+        showSlides(slideIndex);
+
+        function currentSlide(n) {
+            showSlides(slideIndex = n);
+        }
+
+        function showSlides(n) {
+            const slides = document.getElementsByClassName('hero-slide');
+            const dots = document.getElementsByClassName('hero-nav-dot');
             
-            // Get form data
-            const formData = new FormData(this);
-            const data = Object.fromEntries(formData);
+            if (n > slides.length) { slideIndex = 1; }
+            if (n < 1) { slideIndex = slides.length; }
             
-            // Simulate form submission
-            const submitBtn = this.querySelector('.submit-btn');
-            const originalText = submitBtn.innerHTML;
+            for (let i = 0; i < slides.length; i++) {
+                slides[i].classList.remove('active');
+            }
             
-            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sending...';
-            submitBtn.disabled = true;
+            for (let i = 0; i < dots.length; i++) {
+                dots[i].classList.remove('active');
+            }
             
-            setTimeout(() => {
-                submitBtn.innerHTML = '<i class="fas fa-check"></i> Message Sent!';
-                submitBtn.style.background = 'var(--success-green)';
-                
-                // Reset form
-                this.reset();
-                
-                // Reset button after 3 seconds
-                setTimeout(() => {
-                    submitBtn.innerHTML = originalText;
-                    submitBtn.style.background = 'var(--primary-blue)';
-                    submitBtn.disabled = false;
-                }, 3000);
-            }, 2000);
-        });
+            slides[slideIndex - 1].classList.add('active');
+            dots[slideIndex - 1].classList.add('active');
+        }
+
+        // Auto slideshow
+        setInterval(() => {
+            slideIndex++;
+            if (slideIndex > 3) slideIndex = 1;
+            showSlides(slideIndex);
+        }, 5000);
 
         // Smooth scrolling for navigation links
         document.querySelectorAll('a[href^="#"]').forEach(anchor => {
@@ -1668,19 +1241,24 @@
                         behavior: 'smooth',
                         block: 'start'
                     });
+                    // Close mobile menu after clicking a link
+                    navMenu.classList.remove('active');
+                    mobileToggle.classList.remove('active');
+                    mobileToggle.children[0].style.transform = 'none';
+                    mobileToggle.children[1].style.opacity = '1';
+                    mobileToggle.children[2].style.transform = 'none';
                 }
             });
         });
 
-        // Header scroll effect
-        window.addEventListener('scroll', function() {
-            const header = document.querySelector('.header');
-            if (window.scrollY > 50) {
-                header.style.boxShadow = 'var(--shadow-lg)';
-                header.style.backgroundColor = 'rgba(255, 255, 255, 0.95)';
-            } else {
-                header.style.boxShadow = 'var(--shadow-md)';
-                header.style.backgroundColor = '';
+        // Close mobile menu when clicking outside
+        document.addEventListener('click', (e) => {
+            if (!navMenu.contains(e.target) && !mobileToggle.contains(e.target) && navMenu.classList.contains('active')) {
+                navMenu.classList.remove('active');
+                mobileToggle.classList.remove('active');
+                mobileToggle.children[0].style.transform = 'none';
+                mobileToggle.children[1].style.opacity = '1';
+                mobileToggle.children[2].style.transform = 'none';
             }
         });
     </script>

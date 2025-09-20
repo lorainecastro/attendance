@@ -3,66 +3,25 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SAMS - Student Attendance Monitoring System</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         :root {
-            /* Primary Colors */
             --primary-blue: #2563eb;
             --primary-blue-hover: #1d4ed8;
             --primary-blue-light: #dbeafe;
-            
-            /* Status Colors */
-            --success-green: #16a34a;
-            --warning-yellow: #ca8a04;
-            --danger-red: #dc2626;
-            --info-cyan: #0891b2;
-            
-            /* Neutral Colors */
-            --dark-gray: #374151;
+            --dark-gray: #1f2937;
             --medium-gray: #6b7280;
-            --light-gray: #d1d5db;
-            --background: #f9fafb;
+            --light-gray: #f8fafc;
+            --background: #ffffff;
             --white: #ffffff;
             --border-color: #e5e7eb;
-            
-            /* Typography */
-            --font-family: 'Inter', sans-serif;
-            --font-size-sm: 0.875rem;
-            --font-size-base: 1rem;
-            --font-size-lg: 1.125rem;
-            --font-size-xl: 1.25rem;
-            --font-size-2xl: 1.5rem;
-            
-            /* Spacing */
-            --spacing-xs: 0.25rem;
-            --spacing-sm: 0.5rem;
-            --spacing-md: 1rem;
-            --spacing-lg: 1.5rem;
-            --spacing-xl: 2rem;
-            --spacing-2xl: 3rem;
-            
-            /* Layout */
-            --sidebar-width: 280px;
-            --sidebar-collapsed-width: 70px;
-            --header-height: 70px;
-            
-            /* Shadows */
-            --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-            
-            /* Border Radius */
-            --radius-sm: 0.25rem;
-            --radius-md: 0.5rem;
-            --radius-lg: 0.75rem;
-            --radius-xl: 1rem;
-            
-            /* Transitions */
-            --transition-fast: 0.15s ease-in-out;
-            --transition-normal: 0.3s ease-in-out;
-            --transition-slow: 0.5s ease-in-out;
+            --text-primary: #111827;
+            --text-secondary: #4b5563;
+            --shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+            --shadow-lg: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            --radius: 12px;
+            --transition: all 0.3s ease;
         }
 
         * {
@@ -72,444 +31,366 @@
         }
 
         body {
-            font-family: var(--font-family);
+            font-family: 'Inter', sans-serif;
             background-color: var(--background);
-            color: var(--dark-gray);
+            color: var(--text-primary);
             line-height: 1.6;
         }
 
-        .header {
-            background: linear-gradient(135deg, var(--white) 0%, rgba(37, 99, 235, 0.02) 100%);
-            backdrop-filter: blur(10px);
-            border-bottom: 1px solid var(--border-color);
-            box-shadow: var(--shadow-md);
-            position: sticky;
-            top: 0;
-            z-index: 1000;
-            height: var(--header-height);
+        /* Top Bar */
+        .top-bar {
+            background: var(--primary-blue);
+            padding: 8px 0;
+            font-size: 0.875rem;
+            color: white;
         }
 
-        .navbar {
+        .top-bar-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
             display: flex;
             justify-content: space-between;
             align-items: center;
+        }
+
+        .top-bar-left {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .top-bar-right {
+            display: flex;
+            gap: 20px;
+        }
+
+        .top-bar-link {
+            color: rgba(255, 255, 255, 0.9);
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: var(--transition);
+        }
+
+        .top-bar-link:hover {
+            color: white;
+        }
+
+        /* Header */
+        .header {
+            background: white;
+            box-shadow: var(--shadow);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+
+        .nav-container {
             max-width: 1200px;
             margin: 0 auto;
-            padding: 0 var(--spacing-lg);
-            height: 100%;
+            padding: 0 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            height: 70px;
+        }
+
+        .logo-section {
+            display: flex;
+            align-items: center;
+            gap: 12px;
         }
 
         .logo {
+            width: 48px;
+            height: 48px;
+            background: var(--primary-blue);
+            border-radius: var(--radius);
             display: flex;
             align-items: center;
-            gap: var(--spacing-sm);
-            text-decoration: none;
-            color: var(--primary-blue);
+            justify-content: center;
+            color: white;
+            font-size: 20px;
+        }
+
+        .logo-text {
+            font-size: 1.25rem;
             font-weight: 700;
-            font-size: var(--font-size-xl);
-            transition: var(--transition-fast);
+            color: var(--text-primary);
         }
 
-        .logo i {
-            font-size: 1.5rem;
-            background: linear-gradient(135deg, var(--primary-blue), var(--info-cyan));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
+        .logo-subtext {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            font-weight: 400;
         }
 
-        .logo:hover {
-            transform: translateY(-1px);
-            color: var(--primary-blue-hover);
-        }
-
-        .nav-links {
+        /* Navigation */
+        .nav-menu {
             display: flex;
             list-style: none;
-            gap: var(--spacing-xl);
+            gap: 32px;
             align-items: center;
         }
 
-        .nav-links a {
+        .nav-link {
             text-decoration: none;
-            color: var(--dark-gray);
+            color: var(--text-secondary);
             font-weight: 500;
-            font-size: var(--font-size-base);
-            padding: var(--spacing-sm) var(--spacing-md);
-            border-radius: var(--radius-md);
-            transition: var(--transition-normal);
-            position: relative;
-            overflow: hidden;
+            font-size: 0.95rem;
+            padding: 8px 16px;
+            border-radius: var(--radius);
+            transition: var(--transition);
         }
 
-        .nav-links a::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: -100%;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(37, 99, 235, 0.1), transparent);
-            transition: var(--transition-normal);
-        }
-
-        .nav-links a:hover::before {
-            left: 100%;
-        }
-
-        .nav-links a:hover {
+        .nav-link:hover,
+        .nav-link.active {
             color: var(--primary-blue);
             background-color: var(--primary-blue-light);
-            transform: translateY(-2px);
         }
 
-        .nav-links a.active {
-            color: var(--primary-blue);
-            background-color: var(--primary-blue-light);
-            border: 1px solid rgba(37, 99, 235, 0.2);
-        }
-
+        /* Buttons */
         .auth-buttons {
             display: flex;
-            gap: var(--spacing-md);
+            gap: 12px;
             align-items: center;
         }
 
         .btn {
-            padding: var(--spacing-sm) var(--spacing-lg);
-            border: none;
-            border-radius: var(--radius-md);
-            font-family: var(--font-family);
-            font-size: var(--font-size-base);
+            padding: 10px 20px;
+            border-radius: var(--radius);
             font-weight: 500;
-            cursor: pointer;
-            transition: var(--transition-normal);
+            font-size: 0.9rem;
             text-decoration: none;
-            display: inline-flex;
-            align-items: center;
-            gap: var(--spacing-xs);
-            position: relative;
-            overflow: hidden;
+            transition: var(--transition);
+            cursor: pointer;
+            border: none;
         }
 
-        .btn::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: -100%;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
-            transition: var(--transition-fast);
-        }
-
-        .btn:hover::before {
-            left: 100%;
-        }
-
-        .btn-outline {
+        .btn-signin {
+            color: var(--primary-blue);
             background: transparent;
-            color: var(--primary-blue);
-            border: 1px solid var(--primary-blue);
+            border: 1px solid var(--border-color);
         }
 
-        .btn-outline:hover {
-            background-color: var(--primary-blue);
-            color: var(--white);
-            transform: translateY(-2px);
-            box-shadow: var(--shadow-lg);
+        .btn-signin:hover {
+            border-color: var(--primary-blue);
+            background: var(--primary-blue-light);
         }
 
-        .btn-primary {
-            background: linear-gradient(135deg, var(--primary-blue), var(--primary-blue-hover));
-            color: var(--white);
-            border: 1px solid transparent;
+        .btn-signup {
+            background: var(--primary-blue);
+            color: white;
         }
 
-        .btn-primary:hover {
-            background: linear-gradient(135deg, var(--primary-blue-hover), var(--primary-blue));
-            transform: translateY(-2px);
-            box-shadow: var(--shadow-lg);
+        .btn-signup:hover {
+            background: var(--primary-blue-hover);
         }
 
-        .mobile-menu-toggle {
+        /* Mobile Responsive */
+        .mobile-toggle {
             display: none;
-            background: none;
-            border: none;
-            font-size: var(--font-size-xl);
-            color: var(--dark-gray);
+            flex-direction: column;
             cursor: pointer;
-            padding: var(--spacing-sm);
-            border-radius: var(--radius-md);
-            transition: var(--transition-fast);
+            padding: 8px;
         }
 
-        .mobile-menu-toggle:hover {
-            color: var(--primary-blue);
-            background-color: var(--primary-blue-light);
-        }
-
-        .mobile-menu {
-            position: fixed;
-            top: var(--header-height);
-            left: -100%;
-            width: 100%;
-            height: calc(100vh - var(--header-height));
-            background: var(--white);
-            z-index: 999;
-            transition: var(--transition-normal);
-            overflow-y: auto;
-            box-shadow: var(--shadow-lg);
-        }
-
-        .mobile-menu.active {
-            left: 0;
-        }
-
-        .mobile-nav-links {
-            display: flex;
-            flex-direction: column;
-            padding: var(--spacing-xl);
-            gap: var(--spacing-md);
-        }
-
-        .mobile-nav-links a {
-            text-decoration: none;
-            color: var(--dark-gray);
-            font-weight: 500;
-            font-size: var(--font-size-lg);
-            padding: var(--spacing-md);
-            border-radius: var(--radius-md);
-            transition: var(--transition-fast);
-            border-left: 4px solid transparent;
-        }
-
-        .mobile-nav-links a:hover,
-        .mobile-nav-links a.active {
-            background-color: var(--primary-blue-light);
-            color: var(--primary-blue);
-            border-left-color: var(--primary-blue);
-        }
-
-        .mobile-auth-buttons {
-            display: flex;
-            flex-direction: column;
-            gap: var(--spacing-md);
-            padding: var(--spacing-xl);
-            border-top: 1px solid var(--border-color);
+        .mobile-toggle span {
+            width: 22px;
+            height: 2px;
+            background: var(--text-secondary);
+            margin: 3px 0;
+            transition: var(--transition);
+            border-radius: 1px;
         }
 
         @media (max-width: 768px) {
-            .nav-links,
-            .auth-buttons {
+            .top-bar-container {
+                padding: 0 16px;
+            }
+
+            .top-bar-right a:not(:first-child) {
                 display: none;
             }
 
-            .mobile-menu-toggle {
-                display: block;
+            .nav-container {
+                padding: 0 16px;
             }
 
-            .navbar {
-                padding: 0 var(--spacing-md);
+            .logo-text {
+                font-size: 1.1rem;
             }
-        }
 
-        /* Demo content */
-        .demo-content {
-            padding: var(--spacing-2xl);
-            max-width: 1200px;
-            margin: 0 auto;
-        }
+            .logo-subtext {
+                display: none;
+            }
 
-        .hero-section {
-            text-align: center;
-            padding: var(--spacing-2xl) 0;
-            background: linear-gradient(135deg, var(--primary-blue-light), var(--background));
-            border-radius: var(--radius-xl);
-            margin-bottom: var(--spacing-xl);
-        }
+            .nav-menu {
+                position: fixed;
+                left: -100%;
+                top: 118px;
+                flex-direction: column;
+                background: white;
+                width: 100%;
+                text-align: center;
+                transition: left 0.3s ease;
+                box-shadow: var(--shadow-lg);
+                padding: 40px 0;
+                gap: 20px;
+            }
 
-        .hero-section h1 {
-            font-size: var(--font-size-2xl);
-            color: var(--primary-blue);
-            margin-bottom: var(--spacing-md);
-        }
+            .nav-menu.active {
+                left: 0;
+            }
 
-        .hero-section p {
-            color: var(--medium-gray);
-            font-size: var(--font-size-lg);
+            .mobile-toggle {
+                display: flex;
+            }
+
+            .auth-buttons {
+                flex-direction: column;
+                width: 100%;
+                gap: 16px;
+                padding: 0 40px;
+            }
+
+            .btn {
+                width: 100%;
+                text-align: center;
+            }
         }
     </style>
 </head>
 <body>
-    
-<header class="header">
-        <nav class="navbar">
-            <a href="index.php" class="logo">
+    <!-- Top Bar -->
+    <div class="top-bar">
+        <div class="top-bar-container">
+            <div class="top-bar-left">
                 <i class="fas fa-graduation-cap"></i>
-                <span>SAMS</span>
-            </a>
+                <span>Student Attendance Monitoring System</span>
+            </div>
+            <div class="top-bar-right">
+                <a href="#support" class="top-bar-link">
+                    <i class="fas fa-headset"></i>
+                    Support
+                </a>
+                <a href="#help" class="top-bar-link">
+                    <i class="fas fa-question-circle"></i>
+                    Help
+                </a>
+                <a href="#contact" class="top-bar-link">
+                    <i class="fas fa-phone"></i>
+                    Contact
+                </a>
+            </div>
+        </div>
+    </div>
 
-            <ul class="nav-links">
-                <li><a href="index.php">Home</a></li>
-                <li><a href="index.php#about">About</a></li>
-                <li><a href="index.php#features">Features</a></li>
-                <li><a href="index.php#contact">Contact</a></li>
+    <!-- Header -->
+    <header class="header">
+        <div class="nav-container">
+            <div class="logo-section">
+                <div class="logo">
+                    <i class="fas fa-user-graduate"></i>
+                </div>
+                <div>
+                    <div class="logo-text">SAMS</div>
+                    <div class="logo-subtext">Student Attendance Monitoring System</div>
+                </div>
+            </div>
+
+            <ul class="nav-menu" id="nav-menu">
+                <li><a href="index.php" class="nav-link active">Home</a></li>
+                <li><a href="index.php#about" class="nav-link">About</a></li>
+                <li><a href="index.php#features" class="nav-link">Features</a></li>
+                <li><a href="index.php#contact" class="nav-link">Contact</a></li>
+                <div class="auth-buttons">
+                    <a href="sign-in.php" class="btn btn-signin">Sign In</a>
+                    <a href="sign-up.php" class="btn btn-signup">Sign Up</a>
+                </div>
             </ul>
 
-            <div class="auth-buttons">
-                <a href="sign-in.php" class="btn btn-outline">
-                    <i class="fas fa-sign-in-alt"></i>
-                    Sign In
-                </a>
-                <a href="sign-up.php" class="btn btn-primary">
-                    <i class="fas fa-user-plus"></i>
-                    Sign Up
-                </a>
-            </div>
-
-            <button class="mobile-menu-toggle" onclick="toggleMobileMenu()">
-                <i class="fas fa-bars"></i>
-            </button>
-        </nav>
-
-        <div class="mobile-menu" id="mobileMenu">
-            <div class="mobile-nav-links">
-                <a href="index.php" onclick="closeMobileMenu()">Home</a>
-                <a href="index.php#about" onclick="closeMobileMenu()">About</a>
-                <a href="index.php#features" onclick="closeMobileMenu()">Features</a>
-                <a href="index.php#contact" onclick="closeMobileMenu()">Contact</a>
-            </div>
-            <div class="mobile-auth-buttons">
-                <a href="sign-in.php" class="btn btn-outline" onclick="closeMobileMenu()">
-                    <i class="fas fa-sign-in-alt"></i>
-                    Sign In
-                </a>
-                <a href="sign-up.php" class="btn btn-primary" onclick="closeMobileMenu()">
-                    <i class="fas fa-user-plus"></i>
-                    Sign Up
-                </a>
+            <div class="mobile-toggle" id="mobile-toggle">
+                <span></span>
+                <span></span>
+                <span></span>
             </div>
         </div>
     </header>
 
-    <!-- Demo Content 
-    <div class="demo-content">
-        <div class="hero-section">
-            <h1>Student Attendance Monitoring System</h1>
-            <p>Streamline attendance tracking with our comprehensive and user-friendly platform</p>
-        </div>
-    </div> -->
-
     <script>
-        // Mobile menu toggle functionality
-        function toggleMobileMenu() {
-            const mobileMenu = document.getElementById('mobileMenu');
-            const toggleBtn = document.querySelector('.mobile-menu-toggle i');
-            
-            mobileMenu.classList.toggle('active');
-            
-            // Change icon based on menu state
-            if (mobileMenu.classList.contains('active')) {
-                toggleBtn.classList.remove('fa-bars');
-                toggleBtn.classList.add('fa-times');
+        // Mobile menu toggle
+        const mobileToggle = document.getElementById('mobile-toggle');
+        const navMenu = document.getElementById('nav-menu');
+
+        mobileToggle.addEventListener('click', () => {
+            navMenu.classList.toggle('active');
+            mobileToggle.classList.toggle('active');
+            // Animate hamburger to X
+            if (mobileToggle.classList.contains('active')) {
+                mobileToggle.children[0].style.transform = 'rotate(45deg) translate(5px, 5px)';
+                mobileToggle.children[1].style.opacity = '0';
+                mobileToggle.children[2].style.transform = 'rotate(-45deg) translate(5px, -5px)';
             } else {
-                toggleBtn.classList.remove('fa-times');
-                toggleBtn.classList.add('fa-bars');
-            }
-        }
-
-        function closeMobileMenu() {
-            const mobileMenu = document.getElementById('mobileMenu');
-            const toggleBtn = document.querySelector('.mobile-menu-toggle i');
-            
-            mobileMenu.classList.remove('active');
-            toggleBtn.classList.remove('fa-times');
-            toggleBtn.classList.add('fa-bars');
-        }
-
-        // Handle navigation based on current page
-        document.addEventListener('DOMContentLoaded', function() {
-            const currentPage = window.location.pathname.split('/').pop() || 'index.php';
-            const navLinks = document.querySelectorAll('.nav-links a, .mobile-nav-links a');
-            
-            navLinks.forEach(link => {
-                const href = link.getAttribute('href');
-                
-                // Check if we're on the home page and this is a home link
-                if (currentPage === 'index.php' && href === 'index.php') {
-                    link.classList.add('active');
-                }
-                // Check if we're on the same page as the link
-                else if (href.includes(currentPage) && !href.includes('#')) {
-                    link.classList.add('active');
-                }
-            });
-        });
-
-        // Enhanced navigation handling for hash links
-        document.addEventListener('DOMContentLoaded', function() {
-            const navLinks = document.querySelectorAll('.nav-links a, .mobile-nav-links a');
-            
-            navLinks.forEach(link => {
-                link.addEventListener('click', function(e) {
-                    const href = this.getAttribute('href');
-                    
-                    // If it's a hash link and we're on the same page
-                    if (href.includes('#') && href.startsWith('index.php#')) {
-                        const currentPage = window.location.pathname.split('/').pop() || 'index.php';
-                        
-                        if (currentPage === 'index.php') {
-                            // We're already on index.php, just scroll to section
-                            e.preventDefault();
-                            const sectionId = href.split('#')[1];
-                            const target = document.getElementById(sectionId);
-                            
-                            if (target) {
-                                target.scrollIntoView({
-                                    behavior: 'smooth',
-                                    block: 'start'
-                                });
-                            }
-                        }
-                        // If we're not on index.php, let the link redirect normally
-                    }
-                    
-                    // Update active state
-                    navLinks.forEach(l => l.classList.remove('active'));
-                    this.classList.add('active');
-                    
-                    // Close mobile menu if open
-                    closeMobileMenu();
-                });
-            });
-        });
-
-        // Header scroll effect
-        window.addEventListener('scroll', function() {
-            const header = document.querySelector('.header');
-            if (window.scrollY > 50) {
-                header.style.boxShadow = 'var(--shadow-lg)';
-                header.style.backgroundColor = 'rgba(255, 255, 255, 0.95)';
-            } else {
-                header.style.boxShadow = 'var(--shadow-md)';
-                header.style.backgroundColor = '';
+                mobileToggle.children[0].style.transform = 'none';
+                mobileToggle.children[1].style.opacity = '1';
+                mobileToggle.children[2].style.transform = 'none';
             }
         });
 
-        // Handle hash navigation when page loads
-        window.addEventListener('load', function() {
-            if (window.location.hash) {
-                const target = document.querySelector(window.location.hash);
+        // Smooth scrolling for navigation links
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
                 if (target) {
-                    setTimeout(() => {
-                        target.scrollIntoView({
-                            behavior: 'smooth',
-                            block: 'start'
-                        });
-                    }, 100);
+                    target.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                    // Close mobile menu after clicking a link
+                    navMenu.classList.remove('active');
+                    mobileToggle.classList.remove('active');
+                    mobileToggle.children[0].style.transform = 'none';
+                    mobileToggle.children[1].style.opacity = '1';
+                    mobileToggle.children[2].style.transform = 'none';
                 }
+            });
+        });
+
+        // Close mobile menu when clicking outside
+        document.addEventListener('click', (e) => {
+            if (!navMenu.contains(e.target) && !mobileToggle.contains(e.target) && navMenu.classList.contains('active')) {
+                navMenu.classList.remove('active');
+                mobileToggle.classList.remove('active');
+                mobileToggle.children[0].style.transform = 'none';
+                mobileToggle.children[1].style.opacity = '1';
+                mobileToggle.children[2].style.transform = 'none';
             }
+        });
+
+        // Update active nav link based on scroll position
+        const sections = document.querySelectorAll('section');
+        const navLinks = document.querySelectorAll('.nav-link');
+
+        window.addEventListener('scroll', () => {
+            let current = '';
+            sections.forEach(section => {
+                const sectionTop = section.offsetTop;
+                const sectionHeight = section.clientHeight;
+                if (pageYOffset >= sectionTop - 100) {
+                    current = section.getAttribute('id');
+                }
+            });
+
+            navLinks.forEach(link => {
+                link.classList.remove('active');
+                if (link.getAttribute('href').slice(1) === current) {
+                    link.classList.add('active');
+                }
+            });
         });
     </script>
 </body>

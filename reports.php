@@ -661,6 +661,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                 <option value="">Select Report Type</option>
                 <option value="student">Student Attendance History</option>
                 <option value="class">Attendance per Class</option>
+                <option value="perfect">Perfect Attendance Recognition</option> <!-- NEW -->
             </select>
             <select class="selector-select" id="export-format">
                 <option value="">Select Export Format</option>

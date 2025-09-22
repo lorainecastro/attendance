@@ -166,10 +166,6 @@ function arimaForecast($data, $periods = 30) {
     $period1_avg = !empty($period1_data) ? array_sum($period1_data) / count($period1_data) : 0.0;
     $period2_avg = !empty($period2_data) ? array_sum($period2_data) / count($period2_data) : $period1_avg;
 
-    // Monthly trend (used as drift)
-    $monthly_trend = $period2_avg - $period1_avg;
-    $daily_drift = $monthly_trend / 30;
-
     // Calculate differences for AR(1) coefficient
     $differences = [];
     for ($i = 1; $i < count($values); $i++) {
@@ -191,6 +187,7 @@ function arimaForecast($data, $periods = 30) {
         $phi_1 = max(-1, min(1, $phi_1)); // Bound for stability
     } else {
         // Fallback based on trend
+        $monthly_trend = $period2_avg - $period1_avg;
         if ($monthly_trend > 0) {
             $phi_1 = 0.6;
         } elseif ($monthly_trend < 0) {
@@ -203,10 +200,10 @@ function arimaForecast($data, $periods = 30) {
     // Forecast generation
     $forecast = [];
     $currentValue = $period2_avg > 0 ? $period2_avg : ($period1_avg > 0 ? $period1_avg : 0.0);
-    $last_delta = $daily_drift;
+    $last_delta = 0;
 
     for ($i = 0; $i < $periods; $i++) {
-        $delta_y = $phi_1 * $last_delta + $daily_drift;
+        $delta_y = $phi_1 * $last_delta;
         $predicted = $currentValue + $delta_y;
         $predicted = max(0, min(100, $predicted));
 

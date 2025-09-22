@@ -417,6 +417,7 @@ try {
         $students = $student_stmt->fetchAll(PDO::FETCH_ASSOC);
 
         $student_data = [];
+        $isCollege = strpos($class['grade_level'], 'College') !== false;
         foreach ($students as $student) {
             $analytics = generateForecast($pdo, $class['class_id'], $student['lrn']);
             $current_start = $period['historical_start'];
@@ -494,13 +495,15 @@ try {
 
         $current_at_risk = 0;
         foreach ($student_data as $s) {
-            if ($s['totalAbsences'] > 13) $current_at_risk++;
+            $absence_threshold = $isCollege ? 3 : 13;
+            if ($s['totalAbsences'] >= $absence_threshold) $current_at_risk++;
         }
         $previous_at_risk = 0;
         foreach ($students as $student) {
             $prev_rate_data = calculateAttendanceRate($pdo, $class['class_id'], $previous_start, $previous_end, $student['lrn']);
             $prev_absences = $prev_rate_data['total_days'] - $prev_rate_data['present_late_days'];
-            if ($prev_absences > 13) $previous_at_risk++;
+            $absence_threshold = $isCollege ? 3 : 13;
+            if ($prev_absences >= $absence_threshold) $previous_at_risk++;
         }
         $at_risk_diff = $current_at_risk - $previous_at_risk;
         $at_risk_trend_direction = $at_risk_diff > 0 ? 'up' : ($at_risk_diff < 0 ? 'down' : 'stable');
@@ -1796,17 +1799,12 @@ if ($classes_json === false) {
         });
 
         // Initialize on page load
-        if (classes.length > 0) {
-            initializeFilters();
+        if (classes.length > 0) {initializeFilters();
             initializeCharts();
         } else {
-            console.warn('No classes available to initialize charts.');
-            document.getElementById('current-attendance-rate').textContent = 'No data available';
-            document.getElementById('predicted-attendance').textContent = 'No data available';
-            document.getElementById('at-risk-count').textContent = '0';
-            document.getElementById('attendance-trend').textContent = 'No data';
-            document.getElementById('at-risk-trend').textContent = 'No data';
+            console.error('No classes available');
         }
     </script>
 </body>
 </html>
+

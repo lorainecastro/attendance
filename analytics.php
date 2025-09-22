@@ -1185,6 +1185,12 @@ if ($classes_json === false) {
                 padding: var(--spacing-md);
             }
         }
+
+        .student-name {
+            font-weight: 700;
+            font-size: var(--font-size-lg);
+            color: var(--primary-blue);
+        }
     </style>
 </head>
 <body>
@@ -1682,7 +1688,8 @@ if ($classes_json === false) {
                 document.getElementById('late-count').textContent = `${studentData[2]} (${studentTotal > 0 ? ((studentData[2] / studentTotal) * 100).toFixed(1) : 0}%)`;
             }
 
-            document.getElementById('attendance-status-title').textContent = `Attendance Status Distribution for ${student.lastName}, ${student.firstName} ${student.middleName || ''}`;
+            // document.getElementById('attendance-status-title').textContent = `Attendance Status Distribution for ${student.lastName}, ${student.firstName} ${student.middleName || ''}`;
+            document.getElementById('attendance-status-title').innerHTML = `Attendance Status Distribution for <span class="student-name">${student.lastName}, ${student.firstName} ${student.middleName || ''}</span>`;
         }
         
         function generateRecommendations(student) {

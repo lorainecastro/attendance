@@ -971,6 +971,7 @@ if ($classes_json === false) {
 
         .table-responsive {
             overflow-x: auto;
+            margin-bottom: 10px;
         }
 
         table {
@@ -1262,20 +1263,36 @@ if ($classes_json === false) {
         </div>
 
         <div class="pattern-table">
-            <h3>Personal Analytics & AI Recommendations</h3>
-            <div id="student-recommendations"></div>
+            <h3>Personal Analytics</h3>
             <div class="table-responsive">
                 <table>
                     <thead>
                         <tr>
                             <th>Metric</th>
                             <th>Current Value</th>
-                            <th>Forecast Next Month</th>
-                            <th>Recommendation</th>
                         </tr>
                     </thead>
                     <tbody id="student-metrics"></tbody>
                 </table>
+            </div>
+            <div class="pattern-table">
+                <h3>Forecast Metrics</h3>
+                <div class="table-responsive">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Metric</th>
+                                <th>Forecast Next Month</th>
+                            </tr>
+                        </thead>
+                        <tbody id="student-forecast-metrics"></tbody>
+                    </table>
+                </div>
+            </div>
+            <h3>AI Recommendation</h3>
+            <div class="alert alert-warning">
+                <i class="fas fa-exclamation-circle"></i>
+                <span id="student-recommendation-text"></span>
             </div>
         </div>
     </div>
@@ -1527,98 +1544,106 @@ if ($classes_json === false) {
         }
         
         function showStudentPrediction(studentId) {
-            const student = classes.flatMap(c => c.students.map(s => ({
-                ...s,
-                subject: c.subject,
-                section: c.sectionName,
-                gradeLevel: c.gradeLevel
-            }))).find(s => s.id == studentId);
-            
-            if (!student) {
-                document.getElementById('student-prediction-card').style.display = 'none';
-                console.warn('No student found for ID:', studentId);
-                return;
-            }
-            
-            document.getElementById('student-prediction-card').style.display = 'block';
-            
-            const avgForecast = student.forecast.reduce((a, b) => a + b, 0) / student.forecast.length;
-            
-            const studentDetails = document.getElementById('student-details');
-            studentDetails.innerHTML = `
-                <div class="detail-item">
-                    <strong>Class:</strong> ${student.subject} (${student.section})
-                </div>
-                <div class="detail-item">
-                    <strong>LRN:</strong> ${student.lrn || 'N/A'}
-                </div>
-                <div class="detail-item">
-                    <strong>Student:</strong> ${student.lastName}, ${student.firstName} ${student.middleName || ''}
-                </div>
-                <div class="detail-item">
-                    <strong>Current Attendance Rate:</strong> ${student.attendanceRate}%
-                </div>
-                <div class="detail-item">
-                    <strong>Predicted Next Month:</strong> ${avgForecast.toFixed(1)}%
-                </div>
-                <div class="detail-item">
-                    <strong>Total Absences:</strong> ${student.totalAbsences}
-                </div>
-                <div class="detail-item risk-${student.riskLevel}">
-                    <strong>Risk Level:</strong> ${student.riskLevel.charAt(0).toUpperCase() + student.riskLevel.slice(1)}
-                </div>
-            `;
-            
-            const recommendations = generateRecommendations(student);
-            const recDiv = document.getElementById('student-recommendations');
-            recDiv.innerHTML = recommendations.map(rec => 
-                `<div class="alert alert-${rec.type}">
-                    <i class="fas fa-${rec.icon}"></i>
-                    <span>${rec.message}</span>
-                </div>`
-            ).join('');
-            
-            const metricsTable = document.getElementById('student-metrics');
-            metricsTable.innerHTML = `
-                <tr>
-                    <td>Attendance Rate</td>
-                    <td>${student.attendanceRate}%</td>
-                    <td>${avgForecast.toFixed(1)}%</td>
-                    <td>${avgForecast < student.attendanceRate ? 'Implement intervention plan' : 'Continue monitoring'}</td>
-                </tr>
-                <tr>
-                    <td>Total Absences</td>
-                    <td>${student.totalAbsences}</td>
-                    <td>-</td>
-                    <td>${student.totalAbsences > 10 ? 'Contact parents' : 'Review absence patterns'}</td>
-                </tr>
-                <tr>
-                    <td>Risk Level</td>
-                    <td><span class="risk-${student.riskLevel}">${student.riskLevel.charAt(0).toUpperCase() + student.riskLevel.slice(1)}</span></td>
-                    <td>-</td>
-                    <td>${student.riskLevel === 'high' || student.riskLevel === 'critical' ? 'Schedule parent conference' : student.riskLevel === 'medium' ? 'Implement peer support' : 'Continue current strategies'}</td>
-                </tr>
-            `;
-            
-            createIndividualForecastChart(student);
-            
-            if (attendanceStatusChart) {
-                const studentData = [
-                    student.attendanceStatus.present,
-                    student.attendanceStatus.absent,
-                    student.attendanceStatus.late
-                ];
-                const studentTotal = studentData.reduce((a, b) => a + b, 0);
-                attendanceStatusChart.data.datasets[0].data = studentData;
-                attendanceStatusChart.update();
+    const student = classes.flatMap(c => c.students.map(s => ({
+        ...s,
+        subject: c.subject,
+        section: c.sectionName,
+        gradeLevel: c.gradeLevel
+    }))).find(s => s.id == studentId);
+    
+    if (!student) {
+        document.getElementById('student-prediction-card').style.display = 'none';
+        console.warn('No student found for ID:', studentId);
+        return;
+    }
+    
+    document.getElementById('student-prediction-card').style.display = 'block';
+    
+    const avgForecast = student.forecast.reduce((a, b) => a + b, 0) / student.forecast.length;
+    
+    const studentDetails = document.getElementById('student-details');
+    studentDetails.innerHTML = `
+        <div class="detail-item">
+            <strong>Class:</strong> ${student.subject} (${student.section})
+        </div>
+        <div class="detail-item">
+            <strong>LRN:</strong> ${student.lrn || 'N/A'}
+        </div>
+        <div class="detail-item">
+            <strong>Student:</strong> ${student.lastName}, ${student.firstName} ${student.middleName || ''}
+        </div>
+        <div class="detail-item">
+            <strong>Current Attendance Rate:</strong> ${student.attendanceRate}%
+        </div>
+        <div class="detail-item">
+            <strong>Predicted Next Month:</strong> ${avgForecast.toFixed(1)}%
+        </div>
+        <div class="detail-item">
+            <strong>Total Absences:</strong> ${student.totalAbsences}
+        </div>
+        <div class="detail-item risk-${student.riskLevel}">
+            <strong>Risk Level:</strong> ${student.riskLevel.charAt(0).toUpperCase() + student.riskLevel.slice(1)}
+        </div>
+    `;
+    
+    const recommendation = generateRecommendation(student);
+    document.getElementById('student-recommendation-text').textContent = recommendation;
+    
+    const metricsTable = document.getElementById('student-metrics');
+    metricsTable.innerHTML = `
+        <tr>
+            <td>Attendance Rate</td>
+            <td>${student.attendanceRate}%</td>
+        </tr>
+        <tr>
+            <td>Total Absences</td>
+            <td>${student.totalAbsences}</td>
+        </tr>
+        <tr>
+            <td>Risk Level</td>
+            <td><span class="risk-${student.riskLevel}">${student.riskLevel.charAt(0).toUpperCase() + student.riskLevel.slice(1)}</span></td>
+        </tr>
+    `;
+    
+    const forecastMetricsTable = document.getElementById('student-forecast-metrics');
+    forecastMetricsTable.innerHTML = `
+        <tr>
+            <td>Attendance Rate</td>
+            <td>${avgForecast.toFixed(1)}%</td>
+        </tr>
+    `;
+    
+    createIndividualForecastChart(student);
+    
+    if (attendanceStatusChart) {
+        const studentData = [
+            student.attendanceStatus.present,
+            student.attendanceStatus.absent,
+            student.attendanceStatus.late
+        ];
+        const studentTotal = studentData.reduce((a, b) => a + b, 0);
+        attendanceStatusChart.data.datasets[0].data = studentData;
+        attendanceStatusChart.update();
 
-                document.getElementById('present-count').textContent = `${studentData[0]} (${studentTotal > 0 ? ((studentData[0] / studentTotal) * 100).toFixed(1) : 0}%)`;
-                document.getElementById('absent-count').textContent = `${studentData[1]} (${studentTotal > 0 ? ((studentData[1] / studentTotal) * 100).toFixed(1) : 0}%)`;
-                document.getElementById('late-count').textContent = `${studentData[2]} (${studentTotal > 0 ? ((studentData[2] / studentTotal) * 100).toFixed(1) : 0}%)`;
-            }
+        document.getElementById('present-count').textContent = `${studentData[0]} (${studentTotal > 0 ? ((studentData[0] / studentTotal) * 100).toFixed(1) : 0}%)`;
+        document.getElementById('absent-count').textContent = `${studentData[1]} (${studentTotal > 0 ? ((studentData[1] / studentTotal) * 100).toFixed(1) : 0}%)`;
+        document.getElementById('late-count').textContent = `${studentData[2]} (${studentTotal > 0 ? ((studentData[2] / studentTotal) * 100).toFixed(1) : 0}%)`;
+    }
 
-            document.getElementById('attendance-status-title').innerHTML = `Attendance Status Distribution for <span class="student-name">${student.lastName}, ${student.firstName} ${student.middleName || ''}</span>`;
-        }
+    document.getElementById('attendance-status-title').innerHTML = `Attendance Status Distribution for <span class="student-name">${student.lastName}, ${student.firstName} ${student.middleName || ''}</span>`;
+}
+
+function generateRecommendation(student) {
+    if (student.riskLevel === 'high' || student.riskLevel === 'critical') {
+        return `Critical: Schedule immediate parent conference to address ${student.primaryAbsenceReason.toLowerCase()} issues`;
+    } else if (student.riskLevel === 'medium') {
+        return 'Moderate risk: Implement peer support system and weekly progress reviews';
+    } else if (student.trend === 'declining') {
+        return 'Declining trend detected: Investigate underlying causes and adjust approach';
+    } else {
+        return 'Good attendance: Continue current engagement strategies';
+    }
+}
         
         function generateRecommendations(student) {
             const recommendations = [];

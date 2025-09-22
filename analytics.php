@@ -91,46 +91,55 @@ function calculateAttendanceRate($pdo, $class_id, $start_date, $end_date, $lrn =
 
 // Function to fetch historical attendance data for ARIMA
 function getHistoricalAttendanceData($pdo, $class_id, $start_date, $end_date, $lrn = null) {
-    $query = "
-        SELECT DISTINCT attendance_date
-        FROM attendance_tracking
-        WHERE class_id = :class_id
-        AND attendance_date BETWEEN :start_date AND :end_date
-        AND logged_by = 'Teacher'
-        AND attendance_status IN ('Present', 'Absent', 'Late')
-        ORDER BY attendance_date
-    ";
-    $stmt = $pdo->prepare($query);
     try {
-        $stmt->execute([
+        $query = "
+            SELECT DISTINCT attendance_date
+            FROM attendance_tracking
+            WHERE class_id = :class_id
+            AND attendance_date BETWEEN :start_date AND :end_date
+            AND attendance_status IN ('Present', 'Absent', 'Late')
+        ";
+        $params = [
             ':class_id' => $class_id,
             ':start_date' => $start_date,
             ':end_date' => $end_date
-        ]);
-        $dates = $stmt->fetchAll(PDO::FETCH_COLUMN);
-    } catch (PDOException $e) {
-        error_log("Database error in getHistoricalAttendanceData: " . $e->getMessage());
-        $dates = [];
-    }
-
-    $time_series = [];
-    $cumulative_present_late = 0;
-    $cumulative_days = 0;
-
-    foreach ($dates as $index => $date) {
-        $rate_data = calculateAttendanceRate($pdo, $class_id, $date, $date, $lrn);
+        ];
         if ($lrn) {
-            $cumulative_days++;
-            if ($rate_data['present_late_days'] > 0) {
-                $cumulative_present_late++;
-            }
-            $time_series[$date] = $cumulative_days > 0 ? ($cumulative_present_late / $cumulative_days) * 100 : 0;
-        } else {
-            $time_series[$date] = floatval($rate_data['rate']);
+            $query .= " AND lrn = :lrn";
+            $params[':lrn'] = $lrn;
         }
-    }
+        $query .= " ORDER BY attendance_date";
+        $stmt = $pdo->prepare($query);
+        $stmt->execute($params);
+        $dates = $stmt->fetchAll(PDO::FETCH_COLUMN);
 
-    return $time_series;
+        $time_series = [];
+        $cumulative_present_late = 0;
+        $cumulative_days = 0;
+
+        foreach ($dates as $index => $date) {
+            $rate_data = calculateAttendanceRate($pdo, $class_id, $date, $date, $lrn);
+            if ($lrn) {
+                $cumulative_days++;
+                if ($rate_data['present_late_days'] > 0) {
+                    $cumulative_present_late++;
+                }
+                $time_series[$date] = $cumulative_days > 0 ? ($cumulative_present_late / $cumulative_days) * 100 : 0;
+            } else {
+                $time_series[$date] = floatval($rate_data['rate']);
+            }
+        }
+
+        return $time_series;
+    } catch (PDOException $e) {
+        // Handle database errors
+        error_log("Database error in getHistoricalAttendanceData: " . $e->getMessage());
+        return [];
+    } catch (Exception $e) {
+        // Handle other unexpected errors
+        error_log("Unexpected error in getHistoricalAttendanceData: " . $e->getMessage());
+        return [];
+    }
 }
 
 // Simple ARIMA(1,1,0) forecasting function using example parameters
@@ -225,7 +234,10 @@ function generateForecast($pdo, $class_id, $lrn = null) {
     $start_date = date('Y-m-d', strtotime('-2 months', strtotime($today)));
     
     $historical_data = getHistoricalAttendanceData($pdo, $class_id, $start_date, $end_date, $lrn);
-
+    if (empty($historical_data)) {
+        // Fallback for no historical data
+        $historical_data = [$yesterday => 0.0];
+    }   
     $forecast_dates = [];
     $start_forecast = new DateTime($today);
     $start_forecast->add(new DateInterval('P1D'));

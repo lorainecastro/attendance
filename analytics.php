@@ -114,24 +114,23 @@ function getHistoricalAttendanceData($pdo, $class_id, $start_date, $end_date, $l
     }
 
     $time_series = [];
-    foreach ($dates as $date) {
+    $cumulative_present_late = 0;
+    $cumulative_days = 0;
+
+    foreach ($dates as $index => $date) {
         $rate_data = calculateAttendanceRate($pdo, $class_id, $date, $date, $lrn);
-        $time_series[$date] = floatval($rate_data['rate']);
+        if ($lrn) {
+            $cumulative_days++;
+            if ($rate_data['present_late_days'] > 0) {
+                $cumulative_present_late++;
+            }
+            $time_series[$date] = $cumulative_days > 0 ? ($cumulative_present_late / $cumulative_days) * 100 : 0;
+        } else {
+            $time_series[$date] = floatval($rate_data['rate']);
+        }
     }
 
     return $time_series;
-}
-
-// Function to calculate standard deviation
-function calculateStandardDeviation($data) {
-    $n = count($data);
-    if ($n < 2) return 1.0; // Default for insufficient data
-    $mean = array_sum($data) / $n;
-    $variance = 0;
-    foreach ($data as $value) {
-        $variance += pow($value - $mean, 2);
-    }
-    return sqrt($variance / $n);
 }
 
 // Simple ARIMA(1,1,0) forecasting function using example parameters
@@ -169,6 +168,7 @@ function arimaForecast($data, $periods = 30) {
 
     // Monthly trend (used as drift)
     $monthly_trend = $period2_avg - $period1_avg;
+    $daily_drift = $monthly_trend / 30;
 
     // Calculate differences for AR(1) coefficient
     $differences = [];
@@ -202,95 +202,18 @@ function arimaForecast($data, $periods = 30) {
 
     // Forecast generation
     $forecast = [];
-    $currentValue = end($values); // Last historical value
-    $prevValue = count($values) > 1 ? $values[count($values) - 2] : $currentValue;
+    $currentValue = $period2_avg > 0 ? $period2_avg : ($period1_avg > 0 ? $period1_avg : 0.0);
+    $last_delta = $daily_drift;
 
     for ($i = 0; $i < $periods; $i++) {
-        // Apply AR(1) and drift (0.2 multiplier to avoid overshooting)
-        $delta_y = $phi_1 * ($currentValue - $prevValue) + 0.2 * $monthly_trend;
+        $delta_y = $phi_1 * $last_delta + $daily_drift;
         $predicted = $currentValue + $delta_y;
-        $predicted = max(0, min(100, $predicted)); // Clamp between 0% and 100%
+        $predicted = max(0, min(100, $predicted));
 
         $forecast[] = round($predicted, 2);
 
-        // Update for next iteration // Update history
-        $prevValue = $currentValue;
-        $currentValue = $predicted;
-    }
-
-    return $forecast;
-}
-
-
-function meanReversionForecast($data, $periods = 30) {
-    if (count($data) < 1) {
-        return array_fill(0, $periods, 0.0);
-    }
-
-    $values = array_values($data);
-    $n = count($values);
-    $stdDev = calculateStandardDeviation($values);
-    $mean = array_sum($values) / $n;
-    $coefVariation = ($mean > 0) ? $stdDev / $mean : 0.5;
-
-    // Use weighted average for baseline, favoring recent data
-    $weights = [];
-    $weightedSum = 0;
-    $totalWeight = 0;
-    for ($i = 0; $i < $n; $i++) {
-        $weight = 1 + ($i / $n); // Linear weight increase
-        $weights[] = $weight;
-        $weightedSum += $values[$i] * $weight;
-        $totalWeight += $weight;
-    }
-    $baseline = $weightedSum / $totalWeight;
-
-    // Dynamic scaling factor for reversion rate based on data variability
-    $reversionScaling = max(0.1, min(0.5, $coefVariation * 0.5)); // Scales with coefVariation, bounded for stability
-    $reversionRate = $coefVariation * $reversionScaling; // Dynamic reversion rate
-
-    // Dynamic multiplier for max change based on data variability
-    $changeMultiplier = max(0.1, min(0.5, $coefVariation)); // Scales with coefVariation
-    $maxChange = $stdDev * $changeMultiplier; // Dynamic max change
-
-    // Dynamic bound multiplier based on coefficient of variation
-    $boundMultiplier = max(1.0, min(2.0, $coefVariation * 2.0)); // Dynamic bounds between 1.0 and 2.0
-
-    $forecast = [];
-    $currentValue = end($values); // Start from last known value
-
-    for ($i = 0; $i < $periods; $i++) {
-        // Gradual reversion to mean
-        $moveTowardMean = ($mean - $currentValue) * $reversionRate;
-        $currentValue += $moveTowardMean;
-
-        // Set predicted value
-        $predicted = $currentValue;
-
-        // Enforce bounds based on historical data
-        $minBound = max(0, $mean - $stdDev * $boundMultiplier);
-        $maxBound = min(100, $mean + $stdDev * $boundMultiplier);
-        $predicted = max($minBound, min($maxBound, $predicted));
-
-        // Limit period-to-period changes
-        if (!empty($forecast)) {
-            $lastValue = end($forecast);
-            if ($predicted > $lastValue + $maxChange) {
-                $predicted = $lastValue + $maxChange;
-            } elseif ($predicted < $lastValue - $maxChange) {
-                $predicted = $lastValue - $maxChange;
-            }
-        } else {
-            // Limit initial deviation from last historical value
-            $lastHistorical = end($values);
-            if ($predicted > $lastHistorical + $maxChange) {
-                $predicted = $lastHistorical + $maxChange;
-            } elseif ($predicted < $lastHistorical - $maxChange) {
-                $predicted = $lastHistorical - $maxChange;
-            }
-        }
-
-        $forecast[] = round($predicted, 2);
+        // Update for next iteration
+        $last_delta = $delta_y;
         $currentValue = $predicted;
     }
 
@@ -318,39 +241,10 @@ function generateForecast($pdo, $class_id, $lrn = null) {
 
     $forecast_values = arimaForecast($historical_data, 30);
 
-    // Validate forecast reasonableness
-    if (!empty($historical_data)) {
-        $historical_avg = array_sum($historical_data) / count($historical_data);
-        $forecast_avg = array_sum($forecast_values) / count($forecast_values);
-        
-        // If forecast deviates too much, use more conservative approach
-        if (abs($forecast_avg - $historical_avg) > 15) {
-            $forecast_values = meanReversionForecast($historical_data, 30);
-        }
-    }
-
     return [
         'historical' => $historical_data,
         'forecast' => array_combine($forecast_dates, $forecast_values)
     ];
-}
-
-// Debug function to log forecasting details
-function debugForecast($student_name, $historical_data, $forecast_data) {
-    if (empty($historical_data)) return;
-    
-    $historical_values = array_values($historical_data);
-    $forecast_values = array_values($forecast_data);
-    
-    $historical_avg = array_sum($historical_values) / count($historical_values);
-    $forecast_avg = array_sum($forecast_values) / count($forecast_values);
-    
-    error_log("Forecast Debug for {$student_name}:");
-    error_log("Historical average: " . round($historical_avg, 2) . "%");
-    error_log("Forecast average: " . round($forecast_avg, 2) . "%");
-    error_log("Difference: " . round(abs($forecast_avg - $historical_avg), 2) . "%");
-    error_log("Historical data: " . implode(", ", $historical_values));
-    error_log("Forecast data: " . implode(", ", array_slice($forecast_values, 0, 5)) . "...");
 }
 
 // Function to calculate attendance status counts for a student or class
@@ -1383,26 +1277,10 @@ if ($classes_json === false) {
             document.getElementById('predicted-attendance').textContent = `${parseFloat(selectedClass.forecast_values.reduce((a, b) => a + b, 0) / selectedClass.forecast_values.length).toFixed(2)}%`;
             document.getElementById('at-risk-count').textContent = selectedClass.at_risk_count;
 
-            // Calculate cumulative averages for historical data
-            let cumSum = 0;
-            const historicalCumAvgs = selectedClass.historical_values.map((val, i) => {
-                cumSum += Number(val);
-                return cumSum / (i + 1);
-            });
-
-            // Calculate cumulative averages for forecast data
-            let lastCumAvg = historicalCumAvgs[historicalCumAvgs.length - 1] || 0;
-            let n = selectedClass.historical_values.length;
-            const forecastCumAvgs = selectedClass.forecast_values.map(val => {
-                lastCumAvg = (lastCumAvg * n + Number(val)) / (n + 1);
-                n++;
-                return lastCumAvg;
-            });
-
             // Destroy existing chart if it exists
             if (forecastChart) forecastChart.destroy();
 
-            // Create new forecast chart with cumulative averages
+            // Create new forecast chart
             forecastChart = new Chart(forecastChartCtx, {
                 type: 'line',
                 data: {
@@ -1410,15 +1288,15 @@ if ($classes_json === false) {
                     datasets: [
                         {
                             label: 'Historical Data',
-                            data: [...historicalCumAvgs, ...Array(selectedClass.forecast_values.length).fill(null)],
+                            data: [...selectedClass.historical_values, ...Array(selectedClass.forecast_values.length).fill(null)],
                             borderColor: '#3b82f6',
                             backgroundColor: 'rgba(59, 130, 246, 0.1)',
                             fill: true,
                             tension: 0.4
                         },
                         {
-                            label: 'Forecast Average',
-                            data: [...Array(selectedClass.historical_values.length).fill(null), ...forecastCumAvgs],
+                            label: 'Forecasted Average',
+                            data: [...Array(selectedClass.historical_values.length).fill(null), ...selectedClass.forecast_values],
                             borderColor: '#ef4444',
                             backgroundColor: 'rgba(239, 68, 68, 0.1)',
                             borderDash: [5, 5],
@@ -1446,10 +1324,9 @@ if ($classes_json === false) {
                     },
                     scales: {
                         y: {
-                            beginAtZero: false,
-                            min: Math.max(0, Math.min(...historicalCumAvgs, ...forecastCumAvgs) - 5),
-                            max: Math.min(100, Math.max(...historicalCumAvgs, ...forecastCumAvgs) + 5),
-                            title: { display: true, text: 'Cumulative Attendance Rate (%)' }
+                            beginAtZero: true,
+                            max: 100,
+                            title: { display: true, text: 'Attendance Rate (%)' }
                         },
                         x: { title: { display: true, text: 'Date' } }
                     }
@@ -1714,28 +1591,6 @@ if ($classes_json === false) {
             const validatedTimeSeries = student.timeSeriesData.map(val => isNaN(val) ? 0 : Number(val));
             const validatedForecast = student.forecast.map(val => isNaN(val) ? 0 : Number(val));
 
-            if (validatedForecast.length > 0 && validatedTimeSeries.length > 0) {
-                const lastHistorical = validatedTimeSeries[validatedTimeSeries.length - 1];
-                const stdDev = validatedTimeSeries.length > 1 ? Math.sqrt(validatedTimeSeries.reduce((sum, val) => sum + Math.pow(val - (validatedTimeSeries.reduce((a, b) => a + b, 0) / validatedTimeSeries.length), 2), 0) / validatedTimeSeries.length) : 1.0;
-                const maxChange = stdDev * 0.3;
-                if (validatedForecast[0] > lastHistorical + maxChange) validatedForecast[0] = lastHistorical + maxChange;
-                else if (validatedForecast[0] < lastHistorical - maxChange) validatedForecast[0] = lastHistorical - maxChange;
-            }
-
-            let cumSum = 0;
-            const historicalCumAvgs = validatedTimeSeries.map((val, i) => {
-                cumSum += val;
-                return cumSum / (i + 1);
-            });
-
-            let lastCumAvg = historicalCumAvgs[historicalCumAvgs.length - 1] || 0;
-            let n = validatedTimeSeries.length;
-            const forecastCumAvgs = validatedForecast.map(val => {
-                lastCumAvg = (lastCumAvg * n + val) / (n + 1);
-                n++;
-                return lastCumAvg;
-            });
-
             try {
                 if (individualForecastChart) individualForecastChart.destroy();
                 individualForecastChart = new Chart(ctx.getContext('2d'), {
@@ -1745,15 +1600,15 @@ if ($classes_json === false) {
                         datasets: [
                             {
                                 label: 'Historical Data',
-                                data: [...historicalCumAvgs, ...Array(validatedForecast.length).fill(null)],
+                                data: [...validatedTimeSeries, ...Array(validatedForecast.length).fill(null)],
                                 borderColor: '#3b82f6',
                                 backgroundColor: 'rgba(59, 130, 246, 0.1)',
                                 fill: true,
                                 tension: 0.4
                             },
                             {
-                                label: 'Forecast Average',
-                                data: [...Array(validatedTimeSeries.length).fill(null), ...forecastCumAvgs],
+                                label: 'Forecasted Data',
+                                data: [...Array(validatedTimeSeries.length).fill(null), ...validatedForecast],
                                 borderColor: '#ef4444',
                                 backgroundColor: 'rgba(239, 68, 68, 0.1)',
                                 borderDash: [5, 5],
@@ -1774,9 +1629,8 @@ if ($classes_json === false) {
                         },
                         scales: {
                             y: {
-                                beginAtZero: false,
-                                min: Math.max(0, Math.min(...historicalCumAvgs, ...forecastCumAvgs) - 5),
-                                max: Math.min(100, Math.max(...historicalCumAvgs, ...forecastCumAvgs) + 5),
+                                beginAtZero: true,
+                                max: 100,
                                 title: { display: true, text: 'Attendance Rate (%)' }
                             },
                             x: { title: { display: true, text: 'Date' } }

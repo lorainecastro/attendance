@@ -1328,7 +1328,7 @@ if ($classes_json === false) {
         </div>
     </div>
 
-    <div class="pattern-table">
+    <!-- <div class="pattern-table">
         <div class="table-header">
             <div class="table-title">AI-Powered Early Warning System</div>
             <div class="alert alert-warning">
@@ -1349,7 +1349,7 @@ if ($classes_json === false) {
                 <tbody id="early-warning-table"></tbody>
             </table>
         </div>
-    </div>
+    </div> -->
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0/dist/chartjs-plugin-datalabels.min.js"></script>
@@ -1614,33 +1614,6 @@ if ($classes_json === false) {
             document.getElementById('late-count').textContent = `${statusCounts[2]} (${total > 0 ? ((statusCounts[2] / total) * 100).toFixed(1) : 0}%)`;
         }
         
-        function updateEarlyWarningTable() {
-            const earlyWarningTable = document.getElementById('early-warning-table');
-            earlyWarningTable.innerHTML = '';
-            
-            const allStudents = classes.flatMap(c => c.students.map(s => ({
-                ...s,
-                subject: c.subject,
-                section: c.sectionName,
-                gradeLevel: c.gradeLevel
-            })));
-            
-            const atRiskStudents = allStudents.filter(s => s.riskLevel === 'medium' || s.riskLevel === 'high' || s.riskLevel === 'critical');
-            
-            atRiskStudents.forEach(student => {
-                const avgForecast = student.forecast.reduce((a, b) => a + b, 0) / student.forecast.length;
-                
-                const row = document.createElement('tr');
-                row.innerHTML = `
-                    <td>${student.gradeLevel} – ${student.section} (${student.subject})</td>
-                    <td>${student.lastName}, ${student.firstName} ${student.middleName || ''}</td>
-                    <td>${avgForecast.toFixed(1)}%</td>
-                    <td>${student.riskLevel === 'high' || student.riskLevel === 'critical' ? 'Immediate parent conference' : 'Monitor closely + automated reminders'}</td>
-                `;
-                earlyWarningTable.appendChild(row);
-            });
-        }
-
         function showStudentPrediction(studentId) {
             const student = classes.flatMap(c => c.students.map(s => ({
                 ...s,
@@ -1885,7 +1858,6 @@ if ($classes_json === false) {
             if (forecastChart) forecastChart.destroy();
             if (attendanceStatusChart) attendanceStatusChart.destroy();
             initializeCharts();
-            updateEarlyWarningTable();
             studentSearch.value = ''; // Clear search input on class change
             document.getElementById('attendance-status-title').textContent = 'Attendance Status Distribution';
         });
@@ -1922,7 +1894,6 @@ if ($classes_json === false) {
             if (forecastChart) forecastChart.destroy();
             if (attendanceStatusChart) attendanceStatusChart.destroy();
             initializeCharts();
-            updateEarlyWarningTable();
         });
 
         document.getElementById('clear-filters').addEventListener('click', () => {
@@ -1950,7 +1921,6 @@ if ($classes_json === false) {
                 forecastChart.destroy();
             }
             initializeCharts();
-            updateEarlyWarningTable();
             document.getElementById('attendance-status-title').textContent = 'Attendance Status Distribution';
         });
 
@@ -1965,7 +1935,6 @@ if ($classes_json === false) {
         if (classes.length > 0) {
             initializeFilters();
             initializeCharts();
-            updateEarlyWarningTable();
         } else {
             console.warn('No classes available to initialize charts.');
             document.getElementById('current-attendance-rate').textContent = 'No data available';

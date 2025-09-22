@@ -1679,7 +1679,7 @@ if ($classes_json === false) {
                 <div class="detail-item">
                     <strong>Total Absences:</strong> ${student.totalAbsences}
                 </div>
-                                <div class="detail-item risk-${student.riskLevel}">
+                <div class="detail-item risk-${student.riskLevel}">
                     <strong>Risk Level:</strong> ${student.riskLevel.charAt(0).toUpperCase() + student.riskLevel.slice(1)}
                 </div>
             `;

@@ -232,11 +232,9 @@ function getHistoricalAttendanceData($pdo, $class_id, $start_date, $end_date, $l
 
         return $time_series;
     } catch (PDOException $e) {
-        // Handle database errors
         error_log("Database error in getHistoricalAttendanceData: " . $e->getMessage());
         return [];
     } catch (Exception $e) {
-        // Handle other unexpected errors
         error_log("Unexpected error in getHistoricalAttendanceData: " . $e->getMessage());
         return [];
     }
@@ -405,6 +403,7 @@ try {
     ");
     $stmt->execute([$user['teacher_id']]);
     $classes_db = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    error_log("Classes fetched: " . print_r($classes_db, true)); // Debug log
 
     foreach ($classes_db as $class) {
         $student_stmt = $pdo->prepare("
@@ -417,7 +416,7 @@ try {
         $students = $student_stmt->fetchAll(PDO::FETCH_ASSOC);
 
         $student_data = [];
-        $isCollege = strpos($class['grade_level'], 'College') !== false;
+        $isCollege = isset($class['grade_level']) && strpos($class['grade_level'], 'College') !== false;
         foreach ($students as $student) {
             $analytics = generateForecast($pdo, $class['class_id'], $student['lrn']);
             $current_start = $period['historical_start'];
@@ -428,7 +427,7 @@ try {
             $present_late_days = $current_rate_data['present_late_days'];
             $absences = $total_days - $present_late_days;
             $avg_forecast = array_sum($analytics['forecast']) / count($analytics['forecast']);
-            $riskLevel = ($absences == 0) ? 'no risk' : (($absences <= 13) ? 'low' : (($absences <= 26) ? 'medium' : (($absences <= 39) ? 'high' : 'critical')));
+            $riskLevel = ($absences == 0) ? 'no risk' : ($isCollege ? ($absences >= 3 ? 'Running for Drop Out' : 'no risk') : (($absences <= 13) ? 'low' : (($absences <= 26) ? 'medium' : (($absences <= 39) ? 'high' : 'Running for Drop Out'))));
 
             $student_data[] = [
                 'id' => $student['lrn'],
@@ -459,11 +458,11 @@ try {
         $class_avg_forecast = array_sum($class_analytics['forecast']) / count($class_analytics['forecast']);
         $classes[] = [
             'id' => $class['class_id'],
-            'code' => $class['subject_name'] . '-' . $class['class_id'],
-            'sectionName' => $class['section_name'],
-            'subject' => $class['subject_name'],
-            'gradeLevel' => $class['grade_level'],
-            'room' => $class['room'],
+            'code' => (isset($class['subject_name']) ? $class['subject_name'] : 'Unknown') . '-' . $class['class_id'],
+            'section_name' => isset($class['section_name']) ? $class['section_name'] : 'Unknown',
+            'subject_name' => isset($class['subject_name']) ? $class['subject_name'] : 'Unknown',
+            'grade_level' => isset($class['grade_level']) ? $class['grade_level'] : '',
+            'room' => isset($class['room']) ? $class['room'] : '',
             'attendancePercentage' => $class_current_rate,
             'historical_dates' => array_keys($class_analytics['historical']),
             'historical_values' => array_values($class_analytics['historical']),
@@ -1008,6 +1007,7 @@ if ($classes_json === false) {
         .risk-low { color: var(--success-color); font-weight: 600; }
         .risk-no { color: var(--success-green); font-weight: 600; }
         .risk-critical { color: var(--danger-red); font-weight: 600; }
+        .risk-running-for-drop-out { color: var(--danger-red); font-weight: 600; }
 
         .prediction-card {
             background: var(--card-bg);
@@ -1051,6 +1051,7 @@ if ($classes_json === false) {
         .detail-item.risk-low { border-left-color: var(--success-color); }
         .detail-item.risk-no { border-left-color: var(--success-green); }
         .detail-item.risk-critical { border-left-color: var(--danger-red); }
+        .detail-item.risk-running-for-drop-out { border-left-color: var(--danger-red); }
 
         .alert {
             padding: var(--spacing-md);
@@ -1151,7 +1152,7 @@ if ($classes_json === false) {
             <select class="selector-select" id="class-filter">
                 <?php if (!empty($classes)): ?>
                     <option value="<?php echo htmlspecialchars($classes[0]['id']); ?>">
-                        <?php echo htmlspecialchars($classes[0]['gradeLevel'] . ' – ' . $classes[0]['sectionName'] . ' (' . $classes[0]['subject'] . ')'); ?>
+                        <?php echo htmlspecialchars((isset($classes[0]['grade_level']) ? $classes[0]['grade_level'] . ' – ' : '') . $classes[0]['section_name'] . ' (' . $classes[0]['subject_name'] . ')'); ?>
                     </option>
                 <?php else: ?>
                     <option value="">No Classes Available</option>
@@ -1300,6 +1301,52 @@ if ($classes_json === false) {
         </div>
     </div>
 
+    <div class="pattern-table" id="at-risk-students">
+        <div class="table-header">
+            <div class="table-title">At-Risk Students</div>
+        </div>
+        <div class="table-responsive">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Class</th>
+                        <th>Name</th>
+                        <th>Total Absences</th>
+                    </tr>
+                </thead>
+                <tbody id="at-risk-table-body">
+                    <?php 
+                    $has_at_risk = false;
+                    foreach ($classes as $class): 
+                        $grade_level = isset($class['grade_level']) ? $class['grade_level'] : '';
+                        $section_name = isset($class['section_name']) ? $class['section_name'] : 'Unknown Section';
+                        $subject_name = isset($class['subject_name']) ? $class['subject_name'] : 'Unknown Subject';
+                        $isCollege = $grade_level && strpos($grade_level, 'College') !== false;
+                        foreach ($class['students'] as $student): 
+                            $absence_threshold = $isCollege ? 3 : 13;
+                            if ($student['totalAbsences'] >= $absence_threshold): 
+                                $has_at_risk = true;
+                    ?>
+                                <tr>
+                                    <td><?php echo htmlspecialchars(($grade_level ? $grade_level . ' - ' : '') . $section_name . ' (' . $subject_name . ')'); ?></td>
+                                    <td><?php echo htmlspecialchars($student['lastName'] . ', ' . $student['firstName'] . ' ' . ($student['middleName'] ?? '')); ?></td>
+                                    <td class="risk-<?php echo htmlspecialchars($student['riskLevel']); ?>">
+                                        <?php echo $student['totalAbsences'] . ' - ' . ($isCollege ? ($student['riskLevel'] == 'Running for Drop Out' ? 'Running for Drop Out' : 'No Risk') : ucfirst($student['riskLevel'])); ?>
+                                    </td>
+                                </tr>
+                            <?php endif; ?>
+                        <?php endforeach; ?>
+                    <?php endforeach; ?>
+                    <?php if (!$has_at_risk): ?>
+                        <tr>
+                            <td colspan="3" style="text-align: center;">No data available</td>
+                        </tr>
+                    <?php endif; ?>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0/dist/chartjs-plugin-datalabels.min.js"></script>
     <script>
@@ -1324,7 +1371,7 @@ if ($classes_json === false) {
             classes.forEach(cls => {
                 const option = document.createElement('option');
                 option.value = cls.id;
-                option.textContent = `${cls.gradeLevel} – ${cls.sectionName} (${cls.subject})`;
+                option.textContent = `${cls.grade_level ? cls.grade_level + ' – ' : ''}${cls.section_name} (${cls.subject_name})`;
                 classFilter.appendChild(option);
             });
             
@@ -1335,16 +1382,15 @@ if ($classes_json === false) {
             const selectedClassId = classFilter.value;
             let filteredStudents = classes.flatMap(c => c.students.map(s => ({
                 ...s,
-                gradeLevel: c.gradeLevel,
-                subject: c.subject,
-                section: c.sectionName
+                grade_level: c.grade_level || '',
+                subject_name: c.subject_name || 'Unknown',
+                section_name: c.section_name || 'Unknown'
             })));
 
             if (selectedClassId) {
-                filteredStudents = filteredStudents.filter(s => s.section === classes.find(c => c.id == selectedClassId).sectionName);
+                filteredStudents = filteredStudents.filter(s => s.section_name === classes.find(c => c.id == selectedClassId).section_name);
             }
 
-            // Apply search filter
             if (searchTerm) {
                 searchTerm = searchTerm.toLowerCase().trim();
                 filteredStudents = filteredStudents.filter(s => 
@@ -1371,7 +1417,7 @@ if ($classes_json === false) {
                 filteredStudents.forEach(student => {
                     const option = document.createElement('option');
                     option.value = student.id;
-                    option.textContent = `${student.lastName}, ${student.firstName} ${student.middleName || ''} (${student.section})`.trim();
+                    option.textContent = `${student.lastName}, ${student.firstName} ${student.middleName || ''} (${student.section_name})`.trim();
                     studentFilter.appendChild(option);
                 });
             }
@@ -1384,7 +1430,6 @@ if ($classes_json === false) {
                 return;
             }
 
-            // Calculate status counts
             const statusCounts = selectedClass.students.reduce((acc, student) => {
                 acc[0] += student.attendanceStatus.present;
                 acc[1] += student.attendanceStatus.absent;
@@ -1392,15 +1437,12 @@ if ($classes_json === false) {
                 return acc;
             }, [0, 0, 0]);
 
-            // Update summary cards
             document.getElementById('current-attendance-rate').textContent = `${selectedClass.attendancePercentage}%`;
             document.getElementById('predicted-attendance').textContent = `${parseFloat(selectedClass.forecast_values.reduce((a, b) => a + b, 0) / selectedClass.forecast_values.length).toFixed(2)}%`;
             document.getElementById('at-risk-count').textContent = selectedClass.at_risk_count;
 
-            // Destroy existing chart if it exists
             if (forecastChart) forecastChart.destroy();
 
-            // Create new forecast chart
             forecastChart = new Chart(forecastChartCtx, {
                 type: 'line',
                 data: {
@@ -1453,7 +1495,6 @@ if ($classes_json === false) {
                 }
             });
 
-            // Update attendance status chart
             const total = statusCounts.reduce((a, b) => a + b, 0);
             if (attendanceStatusChart) attendanceStatusChart.destroy();
             attendanceStatusChart = new Chart(attendanceStatusCtx, {
@@ -1509,7 +1550,6 @@ if ($classes_json === false) {
                 plugins: [ChartDataLabels]
             });
 
-            // Update trend indicators
             const attendanceTrendSpan = document.getElementById('attendance-trend');
             attendanceTrendSpan.textContent = selectedClass.attendance_trend_text;
             const attendanceTrendDiv = attendanceTrendSpan.parentElement;
@@ -1540,7 +1580,6 @@ if ($classes_json === false) {
                 atRiskIcon.className = 'fas fa-minus';
             }
 
-            // Update attendance status legend
             document.getElementById('present-count').textContent = `${statusCounts[0]} (${total > 0 ? ((statusCounts[0] / total) * 100).toFixed(1) : 0}%)`;
             document.getElementById('absent-count').textContent = `${statusCounts[1]} (${total > 0 ? ((statusCounts[1] / total) * 100).toFixed(1) : 0}%)`;
             document.getElementById('late-count').textContent = `${statusCounts[2]} (${total > 0 ? ((statusCounts[2] / total) * 100).toFixed(1) : 0}%)`;
@@ -1549,9 +1588,9 @@ if ($classes_json === false) {
         function showStudentPrediction(studentId) {
             const student = classes.flatMap(c => c.students.map(s => ({
                 ...s,
-                subject: c.subject,
-                section: c.sectionName,
-                gradeLevel: c.gradeLevel
+                subject_name: c.subject_name || 'Unknown',
+                section_name: c.section_name || 'Unknown',
+                grade_level: c.grade_level || ''
             }))).find(s => s.id == studentId);
             
             if (!student) {
@@ -1563,14 +1602,12 @@ if ($classes_json === false) {
             document.getElementById('student-prediction-card').style.display = 'block';
             
             const avgForecast = student.forecast.reduce((a, b) => a + b, 0) / student.forecast.length;
-            
-            // Check if gradeLevel contains "College"
-            const isCollege = student.gradeLevel.includes('College');
+            const isCollege = student.grade_level.includes('College');
             
             const studentDetails = document.getElementById('student-details');
             studentDetails.innerHTML = `
                 <div class="detail-item">
-                    <strong>Class:</strong> ${student.subject} (${student.section})
+                    <strong>Class:</strong> ${student.subject_name} (${student.section_name})
                 </div>
                 <div class="detail-item">
                     <strong>LRN:</strong> ${student.lrn || 'N/A'}
@@ -1638,12 +1675,10 @@ if ($classes_json === false) {
         }
     
         function generateRecommendation(student) {
-            if (student.riskLevel === 'high' || student.riskLevel === 'critical') {
+            if (student.riskLevel === 'high' || student.riskLevel === 'Running for Drop Out') {
                 return `Critical: Schedule immediate parent conference to address ${student.primaryAbsenceReason.toLowerCase()} issues`;
             } else if (student.riskLevel === 'medium') {
                 return 'Moderate risk: Implement peer support system and weekly progress reviews';
-            } else if (student.trend === 'declining') {
-                return 'Declining trend detected: Investigate underlying causes and adjust approach';
             } else {
                 return 'Good attendance: Continue current engagement strategies';
             }
@@ -1725,7 +1760,7 @@ if ($classes_json === false) {
             if (forecastChart) forecastChart.destroy();
             if (attendanceStatusChart) attendanceStatusChart.destroy();
             initializeCharts();
-            studentSearch.value = ''; // Clear search input on class change
+            studentSearch.value = '';
             document.getElementById('attendance-status-title').textContent = 'Attendance Status Distribution';
         });
 
@@ -1757,54 +1792,47 @@ if ($classes_json === false) {
             }
         });
 
-        document.getElementById('refresh-data').addEventListener('click', () => {
-            if (forecastChart) forecastChart.destroy();
-            if (attendanceStatusChart) attendanceStatusChart.destroy();
-            initializeCharts();
-        });
-
         document.getElementById('clear-filters').addEventListener('click', () => {
-            classFilter.value = classes.length > 0 ? classes[0].id : '';
+            classFilter.value = classes[0]?.id || '';
             studentFilter.value = '';
             studentSearch.value = '';
             updateStudentFilter();
             document.getElementById('student-prediction-card').style.display = 'none';
-            if (attendanceStatusChart) {
-                const selectedClass = classes.find(c => c.id == classFilter.value) || classes[0];
-                const attendanceData = selectedClass.students.reduce((acc, student) => {
-                    acc[0] += student.attendanceStatus.present;
-                    acc[1] += student.attendanceStatus.absent;
-                    acc[2] += student.attendanceStatus.late;
-                    return acc;
-                }, [0, 0, 0]);
-                const total = attendanceData.reduce((a, b) => a + b, 0);
-                attendanceStatusChart.data.datasets[0].data = attendanceData;
-                attendanceStatusChart.update();
-                document.getElementById('present-count').textContent = `${attendanceData[0]} (${total > 0 ? ((attendanceData[0] / total) * 100).toFixed(1) : 0}%)`;
-                document.getElementById('absent-count').textContent = `${attendanceData[1]} (${total > 0 ? ((attendanceData[1] / total) * 100).toFixed(1) : 0}%)`;
-                document.getElementById('late-count').textContent = `${attendanceData[2]} (${total > 0 ? ((attendanceData[2] / total) * 100).toFixed(1) : 0}%)`;
-            }
-            if (forecastChart) {
-                forecastChart.destroy();
-            }
+            if (individualForecastChart) individualForecastChart.destroy();
             initializeCharts();
             document.getElementById('attendance-status-title').textContent = 'Attendance Status Distribution';
         });
 
+        document.getElementById('refresh-data').addEventListener('click', () => {
+            window.location.reload();
+        });
+
         document.getElementById('export-chart').addEventListener('click', () => {
+            const canvas = studentFilter.value ? document.getElementById('individual-forecast-chart') : document.getElementById('forecast-chart');
+            if (!canvas) {
+                console.error('No chart canvas found for export');
+                return;
+            }
             const link = document.createElement('a');
-            link.href = forecastChart.toBase64Image();
-            link.download = 'attendance-forecast.png';
+            link.href = canvas.toDataURL('image/png');
+            link.download = studentFilter.value ? 'individual_forecast.png' : 'class_forecast.png';
             link.click();
         });
 
-        // Initialize on page load
-        if (classes.length > 0) {initializeFilters();
+        // Initialize the page
+        if (classes.length > 0) {
+            initializeFilters();
             initializeCharts();
         } else {
-            console.error('No classes available');
+            console.warn('No classes available to initialize charts');
+            document.getElementById('current-attendance-rate').textContent = 'N/A';
+            document.getElementById('predicted-attendance').textContent = 'N/A';
+            document.getElementById('at-risk-count').textContent = '0';
+            document.getElementById('attendance-trend').textContent = 'No Data';
+            document.getElementById('at-risk-trend').textContent = 'No Data';
+            document.getElementById('attendance-status-title').textContent = 'No Attendance Data';
+            document.getElementById('at-risk-table-body').innerHTML = '<tr><td colspan="3" style="text-align: center;">No data available</td></tr>';
         }
     </script>
 </body>
 </html>
-

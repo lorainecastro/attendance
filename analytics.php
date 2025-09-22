@@ -1561,6 +1561,9 @@ if ($classes_json === false) {
             
             const avgForecast = student.forecast.reduce((a, b) => a + b, 0) / student.forecast.length;
             
+            // Check if gradeLevel contains "College"
+            const isCollege = student.gradeLevel.includes('College');
+            
             const studentDetails = document.getElementById('student-details');
             studentDetails.innerHTML = `
                 <div class="detail-item">
@@ -1579,11 +1582,13 @@ if ($classes_json === false) {
                     <strong>Predicted Next Month:</strong> ${avgForecast.toFixed(1)}%
                 </div>
                 <div class="detail-item">
-                    <strong>Total Absences:</strong> ${student.totalAbsences}
+                    <strong>Total Absences:</strong> ${student.totalAbsences}${isCollege ? '' : ` - ${student.riskLevel.charAt(0).toUpperCase() + student.riskLevel.slice(1)}`}
                 </div>
+                ${isCollege ? '' : `
                 <div class="detail-item risk-${student.riskLevel}">
                     <strong>Risk Level:</strong> ${student.riskLevel.charAt(0).toUpperCase() + student.riskLevel.slice(1)}
                 </div>
+                `}
             `;
             
             const recommendation = generateRecommendation(student);
@@ -1597,7 +1602,7 @@ if ($classes_json === false) {
                 </tr>
                 <tr>
                     <td>Total Absences</td>
-                    <td class="risk-${student.riskLevel}">${student.totalAbsences} - ${student.riskLevel.charAt(0).toUpperCase() + student.riskLevel.slice(1)}</td>
+                    <td${isCollege ? '' : ` class="risk-${student.riskLevel}"`}>${student.totalAbsences}${isCollege ? '' : ` - ${student.riskLevel.charAt(0).toUpperCase() + student.riskLevel.slice(1)}`}</td>
                 </tr>
             `;
             

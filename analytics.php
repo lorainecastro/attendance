@@ -1328,29 +1328,6 @@ if ($classes_json === false) {
         </div>
     </div>
 
-    <!-- <div class="pattern-table">
-        <div class="table-header">
-            <div class="table-title">AI-Powered Early Warning System</div>
-            <div class="alert alert-warning">
-                <i class="fas fa-bell"></i>
-                <span>Automated alerts based on time series anomaly detection</span>
-            </div>
-        </div>
-        <div class="table-responsive">
-            <table>
-                <thead>
-                    <tr>
-                        <th>Class</th>
-                        <th>Student</th>
-                        <th>Predicted Next Month</th>
-                        <th>Recommendation</th>
-                    </tr>
-                </thead>
-                <tbody id="early-warning-table"></tbody>
-            </table>
-        </div>
-    </div> -->
-
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0/dist/chartjs-plugin-datalabels.min.js"></script>
     <script>

@@ -1340,11 +1340,21 @@ if ($classes_json === false) {
         let forecastChart, attendanceStatusChart, individualForecastChart;
 
         function initializeFilters() {
+            // Clear existing options
+            classFilter.innerHTML = '';
+
+            // Create a Set to track unique class IDs
+            const uniqueClasses = new Set();
+            
+            // Add unique classes to the filter
             classes.forEach(cls => {
-                const option = document.createElement('option');
-                option.value = cls.id;
-                option.textContent = `${cls.grade_level ? cls.grade_level + ' – ' : ''}${cls.section_name} (${cls.subject_name})`;
-                classFilter.appendChild(option);
+                if (!uniqueClasses.has(cls.id)) {
+                    uniqueClasses.add(cls.id);
+                    const option = document.createElement('option');
+                    option.value = cls.id;
+                    option.textContent = `${cls.grade_level ? cls.grade_level + ' – ' : ''}${cls.section_name} (${cls.subject_name})`;
+                    classFilter.appendChild(option);
+                }
             });
             
             updateStudentFilter();

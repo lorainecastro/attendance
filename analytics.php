@@ -335,25 +335,6 @@ function generateForecast($pdo, $class_id, $lrn = null) {
     ];
 }
 
-// Function to validate forecast reasonableness
-function validateForecast($historical_data, $forecast_data) {
-    if (empty($historical_data) || empty($forecast_data)) {
-        return false;
-    }
-    
-    $historical_values = array_values($historical_data);
-    $forecast_values = array_values($forecast_data);
-    
-    $historical_avg = array_sum($historical_values) / count($historical_values);
-    $forecast_avg = array_sum($forecast_values) / count($forecast_values);
-    
-    // Check if forecast is unreasonably different from historical average
-    $difference = abs($forecast_avg - $historical_avg);
-    
-    // Flag as unreasonable if forecast differs by more than 20% from historical average
-    return $difference <= 20;
-}
-
 // Debug function to log forecasting details
 function debugForecast($student_name, $historical_data, $forecast_data) {
     if (empty($historical_data)) return;
@@ -370,35 +351,6 @@ function debugForecast($student_name, $historical_data, $forecast_data) {
     error_log("Difference: " . round(abs($forecast_avg - $historical_avg), 2) . "%");
     error_log("Historical data: " . implode(", ", $historical_values));
     error_log("Forecast data: " . implode(", ", array_slice($forecast_values, 0, 5)) . "...");
-}
-
-// Debug function to understand why certain predictions are made
-function explainForecast($historical_data, $forecast_values) {
-    if (empty($historical_data)) return "No historical data available";
-    
-    $values = array_values($historical_data);
-    $n = count($values);
-    $historical_avg = array_sum($values) / $n;
-    $forecast_avg = array_sum($forecast_values) / count($forecast_values);
-    
-    $recent_values = array_slice($values, -min(3, $n));
-    $recent_avg = array_sum($recent_values) / count($recent_values);
-    
-    $explanation = "Forecast Analysis:\n";
-    $explanation .= "Historical Average: " . round($historical_avg, 2) . "%\n";
-    $explanation .= "Recent Average (last " . count($recent_values) . " periods): " . round($recent_avg, 2) . "%\n";
-    $explanation .= "Predicted Average: " . round($forecast_avg, 2) . "%\n";
-    $explanation .= "Change from Recent: " . round($forecast_avg - $recent_avg, 2) . "%\n";
-    
-    if ($forecast_avg < $recent_avg - 5) {
-        $explanation .= "Reason: Declining trend detected in recent data\n";
-    } elseif ($forecast_avg > $recent_avg + 5) {
-        $explanation .= "Reason: Improving trend detected in recent data\n";
-    } else {
-        $explanation .= "Reason: Stable attendance pattern, minimal change predicted\n";
-    }
-    
-    return $explanation;
 }
 
 // Function to calculate attendance status counts for a student or class

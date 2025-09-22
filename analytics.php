@@ -1343,7 +1343,6 @@ if ($classes_json === false) {
                         <th>Class</th>
                         <th>Student</th>
                         <th>Predicted Next Month</th>
-                        <th>Risk Level</th>
                         <th>Recommendation</th>
                     </tr>
                 </thead>
@@ -1636,7 +1635,6 @@ if ($classes_json === false) {
                     <td>${student.gradeLevel} – ${student.section} (${student.subject})</td>
                     <td>${student.lastName}, ${student.firstName} ${student.middleName || ''}</td>
                     <td>${avgForecast.toFixed(1)}%</td>
-                    <td><span class="risk-${student.riskLevel}">${student.riskLevel.charAt(0).toUpperCase() + student.riskLevel.slice(1)}</span></td>
                     <td>${student.riskLevel === 'high' || student.riskLevel === 'critical' ? 'Immediate parent conference' : 'Monitor closely + automated reminders'}</td>
                 `;
                 earlyWarningTable.appendChild(row);

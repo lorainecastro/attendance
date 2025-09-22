@@ -1597,11 +1597,7 @@ if ($classes_json === false) {
                 </tr>
                 <tr>
                     <td>Total Absences</td>
-                    <td>${student.totalAbsences}</td>
-                </tr>
-                <tr>
-                    <td>Risk Level</td>
-                    <td><span class="risk-${student.riskLevel}">${student.riskLevel.charAt(0).toUpperCase() + student.riskLevel.slice(1)}</span></td>
+                    <td class="risk-${student.riskLevel}">${student.totalAbsences} - ${student.riskLevel.charAt(0).toUpperCase() + student.riskLevel.slice(1)}</td>
                 </tr>
             `;
             
@@ -1624,15 +1620,15 @@ if ($classes_json === false) {
                 const studentTotal = studentData.reduce((a, b) => a + b, 0);
                 attendanceStatusChart.data.datasets[0].data = studentData;
                 attendanceStatusChart.update();
-
+    
                 document.getElementById('present-count').textContent = `${studentData[0]} (${studentTotal > 0 ? ((studentData[0] / studentTotal) * 100).toFixed(1) : 0}%)`;
                 document.getElementById('absent-count').textContent = `${studentData[1]} (${studentTotal > 0 ? ((studentData[1] / studentTotal) * 100).toFixed(1) : 0}%)`;
                 document.getElementById('late-count').textContent = `${studentData[2]} (${studentTotal > 0 ? ((studentData[2] / studentTotal) * 100).toFixed(1) : 0}%)`;
             }
-
+    
             document.getElementById('attendance-status-title').innerHTML = `Attendance Status Distribution for <span class="student-name">${student.lastName}, ${student.firstName} ${student.middleName || ''}</span>`;
         }
-
+    
         function generateRecommendation(student) {
             if (student.riskLevel === 'high' || student.riskLevel === 'critical') {
                 return `Critical: Schedule immediate parent conference to address ${student.primaryAbsenceReason.toLowerCase()} issues`;
@@ -1643,57 +1639,6 @@ if ($classes_json === false) {
             } else {
                 return 'Good attendance: Continue current engagement strategies';
             }
-        }
-        
-        function generateRecommendations(student) {
-            const recommendations = [];
-            
-            if (student.riskLevel === 'high' || student.riskLevel === 'critical') {
-                recommendations.push({
-                    type: 'danger',
-                    icon: 'exclamation-triangle',
-                    message: `Critical: Schedule immediate parent conference to address ${student.primaryAbsenceReason.toLowerCase()} issues`
-                });
-                recommendations.push({
-                    type: 'warning',
-                    icon: 'phone',
-                    message: 'Enable daily automated SMS reminders and check-ins'
-                });
-                if (student.primaryAbsenceReason === 'Transportation') {
-                    recommendations.push({
-                        type: 'info',
-                        icon: 'bus',
-                        message: 'Provide bus pass subsidies if available'
-                    });
-                }
-            } else if (student.riskLevel === 'medium') {
-                recommendations.push({
-                    type: 'warning',
-                    icon: 'bell',
-                    message: 'Moderate risk: Implement peer support system and weekly progress reviews'
-                });
-                recommendations.push({
-                    type: 'info',
-                    icon: 'users',
-                    message: 'Provide resources for family engagement workshops'
-                });
-            } else {
-                recommendations.push({
-                    type: 'info',
-                    icon: 'thumbs-up',
-                    message: 'Good attendance: Continue current engagement strategies'
-                });
-            }
-            
-            if (student.trend === 'declining') {
-                recommendations.push({
-                    type: 'warning',
-                    icon: 'chart-line-down',
-                    message: 'Declining trend detected: Investigate underlying causes and adjust approach'
-                });
-            }
-            
-            return recommendations;
         }
         
         function createIndividualForecastChart(student) {

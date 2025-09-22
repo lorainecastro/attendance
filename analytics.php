@@ -13,6 +13,106 @@ if (!$user) {
 
 $pdo = getDBConnection();
 
+function getHistoricalPeriod() {
+    $today = new DateTime();
+    $day = (int)$today->format('j');
+    $month = (int)$today->format('n');
+    $year = (int)$today->format('Y');
+
+    if ($day >= 22) {
+        $current_start_month = $month;
+        $current_start_year = $year;
+        $current_end_month = $month + 1;
+        $current_end_year = $year;
+        if ($current_end_month > 12) {
+            $current_end_month = 1;
+            $current_end_year++;
+        }
+        $forecast_start = new DateTime(sprintf('%04d-%02d-22', $current_start_year, $current_start_month));
+        $forecast_end = new DateTime(sprintf('%04d-%02d-21', $current_end_year, $current_end_month));
+    } else {
+        $current_end_month = $month;
+        $current_end_year = $year;
+        $current_start_month = $month - 1;
+        $current_start_year = $year;
+        if ($current_start_month < 1) {
+            $current_start_month = 12;
+            $current_start_year--;
+        }
+        $forecast_start = new DateTime(sprintf('%04d-%02d-22', $current_start_year, $current_start_month));
+        $forecast_end = new DateTime(sprintf('%04d-%02d-21', $current_end_year, $current_end_month));
+    }
+
+    $is_current_complete = $today > $forecast_end;
+    if ($is_current_complete) {
+        $last_complete_end = clone $forecast_end;
+    } else {
+        $last_complete_end = clone $forecast_start;
+        $last_complete_end->sub(new DateInterval('P1D'));
+    }
+
+    $last_period_end_month = (int)$last_complete_end->format('n');
+    $last_period_end_year = (int)$last_complete_end->format('Y');
+    $last_period_start_month = $last_period_end_month - 1;
+    $last_period_start_year = $last_period_end_year;
+    if ($last_period_start_month < 1) {
+        $last_period_start_month = 12;
+        $last_period_start_year--;
+    }
+    $last_period_start = new DateTime(sprintf('%04d-%02d-22', $last_period_start_year, $last_period_start_month));
+
+    $prev_period_end = clone $last_period_start;
+    $prev_period_end->sub(new DateInterval('P1D'));
+
+    $prev_period_end_month = (int)$prev_period_end->format('n');
+    $prev_period_end_year = (int)$prev_period_end->format('Y');
+    $prev_period_start_month = $prev_period_end_month - 1;
+    $prev_period_start_year = $prev_period_end_year;
+    if ($prev_period_start_month < 1) {
+        $prev_period_start_month = 12;
+        $prev_period_start_year--;
+    }
+    $prev_period_start = new DateTime(sprintf('%04d-%02d-22', $prev_period_start_year, $prev_period_start_month));
+
+    $prev_prev_end = clone $prev_period_start;
+    $prev_prev_end->sub(new DateInterval('P1D'));
+
+    $prev_prev_end_month = (int)$prev_prev_end->format('n');
+    $prev_prev_end_year = (int)$prev_prev_end->format('Y');
+    $prev_prev_start_month = $prev_prev_end_month - 1;
+    $prev_prev_start_year = $prev_prev_end_year;
+    if ($prev_prev_start_month < 1) {
+        $prev_prev_start_month = 12;
+        $prev_prev_start_year--;
+    }
+    $prev_prev_start = new DateTime(sprintf('%04d-%02d-22', $prev_prev_start_year, $prev_prev_start_month));
+
+    $super_prev_end = clone $prev_prev_start;
+    $super_prev_end->sub(new DateInterval('P1D'));
+
+    $super_prev_end_month = (int)$super_prev_end->format('n');
+    $super_prev_end_year = (int)$super_prev_end->format('Y');
+    $super_prev_start_month = $super_prev_end_month - 1;
+    $super_prev_start_year = $super_prev_end_year;
+    if ($super_prev_start_month < 1) {
+        $super_prev_start_month = 12;
+        $super_prev_start_year--;
+    }
+    $super_prev_start = new DateTime(sprintf('%04d-%02d-22', $super_prev_start_year, $super_prev_start_month));
+
+    return [
+        'historical_start' => $prev_period_start->format('Y-m-d'),
+        'historical_end' => $last_complete_end->format('Y-m-d'),
+        'last_period_start' => $last_period_start->format('Y-m-d'),
+        'prev_period_start' => $prev_period_start->format('Y-m-d'),
+        'prev_period_end' => $prev_period_end->format('Y-m-d'),
+        'trend_previous_start' => $super_prev_start->format('Y-m-d'),
+        'trend_previous_end' => $prev_prev_end->format('Y-m-d'),
+        'forecast_start' => $forecast_start->format('Y-m-d'),
+        'forecast_end' => $forecast_end->format('Y-m-d')
+    ];
+}
+
 // Function to calculate daily attendance rate for a class or student
 function calculateAttendanceRate($pdo, $class_id, $start_date, $end_date, $lrn = null) {
     $total_days = 0;
@@ -144,8 +244,12 @@ function getHistoricalAttendanceData($pdo, $class_id, $start_date, $end_date, $l
 
 // Simple ARIMA(1,1,0) forecasting function using example parameters
 function arimaForecast($data, $periods = 30) {
+    $period = getHistoricalPeriod();
+    $yesterday = $period['historical_end'];
+    $one_month_ago = $period['last_period_start'];
+    $two_months_ago = $period['historical_start'];
+
     if (count($data) < 2) {
-        // Fallback for insufficient data: repeat last value or 0 if none
         $lastValue = count($data) > 0 ? end($data) : 0.0;
         return array_fill(0, $periods, round($lastValue, 2));
     }
@@ -154,15 +258,9 @@ function arimaForecast($data, $periods = 30) {
     $dates = array_keys($data);
     $n = count($values);
 
-    // Determine dynamic periods: two months ago to one month ago, and one month ago to today
-    $today = date('Y-m-d');
-    $yesterday = date('Y-m-d', strtotime('-1 day'));
-    $one_month_ago = date('Y-m-d', strtotime('-1 month', strtotime($today)));
-    $two_months_ago = date('Y-m-d', strtotime('-2 months', strtotime($today)));
-
     // Filter data for the two periods
     $period1_data = []; // Two months ago to one month ago
-    $period2_data = []; // One month ago to today
+    $period2_data = []; // One month ago to yesterday
     foreach ($dates as $index => $date) {
         if ($date >= $two_months_ago && $date < $one_month_ago) {
             $period1_data[] = $values[$index];
@@ -228,27 +326,27 @@ function arimaForecast($data, $periods = 30) {
 
 // Updated main forecasting function with better logic
 function generateForecast($pdo, $class_id, $lrn = null) {
-    $today = date('Y-m-d');
-    $yesterday = date('Y-m-d', strtotime('-1 day'));
-    $end_date = $yesterday;
-    $start_date = date('Y-m-d', strtotime('-2 months', strtotime($today)));
+    $period = getHistoricalPeriod();
+    $start_date = $period['historical_start'];
+    $end_date = $period['historical_end'];
     
     $historical_data = getHistoricalAttendanceData($pdo, $class_id, $start_date, $end_date, $lrn);
     if (empty($historical_data)) {
-        // Fallback for no historical data
-        $historical_data = [$yesterday => 0.0];
+        $historical_data = [$end_date => 0.0];
     }   
-    $forecast_dates = [];
-    $start_forecast = new DateTime($today);
-    $start_forecast->add(new DateInterval('P1D'));
-    
-    for ($i = 0; $i < 30; $i++) {
-        $date = clone $start_forecast;
-        $date->add(new DateInterval('P' . $i . 'D'));
-        $forecast_dates[] = $date->format('Y-m-d');
-    }
 
-    $forecast_values = arimaForecast($historical_data, 30);
+    $start_forecast = new DateTime($period['historical_end']);
+    $start_forecast->add(new DateInterval('P1D'));
+    $end_forecast = new DateTime($period['forecast_end']);
+    $forecast_dates = [];
+    $date = clone $start_forecast;
+    while ($date <= $end_forecast) {
+        $forecast_dates[] = $date->format('Y-m-d');
+        $date->add(new DateInterval('P1D'));
+    }
+    $periods = count($forecast_dates);
+
+    $forecast_values = arimaForecast($historical_data, $periods);
 
     return [
         'historical' => $historical_data,
@@ -258,9 +356,9 @@ function generateForecast($pdo, $class_id, $lrn = null) {
 
 // Function to calculate attendance status counts for a student or class
 function calculateAttendanceStatus($pdo, $class_id, $lrn = null) {
-    $today = date('Y-m-d');
-    $yesterday = date('Y-m-d', strtotime('-1 day'));
-    $start_date = date('Y-m-d', strtotime('-2 months', strtotime($today)));
+    $period = getHistoricalPeriod();
+    $start_date = $period['historical_start'];
+    $end_date = $period['historical_end'];
     $query = "
         SELECT attendance_status, COUNT(*) as count
         FROM attendance_tracking
@@ -275,7 +373,7 @@ function calculateAttendanceStatus($pdo, $class_id, $lrn = null) {
     $query .= " GROUP BY attendance_status";
 
     $stmt = $pdo->prepare($query);
-    $params = [':class_id' => $class_id, ':start_date' => $start_date, ':end_date' => $yesterday];
+    $params = [':class_id' => $class_id, ':start_date' => $start_date, ':end_date' => $end_date];
     if ($lrn) {
         $params[':lrn'] = $lrn;
     }
@@ -297,6 +395,7 @@ function calculateAttendanceStatus($pdo, $class_id, $lrn = null) {
 
 // Fetch classes and students
 $classes = [];
+$period = getHistoricalPeriod();
 try {
     $stmt = $pdo->prepare("
         SELECT c.class_id, c.section_name, s.subject_name, c.grade_level, c.room
@@ -320,10 +419,9 @@ try {
         $student_data = [];
         foreach ($students as $student) {
             $analytics = generateForecast($pdo, $class['class_id'], $student['lrn']);
-            $today = date('Y-m-d');
-            $yesterday = date('Y-m-d', strtotime('-1 day'));
-            $current_start = date('Y-m-d', strtotime('-2 months', strtotime($today)));
-            $current_rate_data = calculateAttendanceRate($pdo, $class['class_id'], $current_start, $yesterday, $student['lrn']);
+            $current_start = $period['historical_start'];
+            $current_end = $period['historical_end'];
+            $current_rate_data = calculateAttendanceRate($pdo, $class['class_id'], $current_start, $current_end, $student['lrn']);
             $current_rate = $current_rate_data['rate'];
             $total_days = $current_rate_data['total_days'];
             $present_late_days = $current_rate_data['present_late_days'];
@@ -353,10 +451,9 @@ try {
         }
 
         $class_analytics = generateForecast($pdo, $class['class_id']);
-        $today = date('Y-m-d');
-        $yesterday = date('Y-m-d', strtotime('-1 day'));
-        $current_start = date('Y-m-d', strtotime('-2 months', strtotime($today)));
-        $class_current_rate_data = calculateAttendanceRate($pdo, $class['class_id'], $current_start, $yesterday);
+        $current_start = $period['historical_start'];
+        $current_end = $period['historical_end'];
+        $class_current_rate_data = calculateAttendanceRate($pdo, $class['class_id'], $current_start, $current_end);
         $class_current_rate = $class_current_rate_data['rate'];
         $class_avg_forecast = array_sum($class_analytics['forecast']) / count($class_analytics['forecast']);
         $classes[] = [
@@ -379,14 +476,8 @@ try {
             'students' => $student_data
         ];
 
-        $today = date('Y-m-d');
-        $yesterday = date('Y-m-d', strtotime('-1 day'));
-        $one_month_ago = date('Y-m-d', strtotime('-1 month', strtotime($today)));
-        $two_months_ago = date('Y-m-d', strtotime('-2 months', strtotime($today)));
-        $current_start = $two_months_ago;
-        $current_end = $yesterday;
-        $previous_start = date('Y-m-d', strtotime('-3 months', strtotime($today)));
-        $previous_end = date('Y-m-d', strtotime('-1 day', strtotime($two_months_ago)));
+        $previous_start = $period['trend_previous_start'];
+        $previous_end = $period['trend_previous_end'];
 
         $previous_rate_data = calculateAttendanceRate($pdo, $class['class_id'], $previous_start, $previous_end);
         $previous_rate = floatval($previous_rate_data['rate']);
@@ -1526,7 +1617,6 @@ if ($classes_json === false) {
                 document.getElementById('late-count').textContent = `${studentData[2]} (${studentTotal > 0 ? ((studentData[2] / studentTotal) * 100).toFixed(1) : 0}%)`;
             }
 
-            // document.getElementById('attendance-status-title').textContent = `Attendance Status Distribution for ${student.lastName}, ${student.firstName} ${student.middleName || ''}`;
             document.getElementById('attendance-status-title').innerHTML = `Attendance Status Distribution for <span class="student-name">${student.lastName}, ${student.firstName} ${student.middleName || ''}</span>`;
         }
         

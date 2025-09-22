@@ -1424,7 +1424,7 @@ if ($classes_json === false) {
                             row.innerHTML = `
                                 <td>${cls.grade_level ? cls.grade_level + ' - ' : ''}${cls.section_name} (${cls.subject_name})</td>
                                 <td>${student.lastName}, ${student.firstName} ${student.middleName || ''}</td>
-                                <td class="risk-${student.riskLevel}">${student.totalAbsences} - ${isCollege ? (student.riskLevel === 'running for drop out' ? 'Running for Drop Out' : 'No Risk') : student.riskLevel.charAt(0).toUpperCase() + student.riskLevel.slice(1)}</td>
+                                <td class="risk-${student.riskLevel}">${student.totalAbsences} - ${isCollege ? (student.riskLevel === 'Running for Drop Out' ? 'Running for Drop Out' : 'No Risk') : student.riskLevel.charAt(0).toUpperCase() + student.riskLevel.slice(1)}</td>
                             `;
                             atRiskTableBody.appendChild(row);
                         }

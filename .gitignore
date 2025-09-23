@@ -45,9 +45,9 @@ ms.php
 config.php
 analytics.php
 
-# verify-email.php
 # sign-up.php
 # sign-in.php
+# verify-email.php
 # forgot-password.php
 # reset-password.php
 # attendance.php

@@ -10,14 +10,112 @@ if (!$currentUser) {
     exit();
 }
 
+$pdo = getDBConnection();
+
 $profileImageUrl = $currentUser['picture'] ?? 'no-icon.png';
 $profileInitials = strtoupper(substr($currentUser['firstname'] ?? 'D', 0, 1) . substr($currentUser['lastname'] ?? 'S', 0, 1));
 $profileName = htmlspecialchars($currentUser['firstname'] . ' ' . $currentUser['lastname'], ENT_QUOTES, 'UTF-8');
+
+function getHistoricalPeriod($pdo, $teacher_id) {
+    // Query to find the earliest attendance date for the teacher's classes
+    $stmt = $pdo->prepare("
+        SELECT MIN(a.attendance_date) as earliest_date
+        FROM attendance_tracking a
+        JOIN class_students cs ON a.lrn = cs.lrn
+        JOIN classes c ON cs.class_id = c.class_id
+        WHERE c.teacher_id = ?
+    ");
+    $stmt->execute([$teacher_id]);
+    $result = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    // Use the earliest attendance date as start_date, or fallback to start of current month
+    $start_date = $result['earliest_date'] ?? date('Y-m-01');
+    // Use current date as end_date
+    $end_date = date('Y-m-d');
+
+    return [
+        'historical_start' => $start_date,
+        'historical_end' => $end_date
+    ];
+}
+
+function getAtRiskStudents($pdo, $teacher_id) {
+    $period = getHistoricalPeriod($pdo, $teacher_id);
+    $start_date = $period['historical_start'];
+    $end_date = $period['historical_end'];
+    $at_risk = [];
+
+    // Fetch classes for the teacher
+    $stmt = $pdo->prepare("
+        SELECT c.class_id, c.section_name, s.subject_name, c.grade_level
+        FROM classes c
+        JOIN subjects s ON c.subject_id = s.subject_id
+        WHERE c.teacher_id = ?
+    ");
+    $stmt->execute([$teacher_id]);
+    $classes = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    foreach ($classes as $class) {
+        $is_college = strpos($class['grade_level'], 'College') !== false;
+
+        // Fetch students in the class
+        $student_stmt = $pdo->prepare("
+            SELECT s.lrn, s.last_name, s.first_name, s.middle_name
+            FROM class_students cs
+            JOIN students s ON cs.lrn = s.lrn
+            WHERE cs.class_id = ?
+        ");
+        $student_stmt->execute([$class['class_id']]);
+        $students = $student_stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        foreach ($students as $student) {
+            // Count absences directly from attendance records
+            $absence_stmt = $pdo->prepare("
+                SELECT COUNT(*) as absence_count
+                FROM attendance_tracking a
+                WHERE a.lrn = ? AND a.class_id = ? AND a.attendance_date BETWEEN ? AND ? AND a.attendance_status = 'Absent'
+            ");
+            $absence_stmt->execute([$student['lrn'], $class['class_id'], $start_date, $end_date]);
+            $absences = $absence_stmt->fetch(PDO::FETCH_ASSOC)['absence_count'];
+
+            $risk = '';
+            if ($is_college) {
+                if ($absences > 3) {
+                    $risk = 'Running for Drop Out';
+                }
+            } else {
+                if ($absences > 40) {
+                    $risk = 'Running for Drop Out';
+                } elseif ($absences > 27) {
+                    $risk = 'High';
+                } elseif ($absences > 14) {
+                    $risk = 'Medium';
+                }
+            }
+
+            if ($risk) {
+                $at_risk[] = [
+                    'id' => $student['lrn'],
+                    // 'fullName' => $student['first_name'] . ' ' . $student['last_name'],
+                    'fullName' => trim($student['first_name'] . ' ' . ($student['middle_name'] ?? '') . ' ' . $student['last_name']),
+                    'gradeLevel' => $class['grade_level'],
+                    'subject' => $class['subject_name'],
+                    'section' => $class['section_name'],
+                    'risk' => $risk,
+                    'absences' => $absences
+                ];
+            }
+        }
+    }
+
+    return $at_risk;
+}
+
+$at_risk_students = getAtRiskStudents($pdo, $currentUser['teacher_id']);
 ?>
 
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -26,7 +124,7 @@ $profileName = htmlspecialchars($currentUser['firstname'] . ' ' . $currentUser['
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-
+  
     <style>
         :root {
             --primary-blue: #2563eb;
@@ -725,7 +823,7 @@ $profileName = htmlspecialchars($currentUser['firstname'] . ' ' . $currentUser['
             </div>
             <div class="sidebar-brand">SAMS</div>
         </div>
-
+      
         <nav class="sidebar-nav">
             <div class="nav-section">
                 <div class="nav-section-title">Main</div>
@@ -737,7 +835,6 @@ $profileName = htmlspecialchars($currentUser['firstname'] . ' ' . $currentUser['
                     </a>
                 </div>
             </div>
-
             <div class="nav-section">
                 <div class="nav-section-title">Management</div>
                 <div class="nav-item">
@@ -747,7 +844,6 @@ $profileName = htmlspecialchars($currentUser['firstname'] . ' ' . $currentUser['
                         <span class="nav-tooltip">Manage Classes</span>
                     </a>
                 </div>
-
                 <div class="nav-item">
                     <a href="#" class="nav-link menu-item">
                         <i class="fas fa-users nav-icon"></i>
@@ -755,7 +851,6 @@ $profileName = htmlspecialchars($currentUser['firstname'] . ' ' . $currentUser['
                         <span class="nav-tooltip">Manage Students</span>
                     </a>
                 </div>
-
                 <div class="nav-item">
                     <a href="#" class="nav-link menu-item">
                         <i class="fas fa-user-check nav-icon"></i>
@@ -771,7 +866,6 @@ $profileName = htmlspecialchars($currentUser['firstname'] . ' ' . $currentUser['
                     </a>
                 </div>
             </div>
-
             <div class="nav-section">
                 <div class="nav-section-title">Analytics</div>
                 <div class="nav-item">
@@ -781,7 +875,6 @@ $profileName = htmlspecialchars($currentUser['firstname'] . ' ' . $currentUser['
                         <span class="nav-tooltip">Analytics & Predictions</span>
                     </a>
                 </div>
-
                 <div class="nav-item">
                     <a href="#" class="nav-link menu-item">
                         <i class="fas fa-file-export nav-icon"></i>
@@ -792,11 +885,7 @@ $profileName = htmlspecialchars($currentUser['firstname'] . ' ' . $currentUser['
             </div>
         </nav>
     </aside>
-
-    <!-- Sidebar Overlay for Mobile -->
     <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
-
-    <!-- Header -->
     <header class="header" id="header">
         <div class="header-left">
             <button class="menu-toggle" onclick="toggleSidebar()">
@@ -807,7 +896,6 @@ $profileName = htmlspecialchars($currentUser['firstname'] . ' ' . $currentUser['
                 <span>Student Attendance Monitoring System</span>
             </div>
         </div>
-
         <div class="header-center">
             <div class="datetime-widget">
                 <div class="datetime-item">
@@ -826,13 +914,11 @@ $profileName = htmlspecialchars($currentUser['firstname'] . ' ' . $currentUser['
                 </div>
             </div>
         </div>
-
         <div class="header-right">
             <button class="notification-btn" id="notificationBtn">
                 <i class="fas fa-bell"></i>
                 <span class="notification-badge" id="notificationCount">0</span>
             </button>
-
             <div class="profile-dropdown" id="profileDropdown">
                 <button class="profile-btn" onclick="toggleProfileDropdown()">
                     <img src="uploads/<?php echo htmlspecialchars($currentUser['picture'] ?? 'no-icon.png'); ?>" alt="Profile" class="profile-avatar">
@@ -842,7 +928,6 @@ $profileName = htmlspecialchars($currentUser['firstname'] . ' ' . $currentUser['
                     </div>
                     <i class="fas fa-chevron-down" style="color: var(--medium-gray); font-size: 0.875rem;"></i>
                 </button>
-
                 <div class="profile-dropdown-menu">
                     <a href="#" class="profile-dropdown-item profile-menu-item">
                         <i class="fas fa-user"></i>
@@ -856,8 +941,6 @@ $profileName = htmlspecialchars($currentUser['firstname'] . ' ' . $currentUser['
             </div>
         </div>
     </header>
-
-    <!-- Notification Modal -->
     <div class="notification-modal" id="notificationModal">
         <div class="notification-modal-content">
             <div class="notification-modal-header">
@@ -867,24 +950,19 @@ $profileName = htmlspecialchars($currentUser['firstname'] . ' ' . $currentUser['
                 </button>
             </div>
             <div class="notification-modal-body" id="notificationList">
-                <!-- Notifications will be populated here -->
             </div>
         </div>
     </div>
-
-    <!-- Main Content -->
     <main class="main-content" id="mainContent">
         <div class="dashboard-body">
             <iframe id="dashboard-frame" src="dashboard.php" frameborder="0"></iframe>
         </div>
     </main>
-
     <script>
-        // Global state
+        const atRiskStudentsData = <?php echo json_encode($at_risk_students, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES); ?>;
         let sidebarCollapsed = false;
         let isMobile = window.innerWidth < 1024;
 
-        // Data from Class Management
         let classes = [{
                 id: 1,
                 code: 'MATH-101-A',
@@ -894,38 +972,15 @@ $profileName = htmlspecialchars($currentUser['firstname'] . ' ' . $currentUser['
                 room: 'Room 201',
                 attendancePercentage: 10,
                 schedule: {
-                    monday: {
-                        start: '08:00',
-                        end: '09:30'
-                    },
-                    wednesday: {
-                        start: '08:00',
-                        end: '09:30'
-                    },
-                    friday: {
-                        start: '08:00',
-                        end: '09:30'
-                    }
+                    monday: { start: '08:00', end: '09:30' },
+                    wednesday: { start: '08:00', end: '09:30' },
+                    friday: { start: '08:00', end: '09:30' }
                 },
                 status: 'active',
-                students: [{
-                        id: 1,
-                        firstName: 'John',
-                        lastName: 'Doe',
-                        email: 'john.doe@email.com'
-                    },
-                    {
-                        id: 2,
-                        firstName: 'Jane',
-                        lastName: 'Smith',
-                        email: 'jane.smith@email.com'
-                    },
-                    {
-                        id: 3,
-                        firstName: 'Mike',
-                        lastName: 'Johnson',
-                        email: 'mike.johnson@email.com'
-                    }
+                students: [
+                    { id: 1, firstName: 'John', lastName: 'Doe', email: 'john.doe@email.com' },
+                    { id: 2, firstName: 'Jane', lastName: 'Smith', email: 'jane.smith@email.com' },
+                    { id: 3, firstName: 'Mike', lastName: 'Johnson', email: 'mike.johnson@email.com' }
                 ]
             },
             {
@@ -937,28 +992,13 @@ $profileName = htmlspecialchars($currentUser['firstname'] . ' ' . $currentUser['
                 room: 'Lab 1',
                 attendancePercentage: 15,
                 schedule: {
-                    tuesday: {
-                        start: '10:00',
-                        end: '11:30'
-                    },
-                    thursday: {
-                        start: '10:00',
-                        end: '11:30'
-                    }
+                    tuesday: { start: '10:00', end: '11:30' },
+                    thursday: { start: '10:00', end: '11:30' }
                 },
                 status: 'active',
-                students: [{
-                        id: 4,
-                        firstName: 'Alice',
-                        lastName: 'Brown',
-                        email: 'alice.brown@email.com'
-                    },
-                    {
-                        id: 5,
-                        firstName: 'Bob',
-                        lastName: 'Wilson',
-                        email: 'bob.wilson@email.com'
-                    }
+                students: [
+                    { id: 4, firstName: 'Alice', lastName: 'Brown', email: 'alice.brown@email.com' },
+                    { id: 5, firstName: 'Bob', lastName: 'Wilson', email: 'bob.wilson@email.com' }
                 ]
             },
             {
@@ -970,45 +1010,19 @@ $profileName = htmlspecialchars($currentUser['firstname'] . ' ' . $currentUser['
                 room: 'Room 305',
                 attendancePercentage: 20,
                 schedule: {
-                    monday: {
-                        start: '14:00',
-                        end: '15:30'
-                    },
-                    wednesday: {
-                        start: '14:00',
-                        end: '15:30'
-                    }
+                    monday: { start: '14:00', end: '15:30' },
+                    wednesday: { start: '14:00', end: '15:30' }
                 },
                 status: 'inactive',
-                students: [{
-                        id: 6,
-                        firstName: 'Carol',
-                        lastName: 'Davis',
-                        email: 'carol.davis@email.com'
-                    },
-                    {
-                        id: 7,
-                        firstName: 'David',
-                        lastName: 'Miller',
-                        email: 'david.miller@email.com'
-                    },
-                    {
-                        id: 8,
-                        firstName: 'Emma',
-                        lastName: 'Garcia',
-                        email: 'emma.garcia@email.com'
-                    },
-                    {
-                        id: 9,
-                        firstName: 'Frank',
-                        lastName: 'Rodriguez',
-                        email: 'frank.rodriguez@email.com'
-                    }
+                students: [
+                    { id: 6, firstName: 'Carol', lastName: 'Davis', email: 'carol.davis@email.com' },
+                    { id: 7, firstName: 'David', lastName: 'Miller', email: 'david.miller@email.com' },
+                    { id: 8, firstName: 'Emma', lastName: 'Garcia', email: 'emma.garcia@email.com' },
+                    { id: 9, firstName: 'Frank', lastName: 'Rodriguez', email: 'frank.rodriguez@email.com' }
                 ]
             }
         ];
 
-        // Student data
         let students = classes.flatMap(cls => cls.students.map(student => ({
             id: student.id,
             firstName: student.firstName,
@@ -1061,29 +1075,14 @@ $profileName = htmlspecialchars($currentUser['firstname'] . ' ' . $currentUser['
 
                     let pageFile;
                     switch (index) {
-                        case 0:
-                            pageFile = 'dashboard.php';
-                            break;
-                        case 1:
-                            pageFile = 'manage-classes.php';
-                            break;
-                        case 2:
-                            pageFile = 'manage-students.php';
-                            break;
-                        case 3:
-                            pageFile = 'attendance.php';
-                            break;
-                        case 4:
-                            pageFile = 'overall-attendance.php';
-                            break;
-                        case 5:
-                            pageFile = 'analytics.php';
-                            break;
-                        case 6:
-                            pageFile = 'reports.php';
-                            break;
-                        default:
-                            pageFile = '404.html';
+                        case 0: pageFile = 'dashboard.php'; break;
+                        case 1: pageFile = 'manage-classes.php'; break;
+                        case 2: pageFile = 'manage-students.php'; break;
+                        case 3: pageFile = 'attendance.php'; break;
+                        case 4: pageFile = 'overall-attendance.php'; break;
+                        case 5: pageFile = 'analytics.php'; break;
+                        case 6: pageFile = 'reports.php'; break;
+                        default: pageFile = '404.html';
                     }
                     loadPage(pageFile);
 
@@ -1102,19 +1101,15 @@ $profileName = htmlspecialchars($currentUser['firstname'] . ' ' . $currentUser['
 
                     let pageFile;
                     switch (index) {
-                        case 0:
-                            pageFile = 'profile.php';
-                            break;
+                        case 0: pageFile = 'profile.php'; break;
                         case 1:
                             if (confirm('Are you sure you want to log out?')) {
                                 window.location.href = 'destroyer.php';
                             }
                             return;
-                        default:
-                            pageFile = '404.html';
+                        default: pageFile = '404.html';
                     }
                     loadPage(pageFile);
-
                     // Close the profile dropdown
                     toggleProfileDropdown();
                 });
@@ -1137,7 +1132,7 @@ $profileName = htmlspecialchars($currentUser['firstname'] . ' ' . $currentUser['
             // Load default page
             loadPage('dashboard.php');
         });
-        
+
         // Load page into iframe
         function loadPage(pageFile) {
             const iframe = document.getElementById('dashboard-frame');
@@ -1154,23 +1149,11 @@ $profileName = htmlspecialchars($currentUser['firstname'] . ' ' . $currentUser['
             clickedItem.classList.add('active');
         }
 
-        // Update date and time
         function updateDateTime() {
             const now = new Date();
-            const dateOptions = {
-                year: 'numeric',
-                month: 'short',
-                day: 'numeric'
-            };
-            const timeOptions = {
-                hour: '2-digit',
-                minute: '2-digit',
-                second: '2-digit',
-                hour12: true
-            };
-            const dayOptions = {
-                weekday: 'long'
-            };
+            const dateOptions = { year: 'numeric', month: 'short', day: 'numeric' };
+            const timeOptions = { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true };
+            const dayOptions = { weekday: 'long' };
 
             const currentDate = document.getElementById('currentDate');
             const currentTime = document.getElementById('currentTime');
@@ -1216,33 +1199,23 @@ $profileName = htmlspecialchars($currentUser['firstname'] . ' ' . $currentUser['
             }
         }
 
-        // Update notifications
         function updateNotifications() {
             const notificationList = document.getElementById('notificationList');
             const notificationCount = document.getElementById('notificationCount');
 
             if (!notificationList || !notificationCount) return;
 
-            // Filter students with low attendance (e.g., < 80%) and select up to 3
-            const atRiskStudents = students
-                .filter(student => student.attendanceRate < 80)
-                .sort(() => Math.random() - 0.5)
-                .slice(0, Math.min(3, students.length))
-                .map(student => ({
-                    id: student.id,
-                    fullName: student.fullName,
-                    gradeLevel: student.gradeLevel,
-                    subject: student.class,
-                    section: student.section,
-                    message: `${student.fullName} is at risk due to excessive absences (Attendance: ${student.attendanceRate}%).`,
-                    timestamp: new Date().toLocaleString('en-US', {
-                        month: 'short',
-                        day: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit',
-                        hour12: true
-                    })
-                }));
+            const riskOrder = { 'Running for Drop Out': 3, 'High': 2, 'Medium': 1 };
+            const atRiskStudents = atRiskStudentsData.map(student => ({
+                ...student,
+                timestamp: new Date().toLocaleString('en-US', {
+                    month: 'short',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    hour12: true
+                })
+            })).sort((a, b) => (riskOrder[b.risk] || 0) - (riskOrder[a.risk] || 0) || b.absences - a.absences);
 
             notificationCount.textContent = atRiskStudents.length;
 
@@ -1252,7 +1225,7 @@ $profileName = htmlspecialchars($currentUser['firstname'] . ' ' . $currentUser['
                     <div class="notification-item">
                         <i class="fas fa-exclamation-triangle notification-icon"></i>
                         <div class="notification-details">
-                            <div class="notification-message">${student.message}</div>
+                            <div class="notification-message">${student.fullName} is at ${student.risk} risk due to ${student.absences} absences.</div>
                             <div class="notification-meta">
                                 Grade: ${student.gradeLevel} | Subject: ${student.subject} | Section: ${student.section} | ${student.timestamp}
                             </div>
@@ -1261,7 +1234,7 @@ $profileName = htmlspecialchars($currentUser['firstname'] . ' ' . $currentUser['
                 `).join('');
         }
 
-        // Handle window resize
+                // Handle window resize
         function handleResize() {
             const wasMobile = isMobile;
             isMobile = window.innerWidth < 1024;
@@ -1309,5 +1282,4 @@ $profileName = htmlspecialchars($currentUser['firstname'] . ' ' . $currentUser['
         }
     </script>
 </body>
-
 </html>

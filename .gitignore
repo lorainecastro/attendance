@@ -45,11 +45,11 @@ ms.php
 config.php
 analytics.php
 
-# sign-up.php
-# sign-in.php
-# verify-email.php
-# forgot-password.php
-# reset-password.php
-# attendance.php
+sign-up.php
+sign-in.php
+verify-email.php
+forgot-password.php
+reset-password.php
+attendance.php
 
 

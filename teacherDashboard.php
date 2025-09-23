@@ -497,22 +497,22 @@ $profileName = htmlspecialchars($currentUser['firstname'] . ' ' . $currentUser['
             /* overflow: hidden; */
         }
 
+        @media (max-width: 1023px) {
+            .main-content {
+                margin-left: 0;
+            }
+        }
 
-@media (max-width: 1023px) {
-    .main-content {
-        margin-left: 0;
-    }
-}
+        @media (max-width: 767px) {
+            .main-content {
+                padding: 0;
+            }
 
-@media (max-width: 767px) {
-    .main-content {
-        padding: 0;
-    }
-
-    .dashboard-body, #dashboard-frame {
-        height: 100%;
-    }
-}
+            .dashboard-body,
+            #dashboard-frame {
+                height: 100%;
+            }
+        }
 
         /* Notification Modal */
         .notification-modal {
@@ -835,7 +835,7 @@ $profileName = htmlspecialchars($currentUser['firstname'] . ' ' . $currentUser['
 
             <div class="profile-dropdown" id="profileDropdown">
                 <button class="profile-btn" onclick="toggleProfileDropdown()">
-                    <img src="uploads/<?php echo htmlspecialchars($currentUser['picture'] ?? 'uploads/no-icon.png'); ?>" alt="Profile" class="profile-avatar">
+                    <img src="uploads/<?php echo htmlspecialchars($currentUser['picture'] ?? 'no-icon.png'); ?>" alt="Profile" class="profile-avatar">
                     <div class="profile-info">
                         <div class="profile-name"><?php echo htmlspecialchars($profileName); ?></div>
                         <div class="profile-role">Teacher</div>
@@ -844,17 +844,11 @@ $profileName = htmlspecialchars($currentUser['firstname'] . ' ' . $currentUser['
                 </button>
 
                 <div class="profile-dropdown-menu">
-                    <a href="#" class="profile-dropdown-item menu-item">
+                    <a href="#" class="profile-dropdown-item profile-menu-item">
                         <i class="fas fa-user"></i>
                         <span>View Profile</span>
                     </a>
-
-                    <a href="#" class="profile-dropdown-item menu-item">
-                        <i class="fas fa-question-circle"></i>
-                        <span>Help & Support</span>
-                    </a>
-
-                    <a href="#" class="profile-dropdown-item logout menu-item">
+                    <a href="#" class="profile-dropdown-item logout profile-menu-item">
                         <i class="fas fa-sign-out-alt"></i>
                         <span>Logout</span>
                     </a>
@@ -1059,7 +1053,7 @@ $profileName = htmlspecialchars($currentUser['firstname'] . ' ' . $currentUser['
                 }
             });
 
-            // Menu item click handlers
+            // Sidebar menu item click handlers
             document.querySelectorAll('.menu-item').forEach((menuItem, index) => {
                 menuItem.addEventListener('click', (e) => {
                     e.preventDefault();
@@ -1088,13 +1082,30 @@ $profileName = htmlspecialchars($currentUser['firstname'] . ' ' . $currentUser['
                         case 6:
                             pageFile = 'reports.php';
                             break;
-                        case 7:
+                        default:
+                            pageFile = '404.html';
+                    }
+                    loadPage(pageFile);
+
+                    // Close sidebar on mobile after clicking a menu item
+                    if (isMobile) {
+                        toggleSidebar();
+                    }
+                });
+            });
+
+            // Profile dropdown item click handlers
+            document.querySelectorAll('.profile-menu-item').forEach((menuItem, index) => {
+                menuItem.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation(); // Prevent click from bubbling up to parent elements
+
+                    let pageFile;
+                    switch (index) {
+                        case 0:
                             pageFile = 'profile.php';
                             break;
-                        case 8:
-                            pageFile = 'help-support.php';
-                            break;
-                        case 9:
+                        case 1:
                             if (confirm('Are you sure you want to log out?')) {
                                 window.location.href = 'destroyer.php';
                             }
@@ -1103,6 +1114,9 @@ $profileName = htmlspecialchars($currentUser['firstname'] . ' ' . $currentUser['
                             pageFile = '404.html';
                     }
                     loadPage(pageFile);
+
+                    // Close the profile dropdown
+                    toggleProfileDropdown();
                 });
             });
 
@@ -1123,7 +1137,7 @@ $profileName = htmlspecialchars($currentUser['firstname'] . ' ' . $currentUser['
             // Load default page
             loadPage('dashboard.php');
         });
-
+        
         // Load page into iframe
         function loadPage(pageFile) {
             const iframe = document.getElementById('dashboard-frame');
@@ -1289,9 +1303,9 @@ $profileName = htmlspecialchars($currentUser['firstname'] . ' ' . $currentUser['
         const iframe = document.getElementById('dashboard-frame');
         if (iframe) {
             iframe.onload = () => {
-    const contentHeight = iframe.contentWindow.document.body.scrollHeight;
-    iframe.style.height = Math.max(contentHeight, window.innerHeight - 70) + 'px';
-};
+                const contentHeight = iframe.contentWindow.document.body.scrollHeight;
+                iframe.style.height = Math.max(contentHeight, window.innerHeight - 70) + 'px';
+            };
         }
     </script>
 </body>

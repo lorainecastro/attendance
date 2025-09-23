@@ -186,10 +186,14 @@ function getDashboardStats($pdo, $teacher_id) {
         $totalClasses = $totalClassesResult ? (int)$totalClassesResult['total_classes'] : 0;
 
         $stmt = $pdo->prepare("
-            SELECT COUNT(DISTINCT cs.lrn) as total_students 
-            FROM class_students cs
-            INNER JOIN classes c ON cs.class_id = c.class_id
-            WHERE c.teacher_id = ? AND c.status = 'active' AND cs.is_enrolled = 1
+            SELECT SUM(student_count) as total_students
+            FROM (
+                SELECT 
+                    c.class_id,
+                    (SELECT COUNT(*) FROM class_students cs WHERE cs.class_id = c.class_id AND cs.is_enrolled = 1) as student_count
+                FROM classes c
+                WHERE c.teacher_id = ? AND c.status = 'active'
+            ) as subquery
         ");
         $stmt->execute([$teacher_id]);
         $totalStudentsResult = $stmt->fetch(PDO::FETCH_ASSOC);

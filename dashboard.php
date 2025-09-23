@@ -1,6 +1,369 @@
+<?php
+date_default_timezone_set('Asia/Manila');
+require 'config.php';
+session_start();
+
+$user = validateSession();
+if (!$user) {
+    destroySession();
+    header("Location: index.php");
+    exit();
+}
+
+$pdo = getDBConnection();
+if (!$pdo instanceof PDO) {
+    http_response_code(500);
+    die("Failed to establish database connection. Please check your configuration.");
+}
+
+$teacher_id = $_SESSION['teacher_id'] ?? null;
+if (!$teacher_id) {
+    error_log("Teacher ID not found in session.");
+    destroySession();
+    header("Location: index.php");
+    exit();
+}
+
+// Function to calculate attendance percentages for today
+function calculateAttendancePercentages($teacher_id) {
+    $pdo = getDBConnection();
+    try {
+        $today = date('Y-m-d');
+        $stmt = $pdo->prepare("
+            SELECT 
+                c.class_id,
+                COUNT(*) as total_records,
+                SUM(CASE WHEN at.attendance_status = 'Present' THEN 1 ELSE 0 END) as present_records
+            FROM classes c
+            LEFT JOIN class_students cs ON c.class_id = cs.class_id AND cs.is_enrolled = 1
+            LEFT JOIN attendance_tracking at ON cs.class_id = at.class_id AND cs.lrn = at.lrn
+            WHERE c.teacher_id = ? 
+            AND at.attendance_date = ? 
+            GROUP BY c.class_id
+        ");
+        $stmt->execute([$teacher_id, $today]);
+        $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        $attendanceData = [];
+        $totalPresent = 0;
+        $totalRecords = 0;
+
+        foreach ($results as $row) {
+            $class_id = $row['class_id'];
+            $total = $row['total_records'];
+            $present = $row['present_records'];
+            $percentage = $total > 0 ? ($present / $total) * 100 : 0;
+            $attendanceData[$class_id] = $percentage;
+            $totalPresent += $present;
+            $totalRecords += $total;
+            error_log("Class ID: $class_id, Present: $present, Total: $total, Percentage: $percentage%");
+        }
+
+        $overallAverage = $totalRecords > 0 ? ($totalPresent / $totalRecords) * 100 : 0;
+        error_log("Total Present: $totalPresent, Total Records: $totalRecords, Overall Average: $overallAverage%");
+
+        return [
+            'success' => true,
+            'class_percentages' => $attendanceData,
+            'overall_average' => $overallAverage
+        ];
+    } catch (PDOException $e) {
+        error_log("Calculate attendance percentages error: " . $e->getMessage());
+        return ['success' => false, 'error' => 'Failed to calculate attendance percentages: ' . $e->getMessage()];
+    }
+}
+
+// Function to calculate daily attendance rate for a class or student
+function calculateAttendanceRate($pdo, $class_id, $lrn = null) {
+    $today = date('Y-m-d');
+    $total_days = 0;
+    $present_late_days = 0;
+
+    $query = "
+        SELECT attendance_date, lrn, attendance_status
+        FROM attendance_tracking
+        WHERE class_id = :class_id
+        AND attendance_date = :today
+        AND logged_by IN ('Teacher', 'Device Camera', 'Scanner Device')
+        AND attendance_status IN ('Present', 'Absent', 'Late')
+    ";
+    if ($lrn) {
+        $query .= " AND lrn = :lrn";
+    }
+
+    $stmt = $pdo->prepare($query);
+    $params = [
+        ':class_id' => $class_id,
+        ':today' => $today
+    ];
+    if ($lrn) {
+        $params[':lrn'] = $lrn;
+    }
+
+    try {
+        $stmt->execute($params);
+        $attendance_records = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    } catch (PDOException $e) {
+        error_log("Database error in calculateAttendanceRate: " . $e->getMessage());
+        return [
+            'rate' => '0.00',
+            'total_days' => 0,
+            'present_late_days' => 0
+        ];
+    }
+
+    $daily_records = [];
+    foreach ($attendance_records as $record) {
+        $date = $record['attendance_date'];
+        if (!isset($daily_records[$date])) {
+            $daily_records[$date] = [];
+        }
+        $daily_records[$date][] = $record;
+    }
+
+    foreach ($daily_records as $date => $records) {
+        $total_students = count($records);
+        $present_late = 0;
+
+        foreach ($records as $record) {
+            if ($record['attendance_status'] === 'Present' || $record['attendance_status'] === 'Late') {
+                $present_late++;
+            }
+        }
+
+        if ($total_students > 0) {
+            $total_days++;
+            if (!$lrn) {
+                $present_late_days += ($present_late / $total_students);
+            } else {
+                foreach ($records as $record) {
+                    if ($record['lrn'] === $lrn && in_array($record['attendance_status'], ['Present', 'Late'])) {
+                        $present_late_days++;
+                        break;
+                    }
+                }
+            }
+        }
+    }
+
+    $rate = $total_days > 0 ? ($present_late_days / $total_days) * 100 : 0;
+    return [
+        'rate' => number_format($rate, 2),
+        'total_days' => $total_days,
+        'present_late_days' => $present_late_days
+    ];
+}
+
+// Set earliest date to today
+$earliest_date = date('Y-m-d');
+
+// Fetch attendance data for JavaScript processing
+$stmt = $pdo->prepare("
+    SELECT a.class_id, a.attendance_date, a.lrn, a.attendance_status, a.time_checked, a.is_qr_scanned,
+           sch.start_time, sch.grace_period_minutes, sch.end_time,
+           s.first_name, s.last_name
+    FROM attendance_tracking a 
+    JOIN classes c ON a.class_id = c.class_id 
+    LEFT JOIN schedules sch ON c.class_id = sch.class_id AND DATE_FORMAT(a.attendance_date, '%W') = LOWER(sch.day)
+    LEFT JOIN students s ON a.lrn = s.lrn
+    WHERE c.teacher_id = ? AND a.attendance_date = ? 
+    AND a.logged_by IN ('Teacher', 'Device Camera', 'Scanner Device') 
+    AND a.attendance_status IN ('Present', 'Absent', 'Late')
+    ORDER BY a.attendance_date DESC, a.class_id, a.lrn
+");
+$stmt->execute([$teacher_id, $earliest_date]);
+$attendance_raw_data = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+function getDashboardStats($pdo, $teacher_id) {
+    try {
+        $stmt = $pdo->prepare("
+            SELECT COUNT(*) as total_classes 
+            FROM classes 
+            WHERE teacher_id = ? AND status = 'active'
+        ");
+        $stmt->execute([$teacher_id]);
+        $totalClassesResult = $stmt->fetch(PDO::FETCH_ASSOC);
+        $totalClasses = $totalClassesResult ? (int)$totalClassesResult['total_classes'] : 0;
+
+        $stmt = $pdo->prepare("
+            SELECT COUNT(DISTINCT cs.lrn) as total_students 
+            FROM class_students cs
+            INNER JOIN classes c ON cs.class_id = c.class_id
+            WHERE c.teacher_id = ? AND c.status = 'active' AND cs.is_enrolled = 1
+        ");
+        $stmt->execute([$teacher_id]);
+        $totalStudentsResult = $stmt->fetch(PDO::FETCH_ASSOC);
+        $totalStudents = $totalStudentsResult ? (int)$totalStudentsResult['total_students'] : 0;
+
+        $today = date('Y-m-d');
+        $stmt = $pdo->prepare("
+            SELECT 
+                COUNT(CASE WHEN at.attendance_status = 'Present' THEN 1 END) as present,
+                COUNT(CASE WHEN at.attendance_status = 'Absent' THEN 1 END) as absent,
+                COUNT(CASE WHEN at.attendance_status = 'Late' THEN 1 END) as late,
+                COUNT(*) as total
+            FROM attendance_tracking at
+            INNER JOIN classes c ON at.class_id = c.class_id
+            WHERE c.teacher_id = ? AND at.attendance_date = ? 
+            AND c.status = 'active' 
+            AND at.logged_by IN ('Teacher', 'Device Camera', 'Scanner Device') 
+            AND at.attendance_status IN ('Present', 'Absent', 'Late')
+        ");
+        $stmt->execute([$teacher_id, $today]);
+        $monthAttendance = $stmt->fetch(PDO::FETCH_ASSOC) ?: ['present' => 0, 'absent' => 0, 'late' => 0, 'total' => 0];
+
+        $attended = (int)$monthAttendance['present'] + (int)$monthAttendance['late'];
+        $total = (int)$monthAttendance['total'];
+        $monthAttendanceRate = $total > 0 ? round(($attended / $total) * 100, 2) : 0;
+
+        return [
+            'totalClasses' => $totalClasses,
+            'totalStudents' => $totalStudents,
+            'monthAttendanceRate' => $monthAttendanceRate,
+            'monthAbsent' => (int)$monthAttendance['absent'],
+            'monthPresent' => (int)$monthAttendance['present'],
+            'monthLate' => (int)$monthAttendance['late']
+        ];
+    } catch (PDOException $e) {
+        error_log("Error getting dashboard stats: " . $e->getMessage());
+        return [
+            'totalClasses' => 0,
+            'totalStudents' => 0,
+            'monthAttendanceRate' => 0,
+            'monthAbsent' => 0,
+            'monthPresent' => 0,
+            'monthLate' => 0
+        ];
+    }
+}
+
+function getClassesData($pdo, $teacher_id) {
+    try {
+        $stmt = $pdo->prepare("
+            SELECT 
+                c.class_id, 
+                c.section_name, 
+                sub.subject_name, 
+                c.room, 
+                COUNT(DISTINCT cs.lrn) as students_count,
+                c.status
+            FROM classes c
+            INNER JOIN subjects sub ON c.subject_id = sub.subject_id
+            LEFT JOIN class_students cs ON c.class_id = cs.class_id AND cs.is_enrolled = 1
+            WHERE c.teacher_id = ? AND c.status = 'active'
+            GROUP BY c.class_id
+        ");
+        $stmt->execute([$teacher_id]);
+        $classes = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
+        $today = date('Y-m-d');
+        
+        foreach ($classes as &$class) {
+            $rate_data = calculateAttendanceRate($pdo, $class['class_id']);
+            $class['attendance_percentage'] = $rate_data['rate'];
+        }
+        
+        return $classes;
+    } catch (PDOException $e) {
+        error_log("Error getting classes data: " . $e->getMessage());
+        return [];
+    }
+}
+
+function getTodaySchedule($pdo, $teacher_id) {
+    try {
+        $today = strtolower(date('l'));
+        $stmt = $pdo->prepare("
+            SELECT 
+                c.class_id, 
+                c.section_name, 
+                sub.subject_name, 
+                c.room, 
+                s.start_time, 
+                s.end_time, 
+                COUNT(cs.lrn) as students_count, 
+                c.status,
+                c.grade_level
+            FROM classes c
+            INNER JOIN schedules s ON c.class_id = s.class_id
+            INNER JOIN subjects sub ON c.subject_id = sub.subject_id
+            LEFT JOIN class_students cs ON c.class_id = cs.class_id AND cs.is_enrolled = 1
+            WHERE c.teacher_id = ? 
+                AND s.day = ?
+                AND c.status = 'active'
+            GROUP BY c.class_id, s.start_time, s.end_time
+            ORDER BY s.start_time ASC
+        ");
+        $stmt->execute([$teacher_id, $today]);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    } catch (PDOException $e) {
+        error_log("Error getting today's schedule: " . $e->getMessage());
+        return [];
+    }
+}
+
+function getTodayAttendanceData($pdo, $teacher_id) {
+    try {
+        $today = date('Y-m-d');
+        
+        $stmt = $pdo->prepare("
+            SELECT 
+                c.section_name, 
+                COUNT(CASE WHEN at.attendance_status = 'Present' THEN 1 END) as present,
+                COUNT(CASE WHEN at.attendance_status = 'Absent' THEN 1 END) as absent,
+                COUNT(CASE WHEN at.attendance_status = 'Late' THEN 1 END) as late,
+                COUNT(*) as total
+            FROM classes c
+            LEFT JOIN attendance_tracking at ON c.class_id = at.class_id
+                AND at.attendance_date = ?
+                AND at.logged_by IN ('Teacher', 'Device Camera', 'Scanner Device') 
+                AND at.attendance_status IN ('Present', 'Absent', 'Late')
+            WHERE c.teacher_id = ? AND c.status = 'active'
+            GROUP BY c.class_id
+            HAVING total > 0
+        ");
+        $stmt->execute([$today, $teacher_id]);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    } catch (PDOException $e) {
+        error_log("Error getting today's attendance data: " . $e->getMessage());
+        return [];
+    }
+}
+
+// Process attendance data for JavaScript
+$attendanceData = [];
+foreach ($attendance_raw_data as $record) {
+    $date = $record['attendance_date'];
+    $classId = $record['class_id'];
+    $lrn = $record['lrn'];
+    
+    if (!isset($attendanceData[$date])) {
+        $attendanceData[$date] = [];
+    }
+    if (!isset($attendanceData[$date][$classId])) {
+        $attendanceData[$date][$classId] = [];
+    }
+    
+    $attendanceData[$date][$classId][$lrn] = [
+        'status' => $record['attendance_status'],
+        'time_checked' => $record['time_checked'],
+        'is_qr_scanned' => $record['is_qr_scanned'],
+        'student_name' => trim($record['first_name'] . ' ' . $record['last_name'])
+    ];
+}
+
+// Get all dashboard data
+$dashboardStats = getDashboardStats($pdo, $teacher_id);
+$classesData = getClassesData($pdo, $teacher_id);
+$todaySchedule = getTodaySchedule($pdo, $teacher_id);
+$monthlyAttendanceData = getTodayAttendanceData($pdo, $teacher_id);
+
+// Format date for chart titles
+$todayFormatted = date('M d');
+?>
+
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -136,6 +499,7 @@
         .bg-pink { background: var(--secondary-gradient); }
         .bg-blue { background: linear-gradient(135deg, #3b82f6, #60a5fa); }
         .bg-green { background: linear-gradient(135deg, #10b981, #34d399); }
+        .bg-red { background: linear-gradient(135deg, #ef4444, #f87171); }
 
         .card-title {
             font-size: 14px;
@@ -174,58 +538,6 @@
         .chart-title {
             font-size: 18px;
             font-weight: 600;
-        }
-
-        .chart-filter {
-            display: flex;
-            gap: 10px;
-        }
-
-        .filter-btn {
-            border: none;
-            background: var(--inputfield-color);
-            padding: 6px 12px;
-            border-radius: 8px;
-            font-size: 14px;
-            cursor: pointer;
-            transition: var(--transition-normal);
-        }
-
-        .filter-btn.active {
-            background: var(--primary-blue);
-            color: var(--whitefont-color);
-        }
-
-        .filter-btn:hover:not(.active) {
-            background: var(--inputfieldhover-color);
-        }
-
-        .quick-actions {
-            display: flex;
-            gap: var(--spacing-sm);
-            margin-bottom: var(--spacing-lg);
-            flex-wrap: wrap;
-        }
-
-        .action-btn {
-            padding: var(--spacing-xs) var(--spacing-md);
-            border: none;
-            border-radius: var(--radius-md);
-            font-size: var(--font-size-sm);
-            font-weight: 600;
-            cursor: pointer;
-            transition: var(--transition-normal);
-            display: inline-flex;
-            align-items: center;
-            gap: var(--spacing-xs);
-            text-decoration: none;
-            background: var(--primary-gradient);
-            color: var(--whitefont-color);
-        }
-
-        .action-btn:hover {
-            background: var(--primary-blue-hover);
-            transform: translateY(-2px);
         }
 
         .schedule-card {
@@ -301,6 +613,63 @@
             font-size: var(--font-size-lg);
         }
 
+        .quick-actions {
+            display: flex;
+            gap: var(--spacing-sm);
+            margin-bottom: var(--spacing-lg);
+            flex-wrap: wrap;
+        }
+
+        .action-btn {
+            padding: var(--spacing-xs) var(--spacing-md);
+            border: none;
+            border-radius: var(--radius-md);
+            font-size: var(--font-size-sm);
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition-normal);
+            display: inline-flex;
+            align-items: center;
+            gap: var(--spacing-xs);
+            text-decoration: none;
+            background: var(--primary-gradient);
+            color: var(--whitefont-color);
+        }
+
+        .action-btn:hover {
+            background: var(--primary-blue-hover);
+            transform: translateY(-2px);
+        }
+
+        #classDetailsModal .status-present {
+            background-color: var(--status-present-bg);
+            color: var(--success-color);
+        }
+
+        #classDetailsModal .status-absent {
+            background-color: var(--status-absent-bg);
+            color: var(--danger-color);
+        }
+
+        #classDetailsModal .status-late {
+            background-color: var(--status-late-bg);
+            color: var(--warning-color);
+        }
+
+        #classDetailsModal .status-none {
+            background-color: var(--status-none-bg);
+            color: var(--grayfont-color);
+        }
+
+        #modalAttendanceTable:empty::after {
+            content: 'No attendance records available';
+            display: block;
+            text-align: center;
+            padding: var(--spacing-md);
+            color: var(--grayfont-color);
+            font-size: var(--font-size-base);
+        }
+
         @media (max-width: 1024px) {
             .charts-row {
                 grid-template-columns: 1fr;
@@ -338,6 +707,16 @@
                 width: 100%;
                 justify-content: center;
             }
+            #classDetailsModal {
+                padding: var(--spacing-sm);
+            }
+            #classDetailsModal > div {
+                width: 95%;
+                padding: var(--spacing-md);
+            }
+            #modalTitle {
+                font-size: var(--font-size-lg);
+            }
         }
     </style>
 </head>
@@ -362,12 +741,13 @@
             <div class="card-header">
                 <div>
                     <div class="card-title">Total Classes</div>
-                    <div class="card-value" id="totalClasses">3</div>
+                    <div class="card-value"><?php echo htmlspecialchars($dashboardStats['totalClasses']); ?></div>
                 </div>
-                <div class="card-icon bg-purple">
+                <div class="card-icon bg-pink">
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 16 16">
-                        <path d="M3.5 2A1.5 1.5 0 0 1 5 0.5h6A1.5 1.5 0 0 1 12.5 2v10a1.5 1.5 0 0 1-1.5 1.5H5A1.5 1.5 0 0 1 3.5 12V2zm1.5-.5A.5.5 0 0 0 4.5 2v10a.5.5 0 0 0 .5.5h6a.5.5 0 0 0 .5-.5V2a.5.5 0 0 0-.5-.5H5z" />
-                        <path d="M7 5.5a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-1a.5.5 0 0 1-.5-.5v-1z" />
+                        <path d="M7 14s-1 0-1-1 1-4 5-4 5 3 5 4-1 1-1 1H7zm4-6a3 3 0 1 0 0-6 3 3 0 0 0 0 6z" />
+                        <path fill-rule="evenodd" d="M5.216 14A2.238 2.238 0 0 1 5 13c0-1.355.68-2.75 1.936-3.72A6.325 6.325 0 0 0 5 9c-4 0-5 3-5 4s1 1 1 1h4.216z" />
+                        <path d="M4.5 8a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z" />
                     </svg>
                 </div>
             </div>
@@ -377,7 +757,7 @@
             <div class="card-header">
                 <div>
                     <div class="card-title">Total Students</div>
-                    <div class="card-value" id="totalStudents">150</div>
+                    <div class="card-value"><?php echo htmlspecialchars($dashboardStats['totalStudents']); ?></div>
                 </div>
                 <div class="card-icon bg-blue">
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 16 16">
@@ -392,8 +772,8 @@
         <div class="card">
             <div class="card-header">
                 <div>
-                    <div class="card-title">Today's Attendance Rate</div>
-                    <div class="card-value" id="todayAttendanceRate">94%</div>
+                    <div class="card-title">Attendance Rate (<?php echo $todayFormatted; ?>)</div>
+                    <div class="card-value"><?php echo htmlspecialchars($dashboardStats['monthAttendanceRate']); ?>%</div>
                 </div>
                 <div class="card-icon bg-green">
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 16 16">
@@ -407,12 +787,13 @@
         <div class="card">
             <div class="card-header">
                 <div>
-                    <div class="card-title">Students at Risk</div>
-                    <div class="card-value" id="atRiskStudents">12</div>
+                    <div class="card-title">Absent (<?php echo $todayFormatted; ?>)</div>
+                    <div class="card-value"><?php echo htmlspecialchars($dashboardStats['monthAbsent']); ?></div>
                 </div>
-                <div class="card-icon bg-pink">
+                <div class="card-icon bg-red">
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 16 16">
-                        <path d="M8 16a2 2 0 0 0 2-2H6a2 2 0 0 0 2 2zm.995-14.901a1 1 0 1 0-1.99 0A5.002 5.002 0 0 0 3 6c0 1.098-.5 6-2 7h14c-1.5-1-2-5.902-2-7 0-2.42-1.72-4.44-4.005-4.901z" />
+                        <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
+                        <path d="M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708z"/>
                     </svg>
                 </div>
             </div>
@@ -422,11 +803,7 @@
     <div class="charts-row">
         <div class="chart-card">
             <div class="chart-header">
-                <div class="chart-title">Attendance Trends</div>
-                <div class="chart-filter">
-                    <button class="filter-btn active" data-period="week" data-chart="attendance">Week</button>
-                    <button class="filter-btn" data-period="month" data-chart="attendance">Month</button>
-                </div>
+                <div class="chart-title">Average Attendance Rate by Class (<?php echo $todayFormatted; ?>)</div>
             </div>
             <div>
                 <canvas id="attendance-chart" style="height: 300px; width: 100%;"></canvas>
@@ -435,11 +812,7 @@
 
         <div class="chart-card">
             <div class="chart-header">
-                <div class="chart-title">Attendance Status Distribution</div>
-                <div class="chart-filter">
-                    <button class="filter-btn" data-period="week" data-chart="status">Week</button>
-                    <button class="filter-btn active" data-period="month" data-chart="status">Month</button>
-                </div>
+                <div class="chart-title">Attendance Status (<?php echo $todayFormatted; ?>)</div>
             </div>
             <div>
                 <canvas id="status-chart" style="height: 300px; width: 100%;"></canvas>
@@ -455,317 +828,241 @@
             <table class="schedule-table">
                 <thead>
                     <tr>
-                        <th>Code</th>
-                        <th>Section Name</th>
+                        <th>Grade Level</th>
+                        <th>Section</th>
                         <th>Subject</th>
-                        <th>Room</th>
                         <th>Time</th>
-                        <th>Status</th>
-                        <th>Actions</th>
+                        <th>Room</th>
+                        <th>Total Students</th>
                     </tr>
                 </thead>
-                <tbody id="scheduleTableBody">
+                <tbody>
+                    <?php if (empty($todaySchedule)): ?>
+                        <tr>
+                            <td colspan="6" class="no-schedule">No classes scheduled today</td>
+                        </tr>
+                    <?php else: ?>
+                        <?php foreach ($todaySchedule as $class): ?>
+                            <tr>
+                                <td><?php echo htmlspecialchars($class['grade_level'] ?? 'N/A'); ?></td>
+                                <td><?php echo htmlspecialchars($class['section_name'] ?? 'N/A'); ?></td>
+                                <td><?php echo htmlspecialchars($class['subject_name'] ?? 'N/A'); ?></td>
+                                <td>
+                                    <?php 
+                                    echo isset($class['start_time'], $class['end_time']) 
+                                        ? date('g:i A', strtotime($class['start_time'])) . ' - ' . date('g:i A', strtotime($class['end_time'])) 
+                                        : 'N/A'; 
+                                    ?>
+                                </td>
+                                <td><?php echo htmlspecialchars($class['room'] ? $class['room'] : 'No room specified'); ?></td>
+                                <td><?php echo htmlspecialchars($class['students_count'] ?? 0); ?></td>
+                            </tr>
+                        <?php endforeach; ?>
+                    <?php endif; ?>
                 </tbody>
             </table>
         </div>
     </div>
 
-    <script>
-        const classes = [{
-                id: 1,
-                code: 'MATH-101-A',
-                sectionName: 'Diamond Section',
-                subject: 'Mathematics',
-                gradeLevel: 'Grade 7',
-                room: 'Room 201',
-                attendancePercentage: 10,
-                schedule: {
-                    monday: {
-                        start: '08:00',
-                        end: '09:30'
-                    },
-                    wednesday: {
-                        start: '08:00',
-                        end: '09:30'
-                    },
-                    saturday: {
-                        start: '09:00',
-                        end: '10:30'
-                    }
-                },
-                status: 'active',
-                students: [{
-                        id: 1,
-                        firstName: 'John',
-                        lastName: 'Doe',
-                        email: 'john.doe@email.com'
-                    },
-                    {
-                        id: 2,
-                        firstName: 'Jane',
-                        lastName: 'Smith',
-                        email: 'jane.smith@email.com'
-                    },
-                    {
-                        id: 3,
-                        firstName: 'Mike',
-                        lastName: 'Johnson',
-                        email: 'mike.johnson@email.com'
-                    }
-                ]
-            },
-            {
-                id: 2,
-                code: 'SCI-201-B',
-                sectionName: 'Einstein Section',
-                subject: 'Science',
-                gradeLevel: 'Grade 10',
-                room: 'Lab 1',
-                attendancePercentage: 15,
-                schedule: {
-                    tuesday: {
-                        start: '10:00',
-                        end: '11:30'
-                    },
-                    thursday: {
-                        start: '10:00',
-                        end: '11:30'
-                    }
-                },
-                status: 'active',
-                students: [{
-                        id: 4,
-                        firstName: 'Alice',
-                        lastName: 'Brown',
-                        email: 'alice.brown@email.com'
-                    },
-                    {
-                        id: 5,
-                        firstName: 'Bob',
-                        lastName: 'Wilson',
-                        email: 'bob.wilson@email.com'
-                    }
-                ]
-            },
-            {
-                id: 3,
-                code: 'ENG-301-C',
-                sectionName: 'Shakespeare Section',
-                subject: 'English Literature',
-                gradeLevel: 'Grade 12',
-                room: 'Room 305',
-                attendancePercentage: 20,
-                schedule: {
-                    monday: {
-                        start: '14:00',
-                        end: '15:30'
-                    },
-                    wednesday: {
-                        start: '14:00',
-                        end: '15:30'
-                    }
-                },
-                status: 'inactive',
-                students: [{
-                        id: 6,
-                        firstName: 'Carol',
-                        lastName: 'Davis',
-                        email: 'carol.davis@email.com'
-                    },
-                    {
-                        id: 7,
-                        firstName: 'David',
-                        lastName: 'Miller',
-                        email: 'david.miller@email.com'
-                    },
-                    {
-                        id: 8,
-                        firstName: 'Emma',
-                        lastName: 'Garcia',
-                        email: 'emma.garcia@email.com'
-                    },
-                    {
-                        id: 9,
-                        firstName: 'Frank',
-                        lastName: 'Rodriguez',
-                        email: 'frank.rodriguez@email.com'
-                    }
-                ]
-            }
-        ];
+    <div id="classDetailsModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.5); z-index: 1000; align-items: center; justify-content: center;">
+        <div style="background: var(--card-bg); border-radius: var(--radius-lg); padding: var(--spacing-lg); width: 90%; max-width: 800px; max-height: 80vh; overflow-y: auto; box-shadow: var(--shadow-lg); border: 1px solid var(--border-color);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--spacing-md);">
+                <h2 id="modalTitle" style="font-size: var(--font-size-xl); color: var(--blackfont-color);">Class Details</h2>
+                <button onclick="closeModal()" style="background: none; border: none; font-size: var(--font-size-lg); cursor: pointer; color: var(--grayfont-color);">&times;</button>
+            </div>
+            <div id="modalContent">
+                <div id="modalClassInfo" style="margin-bottom: var(--spacing-md);"></div>
+                <div id="modalAttendance" style="margin-bottom: var(--spacing-md);">
+                    <h3 style="font-size: var(--font-size-lg); margin-bottom: var(--spacing-sm);">Attendance Records</h3>
+                    <div class="table-responsive">
+                        <table class="schedule-table">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Student Name</th>
+                                    <th>Status</th>
+                                    <th>Time Checked</th>
+                                    <th>QR Scanned</th>
+                                </tr>
+                            </thead>
+                            <tbody id="modalAttendanceTable"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            <div style="text-align: right;">
+                <button onclick="closeModal()" class="btn-info">Close</button>
+            </div>
+        </div>
+    </div>
 
-        const attendanceRecords = [{
-                date: '2025-07-19',
-                studentId: 1,
-                status: 'present'
-            },
-            {
-                date: '2025-07-19',
-                studentId: 2,
-                status: 'absent'
-            },
-            {
-                date: '2025-07-19',
-                studentId: 3,
-                status: 'late'
-            },
-            {
-                date: '2025-07-18',
-                studentId: 1,
-                status: 'present'
-            },
-            {
-                date: '2025-07-18',
-                studentId: 2,
-                status: 'late'
-            },
-            {
-                date: '2025-07-18',
-                studentId: 3,
-                status: 'absent'
-            },
-            {
-                date: '2025-07-17',
-                studentId: 4,
-                status: 'present'
-            },
-            {
-                date: '2025-07-17',
-                studentId: 5,
-                status: 'late'
-            },
-            {
-                date: '2025-07-16',
-                studentId: 6,
-                status: 'present'
-            },
-            {
-                date: '2025-07-16',
-                studentId: 7,
-                status: 'absent'
-            },
-            {
-                date: '2025-07-15',
-                studentId: 8,
-                status: 'present'
-            },
-            {
-                date: '2025-07-15',
-                studentId: 9,
-                status: 'late'
-            },
-            ...new Array(100).fill().map((_, i) => ({
-                date: `2025-07-${(i % 19) + 1 < 10 ? '0' : ''}${(i % 19) + 1}`,
-                studentId: (i % 9) + 1,
-                status: ['present', 'absent', 'late'][Math.floor(Math.random() * 4)]
-            }))
-        ];
+    <script>
+        const attendanceData = <?php echo json_encode($attendanceData, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>;
+        const classesData = <?php echo json_encode($classesData, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>;
+        const monthlyAttendanceData = <?php echo json_encode($monthlyAttendanceData, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>;
+        const dashboardStats = <?php echo json_encode($dashboardStats, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>;
+        const earliestDate = '<?php echo $earliest_date; ?>';
+        const today = '<?php echo date('Y-m-d'); ?>';
+
+        function calcAttendanceRate(class_id, lrn) {
+            let totalMarkedDays = 0;
+            let presentOrLateDays = 0;
+
+            console.log(`Calculating attendance for LRN: ${lrn}, Class: ${class_id}`);
+            console.log(`Date: ${today}`);
+
+            if (attendanceData[today]?.[class_id]) {
+                const classData = attendanceData[today][class_id];
+                let hasMarkedDay = false;
+                for (const studentLrn in classData) {
+                    const dayData = classData[studentLrn];
+                    if (dayData && dayData.status && dayData.status !== '') {
+                        hasMarkedDay = true;
+                        break;
+                    }
+                }
+
+                if (hasMarkedDay) {
+                    const studentDayData = classData[lrn];
+                    if (studentDayData && studentDayData.status && studentDayData.status !== '') {
+                        totalMarkedDays++;
+                        if (studentDayData.status === 'Present' || studentDayData.status === 'Late') {
+                            presentOrLateDays++;
+                        }
+                        console.log(`${today}: ${studentDayData.status}`);
+                    }
+                }
+            }
+
+            console.log(`Total marked days: ${totalMarkedDays}, Present/Late days: ${presentOrLateDays}`);
+            const rate = totalMarkedDays > 0 ? (presentOrLateDays / totalMarkedDays * 100).toFixed(2) : '0.00';
+            console.log(`Attendance rate: ${rate}%`);
+            return rate + '%';
+        }
 
         document.addEventListener('DOMContentLoaded', function() {
             try {
-                updateDashboardStats();
+                if (!attendanceData || !classesData || !monthlyAttendanceData || !dashboardStats) {
+                    console.error('Invalid or missing dashboard data');
+                    alert('Failed to load dashboard data. Please try again later.');
+                    return;
+                }
+                
+                console.log('Dashboard data loaded successfully');
+                console.log('Attendance data:', attendanceData);
+                console.log('Classes data:', classesData);
+                
                 initializeCharts();
-                renderTodaySchedule();
 
-                window.markAttendance = function() {
-                    alert('Mark Attendance functionality to be implemented');
-                };
-
-                window.viewClassDetails = function() {
-                    alert('View Class Details functionality to be implemented');
-                };
-
-                window.generateReport = function() {
-                    alert('Generate Report functionality to be implemented');
-                };
-
-                window.viewClass = function(classId) {
-                    const classItem = classes.find(c => c.id === classId);
-                    if (!classItem) return;
-
-                    const scheduleText = formatSchedule(classItem.schedule);
-
-                    alert(`
-Class Code: ${classItem.code}
-Section Name: ${classItem.sectionName}
-Subject: ${classItem.subject}
-Grade Level: ${classItem.gradeLevel}
-Room: ${classItem.room}
-Students: ${classItem.students.length}
-Attendance Percentage: ${classItem.attendancePercentage}%
-Schedule: ${scheduleText.replace(/<[^>]+>/g, '')}
-Status: ${classItem.status}
-Students List: ${classItem.students.map(s => `${s.firstName} ${s.lastName}`).join(', ')}
-                    `);
-                };
+                if (classesData.length > 0 && Object.keys(attendanceData).length > 0) {
+                    console.log('Testing attendance calculation...');
+                    const firstClass = classesData[0];
+                    console.log('First class:', firstClass);
+                }
+                
             } catch (error) {
                 console.error('Error initializing dashboard:', error);
                 alert('An error occurred while loading the dashboard. Please try again later.');
             }
         });
 
-        function updateDashboardStats() {
-            const totalClasses = classes.length;
-            const totalStudents = classes.reduce((sum, c) => sum + c.students.length, 0);
-            const todayRecords = attendanceRecords.filter(r => r.date === '2025-07-19');
-            const todayPresent = todayRecords.filter(r => r.status === 'present').length;
-            const todayAttendanceRate = todayRecords.length > 0 ? (todayPresent / todayRecords.length) * 100 : 0;
-            const atRiskStudents = [...new Set(attendanceRecords
-                .filter(r => r.date >= '2025-07-01' && r.status === 'absent')
-                .map(r => r.studentId))].length || 12;
+        function viewClass(classId) {
+            try {
+                const classData = classesData.find(c => c.class_id == classId);
+                if (!classData) {
+                    alert('Class not found.');
+                    return;
+                }
 
-            document.getElementById('totalClasses').textContent = totalClasses;
-            document.getElementById('totalStudents').textContent = totalStudents;
-            document.getElementById('todayAttendanceRate').textContent = `${Math.round(todayAttendanceRate)}%`;
-            document.getElementById('atRiskStudents').textContent = atRiskStudents;
+                document.getElementById('modalTitle').textContent = `Class: ${classData.section_name || 'Unknown'}`;
+                const classInfo = `
+                    <p><strong>Subject:</strong> ${classData.subject_name || 'N/A'}</p>
+                    <p><strong>Room:</strong> ${classData.room ? classData.room : 'No room specified'}</p>
+                    <p><strong>Total Students:</strong> ${classData.students_count || 0}</p>
+                    <p><strong>Attendance Rate (<?php echo $todayFormatted; ?>):</strong> ${classData.attendance_percentage || 0}%</p>
+                    <p><strong>Status:</strong> <span class="status-badge ${classData.status || 'inactive'}">${classData.status ? classData.status.charAt(0).toUpperCase() + classData.status.slice(1) : 'Inactive'}</span></p>
+                `;
+                document.getElementById('modalClassInfo').innerHTML = classInfo;
+
+                const attendanceTable = document.getElementById('modalAttendanceTable');
+                attendanceTable.innerHTML = '';
+
+                let attendanceFound = false;
+                for (const date in attendanceData) {
+                    if (attendanceData[date][classId]) {
+                        for (const lrn in attendanceData[date][classId]) {
+                            const record = attendanceData[date][classId][lrn];
+                            const statusClass = `status-${(record.status || 'None').toLowerCase()}`;
+                            const row = `
+                                <tr>
+                                    <td>${date}</td>
+                                    <td>${record.student_name || 'Unknown'}</td>
+                                    <td><span class="status-badge ${statusClass}">${record.status || 'None'}</span></td>
+                                    <td>${record.time_checked || 'N/A'}</td>
+                                    <td>${record.is_qr_scanned ? 'Yes' : 'No'}</td>
+                                </tr>
+                            `;
+                            attendanceTable.innerHTML += row;
+                            attendanceFound = true;
+                        }
+                    }
+                }
+
+                if (!attendanceFound) {
+                    attendanceTable.innerHTML = '';
+                }
+
+                document.getElementById('classDetailsModal').style.display = 'flex';
+            } catch (error) {
+                console.error('Error displaying class details:', error);
+                alert('An error occurred while loading class details.');
+            }
+        }
+
+        function closeModal() {
+            document.getElementById('classDetailsModal').style.display = 'none';
         }
 
         function initializeCharts() {
-            const attendanceData = {
-                week: {
-                    labels: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
-                    values: [92, 90, 93, 91, 94]
-                },
-                month: {
-                    labels: ['Week 1', 'Week 2', 'Week 3', 'Week 4'],
-                    values: [91, 93, 92, 94]
-                }
+            const primaryBlue = getComputedStyle(document.documentElement).getPropertyValue('--primary-blue').trim();
+            const successGreen = getComputedStyle(document.documentElement).getPropertyValue('--success-color').trim();
+            const dangerRed = getComputedStyle(document.documentElement).getPropertyValue('--danger-color').trim();
+            const warningYellow = getComputedStyle(document.documentElement).getPropertyValue('--warning-color').trim();
+
+            const attendanceChartData = {
+                labels: classesData.length ? classesData.map(c => c.section_name || 'Unknown') : ['No Data'],
+                values: classesData.length ? classesData.map(c => parseFloat(c.attendance_percentage) || 0) : [0]
             };
 
             const statusData = {
-                week: {
-                    labels: ['Present', 'Absent', 'Late', 'Excused'],
-                    values: [
-                        attendanceRecords.filter(r => r.date >= '2025-07-15' && r.date <= '2025-07-19' && r.status === 'present').length,
-                        attendanceRecords.filter(r => r.date >= '2025-07-15' && r.date <= '2025-07-19' && r.status === 'absent').length,
-                        attendanceRecords.filter(r => r.date >= '2025-07-15' && r.date <= '2025-07-19' && r.status === 'late').length
-                    ]
-                },
-                month: {
-                    labels: ['Present', 'Absent', 'Late', 'Excused'],
-                    values: [
-                        attendanceRecords.filter(r => r.status === 'present').length,
-                        attendanceRecords.filter(r => r.status === 'absent').length,
-                        attendanceRecords.filter(r => r.status === 'late').length
-                    ]
-                }
+                labels: ['Present', 'Absent', 'Late'],
+                values: [
+                    monthlyAttendanceData.length ? monthlyAttendanceData.reduce((sum, c) => sum + (parseInt(c.present) || 0), 0) : 0,
+                    monthlyAttendanceData.length ? monthlyAttendanceData.reduce((sum, c) => sum + (parseInt(c.absent) || 0), 0) : 0,
+                    monthlyAttendanceData.length ? monthlyAttendanceData.reduce((sum, c) => sum + (parseInt(c.late) || 0), 0) : 0
+                ]
             };
 
-            const attendanceChartCtx = document.getElementById('attendance-chart').getContext('2d');
-            const attendanceChart = new Chart(attendanceChartCtx, {
-                type: 'line',
+            console.log('Chart data prepared:', { attendanceChartData, statusData });
+
+            const attendanceChartCtx = document.getElementById('attendance-chart');
+            if (!attendanceChartCtx) {
+                console.error('Attendance chart canvas not found');
+                return;
+            }
+            
+            const attendanceChart = new Chart(attendanceChartCtx.getContext('2d'), {
+                type: 'bar',
                 data: {
-                    labels: attendanceData.week.labels,
+                    labels: attendanceChartData.labels,
                     datasets: [{
                         label: 'Attendance Rate (%)',
-                        data: attendanceData.week.values,
-                        backgroundColor: 'rgba(99, 102, 241, 0.2)',
-                        borderColor: '#6366f1',
+                        data: attendanceChartData.values,
+                        backgroundColor: primaryBlue,
+                        borderColor: primaryBlue,
                         borderWidth: 2,
-                        tension: 0.4,
-                        pointBackgroundColor: '#6366f1',
-                        pointRadius: 4,
-                        fill: true
+                        borderRadius: 8,
+                        borderSkipped: false,
                     }]
                 },
                 options: {
@@ -773,8 +1070,7 @@ Students List: ${classItem.students.map(s => `${s.firstName} ${s.lastName}`).joi
                     maintainAspectRatio: false,
                     scales: {
                         y: {
-                            beginAtZero: false,
-                            min: 80,
+                            beginAtZero: true,
                             max: 100,
                             grid: {
                                 color: 'rgba(0, 0, 0, 0.05)'
@@ -798,7 +1094,7 @@ Students List: ${classItem.students.map(s => `${s.firstName} ${s.lastName}`).joi
                         tooltip: {
                             callbacks: {
                                 label: function(context) {
-                                    return context.parsed.y + '%';
+                                    return context.parsed.y + '% attendance';
                                 }
                             }
                         }
@@ -806,14 +1102,19 @@ Students List: ${classItem.students.map(s => `${s.firstName} ${s.lastName}`).joi
                 }
             });
 
-            const statusChartCtx = document.getElementById('status-chart').getContext('2d');
-            const statusChart = new Chart(statusChartCtx, {
+            const statusChartCtx = document.getElementById('status-chart');
+            if (!statusChartCtx) {
+                console.error('Status chart canvas not found');
+                return;
+            }
+            
+            const statusChart = new Chart(statusChartCtx.getContext('2d'), {
                 type: 'doughnut',
                 data: {
-                    labels: statusData.month.labels,
+                    labels: statusData.labels,
                     datasets: [{
-                        data: statusData.month.values,
-                        backgroundColor: ['#10b981', '#ef4444', '#f59e0b', '#6366f1'],
+                        data: statusData.values,
+                        backgroundColor: [successGreen, dangerRed, warningYellow],
                         borderWidth: 0,
                         hoverOffset: 5
                     }]
@@ -840,102 +1141,9 @@ Students List: ${classItem.students.map(s => `${s.firstName} ${s.lastName}`).joi
                     cutout: '65%'
                 }
             });
-
-            document.querySelectorAll('.filter-btn').forEach(button => {
-                button.addEventListener('click', function() {
-                    this.parentNode.querySelectorAll('.filter-btn').forEach(btn => {
-                        btn.classList.remove('active');
-                    });
-                    this.classList.add('active');
-
-                    const period = this.getAttribute('data-period');
-                    const chartType = this.getAttribute('data-chart');
-
-                    if (chartType === 'attendance') {
-                        attendanceChart.data.labels = attendanceData[period].labels;
-                        attendanceChart.data.datasets[0].data = attendanceData[period].values;
-                        attendanceChart.update();
-                    } else if (chartType === 'status') {
-                        statusChart.data.labels = statusData[period].labels;
-                        statusChart.data.datasets[0].data = statusData[period].values;
-                        statusChart.update();
-                    }
-                });
-            });
-        }
-
-        function renderTodaySchedule() {
-            const tbody = document.getElementById('scheduleTableBody');
-            const today = new Date('2025-07-19');
-            const dayName = today.toLocaleString('en-US', {
-                weekday: 'long'
-            }).toLowerCase();
-            const filteredClasses = classes.filter(c => c.schedule[dayName]);
-
-            tbody.innerHTML = '';
-
-            if (filteredClasses.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="7" class="no-schedule">No classes scheduled today</td></tr>';
-                return;
-            }
-
-            filteredClasses.forEach(classItem => {
-                const schedule = classItem.schedule[dayName];
-                const time = `${formatTime(schedule.start)} - ${formatTime(schedule.end)}`;
-                const row = document.createElement('tr');
-                row.innerHTML = `
-                    <td>${classItem.code}</td>
-                    <td>${classItem.sectionName}</td>
-                    <td>${classItem.subject}</td>
-                    <td>${classItem.room}</td>
-                    <td>${time}</td>
-                    <td><span class="status-badge ${classItem.status}">${classItem.status}</span></td>
-                    <td>
-                        <button class="btn-info" onclick="viewClass(${classItem.id})">
-                            <i class="fas fa-eye"></i> View
-                        </button>
-                    </td>
-                `;
-                tbody.appendChild(row);
-            });
-        }
-
-        function formatSchedule(schedule) {
-            if (!schedule || Object.keys(schedule).length === 0) {
-                return '<span class="no-schedule">No schedule set</span>';
-            }
-
-            return Object.entries(schedule).map(([day, times]) => {
-                const dayName = capitalizeFirst(day);
-                return `<div class="schedule-item">${dayName}: ${formatTime(times.start)} - ${formatTime(times.end)}</div>`;
-            }).join('');
-        }
-
-        function formatTime(time) {
-            if (!time) return '';
-            const [hours, minutes] = time.split(':');
-            const hourNum = parseInt(hours);
-            const period = hourNum >= 12 ? 'PM' : 'AM';
-            const displayHour = hourNum % 12 || 12;
-            return `${displayHour}:${minutes} ${period}`;
-        }
-
-        function formatDate(dateStr) {
-            const date = new Date(dateStr);
-            return date.toLocaleString('en-US', {
-                month: 'short',
-                day: 'numeric',
-                year: 'numeric',
-                hour: 'numeric',
-                minute: '2-digit',
-                hour12: true
-            });
-        }
-
-        function capitalizeFirst(str) {
-            return str.charAt(0).toUpperCase() + str.slice(1);
+            
+            console.log('Charts initialized successfully');
         }
     </script>
 </body>
-
 </html>

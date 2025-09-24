@@ -26,11 +26,6 @@ $total_students_stmt = $pdo->prepare("SELECT COUNT(DISTINCT cs.lrn) FROM class_s
 $total_students_stmt->execute(['teacher_id' => $user['teacher_id']]);
 $total_students = $total_students_stmt->fetchColumn();
 
-// Fetch overall attendance (average)
-$overall_att_stmt = $pdo->prepare("SELECT AVG(attendance_percentage) FROM classes WHERE teacher_id = :teacher_id");
-$overall_att_stmt->execute(['teacher_id' => $user['teacher_id']]);
-$overall_attendance = round($overall_att_stmt->fetchColumn());
-
 // Fetch active classes count
 $active_classes_stmt = $pdo->prepare("SELECT COUNT(*) FROM classes WHERE teacher_id = :teacher_id AND status = 'active'");
 $active_classes_stmt->execute(['teacher_id' => $user['teacher_id']]);
@@ -630,7 +625,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             <div class="card-header">
                 <div>
                     <div class="card-title">Overall Attendance</div>
-                    <div class="card-value"><?php echo $overall_attendance . '%'; ?></div>
+                    <div class="card-value">0%</div>
                 </div>
                 <div class="card-icon bg-green">
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 16 16">

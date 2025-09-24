@@ -12,6 +12,25 @@ if (!$currentUser) {
 
 $pdo = getDBConnection();
 
+// Create notifications table if not exists
+try {
+    $pdo->exec("
+        CREATE TABLE IF NOT EXISTS notifications (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            teacher_id INT NOT NULL,
+            lrn VARCHAR(20) NOT NULL,
+            class_id INT NOT NULL,
+            risk VARCHAR(50) NOT NULL,
+            absences INT NOT NULL,
+            created_at DATETIME NOT NULL,
+            UNIQUE KEY unique_student_class (lrn, class_id)
+        )
+    ");
+} catch (PDOException $e) {
+    // Handle error silently or log it
+    // error_log("Error creating notifications table: " . $e->getMessage());
+}
+
 $profileImageUrl = $currentUser['picture'] ?? 'no-icon.png';
 $profileInitials = strtoupper(substr($currentUser['firstname'] ?? 'D', 0, 1) . substr($currentUser['lastname'] ?? 'S', 0, 1));
 $profileName = htmlspecialchars($currentUser['firstname'] . ' ' . $currentUser['lastname'], ENT_QUOTES, 'UTF-8');
@@ -43,7 +62,6 @@ function getAtRiskStudents($pdo, $teacher_id) {
     $period = getHistoricalPeriod($pdo, $teacher_id);
     $start_date = $period['historical_start'];
     $end_date = $period['historical_end'];
-    $at_risk = [];
 
     // Fetch classes for the teacher
     $stmt = $pdo->prepare("
@@ -93,22 +111,46 @@ function getAtRiskStudents($pdo, $teacher_id) {
                 }
             }
 
+            $lrn = $student['lrn'];
+            $class_id = $class['class_id'];
+
             if ($risk) {
-                $at_risk[] = [
-                    'id' => $student['lrn'],
-                    // 'fullName' => $student['first_name'] . ' ' . $student['last_name'],
-                    'fullName' => trim($student['first_name'] . ' ' . ($student['middle_name'] ?? '') . ' ' . $student['last_name']),
-                    'gradeLevel' => $class['grade_level'],
-                    'subject' => $class['subject_name'],
-                    'section' => $class['section_name'],
-                    'risk' => $risk,
-                    'absences' => $absences
-                ];
+                // Insert or update notification
+                $insert_stmt = $pdo->prepare("
+                    INSERT INTO notifications (teacher_id, lrn, class_id, risk, absences, created_at) 
+                    VALUES (?, ?, ?, ?, ?, NOW()) 
+                    ON DUPLICATE KEY UPDATE 
+                    risk = VALUES(risk), 
+                    absences = VALUES(absences), 
+                    created_at = IF(risk = VALUES(risk), created_at, NOW())
+                ");
+                $insert_stmt->execute([$teacher_id, $lrn, $class_id, $risk, $absences]);
+            } else {
+                // Delete notification if exists (no longer at risk)
+                $delete_stmt = $pdo->prepare("DELETE FROM notifications WHERE lrn = ? AND class_id = ?");
+                $delete_stmt->execute([$lrn, $class_id]);
             }
         }
     }
 
-    return $at_risk;
+    // Now fetch the current at-risk students from notifications
+    $fetch_stmt = $pdo->prepare("
+        SELECT n.lrn AS id,
+               TRIM(CONCAT(s.first_name, ' ', COALESCE(s.middle_name, ''), ' ', s.last_name)) AS fullName,
+               c.grade_level AS gradeLevel,
+               sub.subject_name AS subject,
+               c.section_name AS section,
+               n.risk,
+               n.absences,
+               n.created_at
+        FROM notifications n
+        JOIN students s ON n.lrn = s.lrn
+        JOIN classes c ON n.class_id = c.class_id
+        JOIN subjects sub ON c.subject_id = sub.subject_id
+        WHERE n.teacher_id = ?
+    ");
+    $fetch_stmt->execute([$teacher_id]);
+    return $fetch_stmt->fetchAll(PDO::FETCH_ASSOC);
 }
 
 $at_risk_students = getAtRiskStudents($pdo, $currentUser['teacher_id']);
@@ -1208,7 +1250,7 @@ $at_risk_students = getAtRiskStudents($pdo, $currentUser['teacher_id']);
             const riskOrder = { 'Running for Drop Out': 3, 'High': 2, 'Medium': 1 };
             const atRiskStudents = atRiskStudentsData.map(student => ({
                 ...student,
-                timestamp: new Date().toLocaleString('en-US', {
+                timestamp: new Date(student.created_at).toLocaleString('en-US', {
                     month: 'short',
                     day: 'numeric',
                     hour: '2-digit',

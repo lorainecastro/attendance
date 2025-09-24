@@ -925,7 +925,7 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
     </style>
 </head>
 <body>
-    <h1>Attendance Tracking</h1>
+    <h1>Attendance Marking</h1>
 
     <div class="stats-grid">
         <div class="card">

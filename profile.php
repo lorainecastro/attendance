@@ -166,7 +166,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             --light-gray: #d1d5db;
             --background: #f9fafb;
             --white: #ffffff;
-            --border-color: #e5e7eb;
+            --border-color: #e2e8f0;
             --card-bg: #ffffff;
             --blackfont-color: #1e293b;
             --whitefont-color: #ffffff;
@@ -189,9 +189,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             --spacing-lg: 1.5rem;
             --spacing-xl: 2rem;
             --spacing-2xl: 3rem;
-            --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.05);
+            --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08);
+            --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.1);
             --radius-sm: 0.375rem;
             --radius-md: 0.5rem;
             --radius-lg: 0.75rem;
@@ -286,6 +286,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             box-shadow: var(--shadow-md);
             transition: var(--transition-normal);
             margin-bottom: var(--spacing-lg);
+            border: 1px solid var(--border-color);
         }
 
         .card h3 {
@@ -302,7 +303,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         label {
-            font-size: var(--font-size-sm);
+            font-size: 15px;
             color: var(--grayfont-color);
             font-weight: 600;
         }
@@ -414,6 +415,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         .profile-header {
             background: var(--card-bg);
             border-radius: 8px;
+            border: 1px solid var(--border-color);
             padding: 30px;
             margin-bottom: 30px;
             box-shadow: var(--shadow-md);

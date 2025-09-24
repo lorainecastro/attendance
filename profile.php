@@ -212,6 +212,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             background-color: var(--card-bg);
             color: var(--blackfont-color);
             padding: 20px;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            
         }
 
         h1 {
@@ -239,8 +243,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         .tabs {
             display: flex;
+            flex-wrap: wrap;
             border-bottom: 2px solid var(--border-color);
             margin-bottom: var(--spacing-lg);
+            gap: var(--spacing-sm);
         }
 
         .tab {
@@ -334,6 +340,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             background: var(--primary-color);
             color: var(--whitefont-color);
             transition: var(--transition-normal);
+            width: 100%;
         }
 
         .action-btn:hover {
@@ -359,6 +366,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             justify-content: center;
             align-items: center;
             z-index: 1000;
+            padding: var(--spacing-md);
         }
 
         .modal-content {
@@ -389,31 +397,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             gap: var(--spacing-md);
             justify-content: flex-end;
             margin-top: var(--spacing-lg);
-        }
-
-        @media (max-width: 768px) {
-            .container {
-                padding: var(--spacing-md);
-            }
-
-            .tabs {
-                flex-direction: column;
-            }
-
-            .tab {
-                padding: var(--spacing-sm) var(--spacing-md);
-            }
-
-            .card {
-                padding: var(--spacing-lg);
-            }
-        }
-
-        @media (max-width: 576px) {
-            .card,
-            .modal-content {
-                overflow-x: auto;
-            }
+            flex-wrap: wrap;
         }
 
         .form-row {
@@ -433,16 +417,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             padding: 30px;
             margin-bottom: 30px;
             box-shadow: var(--shadow-md);
+            width: 100%;
         }
 
         .profile-header-content {
             display: flex;
             align-items: center;
             gap: 20px;
+            flex-wrap: wrap;
         }
 
         .profile-image-section {
             text-align: center;
+            flex: 0 0 auto;
         }
 
         .profile-image-container {
@@ -463,10 +450,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         .profile-info {
             flex: 1;
+            min-width: 200px;
+            text-align: left;
         }
 
         .profile-name {
-            font-size: 28px;
+            font-size: 24px;
             font-weight: 700;
             margin-bottom: 5px;
             color: var(--blackfont-color);
@@ -481,29 +470,82 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         .profile-email {
             font-size: 14px;
             color: var(--grayfont-color);
-            margin-bottom: 10px;
+            margin-bottom: var(--spacing-xs);
+        }
+
+        @media (max-width: 768px) {
+            body { 
+                padding: var(--spacing-sm); 
+            }
+            
+            .container {
+                padding: var(--spacing-xs);
+            }
+
+            .tabs {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .tab {
+                padding: 15px;
+                min-width: 100%;
+            }
+
+            .card {
+                padding: 20px;
+            }
+
+            .profile-header-content {
+                flex-direction: column;
+                align-items: center;
+                text-align: center;
+            }
+
+            .profile-info {
+                text-align: center;
+            }
+
+            .form-row .form-group {
+                min-width: 100%;
+            }
+        }
+
+        @media (max-width: 576px) {
+            .card,
+            .modal-content {
+                padding: 20px;
+            }
+
+            .action-btn {
+                max-width: 100%;
+            }
+
+            .modal {
+                padding: var(--spacing-sm);
+            }
         }
     </style>
 </head>
 <body>
     <h1>Profile</h1>
 
-    <div class="profile-header">
-        <div class="profile-header-content">
-            <div class="profile-image-section">
-                <div class="profile-image-container">
-                    <img src="uploads/<?php echo htmlspecialchars($user['picture'] ?? 'no-icon.png'); ?>" alt="Profile" class="profile-image" id="profilePreview">
+    <div class="container">
+        <div class="profile-header">
+            <div class="profile-header-content">
+                <div class="profile-image-section">
+                    <div class="profile-image-container">
+                        <img src="uploads/<?php echo htmlspecialchars($user['picture'] ?? 'no-icon.png'); ?>" alt="Profile" class="profile-image" id="profilePreview">
+                    </div>
+                </div>
+                <div class="profile-info">
+                    <h1 class="profile-name"><?php echo htmlspecialchars($user['firstname'] . ' ' . $user['lastname']); ?></h1>
+                    <p class="profile-role">Teacher</p>
+                    <p class="profile-email"><?php echo htmlspecialchars($user['email']); ?></p>
                 </div>
             </div>
-            <div class="profile-info">
-                <h1 class="profile-name"><?php echo htmlspecialchars($user['firstname'] . ' ' . $user['lastname']); ?></h1>
-                <p class="profile-role">Teacher</p>
-                <p class="profile-email"><?php echo htmlspecialchars($user['email']); ?></p>
-            </div>
         </div>
-    </div>
 
-    <div class="container">
         <div class="tabs">
             <div class="tab active" data-tab="profile">Profile Information</div>
             <div class="tab" data-tab="password">Password Management</div>

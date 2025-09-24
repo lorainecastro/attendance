@@ -31,6 +31,29 @@ $active_classes_stmt = $pdo->prepare("SELECT COUNT(*) FROM classes WHERE teacher
 $active_classes_stmt->execute(['teacher_id' => $user['teacher_id']]);
 $active_classes = $active_classes_stmt->fetchColumn();
 
+// Fetch today's attendance stats
+$today = date('Y-m-d');
+$todayFormatted = date('M d');
+$today_attendance_stmt = $pdo->prepare("
+    SELECT 
+        COUNT(CASE WHEN at.attendance_status = 'Present' THEN 1 END) as present,
+        COUNT(CASE WHEN at.attendance_status = 'Absent' THEN 1 END) as absent,
+        COUNT(CASE WHEN at.attendance_status = 'Late' THEN 1 END) as late,
+        COUNT(*) as total
+    FROM attendance_tracking at
+    INNER JOIN classes c ON at.class_id = c.class_id
+    WHERE c.teacher_id = :teacher_id AND at.attendance_date = :today 
+    AND c.status = 'active' 
+    AND at.logged_by IN ('Teacher', 'Device Camera', 'Scanner Device') 
+    AND at.attendance_status IN ('Present', 'Absent', 'Late')
+");
+$today_attendance_stmt->execute(['teacher_id' => $user['teacher_id'], 'today' => $today]);
+$today_attendance = $today_attendance_stmt->fetch(PDO::FETCH_ASSOC) ?: ['present' => 0, 'absent' => 0, 'late' => 0, 'total' => 0];
+
+$attended = (int)$today_attendance['present'] + (int)$today_attendance['late'];
+$total = (int)$today_attendance['total'];
+$monthAttendanceRate = $total > 0 ? round(($attended / $total) * 100, 2) : 0;
+
 // Fetch classes
 $classes_stmt = $pdo->prepare("SELECT c.*, sub.subject_code, sub.subject_name FROM classes c JOIN subjects sub ON c.subject_id = sub.subject_id WHERE c.teacher_id = :teacher_id");
 $classes_stmt->execute(['teacher_id' => $user['teacher_id']]);
@@ -271,8 +294,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     }
     exit();
 }
-
-$todayFormatted = date('M d');
 ?>
 
 <!DOCTYPE html>
@@ -381,6 +402,7 @@ $todayFormatted = date('M d');
             padding: 20px;
             box-shadow: var(--shadow-md);
             transition: var(--transition-normal);
+            border: 1px solid var(--border-color);
         }
 
         .card:hover {
@@ -410,6 +432,8 @@ $todayFormatted = date('M d');
         .bg-pink { background: var(--secondary-gradient); }
         .bg-blue { background: linear-gradient(135deg, #3b82f6, #60a5fa); }
         .bg-green { background: linear-gradient(135deg, #10b981, #34d399); }
+        .bg-red { background: linear-gradient(135deg, #ef4444, #f87171); }
+        .bg-yellow { background: linear-gradient(135deg, #f59e0b, #fbbf24); }
 
         .card-title {
             font-size: 14px;
@@ -612,7 +636,7 @@ $todayFormatted = date('M d');
             <div class="card-header">
                 <div>
                     <div class="card-title">Total Classes</div>
-                    <div class="card-value"><?php echo $active_classes; ?></div>
+                    <div class="card-value"><?php echo htmlspecialchars($active_classes); ?></div>
                 </div>
                 <div class="card-icon bg-purple">
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 16 16">
@@ -626,13 +650,41 @@ $todayFormatted = date('M d');
             <div class="card-header">
                 <div>
                     <div class="card-title">Total Students</div>
-                    <div class="card-value"><?php echo $total_students; ?></div>
+                    <div class="card-value"><?php echo htmlspecialchars($total_students); ?></div>
                 </div>
                 <div class="card-icon bg-blue">
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 16 16">
                         <path d="M7 14s-1 0-1-1 1-4 5-4 5 3 5 4-1 1-1 1H7zm4-6a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"/>
                         <path fill-rule="evenodd" d="M5.216 14A2.238 2.238 0 0 1 5 13c0-1.355.68-2.75 1.936-3.72A6.325 6.325 0 0 0 5 9c-4 0-5 3-5 4s1 1 1 1h4.216z"/>
                         <path d="M4.5 8a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z"/>
+                    </svg>
+                </div>
+            </div>
+        </div>
+        <div class="card">
+            <div class="card-header">
+                <div>
+                    <div class="card-title">Late (<?php echo $todayFormatted; ?>)</div>
+                    <div class="card-value"><?php echo htmlspecialchars($today_attendance['late']); ?></div>
+                </div>
+                <div class="card-icon bg-yellow">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 16 16">
+                        <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
+                        <path d="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4z"/>
+                    </svg>
+                </div>
+            </div>
+        </div>
+        <div class="card">
+            <div class="card-header">
+                <div>
+                    <div class="card-title">Absent (<?php echo $todayFormatted; ?>)</div>
+                    <div class="card-value"><?php echo htmlspecialchars($today_attendance['absent']); ?></div>
+                </div>
+                <div class="card-icon bg-red">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 16 16">
+                        <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
+                        <path d="M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708z"/>
                     </svg>
                 </div>
             </div>

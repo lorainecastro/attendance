@@ -27,7 +27,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $attendance = $input['attendance'];
         $pdo = getDBConnection();
         
-        // Get schedule for the class to determine grace period
+        // Get schedule for the class to determine grace period and check if schedule exists
         $schedule_stmt = $pdo->prepare("
             SELECT s.day, s.start_time, s.grace_period_minutes, s.end_time 
             FROM schedules s 
@@ -36,6 +36,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         ");
         $schedule_stmt->execute([$class_id, $date]);
         $schedule = $schedule_stmt->fetch(PDO::FETCH_ASSOC);
+        
+        // Prevent submission if no schedule or if date is in the past (but allow updates for today only in backend for consistency)
+        $today = date('Y-m-d');
+        if (!$schedule || $date < $today) {
+            echo json_encode(['success' => false, 'error' => 'Cannot mark attendance: No schedule or past date.']);
+            exit();
+        }
         
         $grace_period_end = null;
         if ($schedule) {
@@ -451,12 +458,17 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
             text-decoration: none;
         }
 
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
         .btn-primary {
             background: var(--primary-gradient);
             color: var(--whitefont-color);
         }
 
-        .btn-primary:hover {
+        .btn-primary:hover:not(:disabled) {
             background: var(--primary-blue-hover);
             transform: translateY(-2px);
         }
@@ -466,7 +478,7 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
             color: var(--whitefont-color);
         }
 
-        .btn-secondary:hover {
+        .btn-secondary:hover:not(:disabled) {
             background: #4b5563;
             transform: translateY(-2px);
         }
@@ -506,7 +518,7 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
             box-sizing: border-box;
         }
 
-        .bulk-action-btn:hover {
+        .bulk-action-btn:hover:not(:disabled) {
             background: var(--inputfieldhover-color);
         }
 
@@ -573,10 +585,16 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
             width: 100%; 
         }
 
-        .status-select:focus { 
+        .status-select:focus:not(:disabled) { 
             outline: none; 
             border-color: var(--primary-blue); 
             background: var(--inputfieldhover-color); 
+        }
+
+        .status-select:disabled { 
+            background: var(--light-gray); 
+            cursor: not-allowed; 
+            color: var(--grayfont-color);
         }
 
         .status-select option[value="Present"] { 
@@ -611,11 +629,6 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
             background-color: var(--status-none-bg); 
         }
 
-        .status-select:disabled { 
-            background: var(--light-gray); 
-            cursor: not-allowed; 
-        }
-
         .attendance-rate { 
             color: var(--success-green); 
             font-weight: 600; 
@@ -642,7 +655,7 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
             color: var(--blackfont-color); 
         }
 
-        .save-btn:hover { 
+        .save-btn:hover:not(:disabled) { 
             background: var(--inputfieldhover-color); 
         }
 
@@ -651,8 +664,13 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
             color: var(--whitefont-color); 
         }
 
-        .submit-btn:hover { 
+        .submit-btn:hover:not(:disabled) { 
             background: var(--primary-blue-hover); 
+        }
+
+        .submit-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
         }
 
         .qr-scanner-container { 
@@ -689,6 +707,11 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
             background: var(--danger-red); 
         }
 
+        .notification.warning { 
+            background: var(--warning-yellow); 
+            color: var(--dark-gray);
+        }
+
         .pagination {
             display: flex;
             justify-content: center;
@@ -705,7 +728,7 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
             transition: var(--transition-normal);
         }
 
-        .pagination button:hover {
+        .pagination button:hover:not(:disabled) {
             background: var(--inputfieldhover-color);
         }
 
@@ -720,11 +743,18 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
             border-color: var(--primary-blue);
         }
 
-        .no-students-message {
+        .no-students-message,
+        .no-editing-message {
             text-align: center;
             padding: 20px;
             color: var(--grayfont-color);
             font-size: var(--font-size-lg);
+        }
+
+        .no-editing-message {
+            background: var(--status-none-bg);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
         }
 
         @media (max-width: 1024px) {
@@ -886,6 +916,12 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
             color: #dc2626;
             font-size: 0.7rem;
         }
+
+        .action-buttons-container .btn:disabled,
+        .bulk-actions select:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
     </style>
 </head>
 <body>
@@ -929,7 +965,7 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
                 </div>
                 <div class="card-icon bg-pink">
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 16 16">
-                        <path d="M2 0a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2H2zm0 1h12a1 1 0 1 1 1 1v12a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1z"/>
+                        <path d="M2 0a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2H2zm0 1h12a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1z"/>
                         <path d="M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708z"/>
                     </svg>
                 </div>
@@ -994,7 +1030,7 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
             <button class="btn btn-secondary" onclick="stopQRScanner()">Stop Scanner</button>
         </div>
         
-        <div class="action-buttons-container">
+        <div class="action-buttons-container" id="action-buttons-container">
             <div class="bulk-actions">
                 <select class="bulk-action-btn" id="bulk-action-select">
                     <option value="">Select Bulk Action</option>
@@ -1032,7 +1068,7 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
     </div>
 
     <div class="action-buttons">
-        <button class="btn btn-primary submit-btn" onclick="submitAttendance()">Submit Attendance</button>
+        <button class="btn btn-primary submit-btn" id="submit-btn" onclick="submitAttendance()">Submit Attendance</button>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
@@ -1056,6 +1092,8 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
         let isCameraActive = false;
         let currentSchedule = null;
         let gracePeriodInterval = null;
+        let hasSchedule = false;
+        let isEditableDate = false;
 
         function showNotification(message, type) {
             const notification = document.createElement('div');
@@ -1083,6 +1121,7 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
                     clearInterval(gracePeriodInterval);
                     gracePeriodInterval = null;
                 }
+                hasSchedule = false;
                 return;
             }
 
@@ -1103,6 +1142,8 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
                     hour12: true 
                 });
                 scheduleDetails.textContent = `${classSchedule.day.charAt(0).toUpperCase() + classSchedule.day.slice(1)} ${startTime} - ${endTime}`;
+                
+                hasSchedule = true;
                 
                 if (classSchedule.grace_period_minutes > 0) {
                     gracePeriodInfo.style.display = 'block';
@@ -1160,6 +1201,32 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
                     clearInterval(gracePeriodInterval);
                     gracePeriodInterval = null;
                 }
+                hasSchedule = false;
+            }
+        }
+
+        function updateEditingPermissions() {
+            isEditableDate = today === currentToday;
+            const actionContainer = document.getElementById('action-buttons-container');
+            const submitBtn = document.getElementById('submit-btn');
+            const bulkSelect = document.getElementById('bulk-action-select');
+            
+            if (!hasSchedule || !isEditableDate) {
+                actionContainer.style.opacity = '0.6';
+                actionContainer.style.pointerEvents = 'none';
+                submitBtn.disabled = true;
+                bulkSelect.disabled = true;
+                if (!hasSchedule) {
+                    showNotification('No schedule for this class on the selected date. Attendance marking is disabled.', 'warning');
+                }
+                if (!isEditableDate) {
+                    showNotification('Attendance for past dates cannot be modified.', 'warning');
+                }
+            } else {
+                actionContainer.style.opacity = '1';
+                actionContainer.style.pointerEvents = 'auto';
+                submitBtn.disabled = false;
+                bulkSelect.disabled = false;
             }
         }
 
@@ -1270,13 +1337,16 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
 
         function updateSelectAllState() {
             const allFilteredStudents = getAllFilteredStudents();
-            const allSelected = allFilteredStudents.length > 0 && 
-                allFilteredStudents.every(student => selectedStudents.has(student.lrn.toString()));
+            const editableStudents = allFilteredStudents.filter(student => 
+                !attendanceData[today][current_class_id][student.lrn].is_qr_scanned && hasSchedule && isEditableDate
+            );
+            const allSelected = editableStudents.length > 0 && 
+                editableStudents.every(student => selectedStudents.has(student.lrn.toString()));
             
             const selectAllCheckbox = document.getElementById('select-all');
             selectAllCheckbox.checked = allSelected;
             
-            const someSelected = allFilteredStudents.some(student => selectedStudents.has(student.lrn.toString()));
+            const someSelected = editableStudents.some(student => selectedStudents.has(student.lrn.toString()));
             selectAllCheckbox.indeterminate = someSelected && !allSelected;
         }
 
@@ -1383,6 +1453,7 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
                 document.getElementById('select-all').checked = false;
                 document.getElementById('select-all').indeterminate = false;
                 updateScheduleInfo();
+                updateEditingPermissions();
                 return;
             }
 
@@ -1399,6 +1470,7 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
                 document.getElementById('select-all').checked = false;
                 document.getElementById('select-all').indeterminate = false;
                 updateScheduleInfo();
+                updateEditingPermissions();
                 return;
             }
 
@@ -1415,6 +1487,7 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
                 document.getElementById('select-all').checked = false;
                 document.getElementById('select-all').indeterminate = false;
                 updateScheduleInfo();
+                updateEditingPermissions();
                 return;
             }
 
@@ -1439,6 +1512,9 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
                 }
             });
 
+            updateScheduleInfo();
+            updateEditingPermissions();
+
             const filteredStudents = getAllFilteredStudents();
 
             if (filteredStudents.length === 0) {
@@ -1447,7 +1523,16 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
                 document.getElementById('pagination').innerHTML = '';
                 document.getElementById('select-all').checked = false;
                 document.getElementById('select-all').indeterminate = false;
-                updateScheduleInfo();
+                return;
+            }
+
+            if (!hasSchedule || !isEditableDate) {
+                tableBody.innerHTML = '<tr><td colspan="7" class="no-editing-message">You cannot mark attendance for past dates. Attendance marking is disabled.</td></tr>';
+                updateStats(filteredStudents);
+                document.getElementById('pagination').innerHTML = '';
+                selectedStudents.clear();
+                document.getElementById('select-all').checked = false;
+                document.getElementById('select-all').indeterminate = false;
                 return;
             }
 
@@ -1466,7 +1551,7 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
                 };
                 
                 const isQRScanned = att.is_qr_scanned;
-                const isEditable = !isQRScanned;
+                const isEditable = !isQRScanned && hasSchedule && isEditableDate;
                 const statusClass = att.status ? att.status.toLowerCase() : 'none';
                 const isChecked = selectedStudents.has(student.lrn.toString()) && isEditable ? 'checked' : '';
                 const rate = calcAttendanceRate(current_class_id, student.lrn);
@@ -1478,12 +1563,12 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
                 
                 const row = document.createElement('tr');
                 row.innerHTML = `
-                    <td><input type="checkbox" class="select-student" data-id="${student.lrn}" ${isChecked} ${isQRScanned ? 'disabled' : ''}></td>
+                    <td><input type="checkbox" class="select-student" data-id="${student.lrn}" ${isChecked} ${!isEditable ? 'disabled' : ''}></td>
                     <td><img src="uploads/${student.photo || 'no-icon.png'}" class="student-photo" alt="${student.name}" onerror="this.src='uploads/no-icon.png'"></td>
                     <td>${student.lrn}</td>
                     <td>${student.name}</td>
                     <td>
-                        <select class="status-select ${statusClass}" data-id="${student.lrn}" ${isQRScanned ? 'disabled' : ''}>
+                        <select class="status-select ${statusClass}" data-id="${student.lrn}" ${!isEditable ? 'disabled' : ''}>
                             <option value="" ${att.status === '' ? 'selected' : ''}>Select Status</option>
                             <option value="Present" ${att.status === 'Present' ? 'selected' : ''}>Present</option>
                             <option value="Absent" ${att.status === 'Absent' ? 'selected' : ''}>Absent</option>
@@ -1499,7 +1584,6 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
 
             bulkActionSelect.value = selectedBulkAction;
             updateSelectAllState();
-            updateScheduleInfo();
 
             document.querySelectorAll('.select-student').forEach(checkbox => {
                 checkbox.addEventListener('change', () => {
@@ -1625,7 +1709,7 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
 
         function toggleSelectAll() {
             const allFilteredStudents = getAllFilteredStudents().filter(student => 
-                !attendanceData[today][current_class_id][student.lrn].is_qr_scanned
+                !attendanceData[today][current_class_id][student.lrn].is_qr_scanned && hasSchedule && isEditableDate
             );
             const selectAllCheckbox = document.getElementById('select-all');
             
@@ -1641,7 +1725,7 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
             
             document.querySelectorAll('.select-student').forEach(checkbox => {
                 const studentId = checkbox.dataset.id.toString();
-                if (!attendanceData[today][current_class_id][studentId].is_qr_scanned) {
+                if (!attendanceData[today][current_class_id][studentId].is_qr_scanned && hasSchedule && isEditableDate) {
                     checkbox.checked = selectedStudents.has(studentId);
                 }
             });
@@ -1650,7 +1734,10 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
         }
 
         function markAllPresent() {
-            if (!current_class_id) return;
+            if (!current_class_id || !hasSchedule || !isEditableDate) {
+                showNotification('Cannot mark attendance: No active schedule or selected date is in the past.', 'error');
+                return;
+            }
             const filteredStudents = getAllFilteredStudents().filter(student => 
                 !attendanceData[today][current_class_id][student.lrn].is_qr_scanned
             );
@@ -1667,7 +1754,10 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
         }
 
         function applyBulkAction() {
-            if (!current_class_id) return;
+            if (!current_class_id || !hasSchedule || !isEditableDate) {
+                showNotification('Cannot apply bulk action: No active schedule or selected date is in the past.', 'error');
+                return;
+            }
             const action = document.getElementById('bulk-action-select').value;
             if (!action) {
                 showNotification('Please select a bulk action.', 'error');
@@ -1695,7 +1785,10 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
         }
 
         function submitAttendance() {
-            if (!current_class_id) return;
+            if (!current_class_id || !hasSchedule || !isEditableDate) {
+                showNotification('Cannot submit attendance: No active schedule or selected date is in the past.', 'error');
+                return;
+            }
             const data = attendanceData[today][current_class_id];
             fetch('', {
                 method: 'POST',
@@ -1706,7 +1799,7 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
                     showNotification('Attendance submitted successfully.', 'success');
                     location.reload();
                 } else {
-                    showNotification('Failed to submit attendance.', 'error');
+                    showNotification(result.error || 'Failed to submit attendance.', 'error');
                 }
             }).catch(err => {
                 showNotification('Error: ' + err.message, 'error');
@@ -1714,7 +1807,10 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
         }
 
         function processQRScan(qrData, source) {
-            if (!current_class_id || isProcessingScan) return;
+            if (!current_class_id || isProcessingScan || !hasSchedule || !isEditableDate) {
+                showNotification('Cannot process QR scan: No active schedule, selected date is in the past, or scanner inactive.', 'error');
+                return;
+            }
             isProcessingScan = true; // Set debounce flag
 
             // Debug: Log the raw QR code data
@@ -1796,6 +1892,10 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
         }
 
         function toggleQRScanner() {
+            if (!hasSchedule || !isEditableDate) {
+                showNotification('QR scanning is only available for scheduled classes on the current date.', 'error');
+                return;
+            }
             const qrScanner = document.getElementById('qr-scanner');
             const scanButton = document.getElementById('qr-scan-btn');
             const video = document.getElementById('qr-video');

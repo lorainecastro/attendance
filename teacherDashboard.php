@@ -18,17 +18,17 @@ try {
         CREATE TABLE IF NOT EXISTS notifications (
             id INT AUTO_INCREMENT PRIMARY KEY,
             teacher_id INT NOT NULL,
-            lrn VARCHAR(20) NOT NULL,
+            lrn VARCHAR(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
             class_id INT NOT NULL,
-            risk VARCHAR(50) NOT NULL,
+            risk VARCHAR(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
             absences INT NOT NULL,
             created_at DATETIME NOT NULL,
             UNIQUE KEY unique_student_class (lrn, class_id)
-        )
+        ) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci
     ");
 } catch (PDOException $e) {
-    // Handle error silently or log it
-    // error_log("Error creating notifications table: " . $e->getMessage());
+    // Log error for debugging
+    error_log("Error creating notifications table: " . $e->getMessage());
 }
 
 $profileImageUrl = $currentUser['picture'] ?? 'no-icon.png';
@@ -36,7 +36,6 @@ $profileInitials = strtoupper(substr($currentUser['firstname'] ?? 'D', 0, 1) . s
 $profileName = htmlspecialchars($currentUser['firstname'] . ' ' . $currentUser['lastname'], ENT_QUOTES, 'UTF-8');
 
 function getHistoricalPeriod($pdo, $teacher_id) {
-    // Query to find the earliest attendance date for the teacher's classes
     $stmt = $pdo->prepare("
         SELECT MIN(a.attendance_date) as earliest_date
         FROM attendance_tracking a
@@ -47,9 +46,7 @@ function getHistoricalPeriod($pdo, $teacher_id) {
     $stmt->execute([$teacher_id]);
     $result = $stmt->fetch(PDO::FETCH_ASSOC);
 
-    // Use the earliest attendance date as start_date, or fallback to start of current month
     $start_date = $result['earliest_date'] ?? date('Y-m-01');
-    // Use current date as end_date
     $end_date = date('Y-m-d');
 
     return [
@@ -87,7 +84,7 @@ function getAtRiskStudents($pdo, $teacher_id) {
         $students = $student_stmt->fetchAll(PDO::FETCH_ASSOC);
 
         foreach ($students as $student) {
-            // Count absences directly from attendance records
+            // Count absences
             $absence_stmt = $pdo->prepare("
                 SELECT COUNT(*) as absence_count
                 FROM attendance_tracking a
@@ -126,14 +123,14 @@ function getAtRiskStudents($pdo, $teacher_id) {
                 ");
                 $insert_stmt->execute([$teacher_id, $lrn, $class_id, $risk, $absences]);
             } else {
-                // Delete notification if exists (no longer at risk)
+                // Delete notification if exists
                 $delete_stmt = $pdo->prepare("DELETE FROM notifications WHERE lrn = ? AND class_id = ?");
                 $delete_stmt->execute([$lrn, $class_id]);
             }
         }
     }
 
-    // Now fetch the current at-risk students from notifications
+    // Fetch at-risk students from notifications with explicit collation
     $fetch_stmt = $pdo->prepare("
         SELECT n.lrn AS id,
                TRIM(CONCAT(s.first_name, ' ', COALESCE(s.middle_name, ''), ' ', s.last_name)) AS fullName,
@@ -144,7 +141,7 @@ function getAtRiskStudents($pdo, $teacher_id) {
                n.absences,
                n.created_at
         FROM notifications n
-        JOIN students s ON n.lrn = s.lrn
+        JOIN students s ON n.lrn COLLATE utf8mb4_general_ci = s.lrn COLLATE utf8mb4_general_ci
         JOIN classes c ON n.class_id = c.class_id
         JOIN subjects sub ON c.subject_id = sub.subject_id
         WHERE n.teacher_id = ?

@@ -21,8 +21,8 @@ if (!$user) {
 
 $pdo = getDBConnection();
 
-// Fetch total students
-$total_students_stmt = $pdo->prepare("SELECT COUNT(DISTINCT cs.lrn) FROM class_students cs JOIN classes c ON cs.class_id = c.class_id WHERE c.teacher_id = :teacher_id");
+// Fetch total students (count all enrollments, not distinct)
+$total_students_stmt = $pdo->prepare("SELECT COUNT(cs.lrn) FROM class_students cs JOIN classes c ON cs.class_id = c.class_id WHERE c.teacher_id = :teacher_id");
 $total_students_stmt->execute(['teacher_id' => $user['teacher_id']]);
 $total_students = $total_students_stmt->fetchColumn();
 
@@ -271,6 +271,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     }
     exit();
 }
+
+$todayFormatted = date('M d');
 ?>
 
 <!DOCTYPE html>
@@ -609,6 +611,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         <div class="card">
             <div class="card-header">
                 <div>
+                    <div class="card-title">Total Classes</div>
+                    <div class="card-value"><?php echo $active_classes; ?></div>
+                </div>
+                <div class="card-icon bg-purple">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 16 16">
+                        <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
+                        <path d="M4 8a.5.5 0 0 1 .5-.5h7a.5.5 0 0 1 0 1h-7A.5.5 0 0 1 4 8z"/>
+                    </svg>
+                </div>
+            </div>
+        </div>
+        <div class="card">
+            <div class="card-header">
+                <div>
                     <div class="card-title">Total Students</div>
                     <div class="card-value"><?php echo $total_students; ?></div>
                 </div>
@@ -617,34 +633,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                         <path d="M7 14s-1 0-1-1 1-4 5-4 5 3 5 4-1 1-1 1H7zm4-6a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"/>
                         <path fill-rule="evenodd" d="M5.216 14A2.238 2.238 0 0 1 5 13c0-1.355.68-2.75 1.936-3.72A6.325 6.325 0 0 0 5 9c-4 0-5 3-5 4s1 1 1 1h4.216z"/>
                         <path d="M4.5 8a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z"/>
-                    </svg>
-                </div>
-            </div>
-        </div>
-        <div class="card">
-            <div class="card-header">
-                <div>
-                    <div class="card-title">Overall Attendance</div>
-                    <div class="card-value">0%</div>
-                </div>
-                <div class="card-icon bg-green">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 16 16">
-                        <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
-                        <path d="M10.97 4.97a.235.235 0 0 0-.02.022L7.477 9.417 5.384 7.323a.75.75 0 0 0-1.06 1.06L6.97 11.03a.75.75 0 0 0 1.079-.02l3.992-4.99a.75.75 0 0 0-1.071-1.05z"/>
-                    </svg>
-                </div>
-            </div>
-        </div>
-        <div class="card">
-            <div class="card-header">
-                <div>
-                    <div class="card-title">Active Classes</div>
-                    <div class="card-value"><?php echo $active_classes; ?></div>
-                </div>
-                <div class="card-icon bg-purple">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 16 16">
-                        <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
-                        <path d="M4 8a.5.5 0 0 1 .5-.5h7a.5.5 0 0 1 0 1h-7A.5.5 0 0 1 4 8z"/>
                     </svg>
                 </div>
             </div>

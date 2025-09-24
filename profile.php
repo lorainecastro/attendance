@@ -340,7 +340,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             background: var(--primary-color);
             color: var(--whitefont-color);
             transition: var(--transition-normal);
-            width: 100%;
+            /* width: 100%; */
         }
 
         .action-btn:hover {
@@ -477,7 +477,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             body { 
                 padding: var(--spacing-sm); 
             }
-            
+
             .container {
                 padding: var(--spacing-xs);
             }

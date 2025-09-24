@@ -1205,23 +1205,55 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
             }
         }
 
+        // function updateEditingPermissions() {
+        //     isEditableDate = today === currentToday;
+        //     const actionContainer = document.getElementById('action-buttons-container');
+        //     const submitBtn = document.getElementById('submit-btn');
+        //     const bulkSelect = document.getElementById('bulk-action-select');
+            
+        //     if (!hasSchedule || !isEditableDate) {
+        //         actionContainer.style.opacity = '0.6';
+        //         actionContainer.style.pointerEvents = 'none';
+        //         submitBtn.disabled = true;
+        //         bulkSelect.disabled = true;
+        //         if (!hasSchedule) {
+        //             showNotification('No schedule for this class on the selected date. Attendance marking is disabled.', 'warning');
+        //         }
+        //         if (!isEditableDate) {
+        //             showNotification('Attendance for past dates cannot be modified.', 'warning');
+        //         }
+        //     } else {
+        //         actionContainer.style.opacity = '1';
+        //         actionContainer.style.pointerEvents = 'auto';
+        //         submitBtn.disabled = false;
+        //         bulkSelect.disabled = false;
+        //     }
+        // }
+
         function updateEditingPermissions() {
             isEditableDate = today === currentToday;
             const actionContainer = document.getElementById('action-buttons-container');
             const submitBtn = document.getElementById('submit-btn');
             const bulkSelect = document.getElementById('bulk-action-select');
             
-            if (!hasSchedule || !isEditableDate) {
+            if (!hasSchedule) {
                 actionContainer.style.opacity = '0.6';
                 actionContainer.style.pointerEvents = 'none';
                 submitBtn.disabled = true;
                 bulkSelect.disabled = true;
-                if (!hasSchedule) {
-                    showNotification('No schedule for this class on the selected date. Attendance marking is disabled.', 'warning');
-                }
+                showNotification('No schedule for this class on the selected date. Attendance marking is disabled.', 'warning');
+                
                 if (!isEditableDate) {
-                    showNotification('Attendance for past dates cannot be modified.', 'warning');
+                    setTimeout(() => {
+                        showNotification('Attendance for past dates cannot be modified.', 'warning');
+                    }, 3000);
                 }
+            } else if (!isEditableDate) {
+                actionContainer.style.opacity = '0.6';
+                actionContainer.style.pointerEvents = 'none';
+                submitBtn.disabled = true;
+                bulkSelect.disabled = true;
+                showNotification('Attendance for past dates cannot be modified.', 'warning');
             } else {
                 actionContainer.style.opacity = '1';
                 actionContainer.style.pointerEvents = 'auto';

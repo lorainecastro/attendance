@@ -1089,7 +1089,7 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
             const selectedDate = new Date(today);
             const dayOfWeek = selectedDate.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
             
-            const classSchedule = classes.find(c => c.class_id == current_class_id);
+            const classSchedule = classes.find(c => c.class_id == current_class_id && c.day === dayOfWeek);
             if (classSchedule && classSchedule.start_time && classSchedule.day === dayOfWeek) {
                 scheduleInfo.style.display = 'block';
                 const startTime = new Date(`${today}T${classSchedule.start_time}`).toLocaleTimeString('en-US', { 
@@ -1392,7 +1392,7 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
                 c.subject_name === subjectFilter
             );
 
-            if (matchingClasses.length !== 1) {
+            if (matchingClasses.length === 0) {
                 updateStats([]);
                 current_class_id = null;
                 selectedStudents.clear();

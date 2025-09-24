@@ -123,14 +123,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     throw new Exception('No changes made to password.');
                 }
                 $notification = ['message' => 'Password changed successfully.', 'type' => 'success'];
-
-            } elseif ($action === 'delete_account') {
-                $stmt = $pdo->prepare("DELETE FROM teacher_sessions WHERE teacher_id = ?");
-                $stmt->execute([$user['teacher_id']]);
-                $stmt = $pdo->prepare("DELETE FROM teachers WHERE teacher_id = ?");
-                $stmt->execute([$user['teacher_id']]);
-                destroySession();
-                $notification = ['message' => 'Account deleted successfully.', 'type' => 'success', 'redirect' => 'sign-in.php'];
             }
 
             if (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest') {
@@ -349,14 +341,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             transform: translateY(-2px);
         }
 
-        .danger-btn {
-            background: var(--danger-red);
-        }
-
-        .danger-btn:hover {
-            background: #b91c1c;
-        }
-
         .error {
             color: var(--danger-red);
             font-size: var(--font-size-sm);
@@ -523,7 +507,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <div class="tabs">
             <div class="tab active" data-tab="profile">Profile Information</div>
             <div class="tab" data-tab="password">Password Management</div>
-            <div class="tab" data-tab="actions">Account Actions</div>
         </div>
 
         <div class="tab-content active" id="profile">
@@ -596,13 +579,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             </div>
         </div>
 
-        <div class="tab-content" id="actions">
-            <div class="card">
-                <h3>Manage Account</h3>
-                <button class="action-btn danger-btn" id="delete-account">Delete Account</button>
-            </div>
-        </div>
-
         <div class="modal" id="confirmation-modal">
             <div class="modal-content">
                 <span class="close-btn" id="close-modal">×</span>
@@ -621,7 +597,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             const tabContents = document.querySelectorAll('.tab-content');
             const profileForm = document.getElementById('profile-form');
             const passwordForm = document.getElementById('password-form');
-            const deleteAccount = document.getElementById('delete-account');
             const confirmationModal = document.getElementById('confirmation-modal');
             const modalTitle = document.getElementById('modal-title');
             const modalMessage = document.getElementById('modal-message');
@@ -634,38 +609,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 document.getElementById(id).style.display = show ? 'block' : 'none';
             }
 
-            function showModal(title, message, actionType, confirmCallback = null) {
+            function showModal(title, message, actionType) {
                 modalTitle.textContent = title;
                 modalMessage.textContent = message;
                 confirmationModal.style.display = 'flex';
 
-                // Set modal buttons based on action type
-                if (actionType === 'confirmation') {
-                    modalActions.innerHTML = `
-                        <button class="action-btn" id="confirm-action">Confirm</button>
-                        <button class="action-btn" id="cancel-action">Cancel</button>
-                    `;
-                    const confirmAction = document.getElementById('confirm-action');
-                    const cancelAction = document.getElementById('cancel-action');
-                    confirmAction.onclick = () => {
-                        if (confirmCallback) confirmCallback();
-                        confirmationModal.style.display = 'none';
-                    };
-                    cancelAction.onclick = () => {
-                        confirmationModal.style.display = 'none';
-                    };
-                } else {
-                    modalActions.innerHTML = `
-                        <button class="action-btn" id="ok-action">Ok</button>
-                    `;
-                    const okAction = document.getElementById('ok-action');
-                    okAction.onclick = () => {
-                        confirmationModal.style.display = 'none';
-                    };
-                }
+                modalActions.innerHTML = `
+                    <button class="action-btn" id="ok-action">Ok</button>
+                `;
+                const okAction = document.getElementById('ok-action');
+                okAction.onclick = () => {
+                    confirmationModal.style.display = 'none';
+                };
             }
 
-            // Preview profile picture
             profilePictureInput.addEventListener('change', function() {
                 const file = this.files[0];
                 if (file) {
@@ -773,31 +730,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         console.error('Error:', error);
                     });
                 }
-            });
-
-            deleteAccount.addEventListener('click', () => {
-                showModal('Confirm Account Deletion', 'Are you sure you want to delete your account? This action cannot be undone.', 'confirmation', () => {
-                    const formData = new FormData();
-                    formData.append('action', 'delete_account');
-                    fetch('profile.php', {
-                        method: 'POST',
-                        body: formData,
-                        headers: {
-                            'X-Requested-With': 'XMLHttpRequest'
-                        }
-                    })
-                    .then(response => response.json())
-                    .then(data => {
-                        showModal(data.type === 'success' ? 'Success' : 'Error', data.message, 'notification');
-                        if (data.redirect) {
-                            setTimeout(() => window.location.href = data.redirect, 1000);
-                        }
-                    })
-                    .catch(error => {
-                        showModal('Error', `An error occurred: ${error.message}`, 'notification');
-                        console.error('Error:', error);
-                    });
-                });
             });
 
             closeModal.addEventListener('click', () => {

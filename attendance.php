@@ -1483,7 +1483,8 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
 
             const currentClass = matchingClasses[0];
             current_class_id = currentClass.class_id;
-            currentSchedule = currentClass;
+            const dayOfWeek = new Date(today).toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
+            currentSchedule = classes.find(c => c.class_id === current_class_id && c.day === dayOfWeek) || null;
             const current_students = students_by_class[current_class_id] || [];
 
             if (current_students.length === 0) {
@@ -1512,9 +1513,9 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
                         timeChecked: '',
                         is_qr_scanned: false,
                         isNew: true,
-                        start_time: currentClass.start_time,
-                        end_time: currentClass.end_time,
-                        grace_period_minutes: currentClass.grace_period_minutes
+                        start_time: currentSchedule ? currentSchedule.start_time : null,
+                        end_time: currentSchedule ? currentSchedule.end_time : null,
+                        grace_period_minutes: currentSchedule ? currentSchedule.grace_period_minutes : null
                     };
                 }
             });
@@ -1552,9 +1553,9 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
                     status: '',
                     timeChecked: '',
                     is_qr_scanned: false,
-                    start_time: currentClass.start_time,
-                    end_time: currentClass.end_time,
-                    grace_period_minutes: currentClass.grace_period_minutes
+                    start_time: currentSchedule ? currentSchedule.start_time : null,
+                    end_time: currentSchedule ? currentSchedule.end_time : null,
+                    grace_period_minutes: currentSchedule ? currentSchedule.grace_period_minutes : null
                 };
                 
                 const isQRScanned = att.is_qr_scanned;

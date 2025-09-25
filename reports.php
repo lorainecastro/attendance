@@ -900,10 +900,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                         let adjustedStr = '';
                         if (lateCount > 0 || absentCount > 0) {
                             const lateToAbsent = cls.late_to_absent || 0;
-                            let additionalAbsents = lateToAbsent > 0 ? Math.floor(lateCount / lateToAbsent) : 0;
-                            let remainingLates = lateToAbsent > 0 ? lateCount % lateToAbsent : lateCount;
-                            let adjustedAbsents = absentCount + additionalAbsents;
-                            adjustedStr = `${remainingLates} Late and ${adjustedAbsents} Absent`;
+                            if (lateCount === 0) {
+                                adjustedStr = `${absentCount} Absent`;
+                            } else {
+                                let additionalAbsents = lateToAbsent > 0 ? Math.floor(lateCount / lateToAbsent) : 0;
+                                let remainingLates = lateToAbsent > 0 ? lateCount % lateToAbsent : lateCount;
+                                let adjustedAbsents = absentCount + additionalAbsents;
+                                let parts = [];
+                                if (remainingLates > 0) parts.push(`${remainingLates} Late`);
+                                if (adjustedAbsents > 0) parts.push(`${adjustedAbsents} Absent`);
+                                adjustedStr = parts.join(' and ');
+                            }
                         }
 
                         const formattedClass = `${cls.gradeLevel} - ${cls.sectionName} (${cls.subject})`;

@@ -69,6 +69,7 @@ foreach ($classes_db as $cls) {
     $schedules_stmt->execute(['class_id' => $cls['class_id']]);
     $schedules = $schedules_stmt->fetchAll(PDO::FETCH_ASSOC);
     $schedule = [];
+    $late_to_absent = $schedules[0]['late_to_absent'] ?? 0;
     foreach ($schedules as $sch) {
         $schedule[$sch['day']] = ['start' => $sch['start_time'], 'end' => $sch['end_time']];
     }
@@ -83,6 +84,7 @@ foreach ($classes_db as $cls) {
         'attendancePercentage' => $cls['attendance_percentage'],
         'schedule' => $schedule,
         'status' => $cls['status'],
+        'late_to_absent' => $late_to_absent,
         'students' => array_map(function($student) {
             return [
                 'id' => $student['id'],
@@ -129,7 +131,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     } elseif ($reportType === 'class') {
         $headers = ['Class', 'Total Students', 'Present', 'Absent', 'Late', 'Average Attendance'];
     } elseif ($reportType === 'perfect') {
-        $headers = ['Class', 'LRN', 'Name', 'Status', 'Reason'];
+        $headers = ['Class', 'LRN', 'Name', 'Status', 'Attendance Issue Summary', 'Adjusted Attendance Record'];
     }
 
     try {
@@ -871,7 +873,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                         <th>LRN</th>
                         <th>Name</th>
                         <th>Status</th>
-                        <th>Reason</th>
+                        <th>Attendance Issue Summary</th>
+                        <th>Adjusted Attendance Record</th>
                     </tr>
                 `;
 
@@ -894,6 +897,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                             if (absentCount > 0) reasons.push(`${absentCount} Absent`);
                             reason = reasons.join(' and ');
                         }
+                        let adjustedStr = '';
+                        if (lateCount > 0 || absentCount > 0) {
+                            const lateToAbsent = cls.late_to_absent || 0;
+                            let additionalAbsents = lateToAbsent > 0 ? Math.floor(lateCount / lateToAbsent) : 0;
+                            let remainingLates = lateToAbsent > 0 ? lateCount % lateToAbsent : lateCount;
+                            let adjustedAbsents = absentCount + additionalAbsents;
+                            adjustedStr = `${remainingLates} Late and ${adjustedAbsents} Absent`;
+                        }
 
                         const formattedClass = `${cls.gradeLevel} - ${cls.sectionName} (${cls.subject})`;
                         const statusClass = status === 'Recognized' ? 'status-present' : 'status-absent';
@@ -905,6 +916,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                             <td>${student.fullName}</td>
                             <td><span class="status-badge ${statusClass}">${status}</span></td>
                             <td>${reason}</td>
+                            <td>${adjustedStr}</td>
                         `;
                         reportTbody.appendChild(row);
                     });

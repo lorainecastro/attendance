@@ -1080,13 +1080,21 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
             border-color: #007bff;
         }
 
+        /* .controls-right .btn.btn-primary {
+            order: 1;
+        }
+
+        .controls-right .view-toggle {
+            order: 2;
+        } */
+
         .search-container {
             position: relative;
             min-width: 200px;
             flex: 1;
         }
 
-        .search-input {
+        /* .search-input {
             width: 100%;
             padding: var(--spacing-xs) var(--spacing-md) var(--spacing-xs) 2.5rem;
             border: 1px solid var(--border-color);
@@ -1094,7 +1102,7 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
             font-size: var(--font-size-sm);
             background: var(--inputfield-color);
             transition: var(--transition-normal);
-        }
+        } */
 
         .search-input:focus {
             outline: none;
@@ -1123,6 +1131,7 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
             font-size: var(--font-size-sm);
             background: var(--inputfield-color);
             transition: var(--transition-normal);
+            padding: var(--spacing-xs) var(--spacing-sm);
         }
 
         .filter-select:focus {
@@ -1533,394 +1542,7 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
             display: none;
         }
 
-        @keyframes fadeIn {
-            from {
-                opacity: 0;
-            }
-
-            to {
-                opacity: 1;
-            }
-        }
-
-        @keyframes slideIn {
-            from {
-                transform: translateY(-20px);
-                opacity: 0;
-            }
-
-            to {
-                transform: translateY(0);
-                opacity: 1;
-            }
-        }
-
-        @media (max-width: 1024px) {
-            .controls {
-                flex-direction: column;
-                align-items: stretch;
-            }
-
-            .controls-right {
-                justify-content: flex-start;
-                margin-top: var(--spacing-sm);
-            }
-
-            .stats-grid {
-                grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-            }
-        }
-
-        @media (max-width: 768px) {
-            body {
-                padding: var(--spacing-sm);
-            }
-
-            .controls-left {
-                flex-direction: column;
-                gap: var(--spacing-xs);
-            }
-
-            .controls-right {
-                flex-direction: column;
-                gap: var(--spacing-xs);
-            }
-
-            .search-container {
-                min-width: auto;
-                width: 100%;
-            }
-
-            .filter-select {
-                width: 100%;
-            }
-
-            .btn {
-                width: 100%;
-                justify-content: center;
-            }
-
-            .view-toggle {
-                width: 100%;
-                justify-content: space-between;
-            }
-
-            .student-grid {
-                grid-template-columns: 1fr;
-            }
-
-            .modal-content {
-                width: 98%;
-                max-height: 95vh;
-            }
-
-            .modal-form {
-                grid-template-columns: 1fr;
-                padding: var(--spacing-lg);
-            }
-
-            .form-actions {
-                flex-direction: column;
-                gap: var(--spacing-sm);
-            }
-
-            .form-actions .btn {
-                width: 100%;
-                justify-content: center;
-            }
-
-            .table th:nth-child(n+6),
-            .table td:nth-child(n+6) {
-                display: none;
-            }
-        }
-
-        @media (max-width: 576px) {
-            h1 {
-                font-size: var(--font-size-xl);
-            }
-
-            .table th:nth-child(n+4),
-            .table td:nth-child(n+4) {
-                display: none;
-            }
-
-            .student-card {
-                padding: var(--spacing-sm);
-            }
-
-            .student-actions {
-                flex-direction: column;
-            }
-
-            .student-actions .btn {
-                width: 100%;
-                justify-content: center;
-            }
-
-            .view-toggle {
-                width: 100%;
-            }
-
-            .view-btn {
-                flex: 1;
-                justify-content: center;
-            }
-        }
-
-        @media print {
-
-            .controls,
-            .bulk-actions,
-            .student-actions,
-            .modal {
-                display: none !important;
-            }
-
-            body {
-                padding: 0;
-            }
-
-            .student-card {
-                box-shadow: none;
-                border: 1px solid var(--border-color);
-                page-break-inside: avoid;
-            }
-        }
-
-        .controls-right {
-            display: flex;
-            flex-direction: column;
-            align-items: flex-start;
-            gap: var(--spacing-sm);
-        }
-
-        .preview-table-container {
-            margin-top: var(--spacing-lg);
-            background: var(--card-bg);
-            border-radius: var(--radius-lg);
-            padding: var(--spacing-lg);
-            box-shadow: var(--shadow-md);
-            border: 1px solid var(--border-color);
-        }
-
-        .preview-table-container h3 {
-            font-size: var(--font-size-lg);
-            font-weight: 600;
-            color: var(--blackfont-color);
-            margin-bottom: var(--spacing-md);
-        }
-    </style>
-
-    <style>
-        .controls {
-            background: var(--card-bg);
-            border-radius: var(--radius-md);
-            padding: var(--spacing-md);
-            box-shadow: var(--shadow-md);
-            margin-bottom: var(--spacing-lg);
-            display: flex;
-            flex-wrap: wrap;
-            gap: var(--spacing-sm);
-            align-items: center;
-            border: 1px solid var(--border-color);
-        }
-
-        .controls-left {
-            display: flex;
-            flex-wrap: wrap;
-            gap: var(--spacing-sm);
-            flex: 1;
-            align-items: center;
-        }
-
-        .controls-right {
-            display: flex;
-            flex-wrap: wrap;
-            gap: var(--spacing-sm);
-            align-items: center;
-        }
-
-        .controls-right .btn.btn-primary {
-            order: 1;
-        }
-
-        .controls-right .view-toggle {
-            order: 2;
-        }
-
-
-        .controls-right .btn.btn-primary,
-        .controls-right .view-btn {
-            height: 36px;
-            padding: 8px 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .controls-right .view-btn {
-            width: 38px;
-            padding: 0;
-        }
-
-        .controls-right .view-btn.active {
-            background: #007bff;
-            color: white;
-            border-color: #007bff;
-        }
-
-        .controls-right {
-            display: flex;
-            flex-direction: column;
-            align-items: flex-start;
-            gap: var(--spacing-sm);
-        }
-
-        .search-container {
-            position: relative;
-            min-width: 200px;
-            flex: 1;
-        }
-
-        .search-input {
-            width: 100%;
-            padding: var(--spacing-xs) var(--spacing-md) var(--spacing-xs) 2.5rem;
-            border: 1px solid var(--border-color);
-            border-radius: var(--radius-sm);
-            font-size: var(--font-size-sm);
-            background: var(--inputfield-color);
-            transition: var(--transition-normal);
-        }
-
-        .search-icon {
-            position: absolute;
-            left: var(--spacing-sm);
-            top: 55%;
-            transform: translateY(-50%);
-            color: var(--grayfont-color);
-            font-size: 0.875rem;
-        }
-
-        .filter-select {
-            min-width: 180px;
-            padding: var(--spacing-xs) var(--spacing-sm);
-            width: 180px;
-            height: 38px;
-            box-sizing: border-box;
-        }
-
-        .btn {
-            padding: var(--spacing-xs) var(--spacing-md);
-            font-size: var(--font-size-sm);
-        }
-
-        .view-toggle {
-            border: 1px solid var(--border-color);
-            border-radius: var(--radius-sm);
-            overflow: hidden;
-            background: var(--inputfield-color);
-            display: flex;
-        }
-
-        .view-btn {
-            padding: var(--spacing-xs) var(--spacing-sm);
-            font-size: 0.875rem;
-        }
-
-        @media (max-width: 1024px) {
-            .controls {
-                flex-direction: column;
-                align-items: stretch;
-            }
-
-            .controls-right {
-                justify-content: flex-start;
-                margin-top: var(--spacing-sm);
-            }
-        }
-
-        @media (max-width: 768px) {
-            .controls-left {
-                flex-direction: column;
-                gap: var(--spacing-xs);
-            }
-
-            .controls-right {
-                flex-direction: column;
-                gap: var(--spacing-xs);
-            }
-
-            .search-container {
-                min-width: auto;
-                width: 100%;
-            }
-
-            .filter-select {
-                width: 100%;
-            }
-
-            .btn {
-                width: 100%;
-                justify-content: center;
-            }
-
-            .view-toggle {
-                width: 100%;
-                justify-content: space-between;
-            }
-        }
-
-        .preview-table-container {
-            margin-top: var(--spacing-lg);
-            background: var(--card-bg);
-            border-radius: var(--radius-lg);
-            padding: var(--spacing-lg);
-            box-shadow: var(--shadow-md);
-            border: 1px solid var(--border-color);
-        }
-
-        .preview-table-container h3 {
-            font-size: var(--font-size-lg);
-            font-weight: 600;
-            color: var(--blackfont-color);
-            margin-bottom: var(--spacing-md);
-        }
-    </style>
-
-    <style>
-        .student-actions {
-            display: flex;
-            gap: 10px;
-            flex-wrap: nowrap;
-            align-items: center;
-        }
-
-        .student-actions .btn {
-            white-space: nowrap;
-            min-width: auto;
-        }
-
-        .table td .actions {
-            display: flex;
-            gap: 10px;
-            align-items: center;
-        }
-
-        .table td .actions .btn {
-            white-space: nowrap;
-            padding: var(--spacing-xs) var(--spacing-sm);
-        }
-    </style>
-
-    <style>
-        #selectAll {
-            width: 10px;
-            height: 10px;
-            transform: scale(1.5);
-            vertical-align: middle;
-        }
-
+        #selectAll,
         #tableSelectAll {
             width: 10px;
             height: 10px;
@@ -1934,9 +1556,7 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
             transform: scale(1.5);
             cursor: pointer;
         }
-    </style>
 
-    <style>
         .photo-qr-container {
             display: flex;
             flex-direction: row;
@@ -1972,6 +1592,186 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
             font-size: 1.2em;
             vertical-align: top;
         }
+
+        .preview-table-container {
+            margin-top: var(--spacing-lg);
+            background: var(--card-bg);
+            border-radius: var(--radius-lg);
+            padding: var(--spacing-lg);
+            box-shadow: var(--shadow-md);
+            border: 1px solid var(--border-color);
+        }
+
+        .preview-table-container h3 {
+            font-size: var(--font-size-lg);
+            font-weight: 600;
+            color: var(--blackfont-color);
+            margin-bottom: var(--spacing-md);
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+            to {
+                opacity: 1;
+            }
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateY(-20px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        @media (max-width: 1024px) {
+            .controls {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            .controls-right {
+                justify-content: flex-start;
+                margin-top: var(--spacing-sm);
+            }
+            .stats-grid {
+                grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            }
+        }
+
+        @media (max-width: 768px) {
+            body {
+                padding: var(--spacing-sm);
+            }
+            .controls-left {
+                flex-direction: column;
+                gap: var(--spacing-xs);
+            }
+            .controls-right {
+                flex-direction: column;
+                gap: var(--spacing-xs);
+            }
+            .search-container {
+                min-width: auto;
+                width: 100%;
+            }
+            .filter-select {
+                width: 100%;
+            }
+            .btn {
+                width: 100%;
+                justify-content: center;
+            }
+            .view-toggle {
+                width: 100%;
+                justify-content: space-between;
+            }
+            .student-grid {
+                grid-template-columns: 1fr;
+            }
+            .modal-content {
+                width: 98%;
+                max-height: 95vh;
+            }
+            .modal-form {
+                grid-template-columns: 1fr;
+                padding: var(--spacing-lg);
+            }
+            .form-actions {
+                flex-direction: column;
+                gap: var(--spacing-sm);
+            }
+            .form-actions .btn {
+                width: 100%;
+                justify-content: center;
+            }
+            .table th:nth-child(n+6),
+            .table td:nth-child(n+6) {
+                display: none;
+            }
+        }
+
+        @media (max-width: 576px) {
+            h1 {
+                font-size: var(--font-size-xl);
+            }
+            .table th:nth-child(n+4),
+            .table td:nth-child(n+4) {
+                display: none;
+            }
+            .student-card {
+                padding: var(--spacing-sm);
+            }
+            .student-actions {
+                flex-direction: column;
+            }
+            .student-actions .btn {
+                width: 100%;
+                justify-content: center;
+            }
+            .view-toggle {
+                width: 100%;
+            }
+            .view-btn {
+                flex: 1;
+                justify-content: center;
+            }
+        }
+
+        @media print {
+            .controls,
+            .bulk-actions,
+            .student-actions,
+            .modal {
+                display: none !important;
+            }
+            body {
+                padding: 0;
+            }
+            .student-card {
+                box-shadow: none;
+                border: 1px solid var(--border-color);
+                page-break-inside: avoid;
+            }
+        }
+    </style>
+    <style>
+        .search-input {
+            width: 100%;
+            padding: var(--spacing-xs) var(--spacing-md) var(--spacing-xs) 2.5rem;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-sm);
+            font-size: var(--font-size-sm);
+            background: var(--inputfield-color);
+            transition: var(--transition-normal);
+        }
+
+        .search-icon {
+            position: absolute;
+            left: var(--spacing-sm);
+            top: 55%;
+            transform: translateY(-50%);
+            color: var(--grayfont-color);
+            font-size: 0.875rem;
+        }
+
+        .filter-select {
+            min-width: 180px;
+            padding: var(--spacing-xs) var(--spacing-sm);
+            width: 180px;
+            height: 38px;
+            box-sizing: border-box;
+        }
+
+        .btn {
+            padding: var(--spacing-xs) var(--spacing-md);
+            font-size: var(--font-size-sm);
+        }
+
     </style>
 </head>
 

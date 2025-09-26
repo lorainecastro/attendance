@@ -12,6 +12,81 @@ if (!$user) {
 }
 
 $pdo = getDBConnection();
+
+// Fetch total archived classes count
+$archived_classes_stmt = $pdo->prepare("SELECT COUNT(*) FROM classes WHERE teacher_id = :teacher_id AND isArchived = 1");
+$archived_classes_stmt->execute(['teacher_id' => $user['teacher_id']]);
+$archived_classes = $archived_classes_stmt->fetchColumn();
+
+// Fetch total archived students (count all enrollments in archived classes)
+$total_archived_students_stmt = $pdo->prepare("SELECT COUNT(cs.lrn) FROM class_students cs JOIN classes c ON cs.class_id = c.class_id WHERE c.teacher_id = :teacher_id AND c.isArchived = 1");
+$total_archived_students_stmt->execute(['teacher_id' => $user['teacher_id']]);
+$total_archived_students = $total_archived_students_stmt->fetchColumn();
+
+// Fetch total absent records in archived classes
+$archived_absent_stmt = $pdo->prepare("
+    SELECT COUNT(*) as total_absent
+    FROM attendance_tracking at
+    INNER JOIN classes c ON at.class_id = c.class_id
+    WHERE c.teacher_id = :teacher_id AND c.isArchived = 1 AND at.attendance_status = 'Absent'
+");
+$archived_absent_stmt->execute(['teacher_id' => $user['teacher_id']]);
+$total_absent_archived = $archived_absent_stmt->fetch(PDO::FETCH_ASSOC)['total_absent'] ?? 0;
+
+// Fetch archived classes details
+$archived_classes_stmt = $pdo->prepare("
+    SELECT c.*, sub.subject_code, sub.subject_name 
+    FROM classes c 
+    JOIN subjects sub ON c.subject_id = sub.subject_id 
+    WHERE c.teacher_id = :teacher_id AND c.isArchived = 1
+    ORDER BY c.grade_level, c.section_name
+");
+$archived_classes_stmt->execute(['teacher_id' => $user['teacher_id']]);
+$archived_classes_db = $archived_classes_stmt->fetchAll(PDO::FETCH_ASSOC);
+
+$archived_classes_php = [];
+foreach ($archived_classes_db as $cls) {
+    $students_stmt = $pdo->prepare("
+        SELECT s.lrn AS id, CONCAT(s.last_name, ', ', s.first_name, ' ', COALESCE(s.middle_name, '')) AS fullName 
+        FROM students s 
+        JOIN class_students cs ON s.lrn = cs.lrn 
+        WHERE cs.class_id = :class_id 
+        ORDER BY s.last_name ASC, s.first_name ASC
+    ");
+    $students_stmt->execute(['class_id' => $cls['class_id']]);
+    $students = $students_stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    $schedules_stmt = $pdo->prepare("SELECT * FROM schedules WHERE class_id = :class_id");
+    $schedules_stmt->execute(['class_id' => $cls['class_id']]);
+    $schedules = $schedules_stmt->fetchAll(PDO::FETCH_ASSOC);
+    
+    $schedule_text = [];
+    if (!empty($schedules)) {
+        foreach ($schedules as $sch) {
+            $day = ucfirst($sch['day']);
+            $start_time = date('h:i A', strtotime($sch['start_time']));
+            $end_time = date('h:i A', strtotime($sch['end_time']));
+            $grace = $sch['grace_period'] ?? 15;
+            $schedule_text[] = "{$day}: {$start_time} - {$end_time} (Grace: {$grace} min)";
+        }
+    }
+    
+    $late_to_absent = $schedules[0]['late_to_absent'] ?? 3;
+    $grace_period = $schedules[0]['grace_period'] ?? 15;
+
+    $archived_classes_php[] = [
+        'id' => $cls['class_id'],
+        'code' => $cls['subject_code'] ?? 'N/A',
+        'sectionName' => $cls['section_name'],
+        'subject' => $cls['subject_name'],
+        'gradeLevel' => $cls['grade_level'],
+        'room' => $cls['room'] ?? 'No room specified',
+        'totalStudents' => count($students),
+        'scheduleText' => implode('<br>', $schedule_text),
+        'late_to_absent' => $late_to_absent,
+        'grace_period' => $grace_period
+    ];
+}
 ?>
 
 <!DOCTYPE html>
@@ -19,7 +94,7 @@ $pdo = getDBConnection();
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Reports - Student Attendance System</title>
+    <title>Archived Classes - Student Attendance System</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         :root {
@@ -66,13 +141,8 @@ $pdo = getDBConnection();
             --transition-fast: 0.2s ease-in-out;
             --transition-normal: 0.3s ease-in-out;
             --transition-slow: 0.5s ease-in-out;
-            --status-present-bg: rgba(16, 185, 129, 0.15);
-            --status-absent-bg: rgba(239, 68, 68, 0.15);
-            --status-late-bg: rgba(245, 158, 11, 0.15);
-            --status-none-bg: #f8fafc;
-            --success-color: #10b981;
-            --warning-color: #f59e0b;
-            --danger-color: #ef4444;
+            --status-archived-bg: #ef4444;
+            --status-archived-color: #f8fafc;
         }
 
         * {
@@ -106,10 +176,412 @@ $pdo = getDBConnection();
             background: var(--primary-gradient);
             border-radius: var(--radius-sm);
         }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: var(--spacing-md);
+            margin-bottom: var(--spacing-lg);
+        }
+
+        .card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: var(--shadow-md);
+            transition: var(--transition-normal);
+            border: 1px solid var(--border-color);
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .card-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            color: var(--whitefont-color);
+        }
+
+        .bg-purple { background: var(--primary-gradient); }
+        .bg-blue { background: linear-gradient(135deg, #3b82f6, #60a5fa); }
+        .bg-red { background: linear-gradient(135deg, #ef4444, #f87171); }
+
+        .card-title {
+            font-size: 14px;
+            color: var(--grayfont-color);
+            margin-bottom: var(--spacing-xs);
+        }
+
+        .card-value {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--blackfont-color);
+        }
+
+        .archived-classes-grid {
+            display: grid;
+            gap: var(--spacing-lg);
+            margin-top: var(--spacing-lg);
+        }
+
+        .archived-class-card {
+            background: var(--card-bg);
+            border-radius: var(--radius-xl);
+            padding: var(--spacing-xl);
+            box-shadow: var(--shadow-md);
+            border-left: 6px solid var(--primary-blue);
+            transition: var(--transition-normal);
+            border: 1px solid var(--border-color);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .archived-class-card::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: var(--card-bg);
+            z-index: 0;
+            animation: pulse 6s infinite;
+        }
+
+        .archived-class-card > * {
+            position: relative;
+            z-index: 1;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.2); }
+            100% { transform: scale(1); }
+        }
+
+        .class-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: var(--spacing-md);
+            flex-wrap: wrap;
+            gap: var(--spacing-sm);
+        }
+
+        .class-title {
+            font-size: var(--font-size-xl);
+            font-weight: 700;
+            color: var(--blackfont-color);
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.1);
+        }
+
+        .class-status {
+            padding: 6px 14px;
+            border-radius: var(--radius-md);
+            font-size: var(--font-size-sm);
+            font-weight: 600;
+            background-color: var(--status-archived-bg);
+            color: var(--status-archived-color);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .class-details {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+            gap: var(--spacing-md);
+            margin-top: var(--spacing-md);
+            background: rgba(255, 255, 255, 0.9);
+            padding: var(--spacing-md);
+            border-radius: var(--radius-md);
+            box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.08);
+        }
+
+        .detail-item {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .detail-label {
+            font-size: var(--font-size-sm);
+            color: var(--grayfont-color);
+            margin-bottom: var(--spacing-xs);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .detail-value {
+            font-size: var(--font-size-base);
+            font-weight: 500;
+            color: var(--blackfont-color);
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-xs);
+        }
+
+        .detail-value i {
+            color: var(--primary-blue);
+            font-size: var(--font-size-lg);
+        }
+
+        .schedule-section {
+            grid-column: 1 / -1;
+            margin-top: var(--spacing-md);
+            background: rgba(255, 255, 255, 0.9);
+            padding: var(--spacing-md);
+            border-radius: var(--radius-md);
+            box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.08);
+        }
+
+        .schedule-title {
+            font-size: var(--font-size-lg);
+            font-weight: 600;
+            color: var(--grayfont-color);
+            margin-bottom: var(--spacing-sm);
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-xs);
+        }
+
+        .schedule-title i {
+            color: var(--primary-blue);
+        }
+
+        .schedule-list {
+            display: flex;
+            flex-direction: column;
+            gap: var(--spacing-xs);
+            color: var(--medium-gray);
+        }
+
+        .class-buttons {
+            display: flex;
+            gap: var(--spacing-sm);
+            margin-top: var(--spacing-md);
+            justify-content: flex-end;
+        }
+
+        .btn {
+            padding: var(--spacing-xs) var(--spacing-md);
+            border: none;
+            border-radius: var(--radius-sm);
+            font-size: var(--font-size-sm);
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition-normal);
+            display: inline-flex;
+            align-items: center;
+            gap: var(--spacing-xs);
+            text-decoration: none;
+        }
+
+        .btn-view { background: var(--info-cyan); color: var(--white); }
+        .btn-view:hover { background: #0369a1; }
+        .btn-students { background: var(--success-green); color: var(--white); }
+        .btn-students:hover { background: #15803d; }
+        .btn-unarchive { background: var(--warning-yellow); color: var(--white); }
+        .btn-unarchive:hover { background: #d97706; }
+
+        .no-classes {
+            text-align: center;
+            padding: var(--spacing-xl);
+            color: var(--grayfont-color);
+            font-style: italic;
+            background: var(--card-bg);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-md);
+        }
+
+        @media (max-width: 768px) {
+            body {
+                padding: var(--spacing-sm);
+            }
+            .card-value {
+                font-size: 20px;
+            }
+            .class-header {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            .class-details {
+                grid-template-columns: 1fr;
+            }
+            .class-buttons {
+                flex-direction: column;
+                width: 100%;
+            }
+            .btn {
+                width: 100%;
+                justify-content: center;
+            }
+        }
     </style>
 </head>
 <body>
     <h1>Archived Classes</h1>
-<body>
-    
+
+    <div class="stats-grid">
+        <div class="card">
+            <div class="card-header">
+                <div>
+                    <div class="card-title">Total Classes Archived</div>
+                    <div class="card-value"><?php echo htmlspecialchars($archived_classes); ?></div>
+                </div>
+                <div class="card-icon bg-purple">
+                    <i class="fas fa-archive"></i>
+                </div>
+            </div>
+        </div>
+        <div class="card">
+            <div class="card-header">
+                <div>
+                    <div class="card-title">Total Students Archived</div>
+                    <div class="card-value"><?php echo htmlspecialchars($total_archived_students); ?></div>
+                </div>
+                <div class="card-icon bg-blue">
+                    <i class="fas fa-users"></i>
+                </div>
+            </div>
+        </div>
+        <div class="card">
+            <div class="card-header">
+                <div>
+                    <div class="card-title">Total Absent Records</div>
+                    <div class="card-value"><?php echo htmlspecialchars($total_absent_archived); ?></div>
+                </div>
+                <div class="card-icon bg-red">
+                    <i class="fas fa-exclamation-triangle"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="archived-classes-grid">
+        <?php if (empty($archived_classes_php)): ?>
+            <div class="no-classes">
+                <i class="fas fa-archive" style="font-size: 3rem; color: var(--grayfont-color); margin-bottom: var(--spacing-md);"></i>
+                <p>No archived classes found.</p>
+            </div>
+        <?php else: ?>
+            <?php foreach ($archived_classes_php as $cls): ?>
+                <div class="archived-class-card">
+                    <div class="class-header">
+                        <div class="class-title">
+                            <?php echo htmlspecialchars($cls['gradeLevel'] . ' - ' . $cls['sectionName']); ?>
+                        </div>
+                        <span class="class-status">Archived</span>
+                    </div>
+
+                    <div class="class-details">
+                        <div class="detail-item">
+                            <div class="detail-label">Subject</div>
+                            <div class="detail-value"><i class="fas fa-book"></i> <?php echo htmlspecialchars($cls['subject']); ?></div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Subject Code</div>
+                            <div class="detail-value"><?php echo htmlspecialchars($cls['code']); ?></div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Room</div>
+                            <div class="detail-value"><?php echo htmlspecialchars($cls['room']); ?></div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Total Students</div>
+                            <div class="detail-value"><?php echo htmlspecialchars($cls['totalStudents']); ?></div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Late to Absent</div>
+                            <div class="detail-value"><?php echo htmlspecialchars($cls['late_to_absent']); ?> marks</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Grace Period</div>
+                            <div class="detail-value"><?php echo htmlspecialchars($cls['grace_period']); ?> min</div>
+                        </div>
+                    </div>
+
+                    <?php if (!empty($cls['scheduleText'])): ?>
+                        <div class="schedule-section">
+                            <div class="schedule-title">
+                                <i class="fas fa-clock"></i> Schedule
+                            </div>
+                            <div class="schedule-list">
+                                <?php echo $cls['scheduleText']; ?>
+                            </div>
+                        </div>
+                    <?php endif; ?>
+
+                    <div class="class-buttons">
+                        <button class="btn btn-view" data-class-id="<?php echo $cls['id']; ?>"><i class="fas fa-eye"></i> View</button>
+                        <button class="btn btn-students" data-class-id="<?php echo $cls['id']; ?>"><i class="fas fa-users"></i> Students</button>
+                        <button class="btn btn-unarchive" data-class-id="<?php echo $cls['id']; ?>"><i class="fas fa-box-open"></i> Unarchive</button>
+                    </div>
+                </div>
+            <?php endforeach; ?>
+        <?php endif; ?>
+    </div>
+
+    <!-- Modal for View -->
+    <div id="viewModal" class="modal" style="display:none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000;">
+        <div style="background: var(--white); margin: 10% auto; padding: var(--spacing-lg); border-radius: var(--radius-lg); width: 90%; max-width: 600px; box-shadow: var(--shadow-lg); position: relative;">
+            <h2 style="font-size: var(--font-size-xl); margin-bottom: var(--spacing-md); color: var(--blackfont-color);">Class Details</h2>
+            <div id="modalContent" style="color: var(--medium-gray);"></div>
+            <button style="position: absolute; top: var(--spacing-sm); right: var(--spacing-sm); padding: var(--spacing-xs) var(--spacing-md); border: none; border-radius: var(--radius-sm); background: var(--danger-red); color: var(--white); cursor: pointer;" onclick="document.getElementById('viewModal').style.display='none'">Close</button>
+        </div>
+    </div>
+
+    <script>
+        document.querySelectorAll('.btn-view').forEach(button => {
+            button.addEventListener('click', () => {
+                const classId = button.getAttribute('data-class-id');
+                const classData = <?php echo json_encode($archived_classes_php); ?>.find(cls => cls.id == classId);
+                if (classData) {
+                    const content = `
+                        <p><strong>Grade & Section:</strong> ${classData.gradeLevel} - ${classData.sectionName}</p>
+                        <p><strong>Subject:</strong> ${classData.subject}</p>
+                        <p><strong>Subject Code:</strong> ${classData.code}</p>
+                        <p><strong>Room:</strong> ${classData.room}</p>
+                        <p><strong>Total Students:</strong> ${classData.totalStudents}</p>
+                        <p><strong>Late to Absent:</strong> ${classData.late_to_absent} marks</p>
+                        <p><strong>Grace Period:</strong> ${classData.grace_period} min</p>
+                        ${classData.scheduleText ? `<p><strong>Schedule:</strong><br>${classData.scheduleText}</p>` : ''}
+                    `;
+                    document.getElementById('modalContent').innerHTML = content;
+                    document.getElementById('viewModal').style.display = 'block';
+                }
+            });
+        });
+
+        document.querySelectorAll('.btn-students').forEach(button => {
+            button.addEventListener('click', () => {
+                const classId = button.getAttribute('data-class-id');
+                // Add logic to fetch and display students (e.g., via AJAX or pre-loaded data)
+                alert(`View students for Class ID: ${classId}`);
+            });
+        });
+
+        document.querySelectorAll('.btn-unarchive').forEach(button => {
+            button.addEventListener('click', () => {
+                const classId = button.getAttribute('data-class-id');
+                if (confirm('Are you sure you want to unarchive this class?')) {
+                    // Add logic to unarchive (e.g., AJAX call to update isArchived to 0)
+                    alert(`Unarchiving Class ID: ${classId} (Implement server-side logic)`);
+                }
+            });
+        });
+    </script>
+</body>
 </html>

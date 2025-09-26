@@ -1294,11 +1294,13 @@ $at_risk_students = getAtRiskStudents($pdo, $currentUser['teacher_id']);
         }
 
         // Update layout based on screen size
+        // Update layout based on screen size
         function updateLayout() {
             const sidebar = document.getElementById('sidebar');
             const header = document.getElementById('header');
             const mainContent = document.getElementById('mainContent');
             const overlay = document.getElementById('sidebarOverlay');
+            const systemTitleSpan = document.querySelector('.system-title span');
 
             if (isMobile) {
                 sidebar.classList.remove('collapsed');
@@ -1307,9 +1309,17 @@ $at_risk_students = getAtRiskStudents($pdo, $currentUser['teacher_id']);
                 mainContent.classList.remove('sidebar-collapsed');
                 overlay.classList.remove('active');
                 sidebarCollapsed = false;
+                // Set system-title span to "SAMS" on mobile
+                if (systemTitleSpan) {
+                    systemTitleSpan.textContent = 'SAMS';
+                }
             } else {
                 sidebar.classList.remove('mobile-open');
                 overlay.classList.remove('active');
+                // Set system-title span to full name on desktop
+                if (systemTitleSpan) {
+                    systemTitleSpan.textContent = 'Student Attendance Monitoring System';
+                }
                 if (sidebarCollapsed) {
                     sidebar.classList.add('collapsed');
                     header.classList.add('sidebar-collapsed');

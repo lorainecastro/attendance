@@ -1,4 +1,5 @@
 <?php
+// archived_classes.php
 // Set timezone to Asia/Manila
 date_default_timezone_set('Asia/Manila');
 require 'config.php';
@@ -12,6 +13,66 @@ if (!$user) {
 }
 
 $pdo = getDBConnection();
+
+// Handle AJAX requests
+if (isset($_POST['action'])) {
+    header('Content-Type: application/json');
+
+    if ($_POST['action'] === 'unarchive_class') {
+        $class_id = $_POST['class_id'] ?? 0;
+
+        if ($class_id <= 0) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Invalid class ID']);
+            exit();
+        }
+
+        // Update isArchived to 0
+        $stmt = $pdo->prepare("UPDATE classes SET isArchived = 0 WHERE class_id = :class_id AND teacher_id = :teacher_id");
+        $success = $stmt->execute([
+            'class_id' => $class_id,
+            'teacher_id' => $user['teacher_id']
+        ]);
+
+        if ($success) {
+            echo json_encode(['success' => true]);
+        } else {
+            http_response_code(500);
+            echo json_encode(['error' => 'Failed to unarchive class']);
+        }
+        exit();
+    }
+
+    if ($_POST['action'] === 'get_students') {
+        $class_id = $_POST['class_id'] ?? 0;
+
+        if ($class_id <= 0) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Invalid class ID']);
+            exit();
+        }
+
+        // Fetch students for the class
+        $stmt = $pdo->prepare("
+            SELECT s.lrn, s.last_name, s.first_name, s.middle_name, s.email, s.gender, s.dob, 
+                   s.grade_level, s.address, s.parent_name, s.parent_email, s.emergency_contact, 
+                   s.photo, s.qr_code
+            FROM students s
+            JOIN class_students cs ON s.lrn = cs.lrn
+            WHERE cs.class_id = :class_id
+            ORDER BY s.last_name ASC, s.first_name ASC
+        ");
+        $stmt->execute(['class_id' => $class_id]);
+        $students = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        echo json_encode(['success' => true, 'students' => $students]);
+        exit();
+    }
+
+    http_response_code(400);
+    echo json_encode(['error' => 'Invalid action']);
+    exit();
+}
 
 // Fetch total archived classes count
 $archived_classes_stmt = $pdo->prepare("SELECT COUNT(*) FROM classes WHERE teacher_id = :teacher_id AND isArchived = 1");
@@ -543,6 +604,37 @@ foreach ($archived_classes_db as $cls) {
         </div>
     </div>
 
+    <!-- Modal for Students -->
+    <div id="studentsModal" class="modal" style="display:none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000;">
+        <div style="background: var(--white); margin: 5% auto; padding: var(--spacing-lg); border-radius: var(--radius-lg); width: 95%; max-width: 1200px; box-shadow: var(--shadow-lg); position: relative; max-height: 80vh; overflow-y: auto;">
+            <h2 style="font-size: var(--font-size-xl); margin-bottom: var(--spacing-md); color: var(--blackfont-color);">Students in Class</h2>
+            <div id="studentsModalContent">
+                <table style="width: 100%; border-collapse: collapse; font-size: var(--font-size-sm);">
+                    <thead>
+                        <tr style="background: var(--primary-blue); color: var(--white);">
+                            <th style="padding: var(--spacing-sm); border: 1px solid var(--border-color);">LRN</th>
+                            <th style="padding: var(--spacing-sm); border: 1px solid var(--border-color);">Last Name</th>
+                            <th style="padding: var(--spacing-sm); border: 1px solid var(--border-color);">First Name</th>
+                            <th style="padding: var(--spacing-sm); border: 1px solid var(--border-color);">Middle Name</th>
+                            <th style="padding: var(--spacing-sm); border: 1px solid var(--border-color);">Email</th>
+                            <th style="padding: var(--spacing-sm); border: 1px solid var(--border-color);">Gender</th>
+                            <th style="padding: var(--spacing-sm); border: 1px solid var(--border-color);">DOB</th>
+                            <th style="padding: var(--spacing-sm); border: 1px solid var(--border-color);">Grade Level</th>
+                            <th style="padding: var(--spacing-sm); border: 1px solid var(--border-color);">Address</th>
+                            <th style="padding: var(--spacing-sm); border: 1px solid var(--border-color);">Parent Name</th>
+                            <th style="padding: var(--spacing-sm); border: 1px solid var(--border-color);">Parent Email</th>
+                            <th style="padding: var(--spacing-sm); border: 1px solid var(--border-color);">Emergency Contact</th>
+                            <th style="padding: var(--spacing-sm); border: 1px solid var(--border-color);">Photo</th>
+                            <th style="padding: var(--spacing-sm); border: 1px solid var(--border-color);">QR Code</th>
+                        </tr>
+                    </thead>
+                    <tbody id="studentsTableBody"></tbody>
+                </table>
+            </div>
+            <button style="position: absolute; top: var(--spacing-sm); right: var(--spacing-sm); padding: var(--spacing-xs) var(--spacing-md); border: none; border-radius: var(--radius-sm); background: var(--danger-red); color: var(--white); cursor: pointer;" onclick="document.getElementById('studentsModal').style.display='none'">Close</button>
+        </div>
+    </div>
+
     <script>
         document.querySelectorAll('.btn-view').forEach(button => {
             button.addEventListener('click', () => {
@@ -568,8 +660,54 @@ foreach ($archived_classes_db as $cls) {
         document.querySelectorAll('.btn-students').forEach(button => {
             button.addEventListener('click', () => {
                 const classId = button.getAttribute('data-class-id');
-                // Add logic to fetch and display students (e.g., via AJAX or pre-loaded data)
-                alert(`View students for Class ID: ${classId}`);
+                fetch('<?php echo basename(__FILE__); ?>', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: `action=get_students&class_id=${encodeURIComponent(classId)}`
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        const tableBody = document.getElementById('studentsTableBody');
+                        tableBody.innerHTML = '';
+                        if (data.students.length === 0) {
+                            tableBody.innerHTML = '<tr><td colspan="14" style="text-align: center; padding: var(--spacing-md);">No students found.</td></tr>';
+                        } else {
+                            data.students.forEach(student => {
+                                const row = `
+                                    <tr style="border-bottom: 1px solid var(--border-color);">
+                                        <td style="padding: var(--spacing-sm);">${student.lrn || 'N/A'}</td>
+                                        <td style="padding: var(--spacing-sm);">${student.last_name || 'N/A'}</td>
+                                        <td style="padding: var(--spacing-sm);">${student.first_name || 'N/A'}</td>
+                                        <td style="padding: var(--spacing-sm);">${student.middle_name || 'N/A'}</td>
+                                        <td style="padding: var(--spacing-sm);">${student.email || 'N/A'}</td>
+                                        <td style="padding: var(--spacing-sm);">${student.gender || 'N/A'}</td>
+                                        <td style="padding: var(--spacing-sm);">${student.dob || 'N/A'}</td>
+                                        <td style="padding: var(--spacing-sm);">${student.grade_level || 'N/A'}</td>
+                                        <td style="padding: var(--spacing-sm);">${student.address || 'N/A'}</td>
+                                        <td style="padding: var(--spacing-sm);">${student.parent_name || 'N/A'}</td>
+                                        <td style="padding: var(--spacing-sm);">${student.parent_email || 'N/A'}</td>
+                                        <td style="padding: var(--spacing-sm);">${student.emergency_contact || 'N/A'}</td>
+                                        <td style="padding: var(--spacing-sm);">
+                                            ${student.photo ? `<img src="uploads/${student.photo}" alt="Photo" style="width: 50px; height: 50px; object-fit: cover; border-radius: var(--radius-sm);" />` : 'N/A'}
+                                        </td>
+                                        <td style="padding: var(--spacing-sm);">
+                                            ${student.qr_code ? `<img src="qrcodes/${student.qr_code}" alt="QR Code" style="width: 50px; height: 50px; object-fit: cover;" />` : 'N/A'}
+                                        </td>
+                                    </tr>
+                                `;
+                                tableBody.innerHTML += row;
+                            });
+                        }
+                        document.getElementById('studentsModal').style.display = 'block';
+                    } else {
+                        alert('Error: ' + data.error);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Failed to load students.');
+                });
             });
         });
 
@@ -577,8 +715,28 @@ foreach ($archived_classes_db as $cls) {
             button.addEventListener('click', () => {
                 const classId = button.getAttribute('data-class-id');
                 if (confirm('Are you sure you want to unarchive this class?')) {
-                    // Add logic to unarchive (e.g., AJAX call to update isArchived to 0)
-                    alert(`Unarchiving Class ID: ${classId} (Implement server-side logic)`);
+                    fetch('<?php echo basename(__FILE__); ?>', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                        body: `action=unarchive_class&class_id=${encodeURIComponent(classId)}`
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            // Remove the class card from the DOM
+                            button.closest('.archived-class-card').remove();
+                            // Update stats
+                            const totalClassesCard = document.querySelector('.stats-grid .card .card-value');
+                            totalClassesCard.textContent = parseInt(totalClassesCard.textContent) - 1;
+                            alert('Class unarchived successfully!');
+                        } else {
+                            alert('Error: ' + data.error);
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        alert('Failed to unarchive class.');
+                    });
                 }
             });
         });

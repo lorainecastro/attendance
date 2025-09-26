@@ -32,7 +32,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             SELECT s.day, s.start_time, s.grace_period_minutes, s.end_time 
             FROM schedules s 
             JOIN classes c ON s.class_id = c.class_id 
-            WHERE s.class_id = ? AND DATE_FORMAT(?, '%W') = s.day
+            WHERE s.class_id = ? AND DATE_FORMAT(?, '%W') = s.day AND c.isArchived = 0
         ");
         $schedule_stmt->execute([$class_id, $date]);
         $schedule = $schedule_stmt->fetch(PDO::FETCH_ASSOC);
@@ -135,7 +135,7 @@ $stmt = $pdo->prepare("
     FROM classes c 
     JOIN subjects s ON c.subject_id = s.subject_id 
     LEFT JOIN schedules sch ON c.class_id = sch.class_id
-    WHERE c.teacher_id = ?
+    WHERE c.teacher_id = ? AND c.isArchived = 0
     ORDER BY c.grade_level, c.section_name, s.subject_name
 ");
 $stmt->execute([$user['teacher_id']]);
@@ -160,7 +160,7 @@ $stmt = $pdo->prepare("
     SELECT MIN(attendance_date) AS earliest_date 
     FROM attendance_tracking a 
     JOIN classes c ON a.class_id = c.class_id 
-    WHERE c.teacher_id = ?
+    WHERE c.teacher_id = ? AND c.isArchived = 0
 ");
 $stmt->execute([$user['teacher_id']]);
 $earliest_date_result = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -173,7 +173,7 @@ $stmt = $pdo->prepare("
     FROM attendance_tracking a 
     JOIN classes c ON a.class_id = c.class_id 
     LEFT JOIN schedules sch ON c.class_id = sch.class_id AND DATE_FORMAT(a.attendance_date, '%W') = sch.day
-    WHERE c.teacher_id = ? AND a.attendance_date >= ?
+    WHERE c.teacher_id = ? AND a.attendance_date >= ? AND c.isArchived = 0
     ORDER BY a.attendance_date DESC
 ");
 $stmt->execute([$user['teacher_id'], $earliest_date]);

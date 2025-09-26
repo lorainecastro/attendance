@@ -38,7 +38,8 @@ function calculateAttendancePercentages($teacher_id) {
             LEFT JOIN class_students cs ON c.class_id = cs.class_id AND cs.is_enrolled = 1
             LEFT JOIN attendance_tracking at ON cs.class_id = at.class_id AND cs.lrn = at.lrn
             WHERE c.teacher_id = ? 
-            AND at.attendance_date = ? 
+                AND at.attendance_date = ? 
+                AND c.isArchived = 0
             GROUP BY c.class_id
         ");
         $stmt->execute([$teacher_id, $today]);
@@ -167,8 +168,9 @@ $stmt = $pdo->prepare("
     LEFT JOIN schedules sch ON c.class_id = sch.class_id AND DATE_FORMAT(a.attendance_date, '%W') = LOWER(sch.day)
     LEFT JOIN students s ON a.lrn = s.lrn
     WHERE c.teacher_id = ? AND a.attendance_date = ? 
-    AND a.logged_by IN ('Teacher', 'Device Camera', 'Scanner Device') 
-    AND a.attendance_status IN ('Present', 'Absent', 'Late')
+        AND a.logged_by IN ('Teacher', 'Device Camera', 'Scanner Device') 
+        AND a.attendance_status IN ('Present', 'Absent', 'Late')
+        AND c.isArchived = 0
     ORDER BY a.attendance_date DESC, a.class_id, a.lrn
 ");
 $stmt->execute([$teacher_id, $earliest_date]);
@@ -179,7 +181,7 @@ function getDashboardStats($pdo, $teacher_id) {
         $stmt = $pdo->prepare("
             SELECT COUNT(*) as total_classes 
             FROM classes 
-            WHERE teacher_id = ? AND status = 'active'
+            WHERE teacher_id = ? AND status = 'active' AND isArchived = 0
         ");
         $stmt->execute([$teacher_id]);
         $totalClassesResult = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -192,7 +194,7 @@ function getDashboardStats($pdo, $teacher_id) {
                     c.class_id,
                     (SELECT COUNT(*) FROM class_students cs WHERE cs.class_id = c.class_id AND cs.is_enrolled = 1) as student_count
                 FROM classes c
-                WHERE c.teacher_id = ? AND c.status = 'active'
+                WHERE c.teacher_id = ? AND c.status = 'active' AND c.isArchived = 0
             ) as subquery
         ");
         $stmt->execute([$teacher_id]);
@@ -210,6 +212,7 @@ function getDashboardStats($pdo, $teacher_id) {
             INNER JOIN classes c ON at.class_id = c.class_id
             WHERE c.teacher_id = ? AND at.attendance_date = ? 
             AND c.status = 'active' 
+            AND c.isArchived = 0
             AND at.logged_by IN ('Teacher', 'Device Camera', 'Scanner Device') 
             AND at.attendance_status IN ('Present', 'Absent', 'Late')
         ");
@@ -254,7 +257,7 @@ function getClassesData($pdo, $teacher_id) {
             FROM classes c
             INNER JOIN subjects sub ON c.subject_id = sub.subject_id
             LEFT JOIN class_students cs ON c.class_id = cs.class_id AND cs.is_enrolled = 1
-            WHERE c.teacher_id = ? AND c.status = 'active'
+            WHERE c.teacher_id = ? AND c.status = 'active' AND c.isArchived = 0
             GROUP BY c.class_id
         ");
         $stmt->execute([$teacher_id]);
@@ -295,6 +298,7 @@ function getTodaySchedule($pdo, $teacher_id) {
             WHERE c.teacher_id = ? 
                 AND s.day = ?
                 AND c.status = 'active'
+                AND c.isArchived = 0
             GROUP BY c.class_id, s.start_time, s.end_time
             ORDER BY s.start_time ASC
         ");
@@ -322,7 +326,7 @@ function getTodayAttendanceData($pdo, $teacher_id) {
                 AND at.attendance_date = ?
                 AND at.logged_by IN ('Teacher', 'Device Camera', 'Scanner Device') 
                 AND at.attendance_status IN ('Present', 'Absent', 'Late')
-            WHERE c.teacher_id = ? AND c.status = 'active'
+            WHERE c.teacher_id = ? AND c.status = 'active' AND c.isArchived = 0
             GROUP BY c.class_id
             HAVING total > 0
         ");

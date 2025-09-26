@@ -1050,14 +1050,7 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
             flex-wrap: wrap;
             gap: var(--spacing-sm);
             align-items: center;
-        }
-
-        .controls-right .btn.btn-primary {
-            order: 1;
-        }
-
-        .controls-right .view-toggle {
-            order: 2;
+            flex-direction: column;
         }
 
         .controls-right .btn.btn-primary,
@@ -1080,13 +1073,13 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
             border-color: #007bff;
         }
 
-        /* .controls-right .btn.btn-primary {
+        .controls-right .btn.btn-primary {
             order: 1;
         }
 
         .controls-right .view-toggle {
             order: 2;
-        } */
+        }
 
         .search-container {
             position: relative;
@@ -1094,7 +1087,7 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
             flex: 1;
         }
 
-        /* .search-input {
+        .search-input {
             width: 100%;
             padding: var(--spacing-xs) var(--spacing-md) var(--spacing-xs) 2.5rem;
             border: 1px solid var(--border-color);
@@ -1102,7 +1095,7 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
             font-size: var(--font-size-sm);
             background: var(--inputfield-color);
             transition: var(--transition-normal);
-        } */
+        }
 
         .search-input:focus {
             outline: none;

@@ -591,6 +591,21 @@ foreach ($archived_classes_db as $cls) {
             z-index: 10;
         }
 
+        .students-table th:nth-child(1) { width: 10%; } /* LRN */
+        .students-table th:nth-child(2) { width: 12%; } /* Last Name */
+        .students-table th:nth-child(3) { width: 12%; } /* First Name */
+        .students-table th:nth-child(4) { width: 12%; } /* Middle Name */
+        .students-table th:nth-child(5) { width: 15%; } /* Email */
+        .students-table th:nth-child(6) { width: 8%; } /* Gender */
+        .students-table th:nth-child(7) { width: 10%; } /* DOB */
+        .students-table th:nth-child(8) { width: 8%; } /* Grade Level */
+        .students-table th:nth-child(9) { width: 15%; } /* Address */
+        .students-table th:nth-child(10) { width: 12%; } /* Parent Name */
+        .students-table th:nth-child(11) { width: 15%; } /* Parent Email */
+        .students-table th:nth-child(12) { width: 10%; } /* Emergency Contact */
+        .students-table th:nth-child(13) { width: 6%; } /* Photo */
+        .students-table th:nth-child(14) { width: 6%; } /* QR Code */
+
         .students-table td {
             padding: var(--spacing-sm);
             border-bottom: 1px solid var(--border-color);
@@ -601,7 +616,15 @@ foreach ($archived_classes_db as $cls) {
             background: var(--primary-blue-light);
         }
 
-        .students-table img {
+        .students-table img.photo {
+            width: 50px;
+            height: 50px;
+            object-fit: cover;
+            border-radius: 50%;
+            border: 1px solid var(--border-color);
+        }
+
+        .students-table img.qr-code {
             width: 50px;
             height: 50px;
             object-fit: cover;
@@ -863,8 +886,8 @@ foreach ($archived_classes_db as $cls) {
                                         <td>${student.parent_name || 'N/A'}</td>
                                         <td>${student.parent_email || 'N/A'}</td>
                                         <td>${student.emergency_contact || 'N/A'}</td>
-                                        <td><img src="${student.photo ? 'uploads/' + student.photo : 'uploads/no-icon.png'}" alt="Photo" /></td>
-                                        <td><img src="${student.qr_code ? 'qrcodes/' + student.qr_code : 'N/A'}" alt="QR Code" /></td>
+                                        <td><img src="${student.photo ? 'uploads/' + student.photo : 'uploads/no-icon.png'}" alt="Photo" class="photo" /></td>
+                                        <td><img src="${student.qr_code ? 'qrcodes/' + student.qr_code : 'N/A'}" alt="QR Code" class="qr-code" /></td>
                                     </tr>
                                 `;
                                 tableBody.innerHTML += row;

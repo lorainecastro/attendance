@@ -19,7 +19,7 @@ $stmt = $pdo->prepare("
     SELECT MIN(attendance_date) AS earliest_date 
     FROM attendance_tracking a 
     JOIN classes c ON a.class_id = c.class_id 
-    WHERE c.teacher_id = ?
+    WHERE c.teacher_id = ? AND c.isArchived = 0
 ");
 $stmt->execute([$user['teacher_id']]);
 $earliest_date_result = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -30,7 +30,7 @@ $stmt = $pdo->prepare("
     SELECT c.class_id, c.section_name, s.subject_name, c.grade_level 
     FROM classes c 
     JOIN subjects s ON c.subject_id = s.subject_id 
-    WHERE c.teacher_id = ?
+    WHERE c.teacher_id = ? AND c.isArchived = 0
 ");
 $stmt->execute([$user['teacher_id']]);
 $classes_fetch = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -55,7 +55,7 @@ $stmt = $pdo->prepare("
     SELECT a.class_id, a.attendance_date, a.lrn, a.attendance_status, a.time_checked, a.is_qr_scanned 
     FROM attendance_tracking a 
     JOIN classes c ON a.class_id = c.class_id 
-    WHERE c.teacher_id = ?
+    WHERE c.teacher_id = ? AND c.isArchived = 0
 ");
 $stmt->execute([$user['teacher_id']]);
 while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {

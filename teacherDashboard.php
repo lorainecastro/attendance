@@ -922,6 +922,16 @@ $at_risk_students = getAtRiskStudents($pdo, $currentUser['teacher_id']);
                     </a>
                 </div>
             </div>
+            <div class="nav-section">
+                <div class="nav-section-title">Records Archive</div>
+                <div class="nav-item">
+                    <a href="#" class="nav-link menu-item">
+                        <i class="fas fa-archive nav-icon"></i>
+                        <span class="nav-text">Archived Classes</span>
+                        <span class="nav-tooltip">Archived Classes</span>
+                    </a>
+                </div>
+            </div>
         </nav>
     </aside>
     <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
@@ -1121,6 +1131,7 @@ $at_risk_students = getAtRiskStudents($pdo, $currentUser['teacher_id']);
                         case 4: pageFile = 'overall-attendance.php'; break;
                         case 5: pageFile = 'analytics.php'; break;
                         case 6: pageFile = 'reports.php'; break;
+                        case 7: pageFile = 'archived-classes.php'; break;
                         default: pageFile = '404.html';
                     }
                     loadPage(pageFile);

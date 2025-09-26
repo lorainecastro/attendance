@@ -730,7 +730,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['lrn']) && !isset($_POS
                 FROM classes c 
                 JOIN subjects sub ON c.subject_id = sub.subject_id 
                 WHERE c.grade_level = ? AND sub.subject_name = ? 
-                AND c.section_name = ? AND c.teacher_id = ?
+                AND c.section_name = ? AND c.teacher_id = ? AND c.isArchived = 0
             ");
             $stmt->execute([$grade_level, $class, $section, $teacher_id]);
             $new_class = $stmt->fetch();
@@ -823,7 +823,7 @@ $stmt = $pdo->prepare("
     JOIN classes c ON cs.class_id = c.class_id
     JOIN subjects sub ON c.subject_id = sub.subject_id
     JOIN students s ON cs.lrn = s.lrn
-    WHERE c.teacher_id = ?
+    WHERE c.teacher_id = ? AND c.isArchived = 0
 ");
 $stmt->execute([$teacher_id]);
 $students_data = $stmt->fetchAll();
@@ -837,7 +837,7 @@ $stmt = $pdo->prepare("
     FROM class_students cs
     JOIN classes c ON cs.class_id = c.class_id
     JOIN students s ON cs.lrn = s.lrn
-    WHERE c.teacher_id = ? AND s.qr_code IS NULL
+    WHERE c.teacher_id = ? AND c.isArchived = 0 AND s.qr_code IS NULL
 ");
 $stmt->execute([$teacher_id]);
 $no_qr_count = $stmt->fetchColumn();
@@ -847,13 +847,13 @@ $stmt = $pdo->prepare("
     SELECT c.class_id, c.grade_level, sub.subject_name, c.section_name 
     FROM classes c 
     JOIN subjects sub ON c.subject_id = sub.subject_id 
-    WHERE c.teacher_id = ?
+    WHERE c.teacher_id = ? AND c.isArchived = 0
 ");
 $stmt->execute([$teacher_id]);
 $classes_data = $stmt->fetchAll();
 
 // Fetch filters data
-$stmt = $pdo->prepare("SELECT DISTINCT c.grade_level FROM classes c WHERE c.teacher_id = ?");
+$stmt = $pdo->prepare("SELECT DISTINCT c.grade_level FROM classes c WHERE c.teacher_id = ? AND c.isArchived = 0");
 $stmt->execute([$teacher_id]);
 $gradeLevels = $stmt->fetchAll(PDO::FETCH_COLUMN);
 
@@ -861,12 +861,12 @@ $stmt = $pdo->prepare("
     SELECT DISTINCT sub.subject_name 
     FROM subjects sub 
     JOIN classes c ON sub.subject_id = c.subject_id 
-    WHERE c.teacher_id = ?
+    WHERE c.teacher_id = ? AND c.isArchived = 0
 ");
 $stmt->execute([$teacher_id]);
 $subjects = $stmt->fetchAll(PDO::FETCH_COLUMN);
 
-$stmt = $pdo->prepare("SELECT DISTINCT c.section_name FROM classes c WHERE c.teacher_id = ?");
+$stmt = $pdo->prepare("SELECT DISTINCT c.section_name FROM classes c WHERE c.teacher_id = ? AND c.isArchived = 0");
 $stmt->execute([$teacher_id]);
 $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
 ?>

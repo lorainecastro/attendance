@@ -165,6 +165,7 @@ foreach ($archived_classes_db as $cls) {
             --success-green: #22c55e;
             --warning-yellow: #f59e0b;
             --danger-red: #ef4444;
+            --danger-red-hover: #dc2626;
             --info-cyan: #06b6d4;
             --dark-gray: #1f2937;
             --medium-gray: #6b7280;
@@ -467,6 +468,161 @@ foreach ($archived_classes_db as $cls) {
             box-shadow: var(--shadow-md);
         }
 
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            z-index: 1000;
+            backdrop-filter: blur(3px);
+        }
+
+        .modal-content {
+            background: var(--white);
+            margin: 5% auto;
+            padding: var(--spacing-lg);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-lg);
+            position: relative;
+            animation: slideIn 0.3s ease-out;
+        }
+
+        @keyframes slideIn {
+            from { transform: translateY(-50px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: var(--spacing-md);
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: var(--spacing-sm);
+        }
+
+        .modal-title {
+            font-size: var(--font-size-xl);
+            font-weight: 700;
+            color: var(--blackfont-color);
+        }
+
+        .modal-close {
+            padding: var(--spacing-xs) var(--spacing-md);
+            border: none;
+            border-radius: var(--radius-sm);
+            background: var(--danger-red);
+            color: var(--white);
+            cursor: pointer;
+            transition: var(--transition-normal);
+            font-size: var(--font-size-sm);
+            font-weight: 600;
+        }
+
+        .modal-close:hover {
+            background: var(--danger-red-hover);
+        }
+
+        /* View Modal Specific Styles */
+        .view-modal-content {
+            width: 90%;
+            max-width: 600px;
+            background: linear-gradient(135deg, #f8fafc, #ffffff);
+            padding: var(--spacing-xl);
+        }
+
+        .view-modal-body {
+            color: var(--blackfont-color);
+            font-size: var(--font-size-base);
+            line-height: 1.6;
+        }
+
+        .view-modal-body p {
+            margin-bottom: var(--spacing-sm);
+            padding: var(--spacing-sm);
+            background: var(--inputfield-color);
+            border-radius: var(--radius-sm);
+            box-shadow: var(--shadow-sm);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .view-modal-body p strong {
+            color: var(--primary-blue);
+            font-weight: 600;
+        }
+
+        /* Students Modal Specific Styles */
+        .students-modal-content {
+            width: 95%;
+            max-width: 1200px;
+            max-height: 80vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .students-table-container {
+            overflow-y: auto;
+            flex-grow: 1;
+        }
+
+        .students-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: var(--font-size-sm);
+            background: var(--white);
+            border-radius: var(--radius-md);
+            overflow: hidden;
+        }
+
+        .students-table th {
+            background: var(--primary-blue);
+            color: var(--white);
+            padding: var(--spacing-sm);
+            text-align: left;
+            font-weight: 600;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        .students-table td {
+            padding: var(--spacing-sm);
+            border-bottom: 1px solid var(--border-color);
+            color: var(--blackfont-color);
+        }
+
+        .students-table tr:hover {
+            background: var(--primary-blue-light);
+        }
+
+        .students-table img {
+            width: 50px;
+            height: 50px;
+            object-fit: cover;
+            border-radius: var(--radius-sm);
+            border: 1px solid var(--border-color);
+        }
+
+        .students-modal-close {
+            position: sticky;
+            top: var(--spacing-sm);
+            align-self: flex-end;
+            z-index: 20;
+        }
+
+        .no-students {
+            text-align: center;
+            padding: var(--spacing-md);
+            color: var(--grayfont-color);
+            font-style: italic;
+        }
+
         @media (max-width: 768px) {
             body {
                 padding: var(--spacing-sm);
@@ -488,6 +644,21 @@ foreach ($archived_classes_db as $cls) {
             .btn {
                 width: 100%;
                 justify-content: center;
+            }
+            .view-modal-content {
+                width: 95%;
+                padding: var(--spacing-md);
+            }
+            .students-modal-content {
+                width: 98%;
+                padding: var(--spacing-md);
+            }
+            .students-table {
+                font-size: 0.75rem;
+            }
+            .students-table img {
+                width: 40px;
+                height: 40px;
             }
         }
     </style>
@@ -596,42 +767,46 @@ foreach ($archived_classes_db as $cls) {
     </div>
 
     <!-- Modal for View -->
-    <div id="viewModal" class="modal" style="display:none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000;">
-        <div style="background: var(--white); margin: 10% auto; padding: var(--spacing-lg); border-radius: var(--radius-lg); width: 90%; max-width: 600px; box-shadow: var(--shadow-lg); position: relative;">
-            <h2 style="font-size: var(--font-size-xl); margin-bottom: var(--spacing-md); color: var(--blackfont-color);">Class Details</h2>
-            <div id="modalContent" style="color: var(--medium-gray);"></div>
-            <button style="position: absolute; top: var(--spacing-sm); right: var(--spacing-sm); padding: var(--spacing-xs) var(--spacing-md); border: none; border-radius: var(--radius-sm); background: var(--danger-red); color: var(--white); cursor: pointer;" onclick="document.getElementById('viewModal').style.display='none'">Close</button>
+    <div id="viewModal" class="modal">
+        <div class="modal-content view-modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">Class Details</h2>
+                <button class="modal-close">Close</button>
+            </div>
+            <div class="view-modal-body" id="modalContent"></div>
         </div>
     </div>
 
     <!-- Modal for Students -->
-    <div id="studentsModal" class="modal" style="display:none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000;">
-        <div style="background: var(--white); margin: 5% auto; padding: var(--spacing-lg); border-radius: var(--radius-lg); width: 95%; max-width: 1200px; box-shadow: var(--shadow-lg); position: relative; max-height: 80vh; overflow-y: auto;">
-            <h2 style="font-size: var(--font-size-xl); margin-bottom: var(--spacing-md); color: var(--blackfont-color);">Students in Class</h2>
-            <div id="studentsModalContent">
-                <table style="width: 100%; border-collapse: collapse; font-size: var(--font-size-sm);">
+    <div id="studentsModal" class="modal">
+        <div class="modal-content students-modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">Students in Class</h2>
+                <button class="modal-close students-modal-close">Close</button>
+            </div>
+            <div class="students-table-container">
+                <table class="students-table">
                     <thead>
-                        <tr style="background: var(--primary-blue); color: var(--white);">
-                            <th style="padding: var(--spacing-sm); border: 1px solid var(--border-color);">LRN</th>
-                            <th style="padding: var(--spacing-sm); border: 1px solid var(--border-color);">Last Name</th>
-                            <th style="padding: var(--spacing-sm); border: 1px solid var(--border-color);">First Name</th>
-                            <th style="padding: var(--spacing-sm); border: 1px solid var(--border-color);">Middle Name</th>
-                            <th style="padding: var(--spacing-sm); border: 1px solid var(--border-color);">Email</th>
-                            <th style="padding: var(--spacing-sm); border: 1px solid var(--border-color);">Gender</th>
-                            <th style="padding: var(--spacing-sm); border: 1px solid var(--border-color);">DOB</th>
-                            <th style="padding: var(--spacing-sm); border: 1px solid var(--border-color);">Grade Level</th>
-                            <th style="padding: var(--spacing-sm); border: 1px solid var(--border-color);">Address</th>
-                            <th style="padding: var(--spacing-sm); border: 1px solid var(--border-color);">Parent Name</th>
-                            <th style="padding: var(--spacing-sm); border: 1px solid var(--border-color);">Parent Email</th>
-                            <th style="padding: var(--spacing-sm); border: 1px solid var(--border-color);">Emergency Contact</th>
-                            <th style="padding: var(--spacing-sm); border: 1px solid var(--border-color);">Photo</th>
-                            <th style="padding: var(--spacing-sm); border: 1px solid var(--border-color);">QR Code</th>
+                        <tr>
+                            <th>LRN</th>
+                            <th>Last Name</th>
+                            <th>First Name</th>
+                            <th>Middle Name</th>
+                            <th>Email</th>
+                            <th>Gender</th>
+                            <th>DOB</th>
+                            <th>Grade Level</th>
+                            <th>Address</th>
+                            <th>Parent Name</th>
+                            <th>Parent Email</th>
+                            <th>Emergency Contact</th>
+                            <th>Photo</th>
+                            <th>QR Code</th>
                         </tr>
                     </thead>
                     <tbody id="studentsTableBody"></tbody>
                 </table>
             </div>
-            <button style="position: absolute; top: var(--spacing-sm); right: var(--spacing-sm); padding: var(--spacing-xs) var(--spacing-md); border: none; border-radius: var(--radius-sm); background: var(--danger-red); color: var(--white); cursor: pointer;" onclick="document.getElementById('studentsModal').style.display='none'">Close</button>
         </div>
     </div>
 
@@ -671,29 +846,25 @@ foreach ($archived_classes_db as $cls) {
                         const tableBody = document.getElementById('studentsTableBody');
                         tableBody.innerHTML = '';
                         if (data.students.length === 0) {
-                            tableBody.innerHTML = '<tr><td colspan="14" style="text-align: center; padding: var(--spacing-md);">No students found.</td></tr>';
+                            tableBody.innerHTML = '<tr><td colspan="14" class="no-students">No students found.</td></tr>';
                         } else {
                             data.students.forEach(student => {
                                 const row = `
-                                    <tr style="border-bottom: 1px solid var(--border-color);">
-                                        <td style="padding: var(--spacing-sm);">${student.lrn || 'N/A'}</td>
-                                        <td style="padding: var(--spacing-sm);">${student.last_name || 'N/A'}</td>
-                                        <td style="padding: var(--spacing-sm);">${student.first_name || 'N/A'}</td>
-                                        <td style="padding: var(--spacing-sm);">${student.middle_name || 'N/A'}</td>
-                                        <td style="padding: var(--spacing-sm);">${student.email || 'N/A'}</td>
-                                        <td style="padding: var(--spacing-sm);">${student.gender || 'N/A'}</td>
-                                        <td style="padding: var(--spacing-sm);">${student.dob || 'N/A'}</td>
-                                        <td style="padding: var(--spacing-sm);">${student.grade_level || 'N/A'}</td>
-                                        <td style="padding: var(--spacing-sm);">${student.address || 'N/A'}</td>
-                                        <td style="padding: var(--spacing-sm);">${student.parent_name || 'N/A'}</td>
-                                        <td style="padding: var(--spacing-sm);">${student.parent_email || 'N/A'}</td>
-                                        <td style="padding: var(--spacing-sm);">${student.emergency_contact || 'N/A'}</td>
-                                        <td style="padding: var(--spacing-sm);">
-                                            ${student.photo ? `<img src="uploads/${student.photo}" alt="Photo" style="width: 50px; height: 50px; object-fit: cover; border-radius: var(--radius-sm);" />` : 'N/A'}
-                                        </td>
-                                        <td style="padding: var(--spacing-sm);">
-                                            ${student.qr_code ? `<img src="qrcodes/${student.qr_code}" alt="QR Code" style="width: 50px; height: 50px; object-fit: cover;" />` : 'N/A'}
-                                        </td>
+                                    <tr>
+                                        <td>${student.lrn || 'N/A'}</td>
+                                        <td>${student.last_name || 'N/A'}</td>
+                                        <td>${student.first_name || 'N/A'}</td>
+                                        <td>${student.middle_name || 'N/A'}</td>
+                                        <td>${student.email || 'N/A'}</td>
+                                        <td>${student.gender || 'N/A'}</td>
+                                        <td>${student.dob || 'N/A'}</td>
+                                        <td>${student.grade_level || 'N/A'}</td>
+                                        <td>${student.address || 'N/A'}</td>
+                                        <td>${student.parent_name || 'N/A'}</td>
+                                        <td>${student.parent_email || 'N/A'}</td>
+                                        <td>${student.emergency_contact || 'N/A'}</td>
+                                        <td><img src="${student.photo ? 'uploads/' + student.photo : 'uploads/no-icon.png'}" alt="Photo" /></td>
+                                        <td><img src="${student.qr_code ? 'qrcodes/' + student.qr_code : 'N/A'}" alt="QR Code" /></td>
                                     </tr>
                                 `;
                                 tableBody.innerHTML += row;
@@ -738,6 +909,13 @@ foreach ($archived_classes_db as $cls) {
                         alert('Failed to unarchive class.');
                     });
                 }
+            });
+        });
+
+        // Close modals
+        document.querySelectorAll('.modal-close').forEach(button => {
+            button.addEventListener('click', () => {
+                button.closest('.modal').style.display = 'none';
             });
         });
     </script>

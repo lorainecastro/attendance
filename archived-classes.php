@@ -141,7 +141,7 @@ foreach ($archived_classes_db as $cls) {
         'sectionName' => $cls['section_name'],
         'subject' => $cls['subject_name'],
         'gradeLevel' => $cls['grade_level'],
-        'room' => $cls['room'] ?? 'No room specified',
+        'room' => $cls['room'] ? htmlspecialchars($cls['room']) : 'No room specified',
         'totalStudents' => count($students),
         'scheduleText' => implode('<br>', $schedule_text),
         'late_to_absent' => $late_to_absent,
@@ -466,6 +466,7 @@ foreach ($archived_classes_db as $cls) {
             background: var(--card-bg);
             border-radius: var(--radius-lg);
             box-shadow: var(--shadow-md);
+            display: none;
         }
 
         /* Modal Styles */
@@ -726,12 +727,11 @@ foreach ($archived_classes_db as $cls) {
     </div>
 
     <div class="archived-classes-grid">
-        <?php if (empty($archived_classes_php)): ?>
-            <div class="no-classes">
-                <i class="fas fa-archive" style="font-size: 3rem; color: var(--grayfont-color); margin-bottom: var(--spacing-md);"></i>
-                <p>No archived classes found.</p>
-            </div>
-        <?php else: ?>
+        <div class="no-classes">
+            <i class="fas fa-archive" style="font-size: 3rem; color: var(--grayfont-color); margin-bottom: var(--spacing-md);"></i>
+            <p>No archived classes found.</p>
+        </div>
+        <?php if (!empty($archived_classes_php)): ?>
             <?php foreach ($archived_classes_php as $cls): ?>
                 <div class="archived-class-card">
                     <div class="class-header">
@@ -834,6 +834,11 @@ foreach ($archived_classes_db as $cls) {
     </div>
 
     <script>
+        // Control visibility of no-classes div
+        const noClassesDiv = document.querySelector('.no-classes');
+        const hasClasses = <?php echo json_encode(!empty($archived_classes_php)); ?>;
+        noClassesDiv.style.display = hasClasses ? 'none' : 'block';
+
         document.querySelectorAll('.btn-view').forEach(button => {
             button.addEventListener('click', () => {
                 const classId = button.getAttribute('data-class-id');
@@ -918,10 +923,17 @@ foreach ($archived_classes_db as $cls) {
                     .then(data => {
                         if (data.success) {
                             // Remove the class card from the DOM
-                            button.closest('.archived-class-card').remove();
+                            const classCard = button.closest('.archived-class-card');
+                            classCard.remove();
                             // Update stats
                             const totalClassesCard = document.querySelector('.stats-grid .card .card-value');
-                            totalClassesCard.textContent = parseInt(totalClassesCard.textContent) - 1;
+                            const newCount = parseInt(totalClassesCard.textContent) - 1;
+                            totalClassesCard.textContent = newCount;
+                            // Show no-classes message if no classes remain
+                            const remainingClasses = document.querySelectorAll('.archived-class-card').length;
+                            if (remainingClasses === 0) {
+                                document.querySelector('.no-classes').style.display = 'block';
+                            }
                             alert('Class unarchived successfully!');
                         } else {
                             alert('Error: ' + data.error);

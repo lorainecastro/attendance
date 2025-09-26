@@ -1294,7 +1294,6 @@ $at_risk_students = getAtRiskStudents($pdo, $currentUser['teacher_id']);
         }
 
         // Update layout based on screen size
-        // Update layout based on screen size
         function updateLayout() {
             const sidebar = document.getElementById('sidebar');
             const header = document.getElementById('header');

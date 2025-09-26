@@ -262,32 +262,24 @@ function addClass($classData, $scheduleData, $class_id = null)
     }
 }
 
-// Function to delete a class
-function deleteClass($class_id)
+// Function to archive a class
+function archiveClass($class_id)
 {
     $pdo = getDBConnection();
 
     try {
         $pdo->beginTransaction();
 
-        // Delete related schedules
-        $stmt = $pdo->prepare("DELETE FROM schedules WHERE class_id = ?");
-        $stmt->execute([$class_id]);
-
-        // Delete related class_students entries
-        $stmt = $pdo->prepare("DELETE FROM class_students WHERE class_id = ?");
-        $stmt->execute([$class_id]);
-
-        // Delete the class
-        $stmt = $pdo->prepare("DELETE FROM classes WHERE class_id = ? AND teacher_id = ?");
+        // Update the class to set isArchived = 1
+        $stmt = $pdo->prepare("UPDATE classes SET isArchived = 1 WHERE class_id = ? AND teacher_id = ?");
         $stmt->execute([$class_id, $_SESSION['teacher_id']]);
 
         $pdo->commit();
         return ['success' => true];
     } catch (PDOException $e) {
         $pdo->rollBack();
-        error_log("Delete class error: " . $e->getMessage());
-        return ['success' => false, 'error' => 'Failed to delete class: ' . $e->getMessage()];
+        error_log("Archive class error: " . $e->getMessage());
+        return ['success' => false, 'error' => 'Failed to archive class: ' . $e->getMessage()];
     }
 }
 
@@ -311,7 +303,7 @@ function fetchClassesForTeacher()
             FROM classes c
             LEFT JOIN subjects s ON c.subject_id = s.subject_id
             LEFT JOIN schedules sc ON c.class_id = sc.class_id
-            WHERE c.teacher_id = ?
+            WHERE c.teacher_id = ? AND c.isArchived = 0
             GROUP BY c.class_id
         ");
         $stmt->execute([$_SESSION['teacher_id']]);
@@ -558,13 +550,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 
         echo json_encode(addClass($classData, $scheduleData, $classId));
         exit;
-    } elseif ($_POST['action'] === 'deleteClass') {
+    } elseif ($_POST['action'] === 'archiveClass') {
         $class_id = $_POST['classId'] ?? null;
         if (!$class_id) {
             echo json_encode(['success' => false, 'error' => 'Missing class ID']);
             exit;
         }
-        echo json_encode(deleteClass($class_id));
+        echo json_encode(archiveClass($class_id));
         exit;
     } elseif ($_POST['action'] === 'fetchStudents') {
         $class_id = $_POST['classId'] ?? null;
@@ -3033,8 +3025,8 @@ ob_end_flush();
                         <button class="btn btn-sm btn-success" onclick="openStudentModal(${classItem.class_id})">
                             <i class="fas fa-users"></i> Students
                         </button>
-                        <button class="btn btn-sm btn-danger" onclick="deleteClass(${classItem.class_id})">
-                            <i class="fas fa-trash"></i> Delete
+                        <button class="btn btn-sm btn-danger" onclick="archiveClass(${classItem.class_id})">
+                            <i class="fas fa-archive"></i> Archive
                         </button>
                     </div>
                 `;
@@ -3081,8 +3073,8 @@ ob_end_flush();
                         <button class="btn btn-sm btn-success" onclick="openStudentModal(${classItem.class_id})">
                             <i class="fas fa-users"></i>
                         </button>
-                        <button class="btn btn-sm btn-danger" onclick="deleteClass(${classItem.class_id})">
-                            <i class="fas fa-trash"></i>
+                        <button class="btn btn-sm btn-danger" onclick="archiveClass(${classItem.class_id})">
+                            <i class="fas fa-archive"></i>
                         </button>
                     </td>
                 `;
@@ -3315,13 +3307,13 @@ ob_end_flush();
             if (viewModal) viewModal.classList.remove('show');
         }
 
-        function deleteClass(classId) {
-            if (!confirm('Are you sure you want to delete this class?')) return;
+        function archiveClass(classId) {
+            if (!confirm('Are you sure you want to archive this class?')) return;
 
             fetch('manage-classes.php', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                body: `action=deleteClass&classId=${classId}`
+                body: `action=archiveClass&classId=${classId}`
             })
                 .then(response => {
                     if (!response.ok) throw new Error('Network response was not ok: ' + response.statusText);
@@ -3334,14 +3326,14 @@ ob_end_flush();
                         updateStats();
                         renderClasses();
                         populateFilters();
-                        alert('Class deleted successfully!');
+                        alert('Class archived successfully!');
                     } else {
-                        alert('Failed to delete class: ' + (data.error || 'Unknown error'));
+                        alert('Failed to archive class: ' + (data.error || 'Unknown error'));
                     }
                 })
                 .catch(error => {
-                    console.error('Error deleting class:', error);
-                    alert('Error deleting class: ' + error.message);
+                    console.error('Error archiving class:', error);
+                    alert('Error archiving class: ' + error.message);
                 });
         }
 
@@ -3378,7 +3370,7 @@ ob_end_flush();
                     if (data.success) {
                         fetchClasses();
                         closeModal();
-                        alert(editingClassId ? 'Class updated successfully!' : 'Class added successfully!');
+                        alert(editingClassId ? 'Class updated successfully!' : 'Class updated successfully!');
                     } else {
                         alert('Error: ' + (data.error || 'Failed to ' + (editingClassId ? 'update' : 'add') + ' class'));
                     }

@@ -363,15 +363,22 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
             font-weight: 600;
         }
 
+        .table-responsive {
+            overflow-x: auto;
+            width: 100%;
+        }
+
         table {
             width: 100%;
             border-collapse: collapse;
+            min-width: 1000px;
         }
 
         th, td {
             padding: 12px 15px;
             text-align: left;
             border-bottom: 1px solid var(--border-color);
+            white-space: nowrap;
         }
 
         th {
@@ -380,6 +387,13 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
             font-size: 14px;
             background: var(--inputfield-color);
         }
+
+        th:nth-child(1), td:nth-child(2) { width: 10%; min-width: 80px; } /* Photo */
+        th:nth-child(2), td:nth-child(3) { width: 15%; min-width: 120px; } /* LRN */
+        th:nth-child(3), td:nth-child(4) { width: 25%; min-width: 200px; white-space: normal; } /* Student Name */
+        th:nth-child(4), td:nth-child(5) { width: 20%; min-width: 150px; } /* Status */
+        th:nth-child(5), td:nth-child(6) { width: 20%; min-width: 150px; white-space: normal; } /* Time Checked */
+        th:nth-child(6), td:nth-child(7) { width: 15%; min-width: 120px; } /* Attendance Rate */
 
         tbody tr {
             transition: var(--transition-normal);
@@ -501,9 +515,6 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
             }
             .card-value {
                 font-size: 20px;
-            }
-            .table-responsive {
-                overflow-x: auto;
             }
         }
 

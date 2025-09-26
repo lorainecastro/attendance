@@ -1292,19 +1292,39 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
             box-shadow: var(--shadow-md);
             overflow-x: auto;
             border: 1px solid var(--border-color);
+            -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
+            scrollbar-width: thin; /* Firefox scrollbar */
+            scrollbar-color: var(--border-color, #e0e0e0) transparent; /* Firefox scrollbar styling */
+        }
+
+        .table-container::-webkit-scrollbar {
+            height: 8px; /* Scrollbar height for WebKit browsers (Chrome, Safari) */
+        }
+
+        .table-container::-webkit-scrollbar-thumb {
+            background: var(--border-color, #e0e0e0);
+            border-radius: 4px;
+        }
+
+        .table-container::-webkit-scrollbar-track {
+            background: transparent;
         }
 
         .table {
             width: 100%;
+            min-width: 900px; /* Ensure table is wide enough for all columns */
             border-collapse: separate;
             border-spacing: 0;
+            table-layout: auto; /* Allow columns to size based on content */
         }
 
         .table th,
         .table td {
-            padding: var(--spacing-md);
+            padding: var(--spacing-sm, 8px) var(--spacing-md, 12px);
             text-align: left;
-            border-bottom: 1px solid var(--border-color);
+            border-bottom: 1px solid var(--border-color, #e0e0e0);
+            white-space: nowrap; /* Prevent text wrapping */
+            vertical-align: middle;
         }
 
         .table th {
@@ -1312,6 +1332,9 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
             color: var(--grayfont-color);
             font-size: var(--font-size-sm);
             background: var(--inputfield-color);
+            position: sticky;
+            top: 0;
+            z-index: 10;
         }
 
         .table tr:hover {
@@ -1326,7 +1349,42 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
 
         .table td .actions .btn {
             white-space: nowrap;
-            padding: var(--spacing-xs) var(--spacing-sm);
+            padding: var(--spacing-xs, 4px) var(--spacing-sm, 8px);
+        }
+
+        /* Explicitly ensure all columns are visible */
+        .table th,
+        .table td {
+            display: table-cell !important; /* Override any display: none */
+        }
+
+        /* Optional: Minimum column widths */
+        .table th:nth-child(1), .table td:nth-child(1) { /* Checkbox */
+            min-width: 50px;
+        }
+        .table th:nth-child(2), .table td:nth-child(2) { /* Photo */
+            min-width: 80px;
+        }
+        .table th:nth-child(3), .table td:nth-child(3) { /* QR Code */
+            min-width: 80px;
+        }
+        .table th:nth-child(4), .table td:nth-child(4) { /* LRN */
+            min-width: 120px;
+        }
+        .table th:nth-child(5), .table td:nth-child(5) { /* Full Name */
+            min-width: 200px;
+        }
+        .table th:nth-child(6), .table td:nth-child(6) { /* Grade Level */
+            min-width: 100px;
+        }
+        .table th:nth-child(7), .table td:nth-child(7) { /* Subject */
+            min-width: 120px;
+        }
+        .table th:nth-child(8), .table td:nth-child(8) { /* Section */
+            min-width: 100px;
+        }
+        .table th:nth-child(9), .table td:nth-child(9) { /* Actions */
+            min-width: 150px;
         }
 
         .modal {
@@ -1637,8 +1695,9 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
         }
 
         @media (max-width: 768px) {
-            body {
-                padding: var(--spacing-sm);
+            .controls {
+                flex-direction: column;
+                align-items: stretch;
             }
             .controls-left {
                 flex-direction: column;
@@ -1682,19 +1741,19 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
                 width: 100%;
                 justify-content: center;
             }
-            .table th:nth-child(n+6),
-            .table td:nth-child(n+6) {
-                display: none;
+            /* Removed column hiding for table */
+            .table-container {
+                overflow-x: auto; /* Ensure horizontal scrolling */
+            }
+            .table th,
+            .table td {
+                padding: var(--spacing-xs) var(--spacing-sm); /* Smaller padding for mobile */
             }
         }
 
         @media (max-width: 576px) {
             h1 {
                 font-size: var(--font-size-xl);
-            }
-            .table th:nth-child(n+4),
-            .table td:nth-child(n+4) {
-                display: none;
             }
             .student-card {
                 padding: var(--spacing-sm);
@@ -1712,6 +1771,14 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
             .view-btn {
                 flex: 1;
                 justify-content: center;
+            }
+            /* Removed column hiding for table */
+            .table-container {
+                overflow-x: auto; /* Ensure horizontal scrolling */
+            }
+            .table th,
+            .table td {
+                padding: var(--spacing-xs) var(--spacing-xs); /* Even smaller padding for very small screens */
             }
         }
 
@@ -1764,7 +1831,6 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
             padding: var(--spacing-xs) var(--spacing-md);
             font-size: var(--font-size-sm);
         }
-
     </style>
 </head>
 

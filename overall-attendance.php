@@ -629,7 +629,6 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
                         <th>Student Name</th>
                         <th>Status</th>
                         <th>Time Checked</th>
-                        <th>Attendance Rate</th>
                     </tr>
                 </thead>
                 <tbody></tbody>
@@ -851,7 +850,6 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
                     <td>${student.name}</td>
                     <td><span class="status-badge status-${statusClass}">${att.status || 'None'}</span></td>
                     <td>${att.timeChecked || '-'}</td>
-                    <td class="attendance-rate">${rate}</td>
                 `;
                 tableBody.appendChild(row);
             });

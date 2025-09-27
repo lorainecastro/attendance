@@ -1986,7 +1986,7 @@ $total_unique_students = $unique_students_stmt->fetchColumn();
                 <form id="studentForm" class="modal-form" enctype="multipart/form-data">
                     <div class="form-column">
                         <div class="form-group">
-                            <label class="form-label">LRN<span class="required-asterisk"> *</span></label>
+                            <label class="form-label">Learner Reference Number (LRN) / Student Number<span class="required-asterisk"> *</span></label>
                             <input type="text" class="form-input" id="student-id" name="lrn" onkeypress="return (event.charCode != 8 && event.charCode != 0 && (event.charCode >= 48 && event.charCode <= 57))" required>
                         </div>
                         <div class="form-group photo-qr-container">

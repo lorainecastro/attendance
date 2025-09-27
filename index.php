@@ -828,8 +828,20 @@
                 padding: 24px;
             }
 
+            .contact-info-item {
+                display: flex;
+                align-items: flex-start;
+                gap: 16px;
+                margin-bottom: 24px;
+            }
+
+            .contact-info-item p {
+                text-wrap: wrap;
+            }
+
             .contact-map iframe {
                 height: 300px;
+                width: 335px;
             }
 
             .footer-container {
@@ -914,7 +926,7 @@
         <div class="hero-slide active">
             <div class="hero-content">
                 <h1>Smart QR Code Attendance</h1>
-                <p>Modern attendance tracking through QR code scanning and manual marking options, designed for seamless data collection and monitoring</p>
+                <p>An attendance system that uses QR codes and manual options to make checking attendance quick and easy.</p>
                 <div class="hero-buttons">
                     <a href="#features" class="hero-btn hero-btn-primary">
                         <i class="fas fa-qrcode"></i>
@@ -931,7 +943,7 @@
         <div class="hero-slide">
             <div class="hero-content">
                 <h1>ARIMA Time Series Forecasting</h1>
-                <p>Advanced predictive analytics using ARIMA methodology to forecast attendance patterns and identify trends in your centralized database</p>
+                <p>Advanced predictive analytics using ARIMA methodology to forecast attendance patterns and identify trends based on recorded class data.</p>
                 <div class="hero-buttons">
                     <a href="#analytics" class="hero-btn hero-btn-primary">
                         <i class="fas fa-chart-line"></i>

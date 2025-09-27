@@ -568,7 +568,7 @@
 
             .map-container {
                 height: 300px;
-                width: 355px;
+                width: 360px;
                 margin: 0;
                 padding: 0;
                 box-sizing: border-box;
@@ -598,7 +598,7 @@
 
             .map-container {
                 height: 250px;
-                width: 355px;
+                width: 360px;
                 margin: 0;
                 padding: 0;
                 border-radius: 8px; /* Slightly smaller radius for very small screens */
@@ -1006,7 +1006,7 @@
 
             .map-container {
                 height: 300px;
-                width: 355px;
+                width: 360px;
                 overflow: hidden;
                 box-sizing: border-box;
             }
@@ -1102,12 +1102,12 @@
 
             .map-container {
                 height: 250px;
-                width: 355px;
+                width: 360px;
                 margin: 0;
                 padding: 0;
                 overflow: hidden;
                 box-sizing: border-box;
-                box-shadow: 0 0 5px rgba(0, 0, 0, 0.8);
+                box-shadow: var(--shadow-lg);
             }
 
             .footer-container {

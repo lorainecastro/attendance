@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Student Attendance Monitoring System</title>
+    <link rel="icon" href="logo/logos.png">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
@@ -39,6 +40,7 @@
             background-color: var(--background);
             color: var(--text-primary);
             line-height: 1.6;
+            overflow-x: hidden;
         }
 
         /* Top Bar */
@@ -512,6 +514,7 @@
             line-height: 1.7;
         }
 
+        /* Base map container styles */
         .contact-map {
             padding: 40px;
         }
@@ -529,6 +532,119 @@
             border: none;
             border-radius: var(--radius);
             box-shadow: var(--shadow-lg);
+        }
+
+        /* Tablet responsive updates */
+        @media (max-width: 1024px) {
+            .contact-map {
+                padding: 32px;
+                width: 100%;
+                max-width: 100%;
+                box-sizing: border-box;
+            }
+            
+            .map-container {
+                height: 350px;
+                margin: 0;
+                padding: 0;
+            }
+        }
+
+        /* Mobile responsive updates */
+        @media (max-width: 768px) {
+            .contact-content {
+                grid-template-columns: 1fr;
+                gap: 0; /* Remove gap to prevent overflow */
+            }
+            
+            .contact-info,
+            .contact-map {
+                padding: 24px;
+                width: 100%;
+                max-width: 100%;
+                box-sizing: border-box;
+                margin: 0;
+            }
+
+            .map-container {
+                height: 300px;
+                width: 355px;
+                margin: 0;
+                padding: 0;
+                box-sizing: border-box;
+            }
+            
+            /* Ensure contact section doesn't overflow */
+            .contact-section {
+                overflow-x: hidden;
+            }
+            
+            .contact-container {
+                padding: 0 16px;
+                max-width: 100%;
+                box-sizing: border-box;
+            }
+        }
+
+        /* Small mobile updates */
+        @media (max-width: 480px) {
+            .contact-info,
+            .contact-map {
+                padding: 16px;
+                width: 100%;
+                max-width: 100%;
+                box-sizing: border-box;
+            }
+
+            .map-container {
+                height: 250px;
+                width: 355px;
+                margin: 0;
+                padding: 0;
+                border-radius: 8px; /* Slightly smaller radius for very small screens */
+            }
+            
+            .contact-container {
+                padding: 0 12px;
+                width: 100%;
+                max-width: 100%;
+                box-sizing: border-box;
+            }
+        }
+
+        /* Very small mobile updates */
+        @media (max-width: 360px) {
+            .contact-info,
+            .contact-map {
+                padding: 12px;
+            }
+            
+            .map-container {
+                height: 220px;
+                border-radius: 6px;
+            }
+            
+            .contact-map h3 {
+                font-size: 1.3rem;
+                margin-bottom: 16px;
+            }
+        }
+
+        /* Additional fix for potential horizontal scroll issues */
+        @media (max-width: 768px) {
+            body {
+                overflow-x: hidden;
+            }
+            
+            * {
+                max-width: 100%;
+                box-sizing: border-box;
+            }
+            
+            .contact-section * {
+                max-width: 100%;
+                box-sizing: border-box;
+            }
         }
 
         /* Footer Section */
@@ -704,7 +820,16 @@
             border-radius: 1px;
         }
 
+        /* Tablet Responsive */
         @media (max-width: 1024px) {
+            .nav-container,
+            .top-bar-container,
+            .about-container,
+            .features-container,
+            .contact-container {
+                padding: 0 16px;
+            }
+
             .features-grid {
                 grid-template-columns: 1fr;
                 gap: 24px;
@@ -712,13 +837,35 @@
 
             .contact-content {
                 grid-template-columns: 1fr;
+                gap: 32px;
             }
 
             .footer-container {
                 grid-template-columns: repeat(2, 1fr);
+                gap: 24px;
+            }
+
+            .hero-content {
+                max-width: 800px;
+                padding: 32px;
+            }
+
+            .hero-content h1 {
+                font-size: 3rem;
+            }
+
+            .hero-content p {
+                font-size: 1.2rem;
+            }
+
+            .about-header h2,
+            .features-header h2,
+            .contact-header h2 {
+                font-size: 2.5rem;
             }
         }
 
+        /* Mobile Responsive */
         @media (max-width: 768px) {
             .top-bar-container {
                 padding: 0 16px;
@@ -752,6 +899,7 @@
                 box-shadow: var(--shadow-lg);
                 padding: 40px 0;
                 gap: 20px;
+                z-index: 999;
             }
 
             .nav-menu.active {
@@ -772,6 +920,15 @@
             .btn {
                 width: 100%;
                 text-align: center;
+            }
+
+            .hero-section {
+                min-height: 500px;
+            }
+
+            .hero-content {
+                max-width: 90%;
+                padding: 20px;
             }
 
             .hero-content h1 {
@@ -799,10 +956,28 @@
                 padding: 0 16px;
             }
 
+            .about-section,
+            .features-section,
+            .contact-section {
+                padding: 60px 0;
+            }
+
+            .about-header,
+            .features-header,
+            .contact-header {
+                margin-bottom: 40px;
+            }
+
             .about-header h2,
             .features-header h2,
             .contact-header h2 {
                 font-size: 2.2rem;
+            }
+
+            .about-header p,
+            .features-header p,
+            .contact-header p {
+                font-size: 1rem;
             }
 
             .features-grid {
@@ -813,6 +988,7 @@
             .feature-card {
                 flex-direction: column;
                 text-align: center;
+                padding: 24px;
             }
 
             .feature-card i {
@@ -828,25 +1004,33 @@
                 padding: 24px;
             }
 
-            .contact-info-item {
-                display: flex;
-                align-items: flex-start;
-                gap: 16px;
-                margin-bottom: 24px;
+            .map-container {
+                height: 300px;
+                width: 355px;
+                overflow: hidden;
+                box-sizing: border-box;
             }
 
-            .contact-info-item p {
-                text-wrap: wrap;
+            .contact-map {
+                padding: 24px;
+                box-sizing: border-box;
+                width: 100%;
+                max-width: 100%;
+                overflow: hidden;
             }
 
             .contact-map iframe {
-                height: 300px;
-                width: 335px;
+                width: 100%;
+            }
+
+            .footer {
+                padding: 40px 0 24px;
             }
 
             .footer-container {
                 grid-template-columns: 1fr;
                 text-align: center;
+                gap: 24px;
             }
 
             .footer-logo {
@@ -860,6 +1044,105 @@
 
             .footer-column .contact-info-item {
                 justify-content: center;
+            }
+        }
+
+        /* Small Mobile */
+        @media (max-width: 480px) {
+            .nav-container {
+                padding: 0 12px;
+            }
+
+            .about-container,
+            .features-container,
+            .contact-container {
+                padding: 0 12px;
+            }
+
+            .hero-content {
+                padding: 16px;
+            }
+
+            .hero-content h1 {
+                font-size: 2rem;
+                margin-bottom: 16px;
+            }
+
+            .hero-content p {
+                font-size: 1rem;
+                margin-bottom: 24px;
+            }
+
+            .hero-btn {
+                padding: 12px 24px;
+                font-size: 0.9rem;
+            }
+
+            .about-header h2,
+            .features-header h2,
+            .contact-header h2 {
+                font-size: 1.8rem;
+            }
+
+            .feature-card {
+                padding: 20px;
+            }
+
+            .contact-info,
+            .contact-map {
+                padding: 16px;
+            }
+
+            .contact-map {
+                width: 100%;
+                max-width: 100%;
+                overflow: hidden;
+                box-sizing: border-box;
+            }
+
+            .map-container {
+                height: 250px;
+                width: 355px;
+                margin: 0;
+                padding: 0;
+                overflow: hidden;
+                box-sizing: border-box;
+                box-shadow: 0 0 5px rgba(0, 0, 0, 0.8);
+            }
+
+            .footer-container {
+                padding: 0 12px;
+            }
+        }
+
+        /* Very Small Mobile */
+        @media (max-width: 360px) {
+            .logo {
+                width: 40px;
+                height: 40px;
+                font-size: 18px;
+            }
+
+            .logo-text {
+                font-size: 1rem;
+            }
+
+            .hero-content h1 {
+                font-size: 1.75rem;
+            }
+
+            .hero-content p {
+                font-size: 0.9rem;
+            }
+
+            .about-header h2,
+            .features-header h2,
+            .contact-header h2 {
+                font-size: 1.6rem;
+            }
+
+            .feature-card i {
+                font-size: 2rem;
             }
         }
     </style>
@@ -992,23 +1275,31 @@
             <div class="features-grid">
                 <div class="feature-card">
                     <i class="fas fa-chalkboard-teacher"></i>
-                    <h3>Empowering Teachers</h3>
-                    <p>Provides an intuitive platform for teachers to monitor attendance, access AI-driven insights, and receive actionable recommendations to reduce absenteeism and boost student performance.</p>
+                    <div class="feature-content">
+                        <h3>Empowering Teachers</h3>
+                        <p>Provides an intuitive platform for teachers to monitor attendance, access AI-driven insights, and receive actionable recommendations to reduce absenteeism and boost student performance.</p>
+                    </div>
                 </div>
                 <div class="feature-card">
                     <i class="fas fa-user-graduate"></i>
-                    <h3>Supporting Students</h3>
-                    <p>Enables early identification of attendance issues, fostering timely interventions that promote responsibility and improve academic and social outcomes.</p>
+                    <div class="feature-content">
+                        <h3>Supporting Students</h3>
+                        <p>Enables early identification of attendance issues, fostering timely interventions that promote responsibility and improve academic and social outcomes.</p>
+                    </div>
                 </div>
                 <div class="feature-card">
                     <i class="fas fa-school"></i>
-                    <h3>Enhancing Schools</h3>
-                    <p>Supports public schools in adopting data-driven attendance tracking, aligning with digital transformation goals and improving student success and accreditation standards.</p>
+                    <div class="feature-content">
+                        <h3>Enhancing Schools</h3>
+                        <p>Supports public schools in adopting data-driven attendance tracking, aligning with digital transformation goals and improving student success and accreditation standards.</p>
+                    </div>
                 </div>
                 <div class="feature-card">
                     <i class="fas fa-chart-line"></i>
-                    <h3>Advanced Analytics</h3>
-                    <p>Utilizes ARIMA-based Time Series Forecasting to detect attendance patterns, predict risks, and provide clear visualizations for informed decision-making.</p>
+                    <div class="feature-content">
+                        <h3>Advanced Analytics</h3>
+                        <p>Utilizes ARIMA-based Time Series Forecasting to detect attendance patterns, predict risks, and provide clear visualizations for informed decision-making.</p>
+                    </div>
                 </div>
             </div>
         </div>
@@ -1087,17 +1378,16 @@
                     </div>
                 </div>
                 <div class="contact-map">
-    <h3>Our Location</h3>
-    <iframe 
-        src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3856.912401235189!2d120.9099939!3d14.9547300!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x33970009c8e60931%3A0xee163fa5b5612c18!2sBulacan%20State%20University%20-%20Bustos%20Campus!5e0!3m2!1sen!2sph!4v1726758900000!5m2!1sen!2sph" 
-        width="100%" 
-        height="400" 
-        style="border:0;" 
-        allowfullscreen="" 
-        loading="lazy" 
-        referrerpolicy="no-referrer-when-downgrade">
-    </iframe>
-   
+                    <h3>Our Location</h3>
+                    <div class="map-container">
+                        <iframe 
+                            src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3856.912401235189!2d120.9099939!3d14.9547300!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x33970009c8e60931%3A0xee163fa5b5612c18!2sBulacan%20State%20University%20-%20Bustos%20Campus!5e0!3m2!1sen!2sph!4v1726758900000!5m2!1sen!2sph" 
+                            allowfullscreen="" 
+                            loading="lazy" 
+                            referrerpolicy="no-referrer-when-downgrade">
+                        </iframe>
+                    </div>
+                </div>
             </div>
         </div>
     </section>
@@ -1141,7 +1431,6 @@
                         <div class="contact-info-item">
                             <i class="fas fa-envelope"></i>
                             <div>
-                               
                                 <p>student.attendance.monitoring.sys@gmail.com</p>
                             </div>
                         </div>
@@ -1150,8 +1439,7 @@
                         <div class="contact-info-item">
                             <i class="fas fa-phone"></i>
                             <div>
-                               
-                                <p>0910-031-0321</p>
+                                <p>0910-031-0621</p>
                             </div>
                         </div>
                     </li>
@@ -1159,7 +1447,6 @@
                         <div class="contact-info-item">
                             <i class="fas fa-map-marker-alt"></i>
                             <div>
-                                
                                 <p>Bulacan State University<br>(Bustos Campus)</p>
                             </div>
                         </div>
@@ -1168,9 +1455,8 @@
             </div>
         </div>
         <div class="footer-bottom">
-    <p>&copy; 2025 Student Attendance Monitoring System | A Capstone Project of BSIT Students, BulSU Bustos Campus</p>
-</div>
-
+            <p>&copy; 2025 Student Attendance Monitoring System | A Capstone Project of BSIT Students, BulSU Bustos Campus</p>
+        </div>
     </footer>
 
     <script>

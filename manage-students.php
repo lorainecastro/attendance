@@ -2261,10 +2261,8 @@ $total_unique_students = $unique_students_stmt->fetchColumn();
         // Update stats for cards
         function updateStats() {
             const totalStudents = students.length;
-            const activeStudents = students.filter(s => s.status === 'active').length; // Assumes status field exists
             const classesEnrolled = [...new Set(students.map(s => `${s.class}-${s.section}`))].length;
             document.getElementById('total-students').textContent = totalStudents;
-            document.getElementById('active-students').textContent = activeStudents;
             document.getElementById('classes-enrolled').textContent = classesEnrolled;
         }
 

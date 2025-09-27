@@ -2712,7 +2712,7 @@ ob_end_flush();
                         <input type="file" id="importFile" accept=".xlsx, .xls" class="file-input">
                         <button class="btn btn-success" onclick="importStudents()">Import Excel</button>
                     </div>
-                    <small class="import-note">Expected columns: LRN, Last Name, First Name, Middle Name, Email, Gender, DOB, Grade Level, Address, Parent Name, Parent Email, Emergency Contact, Photo, QR Code</small>
+                    <small class="import-note">Expected columns: LRN, Last Name, First Name, Middle Name, Email, Gender, DOB, Grade Level, Address, Parent Name, Parent Email, Emergency Contact</small>
                 </div>
                 <div class="preview-table-container" id="previewTableContainer" style="display: none;">
                     <h3 class="preview-title">Preview</h3>

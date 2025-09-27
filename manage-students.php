@@ -66,6 +66,7 @@ if (isset($_GET['delete_lrn']) && isset($_GET['class_id'])) {
                 }
             }
         }
+        // Note: QR code in qrcodes/ is intentionally not deleted to preserve it
         // Delete from class_students
         $stmt = $pdo->prepare("DELETE FROM class_students WHERE lrn = ? AND class_id = ?");
         $stmt->execute([$lrn, $class_id]);
@@ -90,6 +91,7 @@ if (isset($_POST['bulk_delete']) && isset($_POST['lrns']) && isset($_POST['class
         foreach ($lrns as $lrn) {
             $stmt->execute([$lrn, $class_id]);
         }
+        // Note: QR codes in qrcodes/ are intentionally not deleted to preserve them
         $pdo->commit();
         echo json_encode(['success' => true]);
     } catch (PDOException $e) {
@@ -2181,54 +2183,54 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
         });
 
         // Auto fill student on LRN change
-        function autoFillStudent() {
-            const lrn = this.value;
-            if (lrn) {
-                fetch(`?lrn=${lrn}`)
-                    .then(res => {
-                        if (!res.ok) {
-                            return res.text().then(text => {
-                                console.error('Non-JSON response:', text);
-                                throw new Error(`HTTP error! Status: ${res.status}`);
-                            });
-                        }
-                        return res.json();
-                    })
-                    .then(data => {
-                        if (data.success) {
-                            const student = data.student;
-                            document.getElementById('first-name').value = student.first_name;
-                            document.getElementById('middle-name').value = student.middle_name;
-                            document.getElementById('last-name').value = student.last_name;
-                            document.getElementById('email').value = student.email || '';
-                            document.getElementById('gender').value = student.gender || 'Male';
-                            document.getElementById('dob').value = student.dob || '';
-                            document.getElementById('address').value = student.address || '';
-                            document.getElementById('parent-name').value = student.parent_name || '';
-                            document.getElementById('emergency-contact').value = student.emergency_contact || '';
-                            document.getElementById('grade-level').value = student.grade_level || '';
-                            document.getElementById('grade-level').dispatchEvent(new Event('change'));
-                            document.getElementById('student-photo-preview').src = student.photo ?
-                                'uploads/' + student.photo :
-                                'uploads/no-icon.png';
-                        } else {
-                            document.getElementById('first-name').value = '';
-                            document.getElementById('middle-name').value = '';
-                            document.getElementById('last-name').value = '';
-                            document.getElementById('email').value = '';
-                            document.getElementById('gender').value = 'Male';
-                            document.getElementById('dob').value = '';
-                            document.getElementById('address').value = '';
-                            document.getElementById('parent-name').value = '';
-                            document.getElementById('emergency-contact').value = '';
-                            document.getElementById('student-photo-preview').src = 'uploads/no-icon.png';
-                        }
-                    })
-                    .catch(error => {
-                        console.error('Fetch error in autoFillStudent:', error);
-                    });
-            }
-        }
+        // function autoFillStudent() {
+        //     const lrn = this.value;
+        //     if (lrn) {
+        //         fetch(`?lrn=${lrn}`)
+        //             .then(res => {
+        //                 if (!res.ok) {
+        //                     return res.text().then(text => {
+        //                         console.error('Non-JSON response:', text);
+        //                         throw new Error(`HTTP error! Status: ${res.status}`);
+        //                     });
+        //                 }
+        //                 return res.json();
+        //             })
+        //             .then(data => {
+        //                 if (data.success) {
+        //                     const student = data.student;
+        //                     document.getElementById('first-name').value = student.first_name;
+        //                     document.getElementById('middle-name').value = student.middle_name;
+        //                     document.getElementById('last-name').value = student.last_name;
+        //                     document.getElementById('email').value = student.email || '';
+        //                     document.getElementById('gender').value = student.gender || 'Male';
+        //                     document.getElementById('dob').value = student.dob || '';
+        //                     document.getElementById('address').value = student.address || '';
+        //                     document.getElementById('parent-name').value = student.parent_name || '';
+        //                     document.getElementById('emergency-contact').value = student.emergency_contact || '';
+        //                     document.getElementById('grade-level').value = student.grade_level || '';
+        //                     document.getElementById('grade-level').dispatchEvent(new Event('change'));
+        //                     document.getElementById('student-photo-preview').src = student.photo ?
+        //                         'uploads/' + student.photo :
+        //                         'uploads/no-icon.png';
+        //                 } else {
+        //                     document.getElementById('first-name').value = '';
+        //                     document.getElementById('middle-name').value = '';
+        //                     document.getElementById('last-name').value = '';
+        //                     document.getElementById('email').value = '';
+        //                     document.getElementById('gender').value = 'Male';
+        //                     document.getElementById('dob').value = '';
+        //                     document.getElementById('address').value = '';
+        //                     document.getElementById('parent-name').value = '';
+        //                     document.getElementById('emergency-contact').value = '';
+        //                     document.getElementById('student-photo-preview').src = 'uploads/no-icon.png';
+        //                 }
+        //             })
+        //             .catch(error => {
+        //                 console.error('Fetch error in autoFillStudent:', error);
+        //             });
+        //     }
+        // }
 
         // Update section options based on grade
         function updateSectionOptions() {
@@ -3328,6 +3330,17 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
     <script>
         // QR Generation Logic
         document.addEventListener('DOMContentLoaded', () => {
+            updateStats();
+            populateFilters();
+            applyFilters();
+            setupEventListeners();
+            document.querySelector('#studentForm').addEventListener('submit', saveStudent);
+            // Remove or comment out the autoFillStudent listener
+            // document.getElementById('student-id').addEventListener('change', autoFillStudent);
+            document.getElementById('grade-level').addEventListener('change', updateSectionOptions);
+            document.getElementById('section').addEventListener('change', updateSubjectOptions);
+
+            // Ensure QR code generation logic
             const lrnInput = document.getElementById('student-id');
             const firstNameInput = document.getElementById('first-name');
             const middleNameInput = document.getElementById('middle-name');

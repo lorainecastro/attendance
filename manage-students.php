@@ -833,17 +833,6 @@ foreach ($students_data as &$row) {
     $row['fullName'] = $row['last_name'] . ', ' . $row['first_name'] . ' ' . $row['middle_name'];
 }
 
-// Fetch count of students without QR codes
-$stmt = $pdo->prepare("
-    SELECT COUNT(DISTINCT s.lrn) AS no_qr_count
-    FROM class_students cs
-    JOIN classes c ON cs.class_id = c.class_id
-    JOIN students s ON cs.lrn = s.lrn
-    WHERE c.teacher_id = ? AND c.isArchived = 0 AND s.qr_code IS NULL
-");
-$stmt->execute([$teacher_id]);
-$no_qr_count = $stmt->fetchColumn();
-
 // Fetch classes data for dynamic dropdowns
 $stmt = $pdo->prepare("
     SELECT c.class_id, c.grade_level, sub.subject_name, c.section_name 
@@ -871,6 +860,15 @@ $subjects = $stmt->fetchAll(PDO::FETCH_COLUMN);
 $stmt = $pdo->prepare("SELECT DISTINCT c.section_name FROM classes c WHERE c.teacher_id = ? AND c.isArchived = 0");
 $stmt->execute([$teacher_id]);
 $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
+
+$unique_students_stmt = $pdo->prepare("
+    SELECT COUNT(DISTINCT cs.lrn) 
+    FROM class_students cs 
+    JOIN classes c ON cs.class_id = c.class_id 
+    WHERE c.teacher_id = :teacher_id AND c.isArchived = 1
+");
+$unique_students_stmt->execute(['teacher_id' => $user['teacher_id']]);
+$total_unique_students = $unique_students_stmt->fetchColumn();
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -1856,7 +1854,7 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
                     </div>
                 </div>
             </div>
-            <div class="card">
+            <!-- <div class="card">
                 <div class="card-header">
                     <div>
                         <div class="card-title">Active Students</div>
@@ -1867,6 +1865,17 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
                             <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z" />
                             <path d="M10.97 4.97a.235.235 0 0 0-.02.022L7.477 9.417 5.384 7.323a.75.75 0 0 0-1.06 1.06L6.97 11.03a.75.75 0 0 0 1.079-.02l3.992-4.99a.75.75 0 0 0-1.071-1.05z" />
                         </svg>
+                    </div>
+                </div>
+            </div> -->
+            <div class="card">
+                <div class="card-header">
+                    <div>
+                        <div class="card-title">Total Unique Students</div>
+                        <div class="card-value"><?php echo htmlspecialchars($total_unique_students); ?></div>
+                    </div>
+                    <div class="card-icon bg-green">
+                        <i class="fas fa-user"></i>
                     </div>
                 </div>
             </div>
@@ -1881,19 +1890,6 @@ $sections = $stmt->fetchAll(PDO::FETCH_COLUMN);
                             <path d="M7 14s-1 0-1-1 1-4 5-4 5 3 5 4-1 1-1 1H7zm4-6a3 3 0 1 0 0-6 3 3 0 0 0 0 6z" />
                             <path fill-rule="evenodd" d="M5.216 14A2.238 2.238 0 0 1 5 13c0-1.355.68-2.75 1.936-3.72A6.325 6.325 0 0 0 5 9c-4 0-5 3-5 4s1 1 1 1h4.216z" />
                             <path d="M4.5 8a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z" />
-                        </svg>
-                    </div>
-                </div>
-            </div>
-            <div class="card">
-                <div class="card-header">
-                    <div>
-                        <div class="card-title">LRN Without QR Codes</div>
-                        <div class="card-value" id="no-qr-students"><?php echo htmlspecialchars($no_qr_count); ?></div>
-                    </div>
-                    <div class="card-icon bg-blue">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 16 16">
-                            <path d="M6.5 1A1.5 1.5 0 0 0 5 2.5V3H1.5A1.5 1.5 0 0 0 0 4.5v8A1.5 1.5 0 0 0 1.5 14h13a1.5 1.5 0 0 0 1.5-1.5v-8A1.5 1.5 0 0 0 14.5 3H11v-.5A1.5 1.5 0 0 0 9.5 1h-3zm0 1h3a.5.5 0 0 1 .5.5V3H6v-.5a.5.5 0 0 1 .5-.5zm1.886 6.914L7.5 7.028V10.5a.5.5 0 0 1-1 0V7.028L5.614 8.914a.5.5 0 0 1-.707-.707L6.793 6.32V2.75a.5.5 0 0 1 1 0v3.57l1.886-1.887a.5.5 0 0 1 .707.707z" />
                         </svg>
                     </div>
                 </div>

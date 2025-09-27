@@ -84,16 +84,6 @@ $total_archived_students_stmt = $pdo->prepare("SELECT COUNT(cs.lrn) FROM class_s
 $total_archived_students_stmt->execute(['teacher_id' => $user['teacher_id']]);
 $total_archived_students = $total_archived_students_stmt->fetchColumn();
 
-// Fetch total absent records in archived classes
-$archived_absent_stmt = $pdo->prepare("
-    SELECT COUNT(*) as total_absent
-    FROM attendance_tracking at
-    INNER JOIN classes c ON at.class_id = c.class_id
-    WHERE c.teacher_id = :teacher_id AND c.isArchived = 1 AND at.attendance_status = 'Absent'
-");
-$archived_absent_stmt->execute(['teacher_id' => $user['teacher_id']]);
-$total_absent_archived = $archived_absent_stmt->fetch(PDO::FETCH_ASSOC)['total_absent'] ?? 0;
-
 // Fetch archived classes details
 $archived_classes_stmt = $pdo->prepare("
     SELECT c.*, sub.subject_code, sub.subject_name 
@@ -148,6 +138,15 @@ foreach ($archived_classes_db as $cls) {
         'grace_period' => $grace_period
     ];
 }
+
+$unique_students_stmt = $pdo->prepare("
+    SELECT COUNT(DISTINCT cs.lrn) 
+    FROM class_students cs 
+    JOIN classes c ON cs.class_id = c.class_id 
+    WHERE c.teacher_id = :teacher_id AND c.isArchived = 1
+");
+$unique_students_stmt->execute(['teacher_id' => $user['teacher_id']]);
+$total_unique_students = $unique_students_stmt->fetchColumn();
 ?>
 
 <!DOCTYPE html>
@@ -278,9 +277,15 @@ foreach ($archived_classes_db as $cls) {
             color: var(--whitefont-color);
         }
 
+        .bg-pink {
+            background: var(--secondary-gradient);
+        }
         .bg-purple { background: var(--primary-gradient); }
         .bg-blue { background: linear-gradient(135deg, #3b82f6, #60a5fa); }
         .bg-red { background: linear-gradient(135deg, #ef4444, #f87171); }
+        .bg-green {
+            background: linear-gradient(135deg, #10b981, #34d399);
+        }
 
         .card-title {
             font-size: 14px;
@@ -697,7 +702,7 @@ foreach ($archived_classes_db as $cls) {
                     <div class="card-title">Total Classes Archived</div>
                     <div class="card-value"><?php echo htmlspecialchars($archived_classes); ?></div>
                 </div>
-                <div class="card-icon bg-purple">
+                <div class="card-icon bg-pink">
                     <i class="fas fa-archive"></i>
                 </div>
             </div>
@@ -716,11 +721,11 @@ foreach ($archived_classes_db as $cls) {
         <div class="card">
             <div class="card-header">
                 <div>
-                    <div class="card-title">Total Absent Records</div>
-                    <div class="card-value"><?php echo htmlspecialchars($total_absent_archived); ?></div>
+                    <div class="card-title">Total Unique Students</div>
+                    <div class="card-value"><?php echo htmlspecialchars($total_unique_students); ?></div>
                 </div>
-                <div class="card-icon bg-red">
-                    <i class="fas fa-exclamation-triangle"></i>
+                <div class="card-icon bg-green">
+                    <i class="fas fa-user"></i>
                 </div>
             </div>
         </div>

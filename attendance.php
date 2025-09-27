@@ -1964,13 +1964,13 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
                         // Still enable scanner even if camera fails
                         isScannerActive = true;
                         scanButton.innerHTML = '<i class="fas fa-stop"></i> Stop Scanning';
-                        showNotification('Scanner device active. Scan a QR code.', 'success');
+                        showNotification('Scan a QR code.', 'success');
                     });
 
                 // Start scanner
                 isScannerActive = true;
                 if (!isCameraActive) {
-                    showNotification('Scanner device active. Scan a QR code.', 'success');
+                    showNotification('Scan a QR code.', 'success');
                 }
 
                 function tick() {

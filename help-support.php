@@ -433,11 +433,6 @@ if (isset($_POST['export_pdf'])) {
 <body>
     <h1>Help & Support</h1>
 
-    <!-- Export Button -->
-    <form method="post">
-        <button type="submit" name="export_pdf" class="export-button">Export User Manual</button>
-    </form>
-
     <!-- FAQ Section -->
     <section id="faq" class="faq">
         <div class="excel-format">
@@ -567,6 +562,11 @@ if (isset($_POST['export_pdf'])) {
         </div>
     </section>
 
+    <!-- Export Button -->
+    <form method="post">
+        <button type="submit" name="export_pdf" class="export-button">Download User Manual</button>
+    </form>
+    
     <!-- User Manuals Section -->
     <section id="manuals" class="manual">
         <h2>User Manuals</h2>

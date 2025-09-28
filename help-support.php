@@ -185,19 +185,23 @@
             box-shadow: var(--shadow-md);
         }
 
-        .excel-format h2 {
+        /* .excel-format h2 {
             font-size: var(--font-size-xl);
             font-weight: 700;
             color: var(--blackfont-color);
             margin-bottom: var(--spacing-md);
             text-align: center;
-        }
+        } */
 
         .excel-format table {
             width: 100%;
             border-collapse: collapse;
             font-size: var(--font-size-base);
             color: var(--blackfont-color);
+            table-layout: auto;
+            display: block; /* Makes table block-level for scrolling */
+            overflow-x: auto; /* Enables horizontal scrolling for table only */
+            white-space: nowrap; /* Prevents content wrapping */
         }
 
         .excel-format th {
@@ -224,15 +228,12 @@
         }
 
         @media (max-width: 992px) {
-            .faq .grid, .manual .grid, .excel-format {
-                grid-template-columns: 1fr;
-            }
-
             .excel-format table {
                 font-size: var(--font-size-sm);
             }
 
-            .excel-format th, .excel-format td {
+            .excel-format th,
+            .excel-format td {
                 padding: var(--spacing-xs) var(--spacing-sm);
             }
         }

@@ -176,12 +176,60 @@
         <p>Find answers to common questions about using the Student Attendance Monitoring System. For further assistance, contact us via the Contact Page.</p>
         <div class="grid">
             <div class="faq-item" onclick="this.classList.toggle('active')">
-                <h3>How do I mark attendance using the QR code feature? <span class="arrow"> ❯ </span></h3>
-                <div class="content">Log in to your teacher account on https://attendancemonitoring.site, navigate to the attendance section, and scan the student's QR code using a compatible device. The system will automatically record the attendance in real-time.</div>
+                <h3>1. How do I add a new class? <span class="arrow"> ❯ </span></h3>
+                <div class="content">You can add a new class by clicking “Add Class” on the dashboard, filling out the required fields (grade level, section name, schedule, etc.), and saving the class.</div>
             </div>
             <div class="faq-item" onclick="this.classList.toggle('active')">
-                <h3>Can I manually record attendance if QR codes are not available? <span class="arrow"> ❯ </span></h3>
-                <div class="content">Yes, you can manually mark attendance by accessing the class roster on the platform, selecting the student, and updating their attendance status (Present, Absent, or Late).</div>
+                <h3>2. Can I edit a class after creating it? <span class="arrow"> ❯ </span></h3>
+                <div class="content">Yes. Locate the class in the dashboard, click “Edit”, update the details in the modal, and save your changes.</div>
+            </div>
+            <div class="faq-item" onclick="this.classList.toggle('active')">
+                <h3>3. What happens when I archive a class? <span class="arrow"> ❯ </span></h3>
+                <div class="content">Archived classes are moved out of the active list. They cannot be edited unless unarchived, but you can still view details and student records.</div>
+            </div>
+            <div class="faq-item" onclick="this.classList.toggle('active')">
+                <h3>4. How do I import students into a class? <span class="arrow"> ❯ </span></h3>
+                <div class="content">Open the Students section of the class, upload an Excel file with the required columns (LRN, names, email, etc.), preview, and import. QR codes will be generated automatically if missing.</div>
+            </div>
+            <div class="faq-item" onclick="this.classList.toggle('active')">
+                <h3>5. How do QR codes work for attendance? <span class="arrow"> ❯ </span></h3>
+                <div class="content">Each student has a unique QR code generated from their LRN and name. Teachers can scan these codes using a camera or scanner to mark attendance.</div>
+            </div>
+            <div class="faq-item" onclick="this.classList.toggle('active')">
+                <h3>6. Can I manually mark attendance without QR codes? <span class="arrow"> ❯ </span></h3>
+                <div class="content">Yes. You can manually mark students as Present, Absent, or Late in the attendance table. Bulk marking is also supported.</div>
+            </div>
+            <div class="faq-item" onclick="this.classList.toggle('active')">
+                <h3>7. What is the “Grace Period”? <span class="arrow"> ❯ </span></h3>
+                <div class="content">It is the number of minutes allowed for students to arrive late but still be marked Present. Scans after this period are marked Late.</div>
+            </div>
+            <div class="faq-item" onclick="this.classList.toggle('active')">
+                <h3>8. What does “Late to Absent” mean? <span class="arrow"> ❯ </span></h3>
+                <div class="content">This setting converts a number of late marks into one absence (e.g., 3 lates = 1 absence).</div>
+            </div>
+            <div class="faq-item" onclick="this.classList.toggle('active')">
+                <h3>9. Can I edit attendance records from past dates? <span class="arrow"> ❯ </span></h3>
+                <div class="content">No. Attendance can only be marked or modified for the current date. Past attendance is view-only.</div>
+            </div>
+            <div class="faq-item" onclick="this.classList.toggle('active')">
+                <h3>10. How do I generate reports? <span class="arrow"> ❯ </span></h3>
+                <div class="content">Go to the Reports section, set filters (class, student, date range, type), generate the report, and export it as PDF or Excel.</div>
+            </div>
+            <div class="faq-item" onclick="this.classList.toggle('active')">
+                <h3>11. Why can’t I import my Excel file? <span class="arrow"> ❯ </span></h3>
+                <div class="content">Ensure the file is in .xlsx or .xls format and includes all required columns with the correct headers.</div>
+            </div>
+            <div class="faq-item" onclick="this.classList.toggle('active')">
+                <h3>12. Why is my QR code not generating? <span class="arrow"> ❯ </span></h3>
+                <div class="content">Check that the LRN, first name, and last name fields are filled in. QR codes are auto-generated when these fields are valid.</div>
+            </div>
+            <div class="faq-item" onclick="this.classList.toggle('active')">
+                <h3>13. Can I change my username or password? <span class="arrow"> ❯ </span></h3>
+                <div class="content">Yes. In the Profile section, update your username or password. The system ensures usernames are unique, and passwords must match the confirmation field.</div>
+            </div>
+            <div class="faq-item" onclick="this.classList.toggle('active')">
+                <h3>14. How do I contact support? <span class="arrow"> ❯ </span></h3>
+                <div class="content">For further assistance, email student.attendance.monitoring.sys@gmail.com</div>
             </div>
             <div class="faq-item" onclick="this.classList.toggle('active')">
                 <h3>How does the ARIMA forecasting feature work? <span class="arrow"> ❯ </span></h3>
@@ -190,10 +238,6 @@
             <div class="faq-item" onclick="this.classList.toggle('active')">
                 <h3>How can I identify at-risk students? <span class="arrow"> ❯ </span></h3>
                 <div class="content">The system’s risk assessment tool highlights students with frequent absences or irregular attendance patterns. Check the Teacher Dashboard for alerts and detailed reports to take timely action.</div>
-            </div>
-            <div class="faq-item" onclick="this.classList.toggle('active')">
-                <h3>What should I do if I encounter technical issues? <span class="arrow"> ❯ </span></h3>
-                <div class="content">Contact our support team at student.attendance.monitoring.sys@gmail.com or call 0910-031-0621. Provide details of the issue, and we’ll assist you promptly.</div>
             </div>
         </div>
     </section>

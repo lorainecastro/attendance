@@ -312,7 +312,7 @@ if (isset($_POST['export_pdf'])) {
 
     <!-- Export Button -->
     <form method="post">
-        <button type="submit" name="export_pdf" class="export-button">Export Manual as PDF</button>
+        <button type="submit" name="export_pdf" class="export-button">Export User Manual</button>
     </form>
 
     <!-- FAQ Section -->

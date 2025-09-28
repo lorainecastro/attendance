@@ -87,11 +87,116 @@
             background: var(--primary-gradient); 
             border-radius: var(--radius-sm); 
         }
+
+        .faq {
+            background-color: var(--background);
+            padding: var(--spacing-2xl) var(--spacing-xl);
+        }
+
+        .faq h2 {
+            font-size: var(--font-size-2xl);
+            font-weight: 800;
+            text-align: center;
+            margin-bottom: var(--spacing-lg);
+            color: var(--blackfont-color);
+        }
+
+        .faq p {
+            font-size: var(--font-size-lg);
+            color: var(--grayfont-color);
+            text-align: center;
+            margin-bottom: var(--spacing-xl);
+            max-width: 800px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .faq .grid {
+            max-width: 1280px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: var(--spacing-lg);
+        }
+
+        .faq-item {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            padding: var(--spacing-md);
+            cursor: pointer;
+            transition: var(--transition-normal);
+        }
+
+        .faq-item:hover {
+            background-color: var(--inputfieldhover-color);
+        }
+
+        .faq-item h3 {
+            font-size: var(--font-size-lg);
+            font-weight: 600;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .faq-item .content {
+            display: none;
+            margin-top: var(--spacing-sm);
+            font-size: var(--font-size-base);
+            color: var(--grayfont-color);
+        }
+
+        .faq-item.active .content {
+            display: block;
+        }
+
+        .arrow {
+            transition: transform var(--transition-fast);
+        }
+
+        .faq-item.active .arrow {
+            transform: rotate(180deg);
+        }
+
+        @media (max-width: 992px) {
+            .faq .grid {
+                grid-template-columns: 1fr;
+            }
+        }
     </style>
 </head>
 
 <body>
     <h1>Help & Support</h1>
+
+    <!-- FAQ Section -->
+    <section id="faq" class="faq">
+        <h2>Frequently Asked Questions</h2>
+        <p>Find answers to common questions about using the Student Attendance Monitoring System. For further assistance, contact us via the Contact Page.</p>
+        <div class="grid">
+            <div class="faq-item" onclick="this.classList.toggle('active')">
+                <h3>How do I mark attendance using the QR code feature? <span class="arrow"> ❯ </span></h3>
+                <div class="content">Log in to your teacher account on https://attendancemonitoring.site, navigate to the attendance section, and scan the student's QR code using a compatible device. The system will automatically record the attendance in real-time.</div>
+            </div>
+            <div class="faq-item" onclick="this.classList.toggle('active')">
+                <h3>Can I manually record attendance if QR codes are not available? <span class="arrow"> ❯ </span></h3>
+                <div class="content">Yes, you can manually mark attendance by accessing the class roster on the platform, selecting the student, and updating their attendance status (Present, Absent, or Late).</div>
+            </div>
+            <div class="faq-item" onclick="this.classList.toggle('active')">
+                <h3>How does the ARIMA forecasting feature work? <span class="arrow"> ❯ </span></h3>
+                <div class="content">The ARIMA-based Time Series Forecasting analyzes historical attendance data to predict future patterns. Access the analytics dashboard to view trends and forecasts for your class or individual students.</div>
+            </div>
+            <div class="faq-item" onclick="this.classList.toggle('active')">
+                <h3>How can I identify at-risk students? <span class="arrow"> ❯ </span></h3>
+                <div class="content">The system’s risk assessment tool highlights students with frequent absences or irregular attendance patterns. Check the Teacher Dashboard for alerts and detailed reports to take timely action.</div>
+            </div>
+            <div class="faq-item" onclick="this.classList.toggle('active')">
+                <h3>What should I do if I encounter technical issues? <span class="arrow"> ❯ </span></h3>
+                <div class="content">Contact our support team at student.attendance.monitoring.sys@gmail.com or call 0910-031-0621. Provide details of the issue, and we’ll assist you promptly.</div>
+            </div>
+        </div>
+    </section>
 </body>
 
 </html>

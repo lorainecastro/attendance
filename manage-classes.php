@@ -2046,7 +2046,8 @@ ob_end_flush();
         .import-note {
             display: block;
             color: var(--grayfont-color);
-            font-size: 0.85rem;
+            font-size: 0.90rem;
+            font-weight: bold;
             line-height: 1.2;
             margin-top: 0.5rem;
         }

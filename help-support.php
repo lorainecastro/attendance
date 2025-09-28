@@ -176,7 +176,7 @@ if (isset($_POST['export_pdf'])) {
 
     $html .= '</div>';
     $pdf->writeHTML($html, true, false, true, false, '');
-    $pdf->Output('help-support-manual-' . date('Y-m-d_H-i-s') . '.pdf', 'D');
+    $pdf->Output('SAMS-User-Manual-' . date('Y-m-d_H-i-s') . '.pdf', 'D');
     exit();
 }
 ?>

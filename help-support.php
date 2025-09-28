@@ -231,14 +231,6 @@
                 <h3>14. How do I contact support? <span class="arrow"> ❯ </span></h3>
                 <div class="content">For further assistance, email student.attendance.monitoring.sys@gmail.com</div>
             </div>
-            <div class="faq-item" onclick="this.classList.toggle('active')">
-                <h3>How does the ARIMA forecasting feature work? <span class="arrow"> ❯ </span></h3>
-                <div class="content">The ARIMA-based Time Series Forecasting analyzes historical attendance data to predict future patterns. Access the analytics dashboard to view trends and forecasts for your class or individual students.</div>
-            </div>
-            <div class="faq-item" onclick="this.classList.toggle('active')">
-                <h3>How can I identify at-risk students? <span class="arrow"> ❯ </span></h3>
-                <div class="content">The system’s risk assessment tool highlights students with frequent absences or irregular attendance patterns. Check the Teacher Dashboard for alerts and detailed reports to take timely action.</div>
-            </div>
         </div>
     </section>
 </body>

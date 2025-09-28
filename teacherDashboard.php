@@ -982,6 +982,10 @@ $at_risk_students = getAtRiskStudents($pdo, $currentUser['teacher_id']);
                         <i class="fas fa-user"></i>
                         <span>View Profile</span>
                     </a>
+                    <a href="#" class="profile-dropdown-item profile-menu-item">
+                        <i class="fas fa-question-circle"></i>
+                        <span>Help & Support</span>
+                    </a>
                     <a href="#" class="profile-dropdown-item logout profile-menu-item">
                         <i class="fas fa-sign-out-alt"></i>
                         <span>Logout</span>

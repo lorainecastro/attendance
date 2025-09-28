@@ -1156,7 +1156,8 @@ $at_risk_students = getAtRiskStudents($pdo, $currentUser['teacher_id']);
                     let pageFile;
                     switch (index) {
                         case 0: pageFile = 'profile.php'; break;
-                        case 1:
+                        case 1: pageFile = 'help-support.php'; break;
+                        case 2:
                             if (confirm('Are you sure you want to log out?')) {
                                 window.location.href = 'destroyer.php';
                             }

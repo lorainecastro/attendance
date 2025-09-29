@@ -89,7 +89,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             
             // Send email if QR-scanned and Present (only if within grace period)
             if ($is_qr_scanned && $status === 'Present') {
-                $stmt = $pdo->prepare("SELECT parent_email, CONCAT(first_name, ' ', last_name) AS name FROM students WHERE lrn = ?");
+                $stmt = $pdo->prepare("SELECT parent_email, full_name FROM students WHERE lrn = ?");
                 $stmt->execute([$lrn]);
                 $student = $stmt->fetch(PDO::FETCH_ASSOC);
                 if ($student && $student['parent_email']) {
@@ -109,7 +109,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $mail->Body = "
                             <h3>Attendance Notification</h3>
                             <p>Dear Parent/Guardian,</p>
-                            <p>Your child, {$student['name']}, has been marked {$status} for the class on {$date} at {$time_checked}.</p>
+                            <p>Your child, {$student['full_name']}, has been marked {$status} for the class on {$date} at {$time_checked}.</p>
                             <p>Thank you,<br>SAMS Team</p>
                         ";
                         $mail->send();
@@ -146,7 +146,7 @@ $students_by_class = [];
 foreach ($classes_fetch as $class) {
     $class_id = $class['class_id'];
     $stmt = $pdo->prepare("
-        SELECT s.lrn, CONCAT(s.last_name, ', ', s.first_name, ' ', s.middle_name) AS name, s.photo, s.parent_email 
+        SELECT s.lrn, s.full_name, s.photo, s.parent_email 
         FROM students s 
         JOIN class_students cs ON s.lrn = cs.lrn 
         WHERE cs.class_id = ?
@@ -1889,9 +1889,9 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
                 const matchesStatus = statusFilter ? att.status === statusFilter : true;
                 const matchesSearch = searchQuery ? 
                     s.lrn.toString().includes(searchQuery) || 
-                    s.name.toLowerCase().includes(searchQuery) : true;
+                    s.full_name.toLowerCase().includes(searchQuery) : true;
                 return matchesStatus && matchesSearch;
-            }).sort((a, b) => a.name.localeCompare(b.name));
+            }).sort((a, b) => a.full_name.localeCompare(b.full_name));
         }
 
         function updateSelectAllState() {
@@ -2124,9 +2124,9 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
                 const row = document.createElement('tr');
                 row.innerHTML = `
                     <td><input type="checkbox" class="select-student" data-id="${student.lrn}" ${isChecked} ${!isEditable ? 'disabled' : ''}></td>
-                    <td><img src="uploads/${student.photo || 'no-icon.png'}" class="student-photo" alt="${student.name}" onerror="this.src='uploads/no-icon.png'"></td>
+                    <td><img src="uploads/${student.photo || 'no-icon.png'}" class="student-photo" alt="${student.full_name}" onerror="this.src='uploads/no-icon.png'"></td>
                     <td>${student.lrn}</td>
-                    <td>${student.name}</td>
+                    <td>${student.full_name}</td>
                     <td>
                         <select class="status-select ${statusClass}" data-id="${student.lrn}" ${!isEditable ? 'disabled' : ''}>
                             <option value="" ${att.status === '' ? 'selected' : ''}>Select Status</option>
@@ -2393,7 +2393,7 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
 
             if (student) {
                 if (scannedStudents.has(lrn) || attendanceData[today][current_class_id][lrn]?.is_qr_scanned) {
-                    showNotification(`Student ${student.name} already scanned today.`, 'error');
+                    showNotification(`Student ${student.full_name} already scanned today.`, 'error');
                     setTimeout(() => { isProcessingScan = false; }, 1000); // Reset after 1 second
                 } else {
                     const now = new Date();
@@ -2405,12 +2405,12 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
                         
                         if (now > graceEnd) {
                             status = 'Late';
-                            showNotification(`Student ${student.name} marked as Late (after grace period).`, 'warning');
+                            showNotification(`Student ${student.full_name} marked as Late (after grace period).`, 'warning');
                         } else {
-                            showNotification(`Student ${student.name} marked as Present (within grace period).`, 'success');
+                            showNotification(`Student ${student.full_name} marked as Present (within grace period).`, 'success');
                         }
                     } else {
-                        showNotification(`Student ${student.name} marked as Present.`, 'success');
+                        showNotification(`Student ${student.full_name} marked as Present.`, 'success');
                     }
                     
                     attendanceData[today][current_class_id][lrn] = {
@@ -2424,7 +2424,7 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
                     };
                     
                     scannedStudents.add(lrn);
-                    showNotification(`Student ${student.name} marked as Present. Email sent to parent.`, 'success');
+                    showNotification(`Student ${student.full_name} marked as Present. Email sent to parent.`, 'success');
 
                     // Submit to database immediately
                     const data = {};

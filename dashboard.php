@@ -162,7 +162,7 @@ $earliest_date = date('Y-m-d');
 $stmt = $pdo->prepare("
     SELECT a.class_id, a.attendance_date, a.lrn, a.attendance_status, a.time_checked, a.is_qr_scanned,
            sch.start_time, sch.grace_period_minutes, sch.end_time,
-           s.first_name, s.last_name
+           s.full_name
     FROM attendance_tracking a 
     JOIN classes c ON a.class_id = c.class_id 
     LEFT JOIN schedules sch ON c.class_id = sch.class_id AND DATE_FORMAT(a.attendance_date, '%W') = LOWER(sch.day)
@@ -356,7 +356,7 @@ foreach ($attendance_raw_data as $record) {
         'status' => $record['attendance_status'],
         'time_checked' => $record['time_checked'],
         'is_qr_scanned' => $record['is_qr_scanned'],
-        'student_name' => trim($record['first_name'] . ' ' . $record['last_name'])
+        'student_name' => trim($record['full_name'] ?? 'Unknown') // Use full_name directly
     ];
 }
 

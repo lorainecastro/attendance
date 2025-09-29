@@ -75,7 +75,7 @@ function getAtRiskStudents($pdo, $teacher_id) {
 
         // Fetch students in the class
         $student_stmt = $pdo->prepare("
-            SELECT s.lrn, s.last_name, s.first_name, s.middle_name
+            SELECT s.lrn, s.full_name
             FROM class_students cs
             JOIN students s ON cs.lrn = s.lrn
             WHERE cs.class_id = ?
@@ -133,7 +133,7 @@ function getAtRiskStudents($pdo, $teacher_id) {
     // Fetch at-risk students from notifications with explicit collation
     $fetch_stmt = $pdo->prepare("
         SELECT n.lrn AS id,
-               TRIM(CONCAT(s.first_name, ' ', COALESCE(s.middle_name, ''), ' ', s.last_name)) AS fullName,
+               s.full_name AS fullName,
                c.grade_level AS gradeLevel,
                sub.subject_name AS subject,
                c.section_name AS section,
@@ -1031,9 +1031,9 @@ $at_risk_students = getAtRiskStudents($pdo, $currentUser['teacher_id']);
                 },
                 status: 'active',
                 students: [
-                    { id: 1, firstName: 'John', lastName: 'Doe', email: 'john.doe@email.com' },
-                    { id: 2, firstName: 'Jane', lastName: 'Smith', email: 'jane.smith@email.com' },
-                    { id: 3, firstName: 'Mike', lastName: 'Johnson', email: 'mike.johnson@email.com' }
+                    { id: 1, fullName: 'John Doe', email: 'john.doe@email.com' },
+                    { id: 2, fullName: 'Jane Smith', email: 'jane.smith@email.com' },
+                    { id: 3, fullName: 'Mike Johnson', email: 'mike.johnson@email.com' }
                 ]
             },
             {
@@ -1050,8 +1050,8 @@ $at_risk_students = getAtRiskStudents($pdo, $currentUser['teacher_id']);
                 },
                 status: 'active',
                 students: [
-                    { id: 4, firstName: 'Alice', lastName: 'Brown', email: 'alice.brown@email.com' },
-                    { id: 5, firstName: 'Bob', lastName: 'Wilson', email: 'bob.wilson@email.com' }
+                    { id: 4, fullName: 'Alice Brown', email: 'alice.brown@email.com' },
+                    { id: 5, fullName: 'Bob Wilson', email: 'bob.wilson@email.com' }
                 ]
             },
             {
@@ -1068,20 +1068,18 @@ $at_risk_students = getAtRiskStudents($pdo, $currentUser['teacher_id']);
                 },
                 status: 'inactive',
                 students: [
-                    { id: 6, firstName: 'Carol', lastName: 'Davis', email: 'carol.davis@email.com' },
-                    { id: 7, firstName: 'David', lastName: 'Miller', email: 'david.miller@email.com' },
-                    { id: 8, firstName: 'Emma', lastName: 'Garcia', email: 'emma.garcia@email.com' },
-                    { id: 9, firstName: 'Frank', lastName: 'Rodriguez', email: 'frank.rodriguez@email.com' }
+                    { id: 6, fullName: 'Carol Davis', email: 'carol.davis@email.com' },
+                    { id: 7, fullName: 'David Miller', email: 'david.miller@email.com' },
+                    { id: 8, fullName: 'Emma Garcia', email: 'emma.garcia@email.com' },
+                    { id: 9, fullName: 'Frank Rodriguez', email: 'frank.rodriguez@email.com' }
                 ]
             }
         ];
 
         let students = classes.flatMap(cls => cls.students.map(student => ({
             id: student.id,
-            firstName: student.firstName,
-            lastName: student.lastName,
+            fullName: student.fullName, // Changed from firstName + lastName to fullName
             email: student.email || '',
-            fullName: `${student.firstName} ${student.lastName}`,
             gender: student.gender || 'Male',
             dob: student.dob || '2010-01-01',
             gradeLevel: cls.gradeLevel,

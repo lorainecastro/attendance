@@ -40,7 +40,7 @@ $students_by_class = [];
 foreach ($classes_fetch as $class) {
     $class_id = $class['class_id'];
     $stmt = $pdo->prepare("
-        SELECT s.lrn, CONCAT(s.last_name, ', ', s.first_name, ' ', s.middle_name) AS name, s.photo 
+        SELECT s.lrn, s.full_name, s.photo 
         FROM students s 
         JOIN class_students cs ON s.lrn = cs.lrn 
         WHERE cs.class_id = ?
@@ -739,9 +739,9 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
                 const matchesStatus = statusFilter ? att.status === statusFilter : true;
                 const matchesSearch = searchQuery ? 
                     s.lrn.toString().includes(searchQuery) || 
-                    s.name.toLowerCase().includes(searchQuery) : true;
+                    s.full_name.toLowerCase().includes(searchQuery) : true; // Changed from s.name to s.full_name
                 return matchesStatus && matchesSearch;
-            }).sort((a, b) => a.name.localeCompare(b.name));
+            }).sort((a, b) => a.full_name.localeCompare(b.full_name)); // Changed from a.name to a.full_name
         }
 
         function calcAttendanceRate(class_id, lrn) {
@@ -845,9 +845,9 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
                 const rate = calcAttendanceRate(student.class_id, student.lrn);
                 const row = document.createElement('tr');
                 row.innerHTML = `
-                    <td><img src="uploads/${student.photo || 'no-icon.png'}" class="student-photo" alt="${student.name}"></td>
+                    <td><img src="uploads/${student.photo || 'no-icon.png'}" class="student-photo" alt="${student.full_name}"></td>
                     <td>${student.lrn}</td>
-                    <td>${student.name}</td>
+                    <td>${student.full_name}</td>
                     <td><span class="status-badge status-${statusClass}">${att.status || 'None'}</span></td>
                     <td>${att.timeChecked || '-'}</td>
                 `;

@@ -108,16 +108,14 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action']) && $_POST['a
     ob_clean();
 
     $lrn = $_POST['lrn'] ?? '';
-    $last_name = $_POST['last_name'] ?? '';
-    $first_name = $_POST['first_name'] ?? '';
-    $middle_name = $_POST['middle_name'] ?? '';
+    $full_name = $_POST['full_name'] ?? '';
 
-    if (empty($lrn) || empty($last_name) || empty($first_name)) {
+    if (empty($lrn) || empty($full_name)) {
         echo json_encode(['success' => false, 'message' => 'Missing required fields for QR generation']);
         exit();
     }
 
-    $content = "$lrn, $last_name, $first_name" . ($middle_name ? " $middle_name" : '');
+    $content = "$lrn, $full_name";
 
     try {
         $qrCode = new QrCode($content);
@@ -156,7 +154,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action']) && $_POST['a
         foreach ($students_data as $data) {
             $lrn = $data['lrn'] ?? '';
             $qr_code = $data['qr_code'] ?? $lrn . '.png';
-            $stmt = $pdo->prepare("SELECT lrn, first_name, middle_name, last_name FROM students WHERE lrn = ?");
+            $stmt = $pdo->prepare("SELECT lrn, full_name FROM students WHERE lrn = ?");
             $stmt->execute([$lrn]);
             $student = $stmt->fetch(PDO::FETCH_ASSOC);
             if ($student) {
@@ -274,8 +272,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action']) && $_POST['a
             $pdf->SetXY($x, $lrn_y);
             $pdf->Cell($card_width, 6, 'LRN: ' . $student['lrn'], 0, 1, 'C');
 
-            // Full Name
-            $full_name = $student['last_name'] . ', ' . $student['first_name'] . ' ' . ($student['middle_name'] ?: '');
+            $full_name = $student['full_name'];
             $name_length = strlen($full_name);
             $font_size = $name_length > 30 ? 8 : ($name_length > 25 ? 9 : ($name_length > 20 ? 10 : 11));
             $pdf->SetFont('helvetica', 'B', $font_size);
@@ -372,7 +369,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action']) && $_POST['a
             JOIN subjects sub ON c.subject_id = sub.subject_id
             JOIN students s ON cs.lrn = s.lrn
             WHERE c.teacher_id = ? AND s.lrn IN ($placeholders)
-            ORDER BY s.last_name, s.first_name
+            ORDER BY s.full_name
         ");
 
         $params = array_merge([$teacher_id], $lrns);
@@ -392,23 +389,20 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action']) && $_POST['a
         // Set headers
         $headers = [
             'A1' => 'LRN',
-            'B1' => 'Last Name',
-            'C1' => 'First Name',
-            'D1' => 'Middle Name',
-            'E1' => 'Email',
-            'F1' => 'Gender',
-            'G1' => 'Date of Birth',
-            'H1' => 'Grade Level',
-            'I1' => 'Address',
-            'J1' => 'Parent Name',
-            'K1' => 'Parent Email', // Add this line
-            'L1' => 'Emergency Contact',
-            'M1' => 'Photo',
-            'N1' => 'QR Code',
-            'O1' => 'Date Added' // Update this from N1 to O1
+            'B1' => 'Full Name',
+            'C1' => 'Email',
+            'D1' => 'Gender',
+            'E1' => 'Date of Birth',
+            'F1' => 'Grade Level',
+            'G1' => 'Address',
+            'H1' => 'Parent Name',
+            'I1' => 'Parent Email',
+            'J1' => 'Emergency Contact',
+            'K1' => 'Photo',
+            'L1' => 'QR Code',
+            'M1' => 'Date Added'
         ];
 
-        // Apply headers with styling
         foreach ($headers as $cell => $value) {
             $sheet->setCellValue($cell, $value);
         }
@@ -435,24 +429,21 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action']) && $_POST['a
                 ],
             ],
         ];
-        $sheet->getStyle('A1:N1')->applyFromArray($headerStyle);
+        $sheet->getStyle('A1:M1')->applyFromArray($headerStyle);
 
-        // Set column widths
         $sheet->getColumnDimension('A')->setWidth(15); // LRN
-        $sheet->getColumnDimension('B')->setWidth(20); // Last Name
-        $sheet->getColumnDimension('C')->setWidth(20); // First Name
-        $sheet->getColumnDimension('D')->setWidth(20); // Middle Name
-        $sheet->getColumnDimension('E')->setWidth(25); // Email
-        $sheet->getColumnDimension('F')->setWidth(10); // Gender
-        $sheet->getColumnDimension('G')->setWidth(15); // DOB
-        $sheet->getColumnDimension('H')->setWidth(12); // Grade Level
-        $sheet->getColumnDimension('I')->setWidth(30); // Address
-        $sheet->getColumnDimension('J')->setWidth(25); // Parent Name
-        $sheet->getColumnDimension('K')->setWidth(25); // Parent Email
-        $sheet->getColumnDimension('L')->setWidth(20); // Emergency Contact (moved from K)
-        $sheet->getColumnDimension('M')->setWidth(15); // Photo (moved from L)
-        $sheet->getColumnDimension('N')->setWidth(15); // QR Code (moved from M)
-        $sheet->getColumnDimension('O')->setWidth(15); // Date Added (moved from N)
+        $sheet->getColumnDimension('B')->setWidth(30); // Full Name
+        $sheet->getColumnDimension('C')->setWidth(25); // Email
+        $sheet->getColumnDimension('D')->setWidth(10); // Gender
+        $sheet->getColumnDimension('E')->setWidth(15); // DOB
+        $sheet->getColumnDimension('F')->setWidth(12); // Grade Level
+        $sheet->getColumnDimension('G')->setWidth(30); // Address
+        $sheet->getColumnDimension('H')->setWidth(25); // Parent Name
+        $sheet->getColumnDimension('I')->setWidth(25); // Parent Email
+        $sheet->getColumnDimension('J')->setWidth(20); // Emergency Contact
+        $sheet->getColumnDimension('K')->setWidth(15); // Photo 
+        $sheet->getColumnDimension('L')->setWidth(15); // QR Code
+        $sheet->getColumnDimension('M')->setWidth(15); // Date Added
         $sheet->getRowDimension(1)->setRowHeight(20);
         // Fill data
         $row = 2;
@@ -460,25 +451,23 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action']) && $_POST['a
             // $sheet->setCellValue('A' . $row, $student['lrn']);
             $sheet->setCellValue('A' . $row, (int)$student['lrn']);
             $sheet->getStyle('A' . $row)->getNumberFormat()->setFormatCode('0');
-            $sheet->setCellValue('B' . $row, $student['last_name']);
-            $sheet->setCellValue('C' . $row, $student['first_name']);
-            $sheet->setCellValue('D' . $row, $student['middle_name']);
-            $sheet->setCellValue('E' . $row, $student['email'] ?: 'N/A');
-            $sheet->setCellValue('F' . $row, $student['gender'] ?: 'N/A');
-            $sheet->setCellValue('G' . $row, $student['dob'] ? date('Y-m-d', strtotime($student['dob'])) : 'N/A');
-            $sheet->setCellValue('H' . $row, $student['grade_level']);
-            $sheet->setCellValue('I' . $row, $student['address'] ?: 'N/A');
-            $sheet->setCellValue('J' . $row, $student['parent_name'] ?: 'N/A');
-            $sheet->setCellValue('K' . $row, $student['parent_email'] ?: 'N/A'); // Add this line
-            $sheet->setCellValue('L' . $row, $student['emergency_contact'] ?: 'N/A'); // Update from K to L
-            $sheet->setCellValue('M' . $row, $student['photo'] ?: 'no-icon.png'); // Update from L to M
-            $sheet->setCellValue('N' . $row, $student['qr_code'] ?: 'No QR Code'); // Update from M to N
-            $sheet->setCellValue('O' . $row, $student['date_added'] ? date('Y-m-d', strtotime($student['date_added'])) : 'N/A'); // Update from N to O
+            $sheet->setCellValue('B' . $row, $student['full_name']);
+            $sheet->setCellValue('C' . $row, $student['email'] ?: 'N/A');
+            $sheet->setCellValue('D' . $row, $student['gender'] ?: 'N/A');
+            $sheet->setCellValue('E' . $row, $student['dob'] ? date('Y-m-d', strtotime($student['dob'])) : 'N/A');
+            $sheet->setCellValue('F' . $row, $student['grade_level']);
+            $sheet->setCellValue('G' . $row, $student['address'] ?: 'N/A');
+            $sheet->setCellValue('H' . $row, $student['parent_name'] ?: 'N/A');
+            $sheet->setCellValue('I' . $row, $student['parent_email'] ?: 'N/A');
+            $sheet->setCellValue('J' . $row, $student['emergency_contact'] ?: 'N/A');
+            $sheet->setCellValue('K' . $row, $student['photo'] ?: 'no-icon.png');
+            $sheet->setCellValue('L' . $row, $student['qr_code'] ?: 'No QR Code');
+            $sheet->setCellValue('M' . $row, $student['date_added'] ? date('Y-m-d', strtotime($student['date_added'])) : 'N/A');
             $row++;
         }
 
         // Apply borders to all data
-        $dataRange = 'A1:O' . ($row - 1); // Update from N to O
+        $dataRange = 'A1:M' . ($row - 1);
         $dataStyle = [
             'borders' => [
                 'allBorders' => [
@@ -495,7 +484,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action']) && $_POST['a
         // Alternate row colors
         for ($i = 2; $i < $row; $i++) {
             if ($i % 2 == 0) {
-                $sheet->getStyle('A' . $i . ':O' . $i)->applyFromArray([ // Update from N to O
+                $sheet->getStyle('A' . $i . ':M' . $i)->applyFromArray([
                     'fill' => [
                         'fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID,
                         'startColor' => ['rgb' => 'F8FAFC'],
@@ -580,7 +569,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action']) && $_POST['a
 
     try {
         $pdo = getDBConnection();
-        $stmt = $pdo->prepare("SELECT lrn, first_name, middle_name, last_name FROM students WHERE lrn = ?");
+        $stmt = $pdo->prepare("SELECT lrn, full_name FROM students WHERE lrn = ?");
         $stmt->execute([$lrn]);
         $student = $stmt->fetch(PDO::FETCH_ASSOC);
         if (!$student) {
@@ -610,7 +599,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action']) && $_POST['a
 
         $pdf->SetXY($x, $y);
         $pdf->SetFont('helvetica', '', 10);
-        $pdf->Cell($card_width, 6, $student['last_name'] . ', ' . $student['first_name'] . ' ' . ($student['middle_name'] ?: ''), 0, 1, 'C');
+        $pdf->Cell($card_width, 6, $student['full_name'], 0, 1, 'C');
         $pdf->SetXY($x, $y + 6);
         $pdf->Cell($card_width, 6, 'LRN: ' . $student['lrn'], 0, 1, 'C');
         $pdf->Image($qr_path, $x + ($card_width - 40) / 2, $y + 12, 40, 40, 'PNG');
@@ -640,9 +629,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['lrn']) && !isset($_POS
 
     $pdo = getDBConnection();
     $lrn = $_POST['lrn'];
-    $last_name = $_POST['last_name'] ?? '';
-    $first_name = $_POST['first_name'] ?? '';
-    $middle_name = $_POST['middle_name'] ?? '';
+    $full_name = $_POST['full_name'] ?? '';
     $email = $_POST['email'] ?? null;
     $gender = $_POST['gender'] ?? null;
     $dob = $_POST['dob'] ?? null;
@@ -656,7 +643,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['lrn']) && !isset($_POS
     $qr_code = $_POST['qr_code'] ?? null;
 
     // Validate required fields
-    if (empty($lrn) || empty($last_name) || empty($first_name) || empty($middle_name) || empty($grade_level) || empty($class) || empty($section)) {
+    if (empty($lrn) || empty($full_name) || empty($grade_level) || empty($class) || empty($section)) {
         echo json_encode(['success' => false, 'message' => 'Missing required fields']);
         exit();
     }
@@ -707,17 +694,15 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['lrn']) && !isset($_POS
             }
             $stmt = $pdo->prepare("
                 UPDATE students SET 
-                    last_name = ?, first_name = ?, middle_name = ?, email = ?, 
-                    gender = ?, dob = ?, grade_level = ?, address = ?, 
-                    parent_name = ?, parent_email = ?, emergency_contact = ?, photo = ?,
-                    qr_code = ?
+                    full_name = ?, email = ?, gender = ?, dob = ?, grade_level = ?, 
+                    address = ?, parent_name = ?, parent_email = ?, emergency_contact = ?, 
+                    photo = ?, qr_code = ?
                 WHERE lrn = ?
             ");
             $stmt->execute([
-                $last_name, $first_name, $middle_name, $email,
-                $gender, $dob, $grade_level, $address,
-                $parent_name, $parent_email, $emergency_contact, $photo,
-                $qr_code, $lrn
+                $full_name, $email, $gender, $dob, $grade_level, 
+                $address, $parent_name, $parent_email, $emergency_contact, 
+                $photo, $qr_code, $lrn
             ]);
 
             // Get current class_id for the student
@@ -766,14 +751,13 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['lrn']) && !isset($_POS
             // Insert new student
             $stmt = $pdo->prepare("
                 INSERT INTO students (
-                    lrn, last_name, first_name, middle_name, email, gender, 
-                    dob, grade_level, address, parent_name, parent_email, emergency_contact, 
-                    photo, qr_code, date_added
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURDATE())
+                    lrn, full_name, email, gender, dob, grade_level, address, 
+                    parent_name, parent_email, emergency_contact, photo, qr_code, date_added
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURDATE())
             ");
             $stmt->execute([
-                $lrn, $last_name, $first_name, $middle_name, $email, $gender,
-                $dob, $grade_level, $address, $parent_name, $parent_email, $emergency_contact,
+                $lrn, $full_name, $email, $gender, $dob, $grade_level, 
+                $address, $parent_name, $parent_email, $emergency_contact, 
                 $photo, $qr_code
             ]);
 
@@ -830,7 +814,7 @@ $stmt = $pdo->prepare("
 $stmt->execute([$teacher_id]);
 $students_data = $stmt->fetchAll();
 foreach ($students_data as &$row) {
-    $row['fullName'] = $row['last_name'] . ', ' . $row['first_name'] . ' ' . $row['middle_name'];
+    $row['fullName'] = $row['full_name'];
 }
 
 // Fetch classes data for dynamic dropdowns
@@ -2003,16 +1987,8 @@ $total_unique_students = $unique_students_stmt->fetchColumn();
                             </div>
                         </div>
                         <div class="form-group">
-                            <label class="form-label">First Name<span class="required-asterisk"> *</span></label>
-                            <input type="text" class="form-input" id="first-name" name="first_name" required>
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Middle Name<span class="required-asterisk"> *</span></label>
-                            <input type="text" class="form-input" id="middle-name" name="middle_name" required>
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Last Name<span class="required-asterisk"> *</span></label>
-                            <input type="text" class="form-input" id="last-name" name="last_name" required>
+                            <label class="form-label">Full Name<span class="required-asterisk"> *</span></label>
+                            <input type="text" class="form-input" id="full_name" name="full_name" required>
                         </div>
                         <div class="form-group">
                             <label class="form-label">Email<span class="required-asterisk"> *</span></label>
@@ -2173,62 +2149,10 @@ $total_unique_students = $unique_students_stmt->fetchColumn();
             applyFilters();
             setupEventListeners();
             document.querySelector('#studentForm').addEventListener('submit', saveStudent);
-            document.getElementById('student-id').addEventListener('change', autoFillStudent);
             document.getElementById('grade-level').addEventListener('change', updateSectionOptions);
             document.getElementById('section').addEventListener('change', updateSubjectOptions);
         });
 
-        // Auto fill student on LRN change
-        // function autoFillStudent() {
-        //     const lrn = this.value;
-        //     if (lrn) {
-        //         fetch(`?lrn=${lrn}`)
-        //             .then(res => {
-        //                 if (!res.ok) {
-        //                     return res.text().then(text => {
-        //                         console.error('Non-JSON response:', text);
-        //                         throw new Error(`HTTP error! Status: ${res.status}`);
-        //                     });
-        //                 }
-        //                 return res.json();
-        //             })
-        //             .then(data => {
-        //                 if (data.success) {
-        //                     const student = data.student;
-        //                     document.getElementById('first-name').value = student.first_name;
-        //                     document.getElementById('middle-name').value = student.middle_name;
-        //                     document.getElementById('last-name').value = student.last_name;
-        //                     document.getElementById('email').value = student.email || '';
-        //                     document.getElementById('gender').value = student.gender || 'Male';
-        //                     document.getElementById('dob').value = student.dob || '';
-        //                     document.getElementById('address').value = student.address || '';
-        //                     document.getElementById('parent-name').value = student.parent_name || '';
-        //                     document.getElementById('emergency-contact').value = student.emergency_contact || '';
-        //                     document.getElementById('grade-level').value = student.grade_level || '';
-        //                     document.getElementById('grade-level').dispatchEvent(new Event('change'));
-        //                     document.getElementById('student-photo-preview').src = student.photo ?
-        //                         'uploads/' + student.photo :
-        //                         'uploads/no-icon.png';
-        //                 } else {
-        //                     document.getElementById('first-name').value = '';
-        //                     document.getElementById('middle-name').value = '';
-        //                     document.getElementById('last-name').value = '';
-        //                     document.getElementById('email').value = '';
-        //                     document.getElementById('gender').value = 'Male';
-        //                     document.getElementById('dob').value = '';
-        //                     document.getElementById('address').value = '';
-        //                     document.getElementById('parent-name').value = '';
-        //                     document.getElementById('emergency-contact').value = '';
-        //                     document.getElementById('student-photo-preview').src = 'uploads/no-icon.png';
-        //                 }
-        //             })
-        //             .catch(error => {
-        //                 console.error('Fetch error in autoFillStudent:', error);
-        //             });
-        //     }
-        // }
-
-        // Update section options based on grade
         function updateSectionOptions() {
             const grade = document.getElementById('grade-level').value;
             const availableSections = [...new Set(classes.filter(c => c.grade_level === grade).map(c => c.section_name))];
@@ -2757,7 +2681,6 @@ $total_unique_students = $unique_students_stmt->fetchColumn();
                 });
         }
 
-
         // Modified bulk delete function
         function bulkDelete() {
             if (allSelectedStudents.size === 0) {
@@ -2776,17 +2699,14 @@ $total_unique_students = $unique_students_stmt->fetchColumn();
             // Populate bulk delete modal
             const tableBody = document.getElementById('bulk-delete-table');
             tableBody.innerHTML = '';
-            selected.forEach(({
-                lrn,
-                class_id
-            }) => {
+            selected.forEach(({ lrn, class_id }) => {
                 const student = students.find(s => s.lrn == lrn && String(s.class_id) === String(class_id));
                 if (student) {
                     const row = document.createElement('tr');
                     row.innerHTML = `
-                <td><img src="${student.photo ? 'uploads/' + student.photo : 'uploads/no-icon.png'}" alt="${student.fullName}" style="width: 60px; height: 60px; border-radius: 50%; object-fit: cover;"></td>
+                <td><img src="${student.photo ? 'uploads/' + student.photo : 'uploads/no-icon.png'}" alt="${student.full_name}" style="width: 60px; height: 60px; border-radius: 50%; object-fit: cover;"></td>
                 <td>${student.lrn}</td>
-                <td>${student.fullName}</td>
+                <td>${student.full_name}</td>
                 <td>${student.gradeLevel}</td>
                 <td>${student.class}</td>
                 <td>${student.section}</td>
@@ -2854,10 +2774,7 @@ $total_unique_students = $unique_students_stmt->fetchColumn();
                     });
             } else if (mode === 'bulk') {
                 const lrns = JSON.parse(confirmBtn.dataset.lrns);
-                const groupedByClass = lrns.reduce((acc, {
-                    lrn,
-                    class_id
-                }) => {
+                const groupedByClass = lrns.reduce((acc, { lrn, class_id }) => {
                     acc[class_id] = acc[class_id] || [];
                     acc[class_id].push(lrn);
                     return acc;
@@ -2916,7 +2833,7 @@ $total_unique_students = $unique_students_stmt->fetchColumn();
             document.getElementById('delete-modal-title').textContent = 'Confirm Student Removal';
             document.getElementById('delete-student-photo').src = student.photo ? 'uploads/' + student.photo : 'uploads/no-icon.png';
             document.getElementById('delete-student-lrn').textContent = student.lrn;
-            document.getElementById('delete-student-name').textContent = student.fullName;
+            document.getElementById('delete-student-name').textContent = student.full_name;
             document.getElementById('delete-student-grade').textContent = student.gradeLevel;
             document.getElementById('delete-student-subject').textContent = student.class;
             document.getElementById('delete-student-section').textContent = student.section;
@@ -2927,13 +2844,12 @@ $total_unique_students = $unique_students_stmt->fetchColumn();
             document.getElementById('confirm-delete-btn').dataset.mode = 'single';
             document.getElementById('delete-modal').classList.add('show');
         }
+
         // Open profile modal
         function openProfileModal(mode, lrn = null) {
             const form = {
                 studentId: document.getElementById('student-id'),
-                firstName: document.getElementById('first-name'),
-                middleName: document.getElementById('middle-name'),
-                lastName: document.getElementById('last-name'),
+                fullName: document.getElementById('full_name'),
                 email: document.getElementById('email'),
                 gender: document.getElementById('gender'),
                 dob: document.getElementById('dob'),
@@ -2970,11 +2886,9 @@ $total_unique_students = $unique_students_stmt->fetchColumn();
                     return;
                 }
                 console.log('Student:', student);
-                document.getElementById('profile-modal-title').textContent = `${student.fullName}'s Profile`;
+                document.getElementById('profile-modal-title').textContent = `${student.full_name}'s Profile`;
                 form.studentId.value = student.lrn;
-                form.firstName.value = student.first_name;
-                form.middleName.value = student.middle_name;
-                form.lastName.value = student.last_name;
+                form.fullName.value = student.full_name || '';
                 form.email.value = student.email || '';
                 form.gender.value = student.gender || 'Male';
                 form.dob.value = student.dob || '';
@@ -3131,10 +3045,7 @@ $total_unique_students = $unique_students_stmt->fetchColumn();
 
             // Get student data from the form
             const lrn = document.getElementById('student-id').value;
-            const firstName = document.getElementById('first-name').value;
-            const middleName = document.getElementById('middle-name').value;
-            const lastName = document.getElementById('last-name').value;
-            const fullName = `${lastName}, ${firstName} ${middleName}`;
+            const fullName = document.getElementById('full_name').value;
 
             // Create a canvas to generate the ID card image
             const canvas = document.createElement('canvas');
@@ -3296,7 +3207,7 @@ $total_unique_students = $unique_students_stmt->fetchColumn();
 
                     // Set download attributes
                     downloadLink.href = url;
-                    downloadLink.download = `QR_ID_${lrn}_${lastName}_${firstName}_${middleName}.png`;
+                    downloadLink.download = `QR_ID_${lrn}_${fullName.replace(/\s+/g, '_')}.png`;
                     downloadLink.style.display = 'none';
 
                     // Append to body, click, and remove
@@ -3308,7 +3219,7 @@ $total_unique_students = $unique_students_stmt->fetchColumn();
                     URL.revokeObjectURL(url);
 
                     // Show success message with enhanced styling
-                    const successMsg = `✅ QR ID card generated successfully!\nFile: QR_ID_${lrn}_${lastName}_${firstName}_${middleName}.png`;
+                    const successMsg = `✅ QR ID card generated successfully!\nFile: QR_ID_${lrn}_${fullName.replace(/\s+/g, '_')}.png`;
                     alert(successMsg);
                 }, 'image/png', 1.0);
             };
@@ -3329,16 +3240,12 @@ $total_unique_students = $unique_students_stmt->fetchColumn();
             applyFilters();
             setupEventListeners();
             document.querySelector('#studentForm').addEventListener('submit', saveStudent);
-            // Remove or comment out the autoFillStudent listener
-            // document.getElementById('student-id').addEventListener('change', autoFillStudent);
             document.getElementById('grade-level').addEventListener('change', updateSectionOptions);
             document.getElementById('section').addEventListener('change', updateSubjectOptions);
 
             // Ensure QR code generation logic
             const lrnInput = document.getElementById('student-id');
-            const firstNameInput = document.getElementById('first-name');
-            const middleNameInput = document.getElementById('middle-name');
-            const lastNameInput = document.getElementById('last-name');
+            const fullNameInput = document.getElementById('full_name');
             const qrContainer = document.getElementById('qr-container');
             const qrCodeDiv = document.getElementById('qr-code');
             const qrCodeHidden = document.getElementById('qr_code_input') || (function() {
@@ -3352,17 +3259,15 @@ $total_unique_students = $unique_students_stmt->fetchColumn();
 
             function generateQR() {
                 const lrn = lrnInput.value.trim();
-                const first_name = firstNameInput.value.trim();
-                const middle_name = middleNameInput.value.trim();
-                const last_name = lastNameInput.value.trim();
+                const full_name = fullNameInput.value.trim();
 
-                if (lrn && first_name && last_name) {
+                if (lrn && full_name) {
                     fetch('', {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/x-www-form-urlencoded'
                         },
-                        body: `action=generateQR&lrn=${encodeURIComponent(lrn)}&first_name=${encodeURIComponent(first_name)}&middle_name=${encodeURIComponent(middle_name)}&last_name=${encodeURIComponent(last_name)}`
+                        body: `action=generateQR&lrn=${encodeURIComponent(lrn)}&full_name=${encodeURIComponent(full_name)}`
                     })
                     .then(res => res.json())
                     .then(data => {
@@ -3380,9 +3285,7 @@ $total_unique_students = $unique_students_stmt->fetchColumn();
             }
 
             lrnInput.addEventListener('change', generateQR);
-            firstNameInput.addEventListener('change', generateQR);
-            middleNameInput.addEventListener('change', generateQR);
-            lastNameInput.addEventListener('change', generateQR);
+            fullNameInput.addEventListener('change', generateQR);
         });
     </script>
 </body>

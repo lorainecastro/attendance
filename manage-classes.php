@@ -367,7 +367,7 @@ function fetchStudentsForClass($class_id)
         }
 
         $stmt = $pdo->prepare("
-            SELECT s.lrn, s.first_name, s.middle_name, s.last_name, s.email, s.gender, s.dob, s.grade_level, 
+            SELECT s.lrn, s.full_name, s.email, s.gender, s.dob, s.grade_level, 
                    s.address, s.parent_name, s.parent_email, s.emergency_contact, s.photo, s.qr_code, s.date_added
             FROM class_students cs
             JOIN students s ON cs.lrn = s.lrn
@@ -412,12 +412,12 @@ function importStudents($class_id, $filePath)
 
         $qrs_to_generate = [];
         foreach ($rows as $index => $row) {
-            if (count($row) >= 12) {
+            if (count($row) >= 10) {
                 $lrn = $row[0] ?? null;
-                if ($lrn && (!isset($row[13]) || empty(trim($row[13])))) {
+                if ($lrn && (!isset($row[11]) || empty(trim($row[11])))) {
                     $qrs_to_generate[] = [
                         'lrn' => $lrn,
-                        'content' => "$lrn, {$row[1]}, {$row[2]}" . (isset($row[3]) && !empty($row[3]) ? " {$row[3]}" : '')
+                        'content' => "$lrn, {$row[1]}" // Use full_name
                     ];
                 }
             }
@@ -441,19 +441,17 @@ function importStudents($class_id, $filePath)
         }
 
         foreach ($rows as $row) {
-            if (count($row) >= 12) {
+            if (count($row) >= 10) {
                 $lrn = $row[0] ?? null;
                 if (!$lrn) continue;
 
-                $qr_code = isset($qr_files[$lrn]) ? $qr_files[$lrn] : (isset($row[13]) && !empty(trim($row[13])) ? trim($row[13]) : null);
+                $qr_code = isset($qr_files[$lrn]) ? $qr_files[$lrn] : (isset($row[11]) && !empty(trim($row[11])) ? trim($row[11]) : null);
 
                 $stmt = $pdo->prepare("
-                    INSERT INTO students (lrn, last_name, first_name, middle_name, email, gender, dob, grade_level, address, parent_name, parent_email, emergency_contact, photo, qr_code, date_added)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURDATE())
+                    INSERT INTO students (lrn, full_name, email, gender, dob, grade_level, address, parent_name, parent_email, emergency_contact, photo, qr_code, date_added)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURDATE())
                     ON DUPLICATE KEY UPDATE 
-                        first_name = VALUES(first_name),
-                        last_name = VALUES(last_name),
-                        middle_name = VALUES(middle_name),
+                        full_name = VALUES(full_name),
                         email = VALUES(email),
                         gender = VALUES(gender),
                         dob = VALUES(dob),
@@ -467,7 +465,7 @@ function importStudents($class_id, $filePath)
                 ");
                 $stmt->execute([
                     $lrn,
-                    $row[1] ?? null,
+                    $row[1] ?? null, // Fullname
                     $row[2] ?? null,
                     $row[3] ?? null,
                     $row[4] ?? null,
@@ -477,8 +475,6 @@ function importStudents($class_id, $filePath)
                     $row[8] ?? null,
                     $row[9] ?? null,
                     $row[10] ?? null,
-                    $row[11] ?? null,
-                    $row[12] ?? null,
                     $qr_code
                 ]);
 
@@ -2713,7 +2709,7 @@ ob_end_flush();
                         <input type="file" id="importFile" accept=".xlsx, .xls" class="file-input">
                         <button class="btn btn-success" onclick="importStudents()">Import Excel</button>
                     </div>
-                    <small class="import-note">Expected columns: LRN, Last Name, First Name, Middle Name, Email, Gender, DOB, Grade Level, Address, Parent Name, Parent Email, Emergency Contact</small>
+                    <small class="import-note">Expected columns: LRN, Fullname, Email, Gender, DOB, Grade Level, Address, Parent Name, Parent Email, Emergency Contact</small>
                 </div>
                 <div class="preview-table-container" id="previewTableContainer" style="display: none;">
                     <h3 class="preview-title">Preview</h3>
@@ -2722,9 +2718,7 @@ ob_end_flush();
                             <thead>
                                 <tr>
                                     <th>LRN</th>
-                                    <th>Last Name</th>
-                                    <th>First Name</th>
-                                    <th>Middle Name</th>
+                                    <th>Fullname</th>
                                     <th>Email</th>
                                     <th>Gender</th>
                                     <th>DOB</th>
@@ -2748,9 +2742,7 @@ ob_end_flush();
                             <thead>
                                 <tr>
                                     <th>LRN</th>
-                                    <th>First Name</th>
-                                    <th>Middle Name</th>
-                                    <th>Last Name</th>
+                                    <th>Fullname</th>
                                     <th>Email</th>
                                     <th>Gender</th>
                                     <th>DOB</th>
@@ -3484,7 +3476,7 @@ ob_end_flush();
             tbody.innerHTML = '';
 
             if (!students || students.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="15" class="no-classes">No students enrolled</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="13" class="no-classes">No students enrolled</td></tr>';
                 return;
             }
 
@@ -3499,9 +3491,7 @@ ob_end_flush();
                 const row = document.createElement('tr');
                 row.innerHTML = `
                     <td>${sanitizeHTML(student.lrn || 'N/A')}</td>
-                    <td>${sanitizeHTML(student.first_name || 'N/A')}</td>
-                    <td>${sanitizeHTML(student.middle_name || 'N/A')}</td>
-                    <td>${sanitizeHTML(student.last_name || 'N/A')}</td>
+                    <td>${sanitizeHTML(student.full_name || 'N/A')}</td>
                     <td>${sanitizeHTML(student.email || 'N/A')}</td>
                     <td>${sanitizeHTML(student.gender || 'N/A')}</td>
                     <td>${sanitizeHTML(student.dob || 'N/A')}</td>
@@ -3607,13 +3597,13 @@ ob_end_flush();
             tbody.innerHTML = '';
 
             previewData.forEach((row, index) => {
-                const photoValue = row[12] || '';
+                const photoValue = row[10] || '';
                 let photoDisplay = photoValue && (photoValue.includes('.jpg') || photoValue.includes('.jpeg') || photoValue.includes('.png') || photoValue.includes('.gif')) ?
                     `<img src="uploads/${photoValue}" alt="Student Photo" style="max-width: 45px; max-height: 45px; border-radius: 50%;" onerror="this.style.display='none'; this.nextSibling.style.display='inline';"><span style="display:none;">${sanitizeHTML(photoValue)}</span>` :
                     `<img src="uploads/no-icon.png" alt="No Photo" style="max-width: 45px; max-height: 45px; border-radius: 50%;">`;
 
-                let qrDisplay = row[13] && row[13].toString().trim() !== '' ?
-                    `<img src="qrcodes/${row[13]}" alt="QR Code" style="max-width: 50px; max-height: 50px;" onerror="this.style.display='none'; this.nextSibling.style.display='inline';"><span style="display:none;">QR: ${row[13]}</span>` :
+                let qrDisplay = row[11] && row[11].toString().trim() !== '' ?
+                    `<img src="qrcodes/${row[11]}" alt="QR Code" style="max-width: 50px; max-height: 50px;" onerror="this.style.display='none'; this.nextSibling.style.display='inline';"><span style="display:none;">QR: ${row[11]}</span>` :
                     'To be generated';
 
                 const tr = document.createElement('tr');
@@ -3623,14 +3613,12 @@ ob_end_flush();
                     <td>${sanitizeHTML(row[1] || '')}</td>
                     <td>${sanitizeHTML(row[2] || '')}</td>
                     <td>${sanitizeHTML(row[3] || '')}</td>
-                    <td>${sanitizeHTML(row[4] || '')}</td>
+                    <td>${sanitizeHTML(row[4] || excelDateToYYYYMMDD(row[4]))}</td>
                     <td>${sanitizeHTML(row[5] || '')}</td>
-                    <td>${sanitizeHTML(row[6] || excelDateToYYYYMMDD(row[6]))}</td>
+                    <td>${sanitizeHTML(row[6] || '')}</td>
                     <td>${sanitizeHTML(row[7] || '')}</td>
                     <td>${sanitizeHTML(row[8] || '')}</td>
                     <td>${sanitizeHTML(row[9] || '')}</td>
-                    <td>${sanitizeHTML(row[10] || '')}</td>
-                    <td>${sanitizeHTML(row[11] || '')}</td>
                     <td>${photoDisplay}</td>
                     <td>${qrDisplay}</td>
                     <td class="actions">
@@ -3709,12 +3697,10 @@ ob_end_flush();
             const qrsToGenerate = [];
             previewData.forEach((row, index) => {
                 const lrn = row[0];
-                const lastName = row[1] || '';
-                const firstName = row[2] || '';
-                const middleName = row[3] || '';
+                const full_name = row[1] || '';
 
-                if (!row[13] || row[13].toString().trim() === '' || row[13] === `${lrn}.png`) {
-                    const qrContent = `${lrn}, ${lastName}, ${firstName}${middleName ? ' ' + middleName : ''}`;
+                if (!row[11] || row[11].toString().trim() === '' || row[11] === `${lrn}.png`) {
+                    const qrContent = `${lrn}, ${full_name}`;
                     qrsToGenerate.push({
                         lrn: lrn,
                         content: qrContent,

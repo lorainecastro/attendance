@@ -61,7 +61,7 @@ $classes_db = $classes_stmt->fetchAll(PDO::FETCH_ASSOC);
 
 $classes_php = [];
 foreach ($classes_db as $cls) {
-    $students_stmt = $pdo->prepare("SELECT s.lrn AS id, CONCAT(s.last_name, ', ', s.first_name, ' ', COALESCE(s.middle_name, '')) AS fullName, s.email FROM students s JOIN class_students cs ON s.lrn = cs.lrn WHERE cs.class_id = :class_id ORDER BY s.last_name ASC, s.first_name ASC");
+    $students_stmt = $pdo->prepare("SELECT s.lrn AS id, s.full_name AS fullName, s.email FROM students s JOIN class_students cs ON s.lrn = cs.lrn WHERE cs.class_id = :class_id ORDER BY s.full_name ASC");
     $students_stmt->execute(['class_id' => $cls['class_id']]);
     $students = $students_stmt->fetchAll(PDO::FETCH_ASSOC);
 
@@ -95,7 +95,7 @@ foreach ($classes_db as $cls) {
 }
 
 // Fetch attendance data
-$attendance_stmt = $pdo->prepare("SELECT at.*, at.lrn AS studentId, at.class_id AS classId, at.time_checked AS timeChecked, CONCAT(s.last_name, ', ', s.first_name, ' ', COALESCE(s.middle_name, '')) AS fullName FROM attendance_tracking at JOIN classes c ON at.class_id = c.class_id JOIN students s ON at.lrn = s.lrn WHERE c.teacher_id = :teacher_id ORDER BY s.last_name ASC, s.first_name ASC, at.time_checked DESC");
+$attendance_stmt = $pdo->prepare("SELECT at.*, at.lrn AS studentId, at.class_id AS classId, at.time_checked AS timeChecked, s.full_name AS fullName FROM attendance_tracking at JOIN classes c ON at.class_id = c.class_id JOIN students s ON at.lrn = s.lrn WHERE c.teacher_id = :teacher_id ORDER BY s.full_name ASC, at.time_checked DESC");
 $attendance_stmt->execute(['teacher_id' => $user['teacher_id']]);
 $attendance_db = $attendance_stmt->fetchAll(PDO::FETCH_ASSOC);
 

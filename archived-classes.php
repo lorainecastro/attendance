@@ -54,13 +54,13 @@ if (isset($_POST['action'])) {
 
         // Fetch students for the class
         $stmt = $pdo->prepare("
-            SELECT s.lrn, s.last_name, s.first_name, s.middle_name, s.email, s.gender, s.dob, 
-                   s.grade_level, s.address, s.parent_name, s.parent_email, s.emergency_contact, 
-                   s.photo, s.qr_code
+            SELECT s.lrn, s.full_name, s.email, s.gender, s.dob, 
+                   s.grade_level, s.address, s.parent_name, s.parent_email, 
+                   s.emergency_contact, s.photo, s.qr_code
             FROM students s
             JOIN class_students cs ON s.lrn = cs.lrn
             WHERE cs.class_id = :class_id
-            ORDER BY s.last_name ASC, s.first_name ASC
+            ORDER BY s.full_name ASC
         ");
         $stmt->execute(['class_id' => $class_id]);
         $students = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -98,11 +98,11 @@ $archived_classes_db = $archived_classes_stmt->fetchAll(PDO::FETCH_ASSOC);
 $archived_classes_php = [];
 foreach ($archived_classes_db as $cls) {
     $students_stmt = $pdo->prepare("
-        SELECT s.lrn AS id, CONCAT(s.last_name, ', ', s.first_name, ' ', COALESCE(s.middle_name, '')) AS fullName 
+        SELECT s.lrn AS id, s.full_name AS fullName 
         FROM students s 
         JOIN class_students cs ON s.lrn = cs.lrn 
         WHERE cs.class_id = :class_id 
-        ORDER BY s.last_name ASC, s.first_name ASC
+        ORDER BY s.full_name ASC
     ");
     $students_stmt->execute(['class_id' => $cls['class_id']]);
     $students = $students_stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -598,19 +598,17 @@ $total_unique_students = $unique_students_stmt->fetchColumn();
         }
 
         .students-table th:nth-child(1) { width: 10%; } /* LRN */
-        .students-table th:nth-child(2) { width: 12%; } /* Last Name */
-        .students-table th:nth-child(3) { width: 12%; } /* First Name */
-        .students-table th:nth-child(4) { width: 12%; } /* Middle Name */
-        .students-table th:nth-child(5) { width: 15%; } /* Email */
-        .students-table th:nth-child(6) { width: 8%; } /* Gender */
-        .students-table th:nth-child(7) { width: 10%; } /* DOB */
-        .students-table th:nth-child(8) { width: 8%; } /* Grade Level */
-        .students-table th:nth-child(9) { width: 15%; } /* Address */
-        .students-table th:nth-child(10) { width: 12%; } /* Parent Name */
-        .students-table th:nth-child(11) { width: 15%; } /* Parent Email */
-        .students-table th:nth-child(12) { width: 10%; } /* Emergency Contact */
-        .students-table th:nth-child(13) { width: 6%; } /* Photo */
-        .students-table th:nth-child(14) { width: 6%; } /* QR Code */
+        .students-table th:nth-child(2) { width: 15%; } /* Full Name */
+        .students-table th:nth-child(3) { width: 15%; } /* Email */
+        .students-table th:nth-child(4) { width: 8%; } /* Gender */
+        .students-table th:nth-child(5) { width: 10%; } /* DOB */
+        .students-table th:nth-child(6) { width: 8%; } /* Grade Level */
+        .students-table th:nth-child(7) { width: 15%; } /* Address */
+        .students-table th:nth-child(8) { width: 12%; } /* Parent Name */
+        .students-table th:nth-child(9) { width: 15%; } /* Parent Email */
+        .students-table th:nth-child(10) { width: 10%; } /* Emergency Contact */
+        .students-table th:nth-child(11) { width: 6%; } /* Photo */
+        .students-table th:nth-child(12) { width: 6%; } /* QR Code */
 
         .students-table td {
             padding: var(--spacing-sm);
@@ -817,9 +815,7 @@ $total_unique_students = $unique_students_stmt->fetchColumn();
                     <thead>
                         <tr>
                             <th>LRN</th>
-                            <th>Last Name</th>
-                            <th>First Name</th>
-                            <th>Middle Name</th>
+                            <th>Full Name</th>
                             <th>Email</th>
                             <th>Gender</th>
                             <th>DOB</th>
@@ -879,15 +875,13 @@ $total_unique_students = $unique_students_stmt->fetchColumn();
                         const tableBody = document.getElementById('studentsTableBody');
                         tableBody.innerHTML = '';
                         if (data.students.length === 0) {
-                            tableBody.innerHTML = '<tr><td colspan="14" class="no-students">No students found.</td></tr>';
+                            tableBody.innerHTML = '<tr><td colspan="12" class="no-students">No students found.</td></tr>';
                         } else {
                             data.students.forEach(student => {
                                 const row = `
                                     <tr>
                                         <td>${student.lrn || 'N/A'}</td>
-                                        <td>${student.last_name || 'N/A'}</td>
-                                        <td>${student.first_name || 'N/A'}</td>
-                                        <td>${student.middle_name || 'N/A'}</td>
+                                        <td>${student.full_name || 'N/A'}</td>
                                         <td>${student.email || 'N/A'}</td>
                                         <td>${student.gender || 'N/A'}</td>
                                         <td>${student.dob || 'N/A'}</td>

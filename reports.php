@@ -366,9 +366,6 @@ $sheet->mergeCells('D5:AB5'); // Merge D5 to AB5
 $sheet->setCellValue('AC5', "Total for the Month");
 $sheet->mergeCells('AC5:AF6');
 
-$sheet->setCellValue('BB5', 'REMARKS (If NLS, state reason, please refer to legend number 2. If TRANSFERRED IN/OUT, write the name of School.)');
-$sheet->mergeCells('BB5:BD5');
-
 $sheet->getStyle('A5:AN5')->applyFromArray($borderStyle);
 $sheet->getStyle('A5:A7')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER)->setVertical(Alignment::VERTICAL_CENTER)->applyFromArray($borderStyle);
 $sheet->getStyle('AC5:AF6')->getAlignment()->setWrapText(true)->setHorizontal(Alignment::HORIZONTAL_CENTER)->setVertical(Alignment::VERTICAL_CENTER);
@@ -384,7 +381,7 @@ $sheet->getStyle('AE7:AF7')->applyFromArray($borderStyle)->getAlignment()->setHo
 
 // Merge AG5:AN7 for Remarks column
 $sheet->mergeCells('AG5:AN7');
-$sheet->setCellValue('AG5', 'REMARKS (If NLS, state reason, please refer to legend number 2. If TRANSFERRED IN/OUT, write the name of School.)');
+$sheet->setCellValue('AG5', 'REMARKS (If DROPPED OUT, state reason, please refer to legend number 2. If TRANSFERRED IN/OUT, write the name of School.)');
 $sheet->getStyle('AG5:AN7')->getAlignment()->setWrapText(true)->setHorizontal(Alignment::HORIZONTAL_CENTER)->setVertical(Alignment::VERTICAL_CENTER);
 $sheet->getStyle('AG5:AN7')->applyFromArray($borderStyle);
 
@@ -451,9 +448,9 @@ for ($j = 0; $j < $maleCount; $j++) {
         $sheet->getStyle($col . $row)->applyFromArray($borderStyle);
     }
     $presentCount = $numDays - $absentCount;
-    $sheet->setCellValue('AW' . $row, $absentCount);
-    $sheet->setCellValue('AY' . $row, $presentCount);
-    $sheet->getStyle('A' . $row . ':BD' . $row)->applyFromArray($borderStyle);
+    $sheet->setCellValue('AC' . $row, $absentCount);
+    $sheet->setCellValue('AE' . $row, $presentCount);
+    $sheet->getStyle('A' . $row . ':AN' . $row)->applyFromArray($borderStyle);
     $studentAttendance[] = $statusArray;
 
     // Check for 5 consecutive absents
@@ -474,7 +471,7 @@ $maleTotalRow = $maleStartRow + $maleCount;
 $sheet->setCellValue('B' . $maleTotalRow, '<=== MALE | TOTAL Per Day ===>');
 $sheet->mergeCells('B' . $maleTotalRow . ':C' . $maleTotalRow);
 $sheet->getRowDimension($maleTotalRow)->setRowHeight(20);
-$sheet->getStyle('A' . $maleTotalRow . ':BD' . $maleTotalRow)->applyFromArray($borderStyle);
+$sheet->getStyle('A' . $maleTotalRow . ':AN' . $maleTotalRow)->applyFromArray($borderStyle);
 
 // Females
 $femaleStartRow = $maleTotalRow + 1;
@@ -515,9 +512,9 @@ for ($j = 0; $j < $femaleCount; $j++) {
         $sheet->getStyle($col . $row)->applyFromArray($borderStyle);
     }
     $presentCount = $numDays - $absentCount;
-    $sheet->setCellValue('AW' . $row, $absentCount);
-    $sheet->setCellValue('AY' . $row, $presentCount);
-    $sheet->getStyle('A' . $row . ':BD' . $row)->applyFromArray($borderStyle);
+    $sheet->setCellValue('AC' . $row, $absentCount);
+    $sheet->setCellValue('AE' . $row, $presentCount);
+    $sheet->getStyle('A' . $row . ':AN' . $row)->applyFromArray($borderStyle);
     $studentAttendance[] = $statusArray;
 
     // Check for 5 consecutive absents
@@ -538,15 +535,15 @@ $femaleTotalRow = $femaleStartRow + $femaleCount;
 $sheet->setCellValue('B' . $femaleTotalRow, '<=== FEMALE | TOTAL Per Day ===>');
 $sheet->mergeCells('B' . $femaleTotalRow . ':C' . $femaleTotalRow);
 $sheet->getRowDimension($femaleTotalRow)->setRowHeight(20);
-$sheet->getStyle('A' . $femaleTotalRow . ':BD' . $femaleTotalRow)->applyFromArray($borderStyle);
+$sheet->getStyle('A' . $femaleTotalRow . ':AN' . $femaleTotalRow)->applyFromArray($borderStyle);
 
 $combinedRow = $femaleTotalRow + 1;
 $sheet->setCellValue('B' . $combinedRow, 'Combined TOTAL Per Day');
 $sheet->mergeCells('B' . $combinedRow . ':C' . $combinedRow);
 $sheet->getRowDimension($combinedRow)->setRowHeight(20);
-$sheet->getStyle('A' . $combinedRow . ':BD' . $combinedRow)->applyFromArray($borderStyle);
+$sheet->getStyle('A' . $combinedRow . ':AN' . $combinedRow)->applyFromArray($borderStyle);
 
-// 🔹 Merge AC:AD and AE:AF for every row from maleStartRow (8) up to Combined TOTAL row
+// 🔹 Merge AC:AD, AE:AF, and AG:AN for every row from maleStartRow (8) up to Combined TOTAL row
 for ($r = $maleStartRow; $r <= $combinedRow; $r++) {
     // Merge AC:AD
     $sheet->mergeCells('AC' . $r . ':AD' . $r);
@@ -563,7 +560,17 @@ for ($r = $maleStartRow; $r <= $combinedRow; $r++) {
         ->setHorizontal(Alignment::HORIZONTAL_CENTER)
         ->setVertical(Alignment::VERTICAL_CENTER);
     $sheet->getStyle('AE' . $r . ':AF' . $r)->applyFromArray($borderStyle);
+
+    // Merge AG:AN (Remarks column)
+    $sheet->mergeCells('AG' . $r . ':AN' . $r);
+    $sheet->getStyle('AG' . $r . ':AN' . $r)
+        ->getAlignment()
+        ->setWrapText(true)
+        ->setHorizontal(Alignment::HORIZONTAL_LEFT) // Remarks usually left-aligned
+        ->setVertical(Alignment::VERTICAL_CENTER);
+    $sheet->getStyle('AG' . $r . ':AN' . $r)->applyFromArray($borderStyle);
 }
+
 
 for ($i = 8; $i < $combinedRow; $i++) {
     $rowHeights[$i] = 20; // Height for student rows and total rows

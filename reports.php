@@ -282,15 +282,17 @@ $borderStyle = [
 ];
 
 $columnWidths = [
-    'A' => 4.14, 'B' => 2.86, 'C' => 30.00, 'D' => 2.86, 'E' => 2.86,
-    'F' => 4.14, 'G' => 2.86, 'H' => 4.14, 'I' => 4.14, 'J' => 4.14,
-    'K' => 4.14, 'L' => 4.14, 'M' => 2.86, 'N' => 4.14, 'O' => 4.14,
-    'P' => 4.14, 'Q' => 4.14, 'R' => 4.14, 'S' => 2.86, 'T' => 4.14,
-    'U' => 4.14, 'V' => 4.14, 'W' => 2.86, 'X' => 4.14, 'Y' => 2.86,
-    'Z' => 4.14, 'AA' => 2.86, 'AB' => 4.14, 'AC' => 4.14, 'AD' => 4.14,
-    'AE' => 4.14, 'AF' => 4.14, 'AG' => 4.14, 'AH' => 2.86, 'AI' => 4.14,
-    'AJ' => 4.14, 'AK' => 4.14, 'AM' => 8.43, 'AN' => 2.86, 'AO' => 8.43,
-    'AP' => 2.86, 'AQ' => 2.86, 'AR' => 30.00, 'AS' => 2.86
+    'A' => 4.14, 'B' => 2.86, 'C' => 30.00, 'D' => 3.5, 'E' => 3.5,
+    'F' => 3.5, 'G' => 3.5, 'H' => 3.5, 'I' => 3.5, 'J' => 3.5,
+    'K' => 3.5, 'L' => 3.5, 'M' => 3.5, 'N' => 3.5, 'O' => 3.5,
+    'P' => 3.5, 'Q' => 3.5, 'R' => 3.5, 'S' => 3.5, 'T' => 3.5,
+    'U' => 3.5, 'V' => 3.5, 'W' => 3.5, 'X' => 3.5, 'Y' => 3.5,
+    'Z' => 3.5, 'AA' => 3.5, 'AB' => 3.5, 'AC' => 3.5, 'AD' => 3.5,
+    'AE' => 3.5, 'AF' => 3.5, 'AG' => 3.5, 'AH' => 3.5, 'AI' => 3.5,
+    'AJ' => 3.5, 'AK' => 3.5, 'AL' => 3.5, 'AM' => 3.5, 'AN' => 3.5, 'AO' => 3.5,
+    'AP' => 3.5, 'AQ' => 3.5, 'AR' => 3.5, 'AS' => 3.5, 'AT' => 3.5,
+    'AU' => 3.5, 'AV' => 3.5, 'AW' => 7.14, 'AX' => 7.14, 'AY' => 7.14,
+    'AZ' => 3.5
 ];
 foreach ($columnWidths as $col => $width) {
     $sheet->getColumnDimension($col)->setWidth($width);
@@ -306,15 +308,15 @@ $rowHeights = [
     6 => 15,  // dates
     7 => 15,  // Day abbreviations
 ];
-for ($i = 8; $i <= 74; $i++) {
-    $rowHeights[$i] = 15; // Default height for student and guideline rows
-}
-foreach ($rowHeights as $row => $height) {
-    $sheet->getRowDimension($row)->setRowHeight($height);
-}
+// for ($i = 8; $i <= 74; $i++) {
+//     $rowHeights[$i] = 15; // Default height for student and guideline rows
+// }
+// foreach ($rowHeights as $row => $height) {
+//     $sheet->getRowDimension($row)->setRowHeight($height);
+// }
 
 // Apply borders to row 6
-$sheet->getStyle('A6:AS6')->applyFromArray($borderStyle);
+$sheet->getStyle('A6:AN6')->applyFromArray($borderStyle);
 
 // Set fixed texts and merge cells (rows 1–5)
 $sheet->setCellValue('A1', 'School Form 2 (SF2) Daily Attendance Report of Learners');
@@ -338,7 +340,7 @@ $sheet->setCellValue('X3', $month);
 $sheet->mergeCells('X3:AB3');
 $sheet->mergeCells('D3:H3'); // Merge F3 to J3
 $sheet->setCellValue('F3', ''); // Leave merged cell empty or set a placeholder if needed
-$sheet->getStyle('A3:AK3')->applyFromArray($borderStyle)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER)->setVertical(Alignment::VERTICAL_CENTER);
+$sheet->getStyle('A3:AN3')->applyFromArray($borderStyle)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER)->setVertical(Alignment::VERTICAL_CENTER);
 
 $sheet->setCellValue('A4', 'Name of School');
 $sheet->mergeCells('A4:C4');
@@ -351,27 +353,40 @@ $sheet->mergeCells('X4:AB4');
 $sheet->setCellValue('AC4', 'Section');
 $sheet->mergeCells('AC4:AF4');
 $sheet->setCellValue('AG4', $sectionName);
-$sheet->mergeCells('AG4:AK4');
-$sheet->getStyle('A4:AS4')->applyFromArray($borderStyle)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER)->setVertical(Alignment::VERTICAL_CENTER);
+$sheet->mergeCells('AG4:AN4');
+$sheet->getStyle('A4:AN4')->applyFromArray($borderStyle)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER)->setVertical(Alignment::VERTICAL_CENTER);
 
 // Modified header row (row 5)
 $sheet->setCellValue('A5', 'No.');
 $sheet->mergeCells('A5:A7'); // Merge A5 through A7
 $sheet->setCellValue('B5', "NAME\n(Last Name, First Name, Middle Name)");
 $sheet->mergeCells('B5:C7'); // Merge B5:C5 through B7:C7
-$sheet->setCellValue('AX5', 'Total for the Month');
-$sheet->mergeCells('AX5:AY5');
+$sheet->setCellValue('D5', '(1st row for date)');
+$sheet->mergeCells('D5:AB5'); // Merge D5 to AB5
+$sheet->setCellValue('AC5', "Total for the Month");
+$sheet->mergeCells('AC5:AF6');
+
 $sheet->setCellValue('BB5', 'REMARKS (If NLS, state reason, please refer to legend number 2. If TRANSFERRED IN/OUT, write the name of School.)');
 $sheet->mergeCells('BB5:BD5');
 
-$sheet->getStyle('A5:BD5')->applyFromArray($borderStyle);
+$sheet->getStyle('A5:AN5')->applyFromArray($borderStyle);
 $sheet->getStyle('A5:A7')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER)->setVertical(Alignment::VERTICAL_CENTER)->applyFromArray($borderStyle);
+$sheet->getStyle('AC5:AF6')->getAlignment()->setWrapText(true)->setHorizontal(Alignment::HORIZONTAL_CENTER)->setVertical(Alignment::VERTICAL_CENTER);
 $sheet->getStyle('B5:C7')->getAlignment()->setWrapText(true)->setHorizontal(Alignment::HORIZONTAL_CENTER)->setVertical(Alignment::VERTICAL_CENTER);
+$sheet->getStyle('D5')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER)->setVertical(Alignment::VERTICAL_CENTER)->applyFromArray($borderStyle);
 
-// Row 7: Day abbreviations and totals
-$sheet->setCellValue('AW7', 'ABSENT');
-$sheet->setCellValue('AY7', 'PRESENT');
-$sheet->getStyle('AW7:AY7')->applyFromArray($borderStyle);
+$sheet->mergeCells('AC7:AD7'); 
+$sheet->setCellValue('AC7', 'ABSENT');
+$sheet->getStyle('AC7:AD7')->applyFromArray($borderStyle)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER)->setVertical(Alignment::VERTICAL_CENTER);
+$sheet->mergeCells('AE7:AF7'); 
+$sheet->setCellValue('AE7', 'PRESENT');
+$sheet->getStyle('AE7:AF7')->applyFromArray($borderStyle)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER)->setVertical(Alignment::VERTICAL_CENTER);
+
+// Merge AG5:AN7 for Remarks column
+$sheet->mergeCells('AG5:AN7');
+$sheet->setCellValue('AG5', 'REMARKS (If NLS, state reason, please refer to legend number 2. If TRANSFERRED IN/OUT, write the name of School.)');
+$sheet->getStyle('AG5:AN7')->getAlignment()->setWrapText(true)->setHorizontal(Alignment::HORIZONTAL_CENTER)->setVertical(Alignment::VERTICAL_CENTER);
+$sheet->getStyle('AG5:AN7')->applyFromArray($borderStyle);
 
 // Apply borders and center-align day and abbreviation cells
 foreach ($dayColumns as $col) {
@@ -458,7 +473,7 @@ for ($j = 0; $j < $maleCount; $j++) {
 $maleTotalRow = $maleStartRow + $maleCount;
 $sheet->setCellValue('B' . $maleTotalRow, '<=== MALE | TOTAL Per Day ===>');
 $sheet->mergeCells('B' . $maleTotalRow . ':C' . $maleTotalRow);
-$sheet->getRowDimension($maleTotalRow)->setRowHeight(15);
+$sheet->getRowDimension($maleTotalRow)->setRowHeight(20);
 $sheet->getStyle('A' . $maleTotalRow . ':BD' . $maleTotalRow)->applyFromArray($borderStyle);
 
 // Females
@@ -522,14 +537,22 @@ for ($j = 0; $j < $femaleCount; $j++) {
 $femaleTotalRow = $femaleStartRow + $femaleCount;
 $sheet->setCellValue('B' . $femaleTotalRow, '<=== FEMALE | TOTAL Per Day ===>');
 $sheet->mergeCells('B' . $femaleTotalRow . ':C' . $femaleTotalRow);
-$sheet->getRowDimension($femaleTotalRow)->setRowHeight(15);
+$sheet->getRowDimension($femaleTotalRow)->setRowHeight(20);
 $sheet->getStyle('A' . $femaleTotalRow . ':BD' . $femaleTotalRow)->applyFromArray($borderStyle);
 
 $combinedRow = $femaleTotalRow + 1;
 $sheet->setCellValue('B' . $combinedRow, 'Combined TOTAL Per Day');
 $sheet->mergeCells('B' . $combinedRow . ':C' . $combinedRow);
-$sheet->getRowDimension($combinedRow)->setRowHeight(15);
+$sheet->getRowDimension($combinedRow)->setRowHeight(20);
 $sheet->getStyle('A' . $combinedRow . ':BD' . $combinedRow)->applyFromArray($borderStyle);
+
+for ($i = 8; $i < $combinedRow; $i++) {
+    $rowHeights[$i] = 20; // Height for student rows and total rows
+}
+$rowHeights[$combinedRow] = 20; // Combined TOTAL Per Day row
+foreach ($rowHeights as $row => $height) {
+    $sheet->getRowDimension($row)->setRowHeight($height);
+}
 
 // Set daily totals
 $totalAttendance = 0;

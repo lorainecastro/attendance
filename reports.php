@@ -546,6 +546,16 @@ $sheet->mergeCells('B' . $combinedRow . ':C' . $combinedRow);
 $sheet->getRowDimension($combinedRow)->setRowHeight(20);
 $sheet->getStyle('A' . $combinedRow . ':BD' . $combinedRow)->applyFromArray($borderStyle);
 
+// 🔹 Merge AC:AD for every row from maleStartRow (8) up to Combined TOTAL row
+for ($r = $maleStartRow; $r <= $combinedRow; $r++) {
+    $sheet->mergeCells('AC' . $r . ':AD' . $r);
+    $sheet->getStyle('AC' . $r . ':AD' . $r)
+        ->getAlignment()
+        ->setHorizontal(Alignment::HORIZONTAL_CENTER)
+        ->setVertical(Alignment::VERTICAL_CENTER);
+    $sheet->getStyle('AC' . $r . ':AD' . $r)->applyFromArray($borderStyle);
+}
+
 for ($i = 8; $i < $combinedRow; $i++) {
     $rowHeights[$i] = 20; // Height for student rows and total rows
 }

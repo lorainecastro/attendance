@@ -178,378 +178,354 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             $schoolYear = $schoolStartYear . ' - ' . ($schoolStartYear + 1);
             $year = ($monthNum >= 6) ? $schoolStartYear : $schoolStartYear + 1;
 
-            // Get school days (Mon-Fri)
-            $firstDay = new DateTime("$year-$monthNum-01");
-            $lastDay = clone $firstDay;
-            $lastDay->modify('last day of this month');
-            $schoolDays = [];
-            $current = clone $firstDay;
-            while ($current <= $lastDay) {
-                $dow = (int)$current->format('N'); // 1 (Mon) to 7 (Sun)
-                if ($dow >= 1 && $dow <= 5) { // Mon-Fri
-                    $schoolDays[] = clone $current;
-                }
-                $current->modify('+1 day');
-            }
-            $numDays = count($schoolDays);
-            if ($numDays > 25) {
-                $schoolDays = array_slice($schoolDays, 0, 25); // Truncate to max columns
-                $numDays = 25;
-            }
+// ... (previous code remains unchanged until the SF2 export section)
 
-            // Define fixed day abbreviation sequence: M, T, W, TH, F repeated 5 times
-            $dayColumns = ['F', 'H', 'I', 'J', 'K', 'L', 'N', 'O', 'P', 'Q', 'R', 'T', 'U', 'V', 'X', 'Z', 'AB', 'AC', 'AD', 'AE', 'AF', 'AG', 'AI', 'AJ', 'AK'];
-            $fixedAbbrevs = ['M', 'T', 'W', 'TH', 'F', 'M', 'T', 'W', 'TH', 'F', 'M', 'T', 'W', 'TH', 'F', 'M', 'T', 'W', 'TH', 'F', 'M', 'T', 'W', 'TH', 'F'];
-            $dayAssignments = [];
-            $dayIndex = 0;
+// Get school days (Mon-Fri)
+$firstDay = new DateTime("$year-$monthNum-01");
+$lastDay = clone $firstDay;
+$lastDay->modify('last day of this month');
+$schoolDays = [];
+$current = clone $firstDay;
+while ($current <= $lastDay) {
+    $dow = (int)$current->format('N'); // 1 (Mon) to 7 (Sun)
+    if ($dow >= 1 && $dow <= 5) { // Mon-Fri
+        $schoolDays[] = clone $current;
+    }
+    $current->modify('+1 day');
+}
+$numDays = count($schoolDays);
+if ($numDays > 25) {
+    $schoolDays = array_slice($schoolDays, 0, 25); // Truncate to max columns
+    $numDays = 25;
+}
 
-            // Determine the starting day of the week for the first school day
-            $firstSchoolDay = reset($schoolDays);
-            $firstDayOfWeek = (int)$firstSchoolDay->format('N'); // 1 (Mon) to 5 (Fri)
-            $dayMap = [1 => 'M', 2 => 'T', 3 => 'W', 4 => 'TH', 5 => 'F'];
-            $startAbbrev = $dayMap[$firstDayOfWeek]; // e.g., 'T' for Tuesday (July 1, 2025)
+// Define consecutive day columns starting from F to AK (25 columns)
+$dayColumns = ['F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', 'AA', 'AB', 'AC', 'AD'];
 
-            // Find the index in fixedAbbrevs where we start
-            $startIndex = array_search($startAbbrev, $fixedAbbrevs);
-            if ($startIndex === false) {
-                throw new Exception('Invalid starting day abbreviation.');
-            }
+// Define fixed day abbreviation sequence: M, T, W, TH, F repeated 5 times
+$fixedAbbrevs = ['M', 'T', 'W', 'TH', 'F', 'M', 'T', 'W', 'TH', 'F', 'M', 'T', 'W', 'TH', 'F', 'M', 'T', 'W', 'TH', 'F', 'M', 'T', 'W', 'TH', 'F'];
+$dayAssignments = [];
+$dayIndex = 0;
 
-            // Assign days, starting with the correct abbreviation
-            for ($i = 0; $i < 25; $i++) {
-                $abbrev = $fixedAbbrevs[$i];
-                $col = $dayColumns[$i];
-                if ($i < $startIndex) {
-                    // Columns before the starting day are blank in row 5
-                    $dayAssignments[] = [
-                        'column' => $col,
-                        'abbrev' => $abbrev,
-                        'date' => null,
-                        'dateNum' => ''
-                    ];
-                } else {
-                    // Assign school days starting from the first school day
-                    if ($dayIndex < count($schoolDays)) {
-                        $dayAssignments[] = [
-                            'column' => $col,
-                            'abbrev' => $abbrev,
-                            'date' => $schoolDays[$dayIndex],
-                            'dateNum' => $schoolDays[$dayIndex]->format('j')
-                        ];
-                        $dayIndex++;
-                    } else {
-                        // No more school days, leave blank
-                        $dayAssignments[] = [
-                            'column' => $col,
-                            'abbrev' => $abbrev,
-                            'date' => null,
-                            'dateNum' => ''
-                        ];
-                    }
-                }
-            }
+// Determine the starting day of the week for the first school day
+$firstSchoolDay = reset($schoolDays);
+$firstDayOfWeek = (int)$firstSchoolDay->format('N'); // 1 (Mon) to 5 (Fri)
+$dayMap = [1 => 'M', 2 => 'T', 3 => 'W', 4 => 'TH', 5 => 'F'];
+$startAbbrev = $dayMap[$firstDayOfWeek]; // e.g., 'T' for Tuesday (July 1, 2025)
 
-            // Fetch students
-            $males_stmt = $pdo->prepare("SELECT s.* FROM students s JOIN class_students cs ON s.lrn = cs.lrn WHERE cs.class_id = :class_id AND LOWER(s.gender) = 'male' ORDER BY s.full_name ASC");
-            $males_stmt->execute(['class_id' => $classId]);
-            $males = $males_stmt->fetchAll(PDO::FETCH_ASSOC);
+// Find the index in fixedAbbrevs where we start
+$startIndex = array_search($startAbbrev, $fixedAbbrevs);
+if ($startIndex === false) {
+    throw new Exception('Invalid starting day abbreviation.');
+}
 
-            $females_stmt = $pdo->prepare("SELECT s.* FROM students s JOIN class_students cs ON s.lrn = cs.lrn WHERE cs.class_id = :class_id AND LOWER(s.gender) = 'female' ORDER BY s.full_name ASC");
-            $females_stmt->execute(['class_id' => $classId]);
-            $females = $females_stmt->fetchAll(PDO::FETCH_ASSOC);
-
-            $maleCount = count($males);
-            $femaleCount = count($females);
-            $totalStudents = $maleCount + $femaleCount;
-
-            // Create spreadsheet
-            $spreadsheet = new Spreadsheet();
-            $sheet = $spreadsheet->getActiveSheet();
-            $sheet->setTitle('school_form_2_ver2014.2.1.1');
-
-            // Border style
-            $borderStyle = [
-                'borders' => [
-                    'allBorders' => [
-                        'borderStyle' => Border::BORDER_THIN,
-                        'color' => ['argb' => 'FF000000'],
-                    ],
-                ],
+// Assign days, starting with the correct abbreviation
+for ($i = 0; $i < 25; $i++) {
+    $abbrev = $fixedAbbrevs[$i];
+    $col = $dayColumns[$i];
+    if ($i < $startIndex) {
+        // Columns before the starting day are blank in row 5
+        $dayAssignments[] = [
+            'column' => $col,
+            'abbrev' => $abbrev,
+            'date' => null,
+            'dateNum' => ''
+        ];
+    } else {
+        // Assign school days starting from the first school day
+        if ($dayIndex < count($schoolDays)) {
+            $dayAssignments[] = [
+                'column' => $col,
+                'abbrev' => $abbrev,
+                'date' => $schoolDays[$dayIndex],
+                'dateNum' => $schoolDays[$dayIndex]->format('j')
             ];
-
-            // Set column widths (based on standard SF2 template, in character units)
-            $columnWidths = [
-                'A' => 4.14,  // No.
-                'B' => 2.86,  // Spacer
-                'C' => 30.00, // Name
-                'D' => 2.86,  // Spacer
-                'E' => 2.86,  // Spacer
-                'F' => 4.14,  // Day 1
-                'G' => 2.86,  // Spacer
-                'H' => 4.14,  // Day 2
-                'I' => 4.14,  // Day 3
-                'J' => 4.14,  // Day 4
-                'K' => 4.14,  // Day 5
-                'L' => 4.14,  // Day 6
-                'M' => 2.86,  // Spacer
-                'N' => 4.14,  // Day 7
-                'O' => 4.14,  // Day 8
-                'P' => 4.14,  // Day 9
-                'Q' => 4.14,  // Day 10
-                'R' => 4.14,  // Day 11
-                'S' => 2.86,  // Spacer
-                'T' => 4.14,  // Day 12
-                'U' => 4.14,  // Day 13
-                'V' => 4.14,  // Day 14
-                'W' => 2.86,  // Spacer
-                'X' => 4.14,  // Day 15
-                'Y' => 2.86,  // Spacer
-                'Z' => 4.14,  // Day 16
-                'AA' => 2.86, // Spacer
-                'AB' => 4.14, // Day 17
-                'AC' => 4.14, // Day 18
-                'AD' => 4.14, // Day 19
-                'AE' => 4.14, // Day 20
-                'AF' => 4.14, // Day 21
-                'AG' => 4.14, // Day 22
-                'AH' => 2.86, // Spacer
-                'AI' => 4.14, // Day 23
-                'AJ' => 4.14, // Day 24
-                'AK' => 4.14, // Day 25
-                'AL' => 2.86, // Spacer
-                'AM' => 8.43, // ABSENT
-                'AN' => 2.86, // Spacer
-                'AO' => 8.43, // PRESENT
-                'AP' => 2.86, // Spacer
-                'AQ' => 2.86, // Spacer
-                'AR' => 30.00, // REMARKS
-                'AS' => 2.86  // Spacer
+            $dayIndex++;
+        } else {
+            // No more school days, leave blank
+            $dayAssignments[] = [
+                'column' => $col,
+                'abbrev' => $abbrev,
+                'date' => null,
+                'dateNum' => ''
             ];
-            foreach ($columnWidths as $col => $width) {
-                $sheet->getColumnDimension($col)->setWidth($width);
+        }
+    }
+}
+
+// Fetch students
+$males_stmt = $pdo->prepare("SELECT s.* FROM students s JOIN class_students cs ON s.lrn = cs.lrn WHERE cs.class_id = :class_id AND LOWER(s.gender) = 'male' ORDER BY s.full_name ASC");
+$males_stmt->execute(['class_id' => $classId]);
+$males = $males_stmt->fetchAll(PDO::FETCH_ASSOC);
+
+$females_stmt = $pdo->prepare("SELECT s.* FROM students s JOIN class_students cs ON s.lrn = cs.lrn WHERE cs.class_id = :class_id AND LOWER(s.gender) = 'female' ORDER BY s.full_name ASC");
+$females_stmt->execute(['class_id' => $classId]);
+$females = $females_stmt->fetchAll(PDO::FETCH_ASSOC);
+
+$maleCount = count($males);
+$femaleCount = count($females);
+$totalStudents = $maleCount + $femaleCount;
+
+// Create spreadsheet
+$spreadsheet = new Spreadsheet();
+$sheet = $spreadsheet->getActiveSheet();
+$sheet->setTitle('school_form_2_ver2014.2.1.1');
+
+// Border style
+$borderStyle = [
+    'borders' => [
+        'allBorders' => [
+            'borderStyle' => Border::BORDER_THIN,
+            'color' => ['argb' => 'FF000000'],
+        ],
+    ],
+];
+
+$columnWidths = [
+    'A' => 4.14, 'B' => 2.86, 'C' => 30.00, 'D' => 2.86, 'E' => 2.86,
+    'F' => 4.14, 'G' => 2.86, 'H' => 4.14, 'I' => 4.14, 'J' => 4.14,
+    'K' => 4.14, 'L' => 4.14, 'M' => 2.86, 'N' => 4.14, 'O' => 4.14,
+    'P' => 4.14, 'Q' => 4.14, 'R' => 4.14, 'S' => 2.86, 'T' => 4.14,
+    'U' => 4.14, 'V' => 4.14, 'W' => 2.86, 'X' => 4.14, 'Y' => 2.86,
+    'Z' => 4.14, 'AA' => 2.86, 'AB' => 4.14, 'AC' => 4.14, 'AD' => 4.14,
+    'AE' => 4.14, 'AF' => 4.14, 'AG' => 4.14, 'AH' => 2.86, 'AI' => 4.14,
+    'AJ' => 4.14, 'AK' => 4.14, 'AM' => 8.43, 'AN' => 2.86, 'AO' => 8.43,
+    'AP' => 2.86, 'AQ' => 2.86, 'AR' => 30.00, 'AS' => 2.86
+];
+foreach ($columnWidths as $col => $width) {
+    $sheet->getColumnDimension($col)->setWidth($width);
+}
+
+// ... (rest of the code from Set row heights onward remains unchanged)
+
+// ... (previous code remains unchanged until Set row heights)
+
+// Set row heights
+$rowHeights = [
+    1 => 30,  // Title
+    2 => 15,  // Subtitle
+    3 => 15,  // School ID, Year, Month
+    4 => 15,  // School Name, Grade, Section
+    5 => 30,  // Headers
+    6 => 15,  // Blank row (spacer)
+    7 => 15,  // Day abbreviations
+];
+for ($i = 8; $i <= 74; $i++) {
+    $rowHeights[$i] = 15; // Default height for student and guideline rows
+}
+foreach ($rowHeights as $row => $height) {
+    $sheet->getRowDimension($row)->setRowHeight($height);
+}
+
+// Apply borders to row 6
+$sheet->getStyle('A6:AS6')->applyFromArray($borderStyle);
+
+// Set fixed texts and merge cells (rows 1–5)
+$sheet->setCellValue('A1', 'School Form 2 (SF2) Daily Attendance Report of Learners');
+$sheet->mergeCells('A1:AR1');
+$sheet->getStyle('A1')->getFont()->setName('SansSerif')->setSize(13)->setBold(true);
+$sheet->getStyle('A1')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER)->setVertical(Alignment::VERTICAL_CENTER);
+
+$sheet->setCellValue('A2', '(This replaces Form 1, Form 2 & STS Form 4 - Absenteeism and Dropout Profile)');
+$sheet->mergeCells('A2:AR2');
+$sheet->getStyle('A2')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+
+$sheet->setCellValue('A3', 'School ID');
+$sheet->mergeCells('A3:E3');
+$sheet->setCellValue('K3', 'School Year');
+$sheet->mergeCells('K3:M3');
+$sheet->setCellValue('N3', $schoolYear);
+$sheet->mergeCells('N3:S3');
+$sheet->setCellValue('T3', 'Report for the Month of');
+$sheet->mergeCells('T3:AB3');
+$sheet->setCellValue('AC3', $month);
+$sheet->mergeCells('AC3:AK3');
+$sheet->getStyle('A3:AK3')->applyFromArray($borderStyle);
+
+$sheet->setCellValue('A4', 'Name of School');
+$sheet->mergeCells('A4:E4');
+$sheet->setCellValue('F4', $schoolName);
+$sheet->mergeCells('F4:U4');
+$sheet->setCellValue('V4', 'Grade Level');
+$sheet->mergeCells('V4:AC4');
+$sheet->setCellValue('AD4', $gradeLevel);
+$sheet->mergeCells('AD4:AL4');
+$sheet->setCellValue('AM4', 'Section');
+$sheet->mergeCells('AM4:AQ4');
+$sheet->setCellValue('AR4', $sectionName);
+$sheet->mergeCells('AR4:AS4');
+$sheet->getStyle('A4:AS4')->applyFromArray($borderStyle);
+
+// Modified header row (row 5)
+$sheet->setCellValue('A5', 'No.');
+// Remove merge for A5:B5, keep "No." in A5 only
+$sheet->setCellValue('C5', "NAME\n(Last Name, First Name, Middle Name)");
+$sheet->mergeCells('C5:E5');
+$sheet->mergeCells('F3:J3'); // Merge F5 to J5
+$sheet->setCellValue('F5', ''); // Leave merged cell empty or set a placeholder if needed
+$sheet->setCellValue('AN5', 'Total for the Month');
+$sheet->mergeCells('AN5:AO5');
+$sheet->setCellValue('AR5', 'REMARKS (If NLS, state reason, please refer to legend number 2. If TRANSFERRED IN/OUT, write the name of School.)');
+$sheet->mergeCells('AR5:AS5');
+$sheet->getStyle('A5:AS5')->applyFromArray($borderStyle);
+$sheet->getStyle('C5')->getAlignment()->setWrapText(true);
+
+// Row 7: Day abbreviations and totals
+$sheet->setCellValue('AM7', 'ABSENT');
+$sheet->setCellValue('AO7', 'PRESENT');
+$sheet->getStyle('AM7:AO7')->applyFromArray($borderStyle);
+
+// Apply borders and center-align day and abbreviation cells
+foreach ($dayColumns as $col) {
+    $sheet->getStyle($col . '5')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+    $sheet->getStyle($col . '7')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+    $sheet->getStyle($col . '5')->applyFromArray($borderStyle);
+    $sheet->getStyle($col . '7')->applyFromArray($borderStyle);
+}
+
+// Populate dates and day abbreviations
+foreach ($dayAssignments as $assignment) {
+    $col = $assignment['column'];
+    $sheet->setCellValue($col . '5', $assignment['dateNum']);
+    $sheet->setCellValue($col . '7', $assignment['abbrev']);
+    $sheet->getStyle($col . '5')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+    $sheet->getStyle($col . '7')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+    $sheet->getStyle($col . '5')->applyFromArray($borderStyle);
+    $sheet->getStyle($col . '7')->applyFromArray($borderStyle);
+}
+
+// Student rows
+$maleStartRow = 8;
+$studentAttendance = []; // To track per student absences
+$dailyPresent = array_fill(0, $numDays, ['male' => 0, 'female' => 0, 'combined' => 0]);
+$consecutiveAbsentCount = 0;
+
+// Males
+for ($j = 0; $j < $maleCount; $j++) {
+    $row = $maleStartRow + $j;
+    $sheet->setCellValue('A' . $row, $j + 1); // Write number in column A only
+    $sheet->setCellValue('C' . $row, $males[$j]['full_name']);
+    $sheet->mergeCells('C' . $row . ':E' . $row);
+    $lrn = $males[$j]['lrn'];
+    $absentCount = 0;
+    $statusArray = [];
+    $dayIndex = 0;
+    foreach ($dayAssignments as $assignment) {
+        $col = $assignment['column'];
+        if ($assignment['date']) { // Only process columns with valid dates
+            $date = $assignment['date']->format('Y-m-d');
+            $att_stmt = $pdo->prepare("SELECT attendance_status FROM attendance_tracking WHERE class_id = :class_id AND lrn = :lrn AND attendance_date = :date");
+            $att_stmt->execute(['class_id' => $classId, 'lrn' => $lrn, 'date' => $date]);
+            $status = $att_stmt->fetchColumn() ?: 'Absent';
+            $mark = ($status === 'Absent') ? 'x' : ($status === 'Late' ? 'L' : '');
+            $sheet->setCellValue($col . $row, $mark);
+            if ($status !== 'Absent') {
+                $dailyPresent[$dayIndex]['male']++;
+                $dailyPresent[$dayIndex]['combined']++;
             }
-
-            // Set row heights (based on standard SF2 template, in points)
-            $rowHeights = [
-                1 => 30,  // Title
-                2 => 15,  // Subtitle
-                3 => 15,  // School ID, Year, Month
-                4 => 15,  // School Name, Grade, Section
-                5 => 30,  // Headers
-                7 => 15,  // Day abbreviations
-            ];
-            // Set student rows (8 to 40) and guideline rows
-            for ($i = 8; $i <= 74; $i++) {
-                $rowHeights[$i] = 15; // Default height for student and guideline rows
+            if ($mark === 'x') {
+                $absentCount++;
+                $statusArray[] = 1;
+            } else {
+                $statusArray[] = 0;
             }
-            foreach ($rowHeights as $row => $height) {
-                $sheet->getRowDimension($row)->setRowHeight($height);
+            $dayIndex++;
+        } else {
+            $sheet->setCellValue($col . $row, '');
+            $statusArray[] = 0; // No absence counted for blank dates
+        }
+        $sheet->getStyle($col . $row)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+        $sheet->getStyle($col . $row)->applyFromArray($borderStyle);
+    }
+    $presentCount = $numDays - $absentCount;
+    $sheet->setCellValue('AM' . $row, $absentCount);
+    $sheet->setCellValue('AO' . $row, $presentCount);
+    $sheet->getStyle('A' . $row . ':AS' . $row)->applyFromArray($borderStyle);
+    $studentAttendance[] = $statusArray;
+
+    // Check for 5 consecutive absents
+    $streak = 0;
+    foreach ($statusArray as $s) {
+        if ($s === 1) {
+            $streak++;
+            if ($streak >= 5) {
+                $consecutiveAbsentCount++;
+                break;
             }
+        } else {
+            $streak = 0;
+        }
+    }
+}
+$maleTotalRow = $maleStartRow + $maleCount;
+$sheet->setCellValue('C' . $maleTotalRow, '<=== MALE | TOTAL Per Day ===>');
+$sheet->mergeCells('C' . $maleTotalRow . ':E' . $maleTotalRow);
+$sheet->getRowDimension($maleTotalRow)->setRowHeight(15);
+$sheet->getStyle('A' . $maleTotalRow . ':AS' . $maleTotalRow)->applyFromArray($borderStyle);
 
-            // Set fixed texts and merge cells (matching the exact SF2 structure)
-            $sheet->setCellValue('A1', 'School Form 2 (SF2) Daily Attendance Report of Learners');
-            $sheet->mergeCells('A1:AR1');
-            $sheet->getStyle('A1')->getFont()->setBold(true)->setSize(12);
-            $sheet->getStyle('A1')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
-
-            $sheet->setCellValue('A2', '(This replaces Form 1, Form 2 & STS Form 4 - Absenteeism and Dropout Profile)');
-            $sheet->mergeCells('A2:AR2');
-            $sheet->getStyle('A2')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
-
-            $sheet->setCellValue('A3', 'School ID');
-            $sheet->mergeCells('A3:I3');
-            $sheet->setCellValue('K3', 'School Year');
-            $sheet->mergeCells('K3:M3');
-            $sheet->setCellValue('N3', $schoolYear);
-            $sheet->mergeCells('N3:S3');
-            $sheet->setCellValue('T3', 'Report for the Month of');
-            $sheet->mergeCells('T3:AB3');
-            $sheet->setCellValue('AC3', $month);
-            $sheet->mergeCells('AC3:AK3');
-            $sheet->getStyle('A3:AK3')->applyFromArray($borderStyle);
-
-            $sheet->setCellValue('A4', 'Name of School');
-            $sheet->mergeCells('A4:E4');
-            $sheet->setCellValue('F4', $schoolName);
-            $sheet->mergeCells('F4:U4');
-            $sheet->setCellValue('V4', 'Grade Level');
-            $sheet->mergeCells('V4:AC4');
-            $sheet->setCellValue('AD4', $gradeLevel);
-            $sheet->mergeCells('AD4:AL4');
-            $sheet->setCellValue('AM4', 'Section');
-            $sheet->mergeCells('AM4:AQ4');
-            $sheet->setCellValue('AR4', $sectionName);
-            $sheet->mergeCells('AR4:AS4');
-            $sheet->getStyle('A4:AS4')->applyFromArray($borderStyle);
-
-            $sheet->setCellValue('A5', 'No.');
-            $sheet->mergeCells('A5:B5');
-            $sheet->setCellValue('C5', "NAME\n(Last Name, First Name, Middle Name)");
-            $sheet->mergeCells('C5:E5');
-            $sheet->setCellValue('AN5', 'Total for the Month');
-            $sheet->mergeCells('AN5:AO5');
-            $sheet->setCellValue('AR5', 'REMARKS (If NLS, state reason, please refer to legend number 2. If TRANSFERRED IN/OUT, write the name of School.)');
-            $sheet->mergeCells('AR5:AS5');
-            $sheet->getStyle('A5:AS5')->applyFromArray($borderStyle);
-            $sheet->getStyle('C5')->getAlignment()->setWrapText(true);
-
-            $sheet->setCellValue('AM7', 'ABSENT');
-            $sheet->setCellValue('AO7', 'PRESENT');
-            $sheet->getStyle('AM7:AO7')->applyFromArray($borderStyle);
-
-            // Apply borders and center-align day and abbreviation cells
-            foreach ($dayColumns as $col) {
-                $sheet->getStyle($col . '5')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
-                $sheet->getStyle($col . '7')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
-                $sheet->getStyle($col . '5')->applyFromArray($borderStyle);
-                $sheet->getStyle($col . '7')->applyFromArray($borderStyle);
+// Females
+$femaleStartRow = $maleTotalRow + 1;
+for ($j = 0; $j < $femaleCount; $j++) {
+    $row = $femaleStartRow + $j;
+    $sheet->setCellValue('A' . $row, $j + 1); // Write number in column A only
+    $sheet->setCellValue('C' . $row, $females[$j]['full_name']);
+    $sheet->mergeCells('C' . $row . ':E' . $row);
+    $lrn = $females[$j]['lrn'];
+    $absentCount = 0;
+    $statusArray = [];
+    $dayIndex = 0;
+    foreach ($dayAssignments as $assignment) {
+        $col = $assignment['column'];
+        if ($assignment['date']) { // Only process columns with valid dates
+            $date = $assignment['date']->format('Y-m-d');
+            $att_stmt = $pdo->prepare("SELECT attendance_status FROM attendance_tracking WHERE class_id = :class_id AND lrn = :lrn AND attendance_date = :date");
+            $att_stmt->execute(['class_id' => $classId, 'lrn' => $lrn, 'date' => $date]);
+            $status = $att_stmt->fetchColumn() ?: 'Absent';
+            $mark = ($status === 'Absent') ? 'x' : ($status === 'Late' ? 'L' : '');
+            $sheet->setCellValue($col . $row, $mark);
+            if ($status !== 'Absent') {
+                $dailyPresent[$dayIndex]['female']++;
+                $dailyPresent[$dayIndex]['combined']++;
             }
-
-            // Populate dates and day abbreviations
-            foreach ($dayAssignments as $assignment) {
-                $col = $assignment['column'];
-                $sheet->setCellValue($col . '5', $assignment['dateNum']);
-                $sheet->setCellValue($col . '7', $assignment['abbrev']);
-                $sheet->getStyle($col . '5')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
-                $sheet->getStyle($col . '7')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
-                $sheet->getStyle($col . '5')->applyFromArray($borderStyle);
-                $sheet->getStyle($col . '7')->applyFromArray($borderStyle);
+            if ($mark === 'x') {
+                $absentCount++;
+                $statusArray[] = 1;
+            } else {
+                $statusArray[] = 0;
             }
+            $dayIndex++;
+        } else {
+            $sheet->setCellValue($col . $row, '');
+            $statusArray[] = 0; // No absence counted for blank dates
+        }
+        $sheet->getStyle($col . $row)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+        $sheet->getStyle($col . $row)->applyFromArray($borderStyle);
+    }
+    $presentCount = $numDays - $absentCount;
+    $sheet->setCellValue('AM' . $row, $absentCount);
+    $sheet->setCellValue('AO' . $row, $presentCount);
+    $sheet->getStyle('A' . $row . ':AS' . $row)->applyFromArray($borderStyle);
+    $studentAttendance[] = $statusArray;
 
-            // Student rows
-            $maleStartRow = 8;
-            $studentAttendance = []; // To track per student absences
-            $dailyPresent = array_fill(0, $numDays, ['male' => 0, 'female' => 0, 'combined' => 0]);
-            $consecutiveAbsentCount = 0;
-
-            // Males
-            for ($j = 0; $j < $maleCount; $j++) {
-                $row = $maleStartRow + $j;
-                $sheet->setCellValue('A' . $row, $j + 1);
-                $sheet->mergeCells('A' . $row . ':B' . $row);
-                $sheet->setCellValue('C' . $row, $males[$j]['full_name']);
-                $sheet->mergeCells('C' . $row . ':E' . $row);
-                $lrn = $males[$j]['lrn'];
-                $absentCount = 0;
-                $statusArray = [];
-                $dayIndex = 0;
-                foreach ($dayAssignments as $assignment) {
-                    $col = $assignment['column'];
-                    if ($assignment['date']) { // Only process columns with valid dates
-                        $date = $assignment['date']->format('Y-m-d');
-                        $att_stmt = $pdo->prepare("SELECT attendance_status FROM attendance_tracking WHERE class_id = :class_id AND lrn = :lrn AND attendance_date = :date");
-                        $att_stmt->execute(['class_id' => $classId, 'lrn' => $lrn, 'date' => $date]);
-                        $status = $att_stmt->fetchColumn() ?: 'Absent';
-                        $mark = ($status === 'Absent') ? 'x' : ($status === 'Late' ? 'L' : '');
-                        $sheet->setCellValue($col . $row, $mark);
-                        if ($status !== 'Absent') {
-                            $dailyPresent[$dayIndex]['male']++;
-                            $dailyPresent[$dayIndex]['combined']++;
-                        }
-                        if ($mark === 'x') {
-                            $absentCount++;
-                            $statusArray[] = 1;
-                        } else {
-                            $statusArray[] = 0;
-                        }
-                        $dayIndex++;
-                    } else {
-                        $sheet->setCellValue($col . $row, '');
-                        $statusArray[] = 0; // No absence counted for blank dates
-                    }
-                    $sheet->getStyle($col . $row)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
-                    $sheet->getStyle($col . $row)->applyFromArray($borderStyle);
-                }
-                $presentCount = $numDays - $absentCount;
-                $sheet->setCellValue('AM' . $row, $absentCount);
-                $sheet->setCellValue('AO' . $row, $presentCount);
-                $sheet->getStyle('A' . $row . ':AS' . $row)->applyFromArray($borderStyle);
-                $studentAttendance[] = $statusArray;
-
-                // Check for 5 consecutive absents
-                $streak = 0;
-                foreach ($statusArray as $s) {
-                    if ($s === 1) {
-                        $streak++;
-                        if ($streak >= 5) {
-                            $consecutiveAbsentCount++;
-                            break;
-                        }
-                    } else {
-                        $streak = 0;
-                    }
-                }
+    // Check for 5 consecutive absents
+    $streak = 0;
+    foreach ($statusArray as $s) {
+        if ($s === 1) {
+            $streak++;
+            if ($streak >= 5) {
+                $consecutiveAbsentCount++;
+                break;
             }
-            $maleTotalRow = $maleStartRow + $maleCount;
-            $sheet->setCellValue('C' . $maleTotalRow, '<=== MALE | TOTAL Per Day ===>');
-            $sheet->mergeCells('C' . $maleTotalRow . ':E' . $maleTotalRow);
-            $sheet->getRowDimension($maleTotalRow)->setRowHeight(15);
-            $sheet->getStyle('A' . $maleTotalRow . ':AS' . $maleTotalRow)->applyFromArray($borderStyle);
-
-            // Females
-            $femaleStartRow = $maleTotalRow + 1;
-            for ($j = 0; $j < $femaleCount; $j++) {
-                $row = $femaleStartRow + $j;
-                $sheet->setCellValue('A' . $row, $j + 1);
-                $sheet->mergeCells('A' . $row . ':B' . $row);
-                $sheet->setCellValue('C' . $row, $females[$j]['full_name']);
-                $sheet->mergeCells('C' . $row . ':E' . $row);
-                $lrn = $females[$j]['lrn'];
-                $absentCount = 0;
-                $statusArray = [];
-                $dayIndex = 0;
-                foreach ($dayAssignments as $assignment) {
-                    $col = $assignment['column'];
-                    if ($assignment['date']) { // Only process columns with valid dates
-                        $date = $assignment['date']->format('Y-m-d');
-                        $att_stmt = $pdo->prepare("SELECT attendance_status FROM attendance_tracking WHERE class_id = :class_id AND lrn = :lrn AND attendance_date = :date");
-                        $att_stmt->execute(['class_id' => $classId, 'lrn' => $lrn, 'date' => $date]);
-                        $status = $att_stmt->fetchColumn() ?: 'Absent';
-                        $mark = ($status === 'Absent') ? 'x' : ($status === 'Late' ? 'L' : '');
-                        $sheet->setCellValue($col . $row, $mark);
-                        if ($status !== 'Absent') {
-                            $dailyPresent[$dayIndex]['female']++;
-                            $dailyPresent[$dayIndex]['combined']++;
-                        }
-                        if ($mark === 'x') {
-                            $absentCount++;
-                            $statusArray[] = 1;
-                        } else {
-                            $statusArray[] = 0;
-                        }
-                        $dayIndex++;
-                    } else {
-                        $sheet->setCellValue($col . $row, '');
-                        $statusArray[] = 0; // No absence counted for blank dates
-                    }
-                    $sheet->getStyle($col . $row)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
-                    $sheet->getStyle($col . $row)->applyFromArray($borderStyle);
-                }
-                $presentCount = $numDays - $absentCount;
-                $sheet->setCellValue('AM' . $row, $absentCount);
-                $sheet->setCellValue('AO' . $row, $presentCount);
-                $sheet->getStyle('A' . $row . ':AS' . $row)->applyFromArray($borderStyle);
-                $studentAttendance[] = $statusArray;
-
-                // Check for 5 consecutive absents
-                $streak = 0;
-                foreach ($statusArray as $s) {
-                    if ($s === 1) {
-                        $streak++;
-                        if ($streak >= 5) {
-                            $consecutiveAbsentCount++;
-                            break;
-                        }
-                    } else {
-                        $streak = 0;
-                    }
-                }
-            }
-            $femaleTotalRow = $femaleStartRow + $femaleCount;
-            $sheet->setCellValue('C' . $femaleTotalRow, '<=== FEMALE | TOTAL Per Day ===>');
-            $sheet->mergeCells('C' . $femaleTotalRow . ':E' . $femaleTotalRow);
-            $sheet->getRowDimension($femaleTotalRow)->setRowHeight(15);
-            $sheet->getStyle('A' . $femaleTotalRow . ':AS' . $femaleTotalRow)->applyFromArray($borderStyle);
+        } else {
+            $streak = 0;
+        }
+    }
+}
+$femaleTotalRow = $femaleStartRow + $femaleCount;
+$sheet->setCellValue('C' . $femaleTotalRow, '<=== FEMALE | TOTAL Per Day ===>');
+$sheet->mergeCells('C' . $femaleTotalRow . ':E' . $femaleTotalRow);
+$sheet->getRowDimension($femaleTotalRow)->setRowHeight(15);
+$sheet->getStyle('A' . $femaleTotalRow . ':AS' . $femaleTotalRow)->applyFromArray($borderStyle);
 
             $combinedRow = $femaleTotalRow + 1;
             $sheet->setCellValue('C' . $combinedRow, 'Combined TOTAL Per Day');

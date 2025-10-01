@@ -403,6 +403,9 @@ function importStudents($class_id, $filePath)
 {
     $pdo = getDBConnection();
     try {
+        // Ensure output buffering is clean
+        ob_clean();
+
         $spreadsheet = \PhpOffice\PhpSpreadsheet\IOFactory::load($filePath);
         $sheet = $spreadsheet->getActiveSheet();
         $rows = $sheet->toArray(null, true, true, true); // Preserve empty cells and use column letters
@@ -412,7 +415,7 @@ function importStudents($class_id, $filePath)
 
         // Normalize first row headers
         $first_row = array_map(function($v) { return strtolower(trim($v ?? '')); }, array_values($rows[1] ?? []));
-        
+
         // Check if the file matches the standard format
         $matching_headers = array_intersect($expected_headers, $first_row);
         $is_standard = count($matching_headers) >= 8; // Allow partial matches (at least 8 headers)
@@ -423,7 +426,7 @@ function importStudents($class_id, $filePath)
             $header_map = array_flip($first_row);
             foreach (array_slice($rows, 1) as $row_index => $row) {
                 $row = array_values($row); // Convert to numeric array
-                $lrn = trim($row[$header_map['lrn']] ?? '');
+                $lrn = trim($row[$header_map['lrn'] ?? 0] ?? '');
                 if (!preg_match('/^\d{12}$/', $lrn)) {
                     error_log("Row $row_index: Invalid LRN '$lrn' for class_id: $class_id");
                     continue;
@@ -431,19 +434,19 @@ function importStudents($class_id, $filePath)
                 // Map all expected fields, defaulting to empty string if not found
                 $data_rows[] = [
                     $lrn,
-                    trim($row[$header_map['fullname']] ?? ''),
-                    trim($row[$header_map['email']] ?? ''),
-                    trim($row[$header_map['gender']] ?? ''),
-                    trim($row[$header_map['dob']] ?? ''),
-                    trim($row[$header_map['grade level']] ?? ''),
-                    trim($row[$header_map['address']] ?? ''),
-                    trim($row[$header_map['parent name']] ?? ''),
-                    trim($row[$header_map['parent email']] ?? ''),
-                    trim($row[$header_map['emergency contact']] ?? ''),
-                    trim($row[$header_map['photo']] ?? ''),
-                    trim($row[$header_map['qr code']] ?? '')
+                    trim($row[$header_map['fullname'] ?? 1] ?? ''),
+                    trim($row[$header_map['email'] ?? 2] ?? ''),
+                    trim($row[$header_map['gender'] ?? 3] ?? ''),
+                    trim($row[$header_map['dob'] ?? 4] ?? ''),
+                    trim($row[$header_map['grade level'] ?? 5] ?? ''),
+                    trim($row[$header_map['address'] ?? 6] ?? ''),
+                    trim($row[$header_map['parent name'] ?? 7] ?? ''),
+                    trim($row[$header_map['parent email'] ?? 8] ?? ''),
+                    trim($row[$header_map['emergency contact'] ?? 9] ?? ''),
+                    trim($row[$header_map['photo'] ?? 10] ?? ''),
+                    trim($row[$header_map['qr code'] ?? 11] ?? '')
                 ];
-                error_log("Row $row_index processed: LRN=$lrn, Fullname=" . trim($row[$header_map['fullname']] ?? ''));
+                error_log("Row $row_index processed: LRN=$lrn, Fullname=" . trim($row[$header_map['fullname'] ?? 1] ?? ''));
             }
         } else {
             // SF1 format: Find data start by looking for a valid LRN
@@ -530,33 +533,38 @@ function importStudents($class_id, $filePath)
         $qr_files = [];
         if (!empty($qrs_to_generate)) {
             foreach ($qrs_to_generate as $item) {
-                $qrCode = new QrCode($item['content']);
-                $writer = new PngWriter();
-                $result = $writer->write($qrCode);
-                $dir = 'qrcodes';
-                if (!file_exists($dir)) {
-                    mkdir($dir, 0777, true);
-                }
-                $filename = $item['lrn'] . '.png';
-                $savePath = $dir . '/' . $filename;
-                if ($result->saveToFile($savePath)) {
-                    $qr_files[$item['lrn']] = $filename;
-                } else {
-                    error_log("Failed to save QR code for LRN: $lrn in class_id: $class_id");
+                try {
+                    $qrCode = new QrCode($item['content']);
+                    $writer = new PngWriter();
+                    $result = $writer->write($qrCode);
+                    $dir = 'qrcodes';
+                    if (!file_exists($dir)) {
+                        mkdir($dir, 0777, true);
+                    }
+                    $filename = $item['lrn'] . '.png';
+                    $savePath = $dir . '/' . $filename;
+                    if ($result->saveToFile($savePath)) {
+                        $qr_files[$item['lrn']] = $filename;
+                    } else {
+                        error_log("Failed to save QR code for LRN: {$item['lrn']} in class_id: $class_id");
+                    }
+                } catch (Exception $e) {
+                    error_log("QR Code generation error for LRN: {$item['lrn']}: " . $e->getMessage());
+                    // Continue processing other QR codes
                 }
             }
         }
 
-        foreach ($data_rows as $row) {
+        foreach ($data_rows as $row_index => $row) {
             $lrn = trim($row[0] ?? '');
             if (!preg_match('/^\d{12}$/', $lrn)) {
-                error_log("Skipping row with invalid LRN: $lrn for class_id: $class_id");
+                error_log("Skipping row $row_index with invalid LRN: $lrn for class_id: $class_id");
                 continue;
             }
 
             // Normalize DOB
             $dob = $row[4] ?? null;
-            if (is_string($dob)) {
+            if (is_string($dob) && $dob !== '') {
                 $dob_trim = trim($dob);
                 if (preg_match('#^(\d{1,2})/(\d{1,2})/(\d{2})$#', $dob_trim, $m)) {
                     $mm = intval($m[1]);
@@ -564,19 +572,28 @@ function importStudents($class_id, $filePath)
                     $yy = intval($m[3]);
                     $year = ($yy < 50) ? 2000 + $yy : 1900 + $yy;
                     $dob = sprintf('%04d-%02d-%02d', $year, $mm, $dd);
+                } elseif (preg_match('#^\d{4}-\d{2}-\d{2}$#', $dob_trim)) {
+                    // Already in YYYY-MM-DD format
+                    $dob = $dob_trim;
+                } else {
+                    $dob = null; // Invalid format, save as null
                 }
             } elseif (is_numeric($dob)) {
                 $base = new \DateTime('1899-12-30');
                 $days = floor($dob);
                 $base->add(new \DateInterval("P{$days}D"));
                 $dob = $base->format('Y-m-d');
+            } else {
+                $dob = null; // Empty or invalid, save as null
             }
 
-            $qr_code = isset($qr_files[$lrn]) ? $qr_files[$lrn] : (isset($row[11]) && !empty(trim($row[11] ?? '')) ? trim($row[11]) : null);
+            $qr_code = isset($qr_files[$lrn]) ? $qr_files[$lrn] : (isset($row[11]) && trim($row[11] ?? '') !== '' ? trim($row[11]) : null);
 
             $stmt = $pdo->prepare("
-                INSERT INTO students (lrn, full_name, email, gender, dob, grade_level, address, parent_name, parent_email, emergency_contact, photo, qr_code, date_added)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURDATE())
+                INSERT INTO students (
+                    lrn, full_name, email, gender, dob, grade_level, address, 
+                    parent_name, parent_email, emergency_contact, photo, qr_code, date_added
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURDATE())
                 ON DUPLICATE KEY UPDATE 
                     full_name = VALUES(full_name),
                     email = VALUES(email),
@@ -604,20 +621,25 @@ function importStudents($class_id, $filePath)
                 trim($row[10] ?? '') ?: null,
                 $qr_code
             ];
-            if ($stmt->execute($params)) {
-                $stmt = $pdo->prepare("
-                    INSERT INTO class_students (class_id, lrn, is_enrolled)
-                    VALUES (?, ?, 1)
-                    ON DUPLICATE KEY UPDATE is_enrolled = 1
-                ");
-                if ($stmt->execute([$class_id, $lrn])) {
-                    $inserted_count++;
-                    error_log("Successfully inserted LRN: $lrn into class_id: $class_id");
+            try {
+                if ($stmt->execute($params)) {
+                    $stmt = $pdo->prepare("
+                        INSERT INTO class_students (class_id, lrn, is_enrolled)
+                        VALUES (?, ?, 1)
+                        ON DUPLICATE KEY UPDATE is_enrolled = 1
+                    ");
+                    if ($stmt->execute([$class_id, $lrn])) {
+                        $inserted_count++;
+                        error_log("Successfully inserted LRN: $lrn into class_id: $class_id");
+                    } else {
+                        error_log("Failed to insert into class_students for LRN: $lrn, class_id: $class_id");
+                    }
                 } else {
-                    error_log("Failed to insert into class_students for LRN: $lrn, class_id: $class_id");
+                    error_log("Failed to insert/update student with LRN: $lrn for class_id: $class_id. Error: " . json_encode($stmt->errorInfo()));
                 }
-            } else {
-                error_log("Failed to insert/update student with LRN: $lrn for class_id: $class_id. Error: " . json_encode($stmt->errorInfo()));
+            } catch (PDOException $e) {
+                error_log("Database error for LRN: $lrn in class_id: $class_id: " . $e->getMessage());
+                // Continue processing other rows
             }
         }
 
@@ -632,11 +654,14 @@ function importStudents($class_id, $filePath)
         return ['success' => true, 'message' => "Imported $inserted_count students successfully"];
     } catch (PDOException $e) {
         $pdo->rollBack();
-        error_log("Import students error for class_id: $class_id: " . $e->getMessage());
+        error_log("Import students database error for class_id: $class_id: " . $e->getMessage());
         return ['success' => false, 'error' => 'Database error: ' . $e->getMessage()];
     } catch (\PhpOffice\PhpSpreadsheet\Reader\Exception $e) {
         error_log("Spreadsheet error for class_id: $class_id: " . $e->getMessage());
         return ['success' => false, 'error' => 'Invalid Excel file: ' . $e->getMessage()];
+    } catch (Exception $e) {
+        error_log("Unexpected error in importStudents for class_id: $class_id: " . $e->getMessage());
+        return ['success' => false, 'error' => 'Unexpected error: ' . $e->getMessage()];
     }
 }
 

@@ -199,8 +199,8 @@ if ($numDays > 25) {
     $numDays = 25;
 }
 
-// Define consecutive day columns starting from F to AK (25 columns)
-$dayColumns = ['F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', 'AA', 'AB', 'AC', 'AD'];
+// Define consecutive day columns starting from D to AB (25 columns)
+$dayColumns = ['D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', 'AA', 'AB'];
 
 // Define fixed day abbreviation sequence: M, T, W, TH, F repeated 5 times
 $fixedAbbrevs = ['M', 'T', 'W', 'TH', 'F', 'M', 'T', 'W', 'TH', 'F', 'M', 'T', 'W', 'TH', 'F', 'M', 'T', 'W', 'TH', 'F', 'M', 'T', 'W', 'TH', 'F'];
@@ -296,18 +296,12 @@ foreach ($columnWidths as $col => $width) {
     $sheet->getColumnDimension($col)->setWidth($width);
 }
 
-// ... (rest of the code from Set row heights onward remains unchanged)
-
-// ... (previous code remains unchanged until Set row heights)
-
-// ... (previous code remains unchanged until Set row heights)
-
 // Set row heights
 $rowHeights = [
     1 => 30,  // Title
-    2 => 15,  // Subtitle
-    3 => 15,  // School ID, Year, Month
-    4 => 15,  // School Name, Grade, Section
+    2 => 20,  // Subtitle
+    3 => 20,  // School ID, Year, Month
+    4 => 20,  // School Name, Grade, Section
     5 => 30,  // Headers
     6 => 15,  // Blank row (spacer)
     7 => 15,  // Day abbreviations
@@ -330,52 +324,51 @@ $sheet->getStyle('A1')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENT
 
 $sheet->setCellValue('A2', '(This replaces Form 1, Form 2 & STS Form 4 - Absenteeism and Dropout Profile)');
 $sheet->mergeCells('A2:AR2');
-$sheet->getStyle('A2')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+$sheet->getStyle('A2')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER)->setVertical(Alignment::VERTICAL_CENTER);
 
 $sheet->setCellValue('A3', 'School ID');
-$sheet->mergeCells('A3:E3');
-$sheet->setCellValue('K3', 'School Year');
-$sheet->mergeCells('K3:M3');
-$sheet->setCellValue('N3', $schoolYear);
-$sheet->mergeCells('N3:S3');
-$sheet->setCellValue('T3', 'Report for the Month of');
-$sheet->mergeCells('T3:AB3');
-$sheet->setCellValue('AC3', $month);
-$sheet->mergeCells('AC3:AK3');
-$sheet->mergeCells('F3:J3'); // Merge F3 to J3
+$sheet->mergeCells('A3:C3');
+$sheet->setCellValue('I3', 'School Year');
+$sheet->mergeCells('I3:K3');
+$sheet->setCellValue('L3', $schoolYear);
+$sheet->mergeCells('L3:P3');
+$sheet->setCellValue('Q3', 'Report for the Month of');
+$sheet->mergeCells('Q3:W3');
+$sheet->setCellValue('X3', $month);
+$sheet->mergeCells('X3:AB3');
+$sheet->mergeCells('D3:H3'); // Merge F3 to J3
 $sheet->setCellValue('F3', ''); // Leave merged cell empty or set a placeholder if needed
-$sheet->getStyle('A3:AK3')->applyFromArray($borderStyle);
+$sheet->getStyle('A3:AK3')->applyFromArray($borderStyle)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER)->setVertical(Alignment::VERTICAL_CENTER);
 
 $sheet->setCellValue('A4', 'Name of School');
-$sheet->mergeCells('A4:E4');
-$sheet->setCellValue('F4', $schoolName);
-$sheet->mergeCells('F4:U4');
-$sheet->setCellValue('V4', 'Grade Level');
-$sheet->mergeCells('V4:AC4');
-$sheet->setCellValue('AD4', $gradeLevel);
-$sheet->mergeCells('AD4:AL4');
-$sheet->setCellValue('AM4', 'Section');
-$sheet->mergeCells('AM4:AQ4');
-$sheet->setCellValue('AR4', $sectionName);
-$sheet->mergeCells('AR4:AS4');
-$sheet->getStyle('A4:AS4')->applyFromArray($borderStyle);
+$sheet->mergeCells('A4:C4');
+$sheet->setCellValue('D4', $schoolName);
+$sheet->mergeCells('D4:P4');
+$sheet->setCellValue('Q4', 'Grade Level');
+$sheet->mergeCells('Q4:W4');
+$sheet->setCellValue('X4', $gradeLevel);
+$sheet->mergeCells('X4:AB4');
+$sheet->setCellValue('AC4', 'Section');
+$sheet->mergeCells('AC4:AF4');
+$sheet->setCellValue('AG4', $sectionName);
+$sheet->mergeCells('AG4:AK4');
+$sheet->getStyle('A4:AS4')->applyFromArray($borderStyle)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER)->setVertical(Alignment::VERTICAL_CENTER);
 
 // Modified header row (row 5)
 $sheet->setCellValue('A5', 'No.');
-// Remove merge for A5:B5, keep "No." in A5 only
-$sheet->setCellValue('C5', "NAME\n(Last Name, First Name, Middle Name)");
-$sheet->mergeCells('C5:E5');
-$sheet->setCellValue('AN5', 'Total for the Month');
-$sheet->mergeCells('AN5:AO5');
-$sheet->setCellValue('AR5', 'REMARKS (If NLS, state reason, please refer to legend number 2. If TRANSFERRED IN/OUT, write the name of School.)');
-$sheet->mergeCells('AR5:AS5');
-$sheet->getStyle('A5:AS5')->applyFromArray($borderStyle);
-$sheet->getStyle('C5')->getAlignment()->setWrapText(true);
+$sheet->setCellValue('B5', "NAME\n(Last Name, First Name, Middle Name)");
+$sheet->mergeCells('B5:C5');
+$sheet->setCellValue('AX5', 'Total for the Month');
+$sheet->mergeCells('AX5:AY5');
+$sheet->setCellValue('BB5', 'REMARKS (If NLS, state reason, please refer to legend number 2. If TRANSFERRED IN/OUT, write the name of School.)');
+$sheet->mergeCells('BB5:BD5');
+$sheet->getStyle('A5:BD5')->applyFromArray($borderStyle);
+$sheet->getStyle('B5')->getAlignment()->setWrapText(true);
 
 // Row 7: Day abbreviations and totals
-$sheet->setCellValue('AM7', 'ABSENT');
-$sheet->setCellValue('AO7', 'PRESENT');
-$sheet->getStyle('AM7:AO7')->applyFromArray($borderStyle);
+$sheet->setCellValue('AW7', 'ABSENT');
+$sheet->setCellValue('AY7', 'PRESENT');
+$sheet->getStyle('AW7:AY7')->applyFromArray($borderStyle);
 
 // Apply borders and center-align day and abbreviation cells
 foreach ($dayColumns as $col) {
@@ -406,8 +399,8 @@ $consecutiveAbsentCount = 0;
 for ($j = 0; $j < $maleCount; $j++) {
     $row = $maleStartRow + $j;
     $sheet->setCellValue('A' . $row, $j + 1); // Write number in column A only
-    $sheet->setCellValue('C' . $row, $males[$j]['full_name']);
-    $sheet->mergeCells('C' . $row . ':E' . $row);
+    $sheet->setCellValue('B' . $row, $males[$j]['full_name']);
+    $sheet->mergeCells('B' . $row . ':C' . $row);
     $lrn = $males[$j]['lrn'];
     $absentCount = 0;
     $statusArray = [];
@@ -440,9 +433,9 @@ for ($j = 0; $j < $maleCount; $j++) {
         $sheet->getStyle($col . $row)->applyFromArray($borderStyle);
     }
     $presentCount = $numDays - $absentCount;
-    $sheet->setCellValue('AM' . $row, $absentCount);
-    $sheet->setCellValue('AO' . $row, $presentCount);
-    $sheet->getStyle('A' . $row . ':AS' . $row)->applyFromArray($borderStyle);
+    $sheet->setCellValue('AW' . $row, $absentCount);
+    $sheet->setCellValue('AY' . $row, $presentCount);
+    $sheet->getStyle('A' . $row . ':BD' . $row)->applyFromArray($borderStyle);
     $studentAttendance[] = $statusArray;
 
     // Check for 5 consecutive absents
@@ -460,18 +453,18 @@ for ($j = 0; $j < $maleCount; $j++) {
     }
 }
 $maleTotalRow = $maleStartRow + $maleCount;
-$sheet->setCellValue('C' . $maleTotalRow, '<=== MALE | TOTAL Per Day ===>');
-$sheet->mergeCells('C' . $maleTotalRow . ':E' . $maleTotalRow);
+$sheet->setCellValue('B' . $maleTotalRow, '<=== MALE | TOTAL Per Day ===>');
+$sheet->mergeCells('B' . $maleTotalRow . ':C' . $maleTotalRow);
 $sheet->getRowDimension($maleTotalRow)->setRowHeight(15);
-$sheet->getStyle('A' . $maleTotalRow . ':AS' . $maleTotalRow)->applyFromArray($borderStyle);
+$sheet->getStyle('A' . $maleTotalRow . ':BD' . $maleTotalRow)->applyFromArray($borderStyle);
 
 // Females
 $femaleStartRow = $maleTotalRow + 1;
 for ($j = 0; $j < $femaleCount; $j++) {
     $row = $femaleStartRow + $j;
     $sheet->setCellValue('A' . $row, $j + 1); // Write number in column A only
-    $sheet->setCellValue('C' . $row, $females[$j]['full_name']);
-    $sheet->mergeCells('C' . $row . ':E' . $row);
+    $sheet->setCellValue('B' . $row, $females[$j]['full_name']);
+    $sheet->mergeCells('B' . $row . ':C' . $row);
     $lrn = $females[$j]['lrn'];
     $absentCount = 0;
     $statusArray = [];
@@ -504,9 +497,9 @@ for ($j = 0; $j < $femaleCount; $j++) {
         $sheet->getStyle($col . $row)->applyFromArray($borderStyle);
     }
     $presentCount = $numDays - $absentCount;
-    $sheet->setCellValue('AM' . $row, $absentCount);
-    $sheet->setCellValue('AO' . $row, $presentCount);
-    $sheet->getStyle('A' . $row . ':AS' . $row)->applyFromArray($borderStyle);
+    $sheet->setCellValue('AW' . $row, $absentCount);
+    $sheet->setCellValue('AY' . $row, $presentCount);
+    $sheet->getStyle('A' . $row . ':BD' . $row)->applyFromArray($borderStyle);
     $studentAttendance[] = $statusArray;
 
     // Check for 5 consecutive absents
@@ -524,37 +517,39 @@ for ($j = 0; $j < $femaleCount; $j++) {
     }
 }
 $femaleTotalRow = $femaleStartRow + $femaleCount;
-$sheet->setCellValue('C' . $femaleTotalRow, '<=== FEMALE | TOTAL Per Day ===>');
-$sheet->mergeCells('C' . $femaleTotalRow . ':E' . $femaleTotalRow);
+$sheet->setCellValue('B' . $femaleTotalRow, '<=== FEMALE | TOTAL Per Day ===>');
+$sheet->mergeCells('B' . $femaleTotalRow . ':C' . $femaleTotalRow);
 $sheet->getRowDimension($femaleTotalRow)->setRowHeight(15);
-$sheet->getStyle('A' . $femaleTotalRow . ':AS' . $femaleTotalRow)->applyFromArray($borderStyle);
+$sheet->getStyle('A' . $femaleTotalRow . ':BD' . $femaleTotalRow)->applyFromArray($borderStyle);
 
-            $combinedRow = $femaleTotalRow + 1;
-            $sheet->setCellValue('C' . $combinedRow, 'Combined TOTAL Per Day');
-            $sheet->mergeCells('C' . $combinedRow . ':E' . $combinedRow);
-            $sheet->getRowDimension($combinedRow)->setRowHeight(15);
-            $sheet->getStyle('A' . $combinedRow . ':AS' . $combinedRow)->applyFromArray($borderStyle);
+$combinedRow = $femaleTotalRow + 1;
+$sheet->setCellValue('B' . $combinedRow, 'Combined TOTAL Per Day');
+$sheet->mergeCells('B' . $combinedRow . ':C' . $combinedRow);
+$sheet->getRowDimension($combinedRow)->setRowHeight(15);
+$sheet->getStyle('A' . $combinedRow . ':BD' . $combinedRow)->applyFromArray($borderStyle);
 
-            // Set daily totals
-            $totalAttendance = 0;
-            $dayIndex = 0;
-            foreach ($dayAssignments as $assignment) {
-                $col = $assignment['column'];
-                if ($assignment['date']) {
-                    $sheet->setCellValue($col . $maleTotalRow, $dailyPresent[$dayIndex]['male']);
-                    $sheet->setCellValue($col . $femaleTotalRow, $dailyPresent[$dayIndex]['female']);
-                    $sheet->setCellValue($col . $combinedRow, $dailyPresent[$dayIndex]['combined']);
-                    $totalAttendance += $dailyPresent[$dayIndex]['combined'];
-                    $dayIndex++;
-                } else {
-                    $sheet->setCellValue($col . $maleTotalRow, '');
-                    $sheet->setCellValue($col . $femaleTotalRow, '');
-                    $sheet->setCellValue($col . $combinedRow, '');
-                }
-                $sheet->getStyle($col . $maleTotalRow)->applyFromArray($borderStyle);
-                $sheet->getStyle($col . $femaleTotalRow)->applyFromArray($borderStyle);
-                $sheet->getStyle($col . $combinedRow)->applyFromArray($borderStyle);
-            }
+// Set daily totals
+$totalAttendance = 0;
+$dayIndex = 0;
+foreach ($dayAssignments as $assignment) {
+    $col = $assignment['column'];
+    if ($assignment['date']) {
+        $sheet->setCellValue($col . $maleTotalRow, $dailyPresent[$dayIndex]['male']);
+        $sheet->setCellValue($col . $femaleTotalRow, $dailyPresent[$dayIndex]['female']);
+        $sheet->setCellValue($col . $combinedRow, $dailyPresent[$dayIndex]['combined']);
+        $totalAttendance += $dailyPresent[$dayIndex]['combined'];
+        $dayIndex++;
+    } else {
+        $sheet->setCellValue($col . $maleTotalRow, '');
+        $sheet->setCellValue($col . $femaleTotalRow, '');
+        $sheet->setCellValue($col . $combinedRow, '');
+    }
+    $sheet->getStyle($col . $maleTotalRow)->applyFromArray($borderStyle);
+    $sheet->getStyle($col . $femaleTotalRow)->applyFromArray($borderStyle);
+    $sheet->getStyle($col . $combinedRow)->applyFromArray($borderStyle);
+}
+
+// ... (rest of the code from Calculate averages onward remains unchanged)
 
             // Calculate averages
             $averageDaily = $numDays > 0 ? $totalAttendance / $numDays : 0;

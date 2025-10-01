@@ -300,6 +300,8 @@ foreach ($columnWidths as $col => $width) {
 
 // ... (previous code remains unchanged until Set row heights)
 
+// ... (previous code remains unchanged until Set row heights)
+
 // Set row heights
 $rowHeights = [
     1 => 30,  // Title
@@ -340,6 +342,8 @@ $sheet->setCellValue('T3', 'Report for the Month of');
 $sheet->mergeCells('T3:AB3');
 $sheet->setCellValue('AC3', $month);
 $sheet->mergeCells('AC3:AK3');
+$sheet->mergeCells('F3:J3'); // Merge F3 to J3
+$sheet->setCellValue('F3', ''); // Leave merged cell empty or set a placeholder if needed
 $sheet->getStyle('A3:AK3')->applyFromArray($borderStyle);
 
 $sheet->setCellValue('A4', 'Name of School');
@@ -361,8 +365,6 @@ $sheet->setCellValue('A5', 'No.');
 // Remove merge for A5:B5, keep "No." in A5 only
 $sheet->setCellValue('C5', "NAME\n(Last Name, First Name, Middle Name)");
 $sheet->mergeCells('C5:E5');
-$sheet->mergeCells('F3:J3'); // Merge F5 to J5
-$sheet->setCellValue('F5', ''); // Leave merged cell empty or set a placeholder if needed
 $sheet->setCellValue('AN5', 'Total for the Month');
 $sheet->mergeCells('AN5:AO5');
 $sheet->setCellValue('AR5', 'REMARKS (If NLS, state reason, please refer to legend number 2. If TRANSFERRED IN/OUT, write the name of School.)');

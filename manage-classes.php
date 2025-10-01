@@ -405,21 +405,125 @@ function importStudents($class_id, $filePath)
     try {
         $spreadsheet = \PhpOffice\PhpSpreadsheet\IOFactory::load($filePath);
         $sheet = $spreadsheet->getActiveSheet();
-        $rows = $sheet->toArray();
+        $rows = $sheet->toArray(null, true, true, true); // Preserve empty cells and use column letters
+
+        // Expected headers for standard format
+        $expected_headers = ['lrn', 'fullname', 'email', 'gender', 'dob', 'grade level', 'address', 'parent name', 'parent email', 'emergency contact', 'photo', 'qr code'];
+
+        // Normalize first row headers
+        $first_row = array_map(function($v) { return strtolower(trim($v ?? '')); }, array_values($rows[1] ?? []));
+        
+        // Check if the file matches the standard format
+        $matching_headers = array_intersect($expected_headers, $first_row);
+        $is_standard = count($matching_headers) >= 8; // Allow partial matches (at least 8 headers)
+        
+        $data_rows = [];
+        if ($is_standard) {
+            // Standard format: Headers in first row, data starts from second row
+            $header_map = array_flip($first_row);
+            foreach (array_slice($rows, 1) as $row_index => $row) {
+                $row = array_values($row); // Convert to numeric array
+                $lrn = trim($row[$header_map['lrn']] ?? '');
+                if (!preg_match('/^\d{12}$/', $lrn)) {
+                    error_log("Row $row_index: Invalid LRN '$lrn' for class_id: $class_id");
+                    continue;
+                }
+                // Map all expected fields, defaulting to empty string if not found
+                $data_rows[] = [
+                    $lrn,
+                    trim($row[$header_map['fullname']] ?? ''),
+                    trim($row[$header_map['email']] ?? ''),
+                    trim($row[$header_map['gender']] ?? ''),
+                    trim($row[$header_map['dob']] ?? ''),
+                    trim($row[$header_map['grade level']] ?? ''),
+                    trim($row[$header_map['address']] ?? ''),
+                    trim($row[$header_map['parent name']] ?? ''),
+                    trim($row[$header_map['parent email']] ?? ''),
+                    trim($row[$header_map['emergency contact']] ?? ''),
+                    trim($row[$header_map['photo']] ?? ''),
+                    trim($row[$header_map['qr code']] ?? '')
+                ];
+                error_log("Row $row_index processed: LRN=$lrn, Fullname=" . trim($row[$header_map['fullname']] ?? ''));
+            }
+        } else {
+            // SF1 format: Find data start by looking for a valid LRN
+            $data_start = 0;
+            foreach ($rows as $row_index => $row) {
+                $lrn = trim($row['B'] ?? '');
+                if (preg_match('/^\d{12}$/', $lrn)) {
+                    $data_start = $row_index;
+                    break;
+                }
+            }
+            if ($data_start === 0) {
+                error_log("Could not detect data rows in SF1 format for class_id: $class_id");
+                return ['success' => false, 'error' => 'Could not detect data rows in SF1 format'];
+            }
+
+            // Fetch class grade level for SF1
+            $stmt = $pdo->prepare("SELECT grade_level FROM classes WHERE class_id = ?");
+            $stmt->execute([$class_id]);
+            $class_grade = $stmt->fetchColumn() ?: 'N/A';
+
+            for ($k = $data_start; $k <= count($rows); $k++) {
+                $row = $rows[$k] ?? [];
+                if (empty($row['B'])) continue;
+
+                $lrn = trim($row['B'] ?? '');
+                $full_name = trim($row['C'] ?? '');
+                $email = null;
+                $gender = ($row['G'] ?? '') === 'M' ? 'Male' : (($row['G'] ?? '') === 'F' ? 'Female' : null);
+                $dob_raw = trim($row['H'] ?? '');
+                $dob = null;
+                if (preg_match('#^(\d{1,2})/(\d{1,2})/(\d{2})$#', $dob_raw, $m)) {
+                    $mm = intval($m[1]);
+                    $dd = intval($m[2]);
+                    $yy = intval($m[3]);
+                    $year = ($yy < 50) ? 2000 + $yy : 1900 + $yy;
+                    $dob = sprintf('%04d-%02d-%02d', $year, $mm, $dd);
+                } elseif (is_numeric($dob_raw)) {
+                    $base = new \DateTime('1899-12-30');
+                    $days = floor($dob_raw);
+                    $base->add(new \DateInterval("P{$days}D"));
+                    $dob = $base->format('Y-m-d');
+                }
+                $grade_level = $class_grade;
+                $address_parts = [
+                    trim($row['N'] ?? ''),
+                    trim($row['O'] ?? ''),
+                    trim($row['P'] ?? ''),
+                    trim($row['Q'] ?? '')
+                ];
+                $address = implode(', ', array_filter($address_parts));
+                $parent_name = trim($row['R'] ?? '');
+                $parent_email = null;
+                $emergency_contact = trim($row['X'] ?? '');
+                $photo = null;
+                $qr_code = null;
+
+                $data_rows[] = [
+                    $lrn, $full_name, $email, $gender, $dob, $grade_level, $address,
+                    $parent_name, $parent_email, $emergency_contact, $photo, $qr_code
+                ];
+            }
+        }
+
+        if (empty($data_rows)) {
+            error_log("No valid data rows found for import in class_id: $class_id");
+            return ['success' => false, 'error' => 'No valid student data found in the file'];
+        }
 
         $pdo->beginTransaction();
-        $header = array_shift($rows);
-
         $qrs_to_generate = [];
-        foreach ($rows as $index => $row) {
-            if (count($row) >= 10) {
-                $lrn = $row[0] ?? null;
-                if ($lrn && (!isset($row[11]) || empty(trim($row[11])))) {
-                    $qrs_to_generate[] = [
-                        'lrn' => $lrn,
-                        'content' => "$lrn, {$row[1]}" // Use full_name
-                    ];
-                }
+        $inserted_count = 0;
+
+        foreach ($data_rows as $row) {
+            $lrn = trim($row[0] ?? '');
+            if ($lrn && (!isset($row[11]) || empty(trim($row[11] ?? '')))) {
+                $qrs_to_generate[] = [
+                    'lrn' => $lrn,
+                    'content' => "$lrn, {$row[1]}" // Use full_name
+                ];
             }
         }
 
@@ -435,66 +539,103 @@ function importStudents($class_id, $filePath)
                 }
                 $filename = $item['lrn'] . '.png';
                 $savePath = $dir . '/' . $filename;
-                $result->saveToFile($savePath);
-                $qr_files[$item['lrn']] = $filename;
+                if ($result->saveToFile($savePath)) {
+                    $qr_files[$item['lrn']] = $filename;
+                } else {
+                    error_log("Failed to save QR code for LRN: $lrn in class_id: $class_id");
+                }
             }
         }
 
-        foreach ($rows as $row) {
-            if (count($row) >= 10) {
-                $lrn = $row[0] ?? null;
-                if (!$lrn) continue;
+        foreach ($data_rows as $row) {
+            $lrn = trim($row[0] ?? '');
+            if (!preg_match('/^\d{12}$/', $lrn)) {
+                error_log("Skipping row with invalid LRN: $lrn for class_id: $class_id");
+                continue;
+            }
 
-                $qr_code = isset($qr_files[$lrn]) ? $qr_files[$lrn] : (isset($row[11]) && !empty(trim($row[11])) ? trim($row[11]) : null);
+            // Normalize DOB
+            $dob = $row[4] ?? null;
+            if (is_string($dob)) {
+                $dob_trim = trim($dob);
+                if (preg_match('#^(\d{1,2})/(\d{1,2})/(\d{2})$#', $dob_trim, $m)) {
+                    $mm = intval($m[1]);
+                    $dd = intval($m[2]);
+                    $yy = intval($m[3]);
+                    $year = ($yy < 50) ? 2000 + $yy : 1900 + $yy;
+                    $dob = sprintf('%04d-%02d-%02d', $year, $mm, $dd);
+                }
+            } elseif (is_numeric($dob)) {
+                $base = new \DateTime('1899-12-30');
+                $days = floor($dob);
+                $base->add(new \DateInterval("P{$days}D"));
+                $dob = $base->format('Y-m-d');
+            }
 
-                $stmt = $pdo->prepare("
-                    INSERT INTO students (lrn, full_name, email, gender, dob, grade_level, address, parent_name, parent_email, emergency_contact, photo, qr_code, date_added)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURDATE())
-                    ON DUPLICATE KEY UPDATE 
-                        full_name = VALUES(full_name),
-                        email = VALUES(email),
-                        gender = VALUES(gender),
-                        dob = VALUES(dob),
-                        grade_level = VALUES(grade_level),
-                        address = VALUES(address),
-                        parent_name = VALUES(parent_name),
-                        parent_email = VALUES(parent_email),
-                        emergency_contact = VALUES(emergency_contact),
-                        photo = VALUES(photo),
-                        qr_code = VALUES(qr_code)
-                ");
-                $stmt->execute([
-                    $lrn,
-                    $row[1] ?? null, // Fullname
-                    $row[2] ?? null,
-                    $row[3] ?? null,
-                    $row[4] ?? null,
-                    $row[5] ?? null,
-                    $row[6] ?? null,
-                    $row[7] ?? null,
-                    $row[8] ?? null,
-                    $row[9] ?? null,
-                    $row[10] ?? null,
-                    $qr_code
-                ]);
+            $qr_code = isset($qr_files[$lrn]) ? $qr_files[$lrn] : (isset($row[11]) && !empty(trim($row[11] ?? '')) ? trim($row[11]) : null);
 
+            $stmt = $pdo->prepare("
+                INSERT INTO students (lrn, full_name, email, gender, dob, grade_level, address, parent_name, parent_email, emergency_contact, photo, qr_code, date_added)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURDATE())
+                ON DUPLICATE KEY UPDATE 
+                    full_name = VALUES(full_name),
+                    email = VALUES(email),
+                    gender = VALUES(gender),
+                    dob = VALUES(dob),
+                    grade_level = VALUES(grade_level),
+                    address = VALUES(address),
+                    parent_name = VALUES(parent_name),
+                    parent_email = VALUES(parent_email),
+                    emergency_contact = VALUES(emergency_contact),
+                    photo = VALUES(photo),
+                    qr_code = VALUES(qr_code)
+            ");
+            $params = [
+                $lrn,
+                trim($row[1] ?? '') ?: null,
+                trim($row[2] ?? '') ?: null,
+                trim($row[3] ?? '') ?: null,
+                $dob,
+                trim($row[5] ?? '') ?: null,
+                trim($row[6] ?? '') ?: null,
+                trim($row[7] ?? '') ?: null,
+                trim($row[8] ?? '') ?: null,
+                trim($row[9] ?? '') ?: null,
+                trim($row[10] ?? '') ?: null,
+                $qr_code
+            ];
+            if ($stmt->execute($params)) {
                 $stmt = $pdo->prepare("
                     INSERT INTO class_students (class_id, lrn, is_enrolled)
                     VALUES (?, ?, 1)
                     ON DUPLICATE KEY UPDATE is_enrolled = 1
                 ");
-                $stmt->execute([$class_id, $lrn]);
+                if ($stmt->execute([$class_id, $lrn])) {
+                    $inserted_count++;
+                    error_log("Successfully inserted LRN: $lrn into class_id: $class_id");
+                } else {
+                    error_log("Failed to insert into class_students for LRN: $lrn, class_id: $class_id");
+                }
+            } else {
+                error_log("Failed to insert/update student with LRN: $lrn for class_id: $class_id. Error: " . json_encode($stmt->errorInfo()));
             }
         }
 
+        if ($inserted_count === 0) {
+            $pdo->rollBack();
+            error_log("No valid students inserted for class_id: $class_id after processing " . count($data_rows) . " rows");
+            return ['success' => false, 'error' => 'No valid students were inserted'];
+        }
+
         $pdo->commit();
-        return ['success' => true];
+        error_log("Successfully imported $inserted_count students for class_id: $class_id");
+        return ['success' => true, 'message' => "Imported $inserted_count students successfully"];
     } catch (PDOException $e) {
         $pdo->rollBack();
-        error_log("Import students error: " . $e->getMessage());
-        return ['success' => false, 'error' => 'Failed to import students: ' . $e->getMessage()];
+        error_log("Import students error for class_id: $class_id: " . $e->getMessage());
+        return ['success' => false, 'error' => 'Database error: ' . $e->getMessage()];
     } catch (\PhpOffice\PhpSpreadsheet\Reader\Exception $e) {
-        error_log("Spreadsheet error: " . $e->getMessage());
+        error_log("Spreadsheet error for class_id: $class_id: " . $e->getMessage());
         return ['success' => false, 'error' => 'Invalid Excel file: ' . $e->getMessage()];
     }
 }
@@ -1358,9 +1499,7 @@ ob_end_flush();
             .table th,
             .table td,
             .student-table th,
-            .student-table td,
-            .preview-table th,
-            .preview-table td {
+            .student-table td {
                 display: table-cell !important; /* Override any display: none */
             }
         }
@@ -1441,9 +1580,7 @@ ob_end_flush();
             .table th,
             .table td,
             .student-table th,
-            .student-table td,
-            .preview-table th,
-            .preview-table td {
+            .student-table td {
                 display: table-cell !important; /* Override any display: none */
             }
         }
@@ -1488,9 +1625,7 @@ ob_end_flush();
             .table th,
             .table td,
             .student-table th,
-            .student-table td,
-            .preview-table th,
-            .preview-table td {
+            .student-table td {
                 display: table-cell !important; /* Override any display: none */
                 padding: var(--spacing-sm) var(--spacing-xs);
                 font-size: 0.75rem;
@@ -1945,11 +2080,13 @@ ob_end_flush();
             flex: 1;
             color: var(--grayfont-color);
             font-size: var(--font-size-sm);
+            line-height: 1.5;
         }
 
         .schedule-details {
             padding-left: var(--spacing-md);
             color: var(--grayfont-color);
+            width: 100%;
         }
 
         .schedule-details .schedule-item {
@@ -1957,12 +2094,15 @@ ob_end_flush();
             display: flex;
             align-items: center;
             gap: var(--spacing-xs);
+            font-size: var(--font-size-sm);
+            line-height: 1.4;
         }
 
         .schedule-details .schedule-item::before {
             content: "•";
             color: var(--primary-blue);
-            margin-right: var(--spacing-xs);
+            font-size: 1.2rem;
+            margin-right: var(--spacing-sm);
         }
 
         .student-table-container {
@@ -2117,6 +2257,7 @@ ob_end_flush();
             display: flex;
             justify-content: flex-end;
             gap: 1rem;
+            background: var(--card-bg);
         }
 
         @media (max-width: 1024px) {
@@ -3469,6 +3610,20 @@ ob_end_flush();
             return `${year}-${month}-${day}`;
         }
 
+        function normalizeDob(val) {
+            if (val == null) return '';
+            if (typeof val === 'number') {
+                return excelDateToYYYYMMDD(val);
+            }
+            const str = String(val).trim();
+            if (/^\d{1,2}\/\d{1,2}\/\d{2}$/.test(str)) {
+                const [mm, dd, yy] = str.split('/').map(Number);
+                const year = (yy < 50) ? 2000 + yy : 1900 + yy;
+                return `${year}-${String(mm).padStart(2, '0')}-${String(dd).padStart(2, '0')}`;
+            }
+            return str;
+        }
+
         function renderStudentTable(students, classId) {
             const tbody = document.querySelector('#studentTable tbody');
             if (!tbody) return;
@@ -3555,7 +3710,7 @@ ob_end_flush();
             reader.onload = function(e) {
                 try {
                     const data = new Uint8Array(e.target.result);
-                    const workbook = XLSX.read(data, { type: 'array' });
+                    const workbook = XLSX.read(data, { type: 'array', raw: false, dateNF: 'yyyy-mm-dd' });
                     const firstSheet = workbook.SheetNames[0];
                     const worksheet = workbook.Sheets[firstSheet];
                     const rows = XLSX.utils.sheet_to_json(worksheet, { header: 1, raw: false });
@@ -3574,8 +3729,69 @@ ob_end_flush();
                         return;
                     }
 
-                    excelHeader = rows[0];
-                    previewData = rows.slice(1).filter(row => row.length >= 11);
+                    // Expected headers for standard format
+                    const expectedHeaders = ['lrn', 'fullname', 'email', 'gender', 'dob', 'grade level', 'address', 'parent name', 'parent email', 'emergency contact', 'photo', 'qr code'];
+                    const firstRow = rows[0].map(v => (v || '').toLowerCase().trim());
+                    const isStandard = firstRow.length >= 8 && expectedHeaders.some(h => firstRow.includes(h));
+
+                    if (isStandard) {
+                        // Standard format
+                        excelHeader = rows[0];
+                        previewData = rows.slice(1).filter(row => row[0] && row[0].toString().trim() !== '');
+                    } else {
+                        // SF1 format
+                        let dataStart = 0;
+                        for (let j = 0; j < rows.length; j++) {
+                            const lrn = rows[j][1];
+                            if (lrn && /^\d{12}$/.test(String(lrn).trim())) {
+                                dataStart = j;
+                                break;
+                            }
+                        }
+                        if (dataStart === 0) {
+                            previewTableContainer.style.display = 'none';
+                            alert('Could not detect data rows in SF1 format.');
+                            return;
+                        }
+
+                        previewData = [];
+                        for (let k = dataStart; k < rows.length; k++) {
+                            const row = rows[k];
+                            if (!row[1]) continue;
+
+                            const lrn = String(row[1] ?? '').trim();
+                            const full_name = String(row[2] ?? '').trim();
+                            const email = '';
+                            const gender = (row[6] ?? '') === 'M' ? 'Male' : ((row[6] ?? '') === 'F' ? 'Female' : '');
+                            let dob = String(row[7] ?? '').trim();
+                            if (/^\d{1,2}\/\d{1,2}\/\d{2}$/.test(dob)) {
+                                const [mm, dd, yy] = dob.split('/').map(Number);
+                                const year = (yy < 50) ? 2000 + yy : 1900 + yy;
+                                dob = `${year}-${String(mm).padStart(2, '0')}-${String(dd).padStart(2, '0')}`;
+                            } else if (typeof row[7] === 'number') {
+                                dob = excelDateToYYYYMMDD(row[7]);
+                            }
+                            const grade_level = '';
+                            const address = [
+                                String(row[13] ?? '').trim(),
+                                String(row[14] ?? '').trim(),
+                                String(row[15] ?? '').trim(),
+                                String(row[16] ?? '').trim()
+                            ].filter(Boolean).join(', ');
+                            const parent_name = String(row[17] ?? '').trim();
+                            const parent_email = '';
+                            const emergency_contact = String(row[23] ?? '').trim();
+                            const photo = '';
+                            const qr_code = '';
+
+                            previewData.push([
+                                lrn, full_name, email, gender, dob, grade_level, address,
+                                parent_name, parent_email, emergency_contact, photo, qr_code
+                            ]);
+                        }
+                        excelHeader = ['LRN', 'Fullname', 'Email', 'Gender', 'DOB', 'Grade Level', 'Address', 'Parent Name', 'Parent Email', 'Emergency Contact', 'Photo', 'QR Code'];
+                    }
+
                     processQRCodeFilenames();
                     generateAndDisplayQRCodes();
                     renderPreviewTable();
@@ -3613,7 +3829,7 @@ ob_end_flush();
                     <td>${sanitizeHTML(row[1] || '')}</td>
                     <td>${sanitizeHTML(row[2] || '')}</td>
                     <td>${sanitizeHTML(row[3] || '')}</td>
-                    <td>${sanitizeHTML(row[4] || excelDateToYYYYMMDD(row[4]))}</td>
+                    <td>${sanitizeHTML(normalizeDob(row[4]))}</td>
                     <td>${sanitizeHTML(row[5] || '')}</td>
                     <td>${sanitizeHTML(row[6] || '')}</td>
                     <td>${sanitizeHTML(row[7] || '')}</td>
@@ -3631,9 +3847,7 @@ ob_end_flush();
             });
         }
 
-        function removePreviewRow(btn) {
-            const tr = btn.closest('tr');
-            const index = parseInt(tr.dataset.index);
+        function removePreviewRow(index) {
             previewData.splice(index, 1);
             renderPreviewTable();
         }
@@ -3686,9 +3900,9 @@ ob_end_flush();
         function processQRCodeFilenames() {
             previewData.forEach((row, index) => {
                 const lrn = row[0];
-                if (!row[13] || row[13].toString().trim() === '') {
+                if (!row[11] || row[11].toString().trim() === '') {
                     const qrFilename = `${lrn}.png`;
-                    previewData[index][13] = qrFilename;
+                    previewData[index][11] = qrFilename;
                 }
             });
         }
@@ -3703,8 +3917,7 @@ ob_end_flush();
                     const qrContent = `${lrn}, ${full_name}`;
                     qrsToGenerate.push({
                         lrn: lrn,
-                        content: qrContent,
-                        index: index
+                        content: qrContent
                     });
                 }
             });
@@ -3731,7 +3944,7 @@ ob_end_flush();
                         Object.keys(data.qr_files).forEach(lrn => {
                             const index = previewData.findIndex(row => row[0] === lrn);
                             if (index !== -1) {
-                                previewData[index][13] = data.qr_files[lrn];
+                                previewData[index][11] = data.qr_files[lrn];
                                 updatePreviewQRCode(index, `qrcodes/${data.qr_files[lrn]}`, data.qr_files[lrn]);
                             }
                         });
@@ -3746,9 +3959,9 @@ ob_end_flush();
 
         function updateAllQRDisplays() {
             previewData.forEach((row, index) => {
-                if (row[13]) {
-                    const qrPath = `qrcodes/${row[13]}`;
-                    updatePreviewQRCode(index, qrPath, row[13]);
+                if (row[11]) {
+                    const qrPath = `qrcodes/${row[11]}`;
+                    updatePreviewQRCode(index, qrPath, row[11]);
                 }
             });
         }
@@ -3760,7 +3973,7 @@ ob_end_flush();
             const row = tbody.querySelector(`tr[data-index="${index}"]`);
             if (!row) return;
 
-            const qrCell = row.cells[13];
+            const qrCell = row.cells[11];
             if (qrCell) {
                 qrCell.innerHTML = `<img src="${qrPath}" alt="QR Code" style="max-width: 50px; max-height: 50px;" onerror="this.style.display='none'; this.nextSibling.style.display='inline';"><span style="display:none;">QR: ${filename}</span>`;
             }

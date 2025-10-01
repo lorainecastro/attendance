@@ -302,8 +302,8 @@ $rowHeights = [
     2 => 20,  // Subtitle
     3 => 20,  // School ID, Year, Month
     4 => 20,  // School Name, Grade, Section
-    5 => 30,  // Headers
-    6 => 15,  // Blank row (spacer)
+    5 => 15,  // Headers
+    6 => 15,  // dates
     7 => 15,  // Day abbreviations
 ];
 for ($i = 8; $i <= 74; $i++) {
@@ -356,14 +356,17 @@ $sheet->getStyle('A4:AS4')->applyFromArray($borderStyle)->getAlignment()->setHor
 
 // Modified header row (row 5)
 $sheet->setCellValue('A5', 'No.');
+$sheet->mergeCells('A5:A7'); // Merge A5 through A7
 $sheet->setCellValue('B5', "NAME\n(Last Name, First Name, Middle Name)");
-$sheet->mergeCells('B5:C5');
+$sheet->mergeCells('B5:C7'); // Merge B5:C5 through B7:C7
 $sheet->setCellValue('AX5', 'Total for the Month');
 $sheet->mergeCells('AX5:AY5');
 $sheet->setCellValue('BB5', 'REMARKS (If NLS, state reason, please refer to legend number 2. If TRANSFERRED IN/OUT, write the name of School.)');
 $sheet->mergeCells('BB5:BD5');
+
 $sheet->getStyle('A5:BD5')->applyFromArray($borderStyle);
-$sheet->getStyle('B5')->getAlignment()->setWrapText(true);
+$sheet->getStyle('A5:A7')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER)->setVertical(Alignment::VERTICAL_CENTER)->applyFromArray($borderStyle);
+$sheet->getStyle('B5:C7')->getAlignment()->setWrapText(true)->setHorizontal(Alignment::HORIZONTAL_CENTER)->setVertical(Alignment::VERTICAL_CENTER);
 
 // Row 7: Day abbreviations and totals
 $sheet->setCellValue('AW7', 'ABSENT');
@@ -372,20 +375,20 @@ $sheet->getStyle('AW7:AY7')->applyFromArray($borderStyle);
 
 // Apply borders and center-align day and abbreviation cells
 foreach ($dayColumns as $col) {
-    $sheet->getStyle($col . '5')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+    $sheet->getStyle($col . '6')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
     $sheet->getStyle($col . '7')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
-    $sheet->getStyle($col . '5')->applyFromArray($borderStyle);
+    $sheet->getStyle($col . '6')->applyFromArray($borderStyle);
     $sheet->getStyle($col . '7')->applyFromArray($borderStyle);
 }
 
 // Populate dates and day abbreviations
 foreach ($dayAssignments as $assignment) {
     $col = $assignment['column'];
-    $sheet->setCellValue($col . '5', $assignment['dateNum']);
+    $sheet->setCellValue($col . '6', $assignment['dateNum']);
     $sheet->setCellValue($col . '7', $assignment['abbrev']);
-    $sheet->getStyle($col . '5')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+    $sheet->getStyle($col . '6')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
     $sheet->getStyle($col . '7')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
-    $sheet->getStyle($col . '5')->applyFromArray($borderStyle);
+    $sheet->getStyle($col . '6')->applyFromArray($borderStyle);
     $sheet->getStyle($col . '7')->applyFromArray($borderStyle);
 }
 

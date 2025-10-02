@@ -617,8 +617,11 @@ foreach ($dayAssignments as $assignment) {
             $sheet->mergeCells('A' . $newRow . ':Q' . $newRow);
             $sheet->setCellValue('S' . $newRow, '1. CODES FOR CHECKING ATTENDANCE');
             $sheet->mergeCells('S' . $newRow . ':AA' . $newRow);
-            $sheet->setCellValue('AE' . $newRow, 'Month : ' . $month);
-            $sheet->mergeCells('AE' . $newRow . ':AG' . $newRow);
+
+            $sheet->setCellValue('AC' . $newRow, 'Month : ' . $month);
+            $sheet->mergeCells('AC' . $newRow . ':AE' . $newRow);
+            $sheet->getStyle('AC' . $newRow . ':AE' . $newRow)->getAlignment()->setWrapText(true);
+
             $sheet->setCellValue('AH' . $newRow, 'No. of Days of Classes:');
             $sheet->mergeCells('AH' . $newRow . ':AI' . $newRow);
             $sheet->setCellValue('AJ' . $newRow, $numDays);
@@ -632,15 +635,14 @@ foreach ($dayAssignments as $assignment) {
             $sheet->mergeCells('A' . $newRow . ':Q' . ($newRow + 2)); 
             $sheet->getStyle('A' . $newRow . ':Q' . ($newRow + 2))->getAlignment()->setWrapText(true);
             
-            $sheet->setCellValue('X' . $newRow, '(blank) - Present; (x)- Absent; Tardy (half shaded= Upper for Late Commer, Lower for Cutting Classes)');
-            $sheet->mergeCells('X' . $newRow . ':AD' . $newRow);
-            $sheet->getStyle('A' . $newRow . ':AS' . $newRow)->applyFromArray($borderStyle);
+            $sheet->setCellValue('S' . $newRow, '(blank) - Present; (x)- Absent; Tardy (half shaded= Upper for Late Commer, Lower for Cutting Classes)');
+            $sheet->mergeCells('S' . $newRow . ':AA' . ($newRow + 1));
+            $sheet->getStyle('S' . $newRow . ':AA' . ($newRow + 1))->getAlignment()->setWrapText(true)->setHorizontal(Alignment::HORIZONTAL_CENTER)->setVertical(Alignment::VERTICAL_CENTER);
+
             $sheet->getStyle('A' . $newRow)->getAlignment()->setWrapText(true);
             $sheet->getStyle('X' . $newRow)->getAlignment()->setWrapText(true);
 
             $newRow = 44 + $offset;
-            $sheet->setCellValue('X' . $newRow, '2. REASONS/CAUSES FOR NLS');
-            $sheet->mergeCells('X' . $newRow . ':AD' . $newRow);
             $sheet->setCellValue('AE' . $newRow, '* Enrolment as of (1st Friday of the SY)');
             $sheet->mergeCells('AE' . $newRow . ':AF' . $newRow);
             $sheet->setCellValue('AG' . $newRow, $maleCount);
@@ -649,6 +651,10 @@ foreach ($dayAssignments as $assignment) {
             $sheet->mergeCells('AI' . $newRow . ':AS' . $newRow);
             $sheet->getStyle('A' . $newRow . ':AS' . $newRow)->applyFromArray($borderStyle);
             $sheet->getRowDimension($newRow)->setRowHeight(15);
+
+            $newRow = 45 + $offset;
+            $sheet->setCellValue('S' . $newRow, '2. REASONS/CAUSES FOR NLS');
+            $sheet->mergeCells('S' . $newRow . ':AA' . $newRow);
 
             $newRow = 46 + $offset;
             $sheet->setCellValue('AE' . $newRow, 'Late enrolment during the month');
@@ -660,71 +666,103 @@ foreach ($dayAssignments as $assignment) {
             $sheet->getStyle('A' . $newRow . ':AS' . $newRow)->applyFromArray($borderStyle);
             $sheet->getRowDimension($newRow)->setRowHeight(15);
 
-            $newRow = 47 + $offset;
-            $sheet->setCellValue('A' . $newRow, 'a. Percentage of Enrolment = Registered Learners as of end of the month x 100');
-            $sheet->mergeCells('A' . $newRow . ':D' . $newRow);
-            $sheet->setCellValue('E' . $newRow, 'Enrolment as of 1st Friday of the school year');
-            $sheet->mergeCells('E' . $newRow . ':W' . $newRow);
-            $sheet->setCellValue('X' . $newRow, 'a. Domestic-Related Factors');
-            $sheet->mergeCells('X' . $newRow . ':AD' . $newRow);
-            $sheet->getStyle('A' . $newRow . ':AS' . $newRow)->applyFromArray($borderStyle);
-            $sheet->getRowDimension($newRow)->setRowHeight(15);
+            $newRow = 46 + $offset;
+            $sheet->setCellValue('B' . $newRow, 'a. Percentage of Enrolment =');
+            $sheet->mergeCells('B' . $newRow . ':C' . ($newRow + 1));
+            $sheet->getStyle('B' . $newRow . ':C' . ($newRow + 1))->getAlignment()->setVertical(Alignment::VERTICAL_CENTER);
 
+            $sheet->setCellValue('D' . $newRow, 'Registered Learners as of end of the month');
+            $sheet->mergeCells('D' . $newRow . ':O' . $newRow);
+            $sheet->getStyle('D' . $newRow . ':O' . $newRow)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER)->setVertical(Alignment::VERTICAL_CENTER);
+            
+            $sheet->setCellValue('P' . $newRow, 'x 100');
+            $sheet->mergeCells('P' . $newRow . ':Q' . ($newRow + 1));
+            $sheet->getStyle('P' . $newRow . ':Q' . ($newRow + 1))->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER)->setVertical(Alignment::VERTICAL_CENTER)->applyFromArray($borderStyle);
+           
+            $sheet->setCellValue('S' . $newRow, 'a. Domestic-Related Factors');
+            $sheet->mergeCells('S' . $newRow . ':AA' . $newRow);
+
+            $newRow = 47 + $offset;
+            $sheet->setCellValue('D' . $newRow, 'Enrolment as of 1st Friday of the school year');
+            $sheet->mergeCells('D' . $newRow . ':O' . $newRow);
+            $sheet->getStyle('D' . $newRow . ':O' . $newRow)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER)->setVertical(Alignment::VERTICAL_CENTER);
+
+            $sheet->setCellValue('S' . $newRow, "a.1. Had to take care of siblings\na.2. Early marriage/pregnancy\na.3. Parents' attitude toward schooling\na.4. Family problems");
+            $sheet->mergeCells('S' . $newRow . ':AA' . ($newRow + 3)); 
+            $sheet->getStyle('S' . $newRow . ':AA' . ($newRow + 3))->getAlignment()->setWrapText(true)->setHorizontal(Alignment::HORIZONTAL_LEFT)->setVertical(Alignment::VERTICAL_TOP);
+            $sheet->getStyle('S' . $newRow . ':AA' . ($newRow + 3))->getFont()->setName('SansSerif')->setSize(8);
+            
             $newRow = 49 + $offset;
-            $sheet->setCellValue('X' . $newRow, 'a.1. Had to take care of siblings');
-            $sheet->mergeCells('X' . $newRow . ':AD' . $newRow);
-            $sheet->setCellValue('X' . ($newRow + 1), 'a.2. Early marriage/pregnancy');
-            $sheet->mergeCells('X' . ($newRow + 1) . ':AD' . ($newRow + 1));
-            $sheet->setCellValue('X' . ($newRow + 2), 'a.3. Parents\' attitude toward schooling');
-            $sheet->mergeCells('X' . ($newRow + 2) . ':AD' . ($newRow + 2));
-            $sheet->setCellValue('X' . ($newRow + 3), 'a.4. Family problems');
-            $sheet->mergeCells('X' . ($newRow + 3) . ':AD' . ($newRow + 3));
-            for ($i = 0; $i <= 3; $i++) {
-                $sheet->getStyle('A' . ($newRow + $i) . ':AS' . ($newRow + $i))->applyFromArray($borderStyle);
-                $sheet->getRowDimension($newRow + $i)->setRowHeight(15);
-            }
+            $sheet->setCellValue('D' . $newRow, 'Number of School Days in reporting month');
+            $sheet->mergeCells('D' . $newRow . ':O' . $newRow);
+            $sheet->getStyle('D' . $newRow . ':O' . $newRow)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER)->setVertical(Alignment::VERTICAL_CENTER);
+
+            // $sheet->setCellValue('X' . $newRow, 'a.1. Had to take care of siblings');
+            // $sheet->mergeCells('X' . $newRow . ':AD' . $newRow);
+            // $sheet->setCellValue('X' . ($newRow + 1), 'a.2. Early marriage/pregnancy');
+            // $sheet->mergeCells('X' . ($newRow + 1) . ':AD' . ($newRow + 1));
+            // $sheet->setCellValue('X' . ($newRow + 2), 'a.3. Parents\' attitude toward schooling');
+            // $sheet->mergeCells('X' . ($newRow + 2) . ':AD' . ($newRow + 2));
+            // $sheet->setCellValue('X' . ($newRow + 3), 'a.4. Family problems');
+            // $sheet->mergeCells('X' . ($newRow + 3) . ':AD' . ($newRow + 3));
+            // for ($i = 0; $i <= 3; $i++) {
+            //     $sheet->getStyle('A' . ($newRow + $i) . ':AS' . ($newRow + $i))->applyFromArray($borderStyle);
+            //     $sheet->getRowDimension($newRow + $i)->setRowHeight(15);
+            // }
+
+            $newRow = 48 + $offset;
+            $sheet->setCellValue('B' . $newRow, 'b. Average Daily Attendance =');
+            $sheet->mergeCells('B' . $newRow . ':C' . ($newRow + 1));
+            $sheet->getStyle('B' . $newRow . ':C' . ($newRow + 1))->getAlignment()->setVertical(Alignment::VERTICAL_CENTER);
+
+            $sheet->setCellValue('D' . $newRow, 'Total Daily Attendance');
+            $sheet->mergeCells('D' . $newRow . ':O' . $newRow);
+            $sheet->getStyle('D' . $newRow . ':O' . $newRow)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER)->setVertical(Alignment::VERTICAL_CENTER);
 
             $newRow = 50 + $offset;
-            $sheet->setCellValue('A' . $newRow, 'b. Average Daily Attendance = Total Daily Attendance');
-            $sheet->mergeCells('A' . $newRow . ':D' . $newRow);
-            $sheet->setCellValue('E' . $newRow, 'Number of School Days in reporting month');
-            $sheet->mergeCells('E' . $newRow . ':W' . $newRow);
-            $sheet->getStyle('A' . $newRow . ':AS' . $newRow)->applyFromArray($borderStyle);
-            $sheet->getRowDimension($newRow)->setRowHeight(15);
+            $sheet->setCellValue('B' . $newRow, 'c. Percentage of Attendance for the month =');
+            $sheet->mergeCells('B' . $newRow . ':C' . ($newRow + 1));
+            $sheet->getStyle('B' . $newRow . ':C' . ($newRow + 1))->getAlignment()->setVertical(Alignment::VERTICAL_CENTER);
 
-            $newRow = 52 + $offset;
-            $sheet->setCellValue('A' . $newRow, 'c. Percentage of Attendance for the month = Average daily attendance x 100');
-            $sheet->mergeCells('A' . $newRow . ':D' . $newRow);
-            $sheet->setCellValue('E' . $newRow, 'Registered Learners as of end of the month');
-            $sheet->mergeCells('E' . $newRow . ':W' . $newRow);
-            $sheet->setCellValue('X' . $newRow, 'b. Individual-Related Factors');
-            $sheet->mergeCells('X' . $newRow . ':AD' . $newRow);
-            $sheet->getStyle('A' . $newRow . ':AS' . $newRow)->applyFromArray($borderStyle);
-            $sheet->getRowDimension($newRow)->setRowHeight(15);
+            $sheet->setCellValue('D' . $newRow, 'Average daily attendance');
+            $sheet->mergeCells('D' . $newRow . ':O' . $newRow);
+            $sheet->getStyle('D' . $newRow . ':O' . $newRow)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER)->setVertical(Alignment::VERTICAL_CENTER);
 
-            $newRow = 54 + $offset;
-            $sheet->setCellValue('X' . $newRow, 'b.1. Illness');
-            $sheet->mergeCells('X' . $newRow . ':AD' . $newRow);
-            $sheet->setCellValue('X' . ($newRow + 1), 'b.2. Overage');
-            $sheet->mergeCells('X' . ($newRow + 1) . ':AD' . ($newRow + 1));
-            $sheet->setCellValue('X' . ($newRow + 2), 'b.3. Death');
-            $sheet->mergeCells('X' . ($newRow + 2) . ':AD' . ($newRow + 2));
-            $sheet->setCellValue('X' . ($newRow + 3), 'b.4. Drug Abuse');
-            $sheet->mergeCells('X' . ($newRow + 3) . ':AD' . ($newRow + 3));
-            $sheet->setCellValue('X' . ($newRow + 4), 'b.5. Poor academic performance');
-            $sheet->mergeCells('X' . ($newRow + 4) . ':AD' . ($newRow + 4));
-            $sheet->setCellValue('X' . ($newRow + 5), 'b.6. Lack of interest/Distractions');
-            $sheet->mergeCells('X' . ($newRow + 5) . ':AD' . ($newRow + 5));
-            $sheet->setCellValue('X' . ($newRow + 6), 'b.7. Hunger/Malnutrition');
-            $sheet->mergeCells('X' . ($newRow + 6) . ':AD' . ($newRow + 6));
-            $sheet->setCellValue('AE' . $newRow, 'Average Daily Attendance');
-            $sheet->mergeCells('AE' . $newRow . ':AF' . $newRow);
-            $sheet->setCellValue('AG' . $newRow, $averageDaily);
-            $sheet->mergeCells('AG' . $newRow . ':AS' . $newRow);
-            for ($i = 0; $i <= 6; $i++) {
-                $sheet->getStyle('A' . ($newRow + $i) . ':AS' . ($newRow + $i))->applyFromArray($borderStyle);
-                $sheet->getRowDimension($newRow + $i)->setRowHeight(15);
-            }
+            $sheet->setCellValue('P' . $newRow, 'x 100');
+            $sheet->mergeCells('P' . $newRow . ':Q' . ($newRow + 1));
+            $sheet->getStyle('P' . $newRow . ':Q' . ($newRow + 1))->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER)->setVertical(Alignment::VERTICAL_CENTER)->applyFromArray($borderStyle);
+
+            $newRow = 51 + $offset;
+            $sheet->setCellValue('D' . $newRow, 'Registered Learners as of end of the month');
+            $sheet->mergeCells('D' . $newRow . ':O' . $newRow);
+            $sheet->getStyle('D' . $newRow . ':O' . $newRow)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER)->setVertical(Alignment::VERTICAL_CENTER);
+
+            $sheet->setCellValue('S' . $newRow, 'b. Individual-Related Factors');
+            $sheet->mergeCells('S' . $newRow . ':AA' . $newRow);
+
+            // $newRow = 54 + $offset;
+            // $sheet->setCellValue('X' . $newRow, 'b.1. Illness');
+            // $sheet->mergeCells('X' . $newRow . ':AD' . $newRow);
+            // $sheet->setCellValue('X' . ($newRow + 1), 'b.2. Overage');
+            // $sheet->mergeCells('X' . ($newRow + 1) . ':AD' . ($newRow + 1));
+            // $sheet->setCellValue('X' . ($newRow + 2), 'b.3. Death');
+            // $sheet->mergeCells('X' . ($newRow + 2) . ':AD' . ($newRow + 2));
+            // $sheet->setCellValue('X' . ($newRow + 3), 'b.4. Drug Abuse');
+            // $sheet->mergeCells('X' . ($newRow + 3) . ':AD' . ($newRow + 3));
+            // $sheet->setCellValue('X' . ($newRow + 4), 'b.5. Poor academic performance');
+            // $sheet->mergeCells('X' . ($newRow + 4) . ':AD' . ($newRow + 4));
+            // $sheet->setCellValue('X' . ($newRow + 5), 'b.6. Lack of interest/Distractions');
+            // $sheet->mergeCells('X' . ($newRow + 5) . ':AD' . ($newRow + 5));
+            // $sheet->setCellValue('X' . ($newRow + 6), 'b.7. Hunger/Malnutrition');
+            // $sheet->mergeCells('X' . ($newRow + 6) . ':AD' . ($newRow + 6));
+            // $sheet->setCellValue('AE' . $newRow, 'Average Daily Attendance');
+            // $sheet->mergeCells('AE' . $newRow . ':AF' . $newRow);
+            // $sheet->setCellValue('AG' . $newRow, $averageDaily);
+            // $sheet->mergeCells('AG' . $newRow . ':AS' . $newRow);
+            // for ($i = 0; $i <= 6; $i++) {
+            //     $sheet->getStyle('A' . ($newRow + $i) . ':AS' . ($newRow + $i))->applyFromArray($borderStyle);
+            //     $sheet->getRowDimension($newRow + $i)->setRowHeight(15);
+            // }
 
             $newRow = 56 + $offset;
             $sheet->setCellValue('AE' . $newRow, 'Percentage of Attendance for the month');

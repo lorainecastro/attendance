@@ -617,14 +617,20 @@ foreach ($dayAssignments as $assignment) {
             $sheet->mergeCells('A' . $newRow . ':Q' . $newRow);
             $sheet->setCellValue('S' . $newRow, '1. CODES FOR CHECKING ATTENDANCE');
             $sheet->mergeCells('S' . $newRow . ':AA' . $newRow);
+            $sheet->getStyle('S' . $newRow . ':AA' . $newRow)->getFont()->setName('SansSerif')->setSize(8)->setBold(true);
+            $sheet->getStyle('S' . $newRow . ':AA' . $newRow)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_LEFT)->setVertical(Alignment::VERTICAL_CENTER);
 
             $sheet->setCellValue('AC' . $newRow, 'Month : ' . $month);
-            $sheet->mergeCells('AC' . $newRow . ':AE' . $newRow);
-            $sheet->getStyle('AC' . $newRow . ':AE' . $newRow)->getAlignment()->setWrapText(true);
+            $sheet->mergeCells('AC' . $newRow . ':AE' . ($newRow + 1)); 
+            $sheet->getStyle('AC' . $newRow . ':AE' . ($newRow + 1))->getAlignment()->setWrapText(true)->setHorizontal(Alignment::HORIZONTAL_LEFT)->setVertical(Alignment::VERTICAL_TOP);
+            $sheet->getStyle('AC' . $newRow . ':AE' . ($newRow + 1))->getFont()->setName('SansSerif')->setSize(8)->setBold(true);
 
-            $sheet->setCellValue('AH' . $newRow, 'No. of Days of Classes:');
-            $sheet->mergeCells('AH' . $newRow . ':AI' . $newRow);
-            $sheet->setCellValue('AJ' . $newRow, $numDays);
+            $sheet->setCellValue('AF' . $newRow, 'No. of Days of Classes:' .$numDays);
+            $sheet->mergeCells('AF' . $newRow . ':AH' . ($newRow + 1)); 
+            $sheet->getStyle('AF' . $newRow . ':AH' . ($newRow + 1))->getAlignment()->setWrapText(true)->setHorizontal(Alignment::HORIZONTAL_LEFT)->setVertical(Alignment::VERTICAL_TOP);
+            $sheet->getStyle('AF' . $newRow . ':AH' . ($newRow + 1))->getFont()->setName('SansSerif')->setSize(8)->setBold(true);
+
+            // $sheet->setCellValue('AJ' . $newRow, $numDays);
             $sheet->setCellValue('AK' . $newRow, 'Summary');
             $sheet->mergeCells('AK' . $newRow . ':AS' . $newRow);
             $sheet->getStyle('A' . $newRow . ':AS' . $newRow)->applyFromArray($borderStyle);
@@ -639,6 +645,7 @@ foreach ($dayAssignments as $assignment) {
             $sheet->setCellValue('S' . $newRow, '(blank) - Present; (x)- Absent; Tardy (half shaded= Upper for Late Commer, Lower for Cutting Classes)');
             $sheet->mergeCells('S' . $newRow . ':AA' . ($newRow + 1));
             $sheet->getStyle('S' . $newRow . ':AA' . ($newRow + 1))->getAlignment()->setWrapText(true)->setHorizontal(Alignment::HORIZONTAL_CENTER)->setVertical(Alignment::VERTICAL_CENTER);
+            $sheet->getStyle('S' . $newRow . ':AA' . ($newRow + 1))->getFont()->setName('SansSerif')->setSize(8);
 
             $sheet->getStyle('A' . $newRow)->getAlignment()->setWrapText(true);
             $sheet->getStyle('X' . $newRow)->getAlignment()->setWrapText(true);
@@ -656,6 +663,8 @@ foreach ($dayAssignments as $assignment) {
             $newRow = 45 + $offset;
             $sheet->setCellValue('S' . $newRow, '2. REASONS/CAUSES FOR NLS');
             $sheet->mergeCells('S' . $newRow . ':AA' . $newRow);
+            $sheet->getStyle('S' . $newRow . ':AA' . $newRow)->getFont()->setName('SansSerif')->setSize(8)->setBold(true);
+            $sheet->getStyle('S' . $newRow . ':AA' . $newRow)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_LEFT)->setVertical(Alignment::VERTICAL_CENTER);
 
             $newRow = 46 + $offset;
             $sheet->setCellValue('AE' . $newRow, 'Late enrolment during the month');
@@ -682,6 +691,9 @@ foreach ($dayAssignments as $assignment) {
            
             $sheet->setCellValue('S' . $newRow, 'a. Domestic-Related Factors');
             $sheet->mergeCells('S' . $newRow . ':AA' . $newRow);
+            $sheet->getStyle('S' . $newRow . ':AA' . $newRow)->getFont()->setName('SansSerif')->setSize(8)->setBold(true);
+            $sheet->getStyle('S' . $newRow . ':AA' . $newRow)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_LEFT)->setVertical(Alignment::VERTICAL_CENTER);
+
 
             $newRow = 47 + $offset;
             $sheet->setCellValue('D' . $newRow, 'Enrolment as of 1st Friday of the school year');
@@ -740,6 +752,8 @@ foreach ($dayAssignments as $assignment) {
 
             $sheet->setCellValue('S' . $newRow, 'b. Individual-Related Factors');
             $sheet->mergeCells('S' . $newRow . ':AA' . $newRow);
+            $sheet->getStyle('S' . $newRow . ':AA' . $newRow)->getFont()->setName('SansSerif')->setSize(8)->setBold(true);
+            $sheet->getStyle('S' . $newRow . ':AA' . $newRow)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_LEFT)->setVertical(Alignment::VERTICAL_CENTER);
 
             $newRow = 52 + $offset;
             $sheet->setCellValue('S' . $newRow, "b.1. Illness\nb.2. Overage\nb.3. Death\nb.4. Drug Abuse\nb.5. Poor academic performance\nb.6. Lack of interest/Distractions\nb.7. Hunger/Malnutrition");
@@ -801,6 +815,8 @@ foreach ($dayAssignments as $assignment) {
 
             $sheet->setCellValue('S' . $newRow, 'c. School-Related Factors');
             $sheet->mergeCells('S' . $newRow . ':AA' . $newRow); 
+            $sheet->getStyle('S' . $newRow . ':AA' . $newRow)->getFont()->setName('SansSerif')->setSize(8)->setBold(true);
+            $sheet->getStyle('S' . $newRow . ':AA' . $newRow)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_LEFT)->setVertical(Alignment::VERTICAL_CENTER);
 
             $sheet->setCellValue('AE' . $newRow, 'NLS');
             $sheet->mergeCells('AE' . $newRow . ':AF' . $newRow);
@@ -832,6 +848,8 @@ foreach ($dayAssignments as $assignment) {
             $newRow = 62 + $offset;
             $sheet->setCellValue('S' . $newRow, 'd. Geographic/Environmental');
             $sheet->mergeCells('S' . $newRow . ':AA' . $newRow); 
+            $sheet->getStyle('S' . $newRow . ':AA' . $newRow)->getFont()->setName('SansSerif')->setSize(8)->setBold(true);
+            $sheet->getStyle('S' . $newRow . ':AA' . $newRow)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_LEFT)->setVertical(Alignment::VERTICAL_CENTER);
 
             $sheet->setCellValue('AE' . $newRow, 'Transferred in');
             $sheet->mergeCells('AE' . $newRow . ':AF' . $newRow);
@@ -842,9 +860,9 @@ foreach ($dayAssignments as $assignment) {
 
             $newRow = 63 + $offset;
             $sheet->setCellValue('S' . $newRow, "d.1. Distance between home and school\nd.2. Armed conflict (incl. Tribal wars & clanfeuds)\nd.3. Calamities/Disasters");
-            $sheet->mergeCells('S' . $newRow . ':AA' . ($newRow + 2)); 
-            $sheet->getStyle('S' . $newRow . ':AA' . ($newRow + 2))->getAlignment()->setWrapText(true)->setHorizontal(Alignment::HORIZONTAL_LEFT)->setVertical(Alignment::VERTICAL_TOP);
-            $sheet->getStyle('S' . $newRow . ':AA' . ($newRow + 2))->getFont()->setName('SansSerif')->setSize(8);
+            $sheet->mergeCells('S' . $newRow . ':AA' . ($newRow + 3)); 
+            $sheet->getStyle('S' . $newRow . ':AA' . ($newRow + 3))->getAlignment()->setWrapText(true)->setHorizontal(Alignment::HORIZONTAL_LEFT)->setVertical(Alignment::VERTICAL_TOP);
+            $sheet->getStyle('S' . $newRow . ':AA' . ($newRow + 3))->getFont()->setName('SansSerif')->setSize(8);
 
             $newRow = 65 + $offset;
             // $sheet->setCellValue('X' . $newRow, 'd. Geographic/Environmental');
@@ -862,15 +880,30 @@ foreach ($dayAssignments as $assignment) {
                 $sheet->getRowDimension($newRow + $i)->setRowHeight(15);
             }
 
-            $newRow = 66 + $offset;
-            $sheet->setCellValue('S' . $newRow, 'd. Geographic/Environmental');
+            $newRow = 67 + $offset;
+            $sheet->setCellValue('S' . $newRow, 'e. Financial-Related');
             $sheet->mergeCells('S' . $newRow . ':AA' . $newRow); 
+            $sheet->getStyle('S' . $newRow . ':AA' . $newRow)->getFont()->setName('SansSerif')->setSize(8)->setBold(true);
+            $sheet->getStyle('S' . $newRow . ':AA' . $newRow)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_LEFT)->setVertical(Alignment::VERTICAL_CENTER);
+
+            $newRow = 68 + $offset;
+            $sheet->setCellValue('S' . $newRow, 'e.1. Child labor, work');
+            $sheet->mergeCells('S' . $newRow . ':AA' . $newRow); 
+            $sheet->getStyle('S' . $newRow . ':AA' . $newRow)->getAlignment()->setWrapText(true)->setHorizontal(Alignment::HORIZONTAL_LEFT)->setVertical(Alignment::VERTICAL_TOP);
+            $sheet->getStyle('S' . $newRow . ':AA' . $newRow)->getFont()->setName('SansSerif')->setSize(8);
+
 
             $newRow = 69 + $offset;
             // $sheet->setCellValue('X' . $newRow, 'e. Financial-Related');
             // $sheet->mergeCells('X' . $newRow . ':AD' . $newRow);
             // $sheet->setCellValue('X' . ($newRow + 1), 'e.1. Child labor, work');
             // $sheet->mergeCells('X' . ($newRow + 1) . ':AD' . ($newRow + 1));
+            $sheet->setCellValue('S' . $newRow, 'f. Others (Specify)');
+            $sheet->mergeCells('S' . $newRow . ':AA' . ($newRow + 1)); 
+            $sheet->getStyle('S' . $newRow . ':AA' . $newRow)->getFont()->setName('SansSerif')->setSize(8)->setBold(true);
+            $sheet->getStyle('S' . $newRow . ':AA' . $newRow)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_LEFT)->setVertical(Alignment::VERTICAL_TOP);
+
+        
             $sheet->setCellValue('AG' . $newRow, '(Signature of Adviser over Printed Name)');
             $sheet->mergeCells('AG' . $newRow . ':AS' . $newRow);
             for ($i = 0; $i <= 1; $i++) {

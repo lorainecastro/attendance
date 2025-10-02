@@ -287,9 +287,9 @@ $columnWidths = [
     'K' => 3.5, 'L' => 3.5, 'M' => 3.5, 'N' => 3.5, 'O' => 3.5,
     'P' => 3.5, 'Q' => 3.5, 'R' => 3.5, 'S' => 3.5, 'T' => 3.5,
     'U' => 3.5, 'V' => 3.5, 'W' => 3.5, 'X' => 3.5, 'Y' => 3.5,
-    'Z' => 3.5, 'AA' => 3.5, 'AB' => 3.5, 'AC' => 3.5, 'AD' => 3.5,
-    'AE' => 3.5, 'AF' => 3.5, 'AG' => 3.5, 'AH' => 3.5, 'AI' => 3.5,
-    'AJ' => 3.5, 'AK' => 3.5, 'AL' => 3.5, 'AM' => 3.5, 'AN' => 3.5, 'AO' => 3.5,
+    'Z' => 3.5, 'AA' => 3.5, 'AB' => 3.5, 'AC' => 4.5, 'AD' => 4.5,
+    'AE' => 4.5, 'AF' => 4.5, 'AG' => 4.5, 'AH' => 4.5, 'AI' => 4.5,
+    'AJ' => 4.5, 'AK' => 4.5, 'AL' => 4.5, 'AM' => 4.5, 'AN' => 4.5, 'AO' => 3.5,
     'AP' => 3.5, 'AQ' => 3.5, 'AR' => 3.5, 'AS' => 3.5, 'AT' => 3.5,
     'AU' => 3.5, 'AV' => 3.5, 'AW' => 7.14, 'AX' => 7.14, 'AY' => 7.14,
     'AZ' => 3.5
@@ -620,7 +620,7 @@ foreach ($dayAssignments as $assignment) {
             $sheet->getStyle('S' . $newRow . ':AA' . $newRow)->getFont()->setName('SansSerif')->setSize(8)->setBold(true);
             $sheet->getStyle('S' . $newRow . ':AA' . $newRow)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_LEFT)->setVertical(Alignment::VERTICAL_CENTER);
 
-            $sheet->setCellValue('AC' . $newRow, 'Month : ' . $month);
+            $sheet->setCellValue('AC' . $newRow, "Month :\n" . $month);
             $sheet->mergeCells('AC' . $newRow . ':AE' . ($newRow + 1)); 
             $sheet->getStyle('AC' . $newRow . ':AE' . ($newRow + 1))->getAlignment()->setWrapText(true)->setHorizontal(Alignment::HORIZONTAL_LEFT)->setVertical(Alignment::VERTICAL_TOP);
             $sheet->getStyle('AC' . $newRow . ':AE' . ($newRow + 1))->getFont()->setName('SansSerif')->setSize(8)->setBold(true);
@@ -631,9 +631,12 @@ foreach ($dayAssignments as $assignment) {
             $sheet->getStyle('AF' . $newRow . ':AH' . ($newRow + 1))->getFont()->setName('SansSerif')->setSize(8)->setBold(true);
 
             // $sheet->setCellValue('AJ' . $newRow, $numDays);
-            $sheet->setCellValue('AK' . $newRow, 'Summary');
-            $sheet->mergeCells('AK' . $newRow . ':AS' . $newRow);
-            $sheet->getStyle('A' . $newRow . ':AS' . $newRow)->applyFromArray($borderStyle);
+            $sheet->setCellValue('AI' . $newRow, 'Summary');
+            $sheet->mergeCells('AI' . $newRow . ':AN' . $newRow);
+            $sheet->getStyle('AI' . $newRow . ':AN' . $newRow)->getFont()->setName('SansSerif')->setSize(8)->setBold(true);
+            $sheet->getStyle('AI' . $newRow . ':AN' . $newRow)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER)->setVertical(Alignment::VERTICAL_CENTER);
+
+            // $sheet->getStyle('A' . $newRow . ':AS' . $newRow)->applyFromArray($borderStyle);
             $sheet->getRowDimension($newRow)->setRowHeight(15);
 
             $newRow = 43 + $offset;
@@ -647,8 +650,21 @@ foreach ($dayAssignments as $assignment) {
             $sheet->getStyle('S' . $newRow . ':AA' . ($newRow + 1))->getAlignment()->setWrapText(true)->setHorizontal(Alignment::HORIZONTAL_CENTER)->setVertical(Alignment::VERTICAL_CENTER);
             $sheet->getStyle('S' . $newRow . ':AA' . ($newRow + 1))->getFont()->setName('SansSerif')->setSize(8);
 
-            $sheet->getStyle('A' . $newRow)->getAlignment()->setWrapText(true);
-            $sheet->getStyle('X' . $newRow)->getAlignment()->setWrapText(true);
+            $sheet->setCellValue('AI' . $newRow, 'M');
+            $sheet->mergeCells('AI' . $newRow . ':AJ' . $newRow);
+            $sheet->getStyle('AI' . $newRow . ':AJ' . $newRow)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER)->setVertical(Alignment::VERTICAL_CENTER);
+            
+            $sheet->setCellValue('AK' . $newRow, 'F');
+            $sheet->mergeCells('AK' . $newRow . ':AL' . $newRow);
+            $sheet->getStyle('AK' . $newRow . ':AL' . $newRow)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER)->setVertical(Alignment::VERTICAL_CENTER);
+            
+            $sheet->setCellValue('AM' . $newRow, 'TOTAL');
+            $sheet->mergeCells('AM' . $newRow . ':AN' . $newRow);
+            $sheet->getStyle('AM' . $newRow . ':AN' . $newRow)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER)->setVertical(Alignment::VERTICAL_CENTER);
+            
+
+            // $sheet->getStyle('A' . $newRow)->getAlignment()->setWrapText(true);
+            // $sheet->getStyle('X' . $newRow)->getAlignment()->setWrapText(true);
 
             $newRow = 44 + $offset;
             $sheet->setCellValue('AE' . $newRow, '* Enrolment as of (1st Friday of the SY)');

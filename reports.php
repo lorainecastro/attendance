@@ -633,7 +633,8 @@ foreach ($dayAssignments as $assignment) {
             $newRow = 43 + $offset;
             $sheet->setCellValue('A' . $newRow, "1. The attendance shall be accomplished daily. Refer to the codes for checking learners' attendance.\n2. Dates shall be written in the columns after Learner's Name.\n3. To compute the following:");
             $sheet->mergeCells('A' . $newRow . ':Q' . ($newRow + 2)); 
-            $sheet->getStyle('A' . $newRow . ':Q' . ($newRow + 2))->getAlignment()->setWrapText(true);
+            $sheet->getStyle('A' . $newRow . ':Q' . ($newRow + 4))->getAlignment()->setWrapText(true)->setHorizontal(Alignment::HORIZONTAL_LEFT)->setVertical(Alignment::VERTICAL_TOP);
+            $sheet->getStyle('A' . $newRow . ':Q' . ($newRow + 4))->getFont()->setName('SansSerif')->setSize(9);
             
             $sheet->setCellValue('S' . $newRow, '(blank) - Present; (x)- Absent; Tardy (half shaded= Upper for Late Commer, Lower for Cutting Classes)');
             $sheet->mergeCells('S' . $newRow . ':AA' . ($newRow + 1));
@@ -740,6 +741,18 @@ foreach ($dayAssignments as $assignment) {
             $sheet->setCellValue('S' . $newRow, 'b. Individual-Related Factors');
             $sheet->mergeCells('S' . $newRow . ':AA' . $newRow);
 
+            $newRow = 52 + $offset;
+            $sheet->setCellValue('S' . $newRow, "b.1. Illness\nb.2. Overage\nb.3. Death\nb.4. Drug Abuse\nb.5. Poor academic performance\nb.6. Lack of interest/Distractions\nb.7. Hunger/Malnutrition");
+            $sheet->mergeCells('S' . $newRow . ':AA' . ($newRow + 5)); 
+            $sheet->getStyle('S' . $newRow . ':AA' . ($newRow + 5))->getAlignment()->setWrapText(true)->setHorizontal(Alignment::HORIZONTAL_LEFT)->setVertical(Alignment::VERTICAL_TOP);
+            $sheet->getStyle('S' . $newRow . ':AA' . ($newRow + 5))->getFont()->setName('SansSerif')->setSize(8);
+
+            $newRow = 53 + $offset;
+            $sheet->setCellValue('A' . $newRow, "4. Every end of the month, the class adviser will submit this form to the office of the principal for recording of summary table into School Form 4. Once signed by the principal, this form should be returned to the adviser.\n5. The adviser will provide neccessary interventions including but not limited to home visitation to learner/s who were absent for 5 consecutive days and/or those at risk of dropping out.\n6.  Attendance performance of learners will be reflected in Form 137 and Form 138 every grading period.");
+            $sheet->mergeCells('A' . $newRow . ':Q' . ($newRow + 4)); 
+            $sheet->getStyle('A' . $newRow . ':Q' . ($newRow + 4))->getAlignment()->setWrapText(true)->setHorizontal(Alignment::HORIZONTAL_LEFT)->setVertical(Alignment::VERTICAL_TOP);
+            $sheet->getStyle('A' . $newRow . ':Q' . ($newRow + 4))->getFont()->setName('SansSerif')->setSize(9);
+            
             // $newRow = 54 + $offset;
             // $sheet->setCellValue('X' . $newRow, 'b.1. Illness');
             // $sheet->mergeCells('X' . $newRow . ':AD' . $newRow);
@@ -781,32 +794,45 @@ foreach ($dayAssignments as $assignment) {
             $sheet->getRowDimension($newRow)->setRowHeight(15);
 
             $newRow = 58 + $offset;
+            $sheet->setCellValue('B' . $newRow, '*Beginning of School Year cut-off report is every 1st Friday of the School Year');
+            $sheet->mergeCells('B' . $newRow . ':Q' . ($newRow + 1));
+            $sheet->getStyle('B' . $newRow . ':Q' . ($newRow + 1))->getAlignment()->setVertical(Alignment::VERTICAL_CENTER);
+            $sheet->getStyle('B' . $newRow . ':Q' . ($newRow + 1))->getFont()->setName('SansSerif')->setSize(9);
+
+            $sheet->setCellValue('S' . $newRow, 'c. School-Related Factors');
+            $sheet->mergeCells('S' . $newRow . ':AA' . $newRow); 
+
             $sheet->setCellValue('AE' . $newRow, 'NLS');
             $sheet->mergeCells('AE' . $newRow . ':AF' . $newRow);
             $sheet->setCellValue('AG' . $newRow, 0);
             $sheet->mergeCells('AG' . $newRow . ':AS' . $newRow);
-            $sheet->setCellValue('X' . $newRow, '*Beginning of School Year cut-off report is every 1st Friday of the School Year');
-            $sheet->mergeCells('X' . $newRow . ':AD' . $newRow);
-            $sheet->getStyle('A' . $newRow . ':AS' . $newRow)->applyFromArray($borderStyle);
-            $sheet->getRowDimension($newRow)->setRowHeight(15);
+
+            $newRow = 59 + $offset;
+            $sheet->setCellValue('S' . $newRow, "c.1. Teacher Factor\nc.2. Physical condition of classroom\nc.3. Peer influence");
+            $sheet->mergeCells('S' . $newRow . ':AA' . ($newRow + 2)); 
+            $sheet->getStyle('S' . $newRow . ':AA' . ($newRow + 2))->getAlignment()->setWrapText(true)->setHorizontal(Alignment::HORIZONTAL_LEFT)->setVertical(Alignment::VERTICAL_TOP);
+            $sheet->getStyle('S' . $newRow . ':AA' . ($newRow + 2))->getFont()->setName('SansSerif')->setSize(8);
 
             $newRow = 60 + $offset;
             $sheet->setCellValue('AE' . $newRow, 'Transferred out');
             $sheet->mergeCells('AE' . $newRow . ':AF' . $newRow);
             $sheet->setCellValue('AG' . $newRow, 0);
             $sheet->mergeCells('AG' . $newRow . ':AS' . $newRow);
-            $sheet->setCellValue('X' . $newRow, 'c.1. Teacher Factor');
-            $sheet->mergeCells('X' . $newRow . ':AD' . $newRow);
-            $sheet->setCellValue('X' . ($newRow + 1), 'c.2. Physical condition of classroom');
-            $sheet->mergeCells('X' . ($newRow + 1) . ':AD' . ($newRow + 1));
-            $sheet->setCellValue('X' . ($newRow + 2), 'c.3. Peer influence');
-            $sheet->mergeCells('X' . ($newRow + 2) . ':AD' . ($newRow + 2));
-            for ($i = 0; $i <= 2; $i++) {
-                $sheet->getStyle('A' . ($newRow + $i) . ':AS' . ($newRow + $i))->applyFromArray($borderStyle);
-                $sheet->getRowDimension($newRow + $i)->setRowHeight(15);
-            }
+            // $sheet->setCellValue('X' . $newRow, 'c.1. Teacher Factor');
+            // $sheet->mergeCells('X' . $newRow . ':AD' . $newRow);
+            // $sheet->setCellValue('X' . ($newRow + 1), 'c.2. Physical condition of classroom');
+            // $sheet->mergeCells('X' . ($newRow + 1) . ':AD' . ($newRow + 1));
+            // $sheet->setCellValue('X' . ($newRow + 2), 'c.3. Peer influence');
+            // $sheet->mergeCells('X' . ($newRow + 2) . ':AD' . ($newRow + 2));
+            // for ($i = 0; $i <= 2; $i++) {
+            //     $sheet->getStyle('A' . ($newRow + $i) . ':AS' . ($newRow + $i))->applyFromArray($borderStyle);
+            //     $sheet->getRowDimension($newRow + $i)->setRowHeight(15);
+            // }
 
             $newRow = 62 + $offset;
+            $sheet->setCellValue('S' . $newRow, 'd. Geographic/Environmental');
+            $sheet->mergeCells('S' . $newRow . ':AA' . $newRow); 
+
             $sheet->setCellValue('AE' . $newRow, 'Transferred in');
             $sheet->mergeCells('AE' . $newRow . ':AF' . $newRow);
             $sheet->setCellValue('AG' . $newRow, 0);
@@ -814,27 +840,37 @@ foreach ($dayAssignments as $assignment) {
             $sheet->getStyle('A' . $newRow . ':AS' . $newRow)->applyFromArray($borderStyle);
             $sheet->getRowDimension($newRow)->setRowHeight(15);
 
+            $newRow = 63 + $offset;
+            $sheet->setCellValue('S' . $newRow, "d.1. Distance between home and school\nd.2. Armed conflict (incl. Tribal wars & clanfeuds)\nd.3. Calamities/Disasters");
+            $sheet->mergeCells('S' . $newRow . ':AA' . ($newRow + 2)); 
+            $sheet->getStyle('S' . $newRow . ':AA' . ($newRow + 2))->getAlignment()->setWrapText(true)->setHorizontal(Alignment::HORIZONTAL_LEFT)->setVertical(Alignment::VERTICAL_TOP);
+            $sheet->getStyle('S' . $newRow . ':AA' . ($newRow + 2))->getFont()->setName('SansSerif')->setSize(8);
+
             $newRow = 65 + $offset;
-            $sheet->setCellValue('X' . $newRow, 'd. Geographic/Environmental');
-            $sheet->mergeCells('X' . $newRow . ':AD' . $newRow);
+            // $sheet->setCellValue('X' . $newRow, 'd. Geographic/Environmental');
+            // $sheet->mergeCells('X' . $newRow . ':AD' . $newRow);
             $sheet->setCellValue('AE' . $newRow, 'I certify that this is a true and correct report.');
             $sheet->mergeCells('AE' . $newRow . ':AS' . $newRow);
-            $sheet->setCellValue('X' . ($newRow + 1), 'd.1. Distance between home and school');
-            $sheet->mergeCells('X' . ($newRow + 1) . ':AD' . ($newRow + 1));
-            $sheet->setCellValue('X' . ($newRow + 2), 'd.2. Armed conflict (incl. Tribal wars & clanfeuds)');
-            $sheet->mergeCells('X' . ($newRow + 2) . ':AD' . ($newRow + 2));
-            $sheet->setCellValue('X' . ($newRow + 3), 'd.3. Calamities/Disasters');
-            $sheet->mergeCells('X' . ($newRow + 3) . ':AD' . ($newRow + 3));
+            // $sheet->setCellValue('X' . ($newRow + 1), 'd.1. Distance between home and school');
+            // $sheet->mergeCells('X' . ($newRow + 1) . ':AD' . ($newRow + 1));
+            // $sheet->setCellValue('X' . ($newRow + 2), 'd.2. Armed conflict (incl. Tribal wars & clanfeuds)');
+            // $sheet->mergeCells('X' . ($newRow + 2) . ':AD' . ($newRow + 2));
+            // $sheet->setCellValue('X' . ($newRow + 3), 'd.3. Calamities/Disasters');
+            // $sheet->mergeCells('X' . ($newRow + 3) . ':AD' . ($newRow + 3));
             for ($i = 0; $i <= 3; $i++) {
                 $sheet->getStyle('A' . ($newRow + $i) . ':AS' . ($newRow + $i))->applyFromArray($borderStyle);
                 $sheet->getRowDimension($newRow + $i)->setRowHeight(15);
             }
 
+            $newRow = 66 + $offset;
+            $sheet->setCellValue('S' . $newRow, 'd. Geographic/Environmental');
+            $sheet->mergeCells('S' . $newRow . ':AA' . $newRow); 
+
             $newRow = 69 + $offset;
-            $sheet->setCellValue('X' . $newRow, 'e. Financial-Related');
-            $sheet->mergeCells('X' . $newRow . ':AD' . $newRow);
-            $sheet->setCellValue('X' . ($newRow + 1), 'e.1. Child labor, work');
-            $sheet->mergeCells('X' . ($newRow + 1) . ':AD' . ($newRow + 1));
+            // $sheet->setCellValue('X' . $newRow, 'e. Financial-Related');
+            // $sheet->mergeCells('X' . $newRow . ':AD' . $newRow);
+            // $sheet->setCellValue('X' . ($newRow + 1), 'e.1. Child labor, work');
+            // $sheet->mergeCells('X' . ($newRow + 1) . ':AD' . ($newRow + 1));
             $sheet->setCellValue('AG' . $newRow, '(Signature of Adviser over Printed Name)');
             $sheet->mergeCells('AG' . $newRow . ':AS' . $newRow);
             for ($i = 0; $i <= 1; $i++) {

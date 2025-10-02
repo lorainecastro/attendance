@@ -159,7 +159,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 
             $gradeLevel = $class['grade_level'];
             $sectionName = $class['section_name'];
-            $schoolName = $user['institution'] ?: 'E. A. Remigio ES'; // Fallback to example
+            $schoolName = $user['institution'] ?: 'Add Institution here'; // Fallback to example
 
             // Month map
             $monthMap = [
@@ -178,8 +178,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             $schoolStartYear = ($currentMonth >= 6) ? $currentYear : $currentYear - 1;
             $schoolYear = $schoolStartYear . ' - ' . ($schoolStartYear + 1);
             $year = ($monthNum >= 6) ? $schoolStartYear : $schoolStartYear + 1;
-
-            // ... (previous code remains unchanged until the SF2 export section)
 
             // Get school days (Mon-Fri)
             $firstDay = new DateTime("$year-$monthNum-01");
@@ -309,12 +307,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                 6 => 15,  // dates
                 7 => 15,  // Day abbreviations
             ];
-            // for ($i = 8; $i <= 74; $i++) {
-            //     $rowHeights[$i] = 15; // Default height for student and guideline rows
-            // }
-            // foreach ($rowHeights as $row => $height) {
-            //     $sheet->getRowDimension($row)->setRowHeight($height);
-            // }
 
             // Apply borders to row 6
             $sheet->getStyle('A6:AN6')->applyFromArray($borderStyle);
@@ -614,6 +606,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             $newRow = 42 + $offset;
             $sheet->setCellValue('A' . $newRow, 'GUIDELINES:');
             $sheet->mergeCells('A' . $newRow . ':Q' . $newRow);
+            $sheet->getStyle('A' . $newRow . ':Q' . $newRow)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_LEFT)->setVertical(Alignment::VERTICAL_CENTER);
+            $sheet->getStyle('A' . $newRow . ':Q' . $newRow)->getFont()->setName('SansSerif')->setSize(8)->setBold(true);
+            
             $sheet->setCellValue('S' . $newRow, '1. CODES FOR CHECKING ATTENDANCE');
             $sheet->mergeCells('S' . $newRow . ':AA' . $newRow);
             $sheet->getStyle('S' . $newRow . ':AA' . $newRow)->getFont()->setName('SansSerif')->setSize(8)->setBold(true);
@@ -624,7 +619,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             $sheet->getStyle('AC' . $newRow . ':AE' . ($newRow + 1))->getAlignment()->setWrapText(true)->setHorizontal(Alignment::HORIZONTAL_LEFT)->setVertical(Alignment::VERTICAL_TOP);
             $sheet->getStyle('AC' . $newRow . ':AE' . ($newRow + 1))->getFont()->setName('SansSerif')->setSize(8)->setBold(true);
 
-            $sheet->setCellValue('AF' . $newRow, 'No. of Days of Classes: ' .$numDays);
+            $sheet->setCellValue('AF' . $newRow, 'No. of Days of Classes:  ' .$numDays);
             $sheet->mergeCells('AF' . $newRow . ':AH' . ($newRow + 1)); 
             $sheet->getStyle('AF' . $newRow . ':AH' . ($newRow + 1))->getAlignment()->setWrapText(true)->setHorizontal(Alignment::HORIZONTAL_LEFT)->setVertical(Alignment::VERTICAL_TOP);
             $sheet->getStyle('AF' . $newRow . ':AH' . ($newRow + 1))->getFont()->setName('SansSerif')->setSize(8)->setBold(true);
@@ -635,13 +630,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             $sheet->getStyle('AI' . $newRow . ':AN' . $newRow)->getFont()->setName('SansSerif')->setSize(8)->setBold(true);
             $sheet->getStyle('AI' . $newRow . ':AN' . $newRow)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER)->setVertical(Alignment::VERTICAL_CENTER);
 
-            $sheet->getRowDimension($newRow)->setRowHeight(15);
-
             $newRow = 43 + $offset;
             $sheet->setCellValue('A' . $newRow, "1. The attendance shall be accomplished daily. Refer to the codes for checking learners' attendance.\n2. Dates shall be written in the columns after Learner's Name.\n3. To compute the following:");
             $sheet->mergeCells('A' . $newRow . ':Q' . ($newRow + 2)); 
-            $sheet->getStyle('A' . $newRow . ':Q' . ($newRow + 4))->getAlignment()->setWrapText(true)->setHorizontal(Alignment::HORIZONTAL_LEFT)->setVertical(Alignment::VERTICAL_TOP);
-            $sheet->getStyle('A' . $newRow . ':Q' . ($newRow + 4))->getFont()->setName('SansSerif')->setSize(9);
+            $sheet->getStyle('A' . $newRow . ':Q' . ($newRow + 4))->getAlignment()->setWrapText(true)->setHorizontal(Alignment::HORIZONTAL_LEFT)->setVertical(Alignment::VERTICAL_CENTER);
+            $sheet->getStyle('A' . $newRow . ':Q' . ($newRow + 4))->getFont()->setName('SansSerif')->setSize(8);
             
             $sheet->setCellValue('S' . $newRow, '(blank) - Present; (x)- Absent; Tardy (half shaded= Upper for Late Commer, Lower for Cutting Classes)');
             $sheet->mergeCells('S' . $newRow . ':AA' . ($newRow + 1));
@@ -727,15 +720,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             $sheet->setCellValue('B' . $newRow, 'a. Percentage of Enrolment =');
             $sheet->mergeCells('B' . $newRow . ':C' . ($newRow + 1));
             $sheet->getStyle('B' . $newRow . ':C' . ($newRow + 1))->getAlignment()->setVertical(Alignment::VERTICAL_CENTER);
-
+            $sheet->getStyle('B' . $newRow . ':C' . ($newRow + 1))->getFont()->setName('SansSerif')->setSize(8);
+            
             $sheet->setCellValue('D' . $newRow, 'Registered Learners as of end of the month');
             $sheet->mergeCells('D' . $newRow . ':O' . $newRow);
             $sheet->getStyle('D' . $newRow . ':O' . $newRow)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER)->setVertical(Alignment::VERTICAL_CENTER);
             
             $sheet->setCellValue('P' . $newRow, 'x 100');
             $sheet->mergeCells('P' . $newRow . ':Q' . ($newRow + 1));
-            $sheet->getStyle('P' . $newRow . ':Q' . ($newRow + 1))->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER)->setVertical(Alignment::VERTICAL_CENTER)->applyFromArray($borderStyle);
-           
+            $sheet->getStyle('P' . $newRow . ':Q' . ($newRow + 1))->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER)->setVertical(Alignment::VERTICAL_CENTER);
+            $sheet->getStyle('P' . $newRow . ':Q' . ($newRow + 1))->getFont()->setName('SansSerif')->setSize(9);
+            
             $sheet->setCellValue('S' . $newRow, 'a. Domestic-Related Factors');
             $sheet->mergeCells('S' . $newRow . ':AA' . $newRow);
             $sheet->getStyle('S' . $newRow . ':AA' . $newRow)->getFont()->setName('SansSerif')->setSize(8)->setBold(true);
@@ -750,7 +745,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             $sheet->setCellValue('D' . $newRow, 'Enrolment as of 1st Friday of the school year');
             $sheet->mergeCells('D' . $newRow . ':O' . $newRow);
             $sheet->getStyle('D' . $newRow . ':O' . $newRow)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER)->setVertical(Alignment::VERTICAL_CENTER);
-
+            $sheet->getStyle('D' . $newRow . ':O' . $newRow)->getBorders()->getTop()->setBorderStyle(Border::BORDER_THIN);
+            
             $sheet->setCellValue('S' . $newRow, "a.1. Had to take care of siblings\na.2. Early marriage/pregnancy\na.3. Parents' attitude toward schooling\na.4. Family problems");
             $sheet->mergeCells('S' . $newRow . ':AA' . ($newRow + 3)); 
             $sheet->getStyle('S' . $newRow . ':AA' . ($newRow + 3))->getAlignment()->setWrapText(true)->setHorizontal(Alignment::HORIZONTAL_LEFT)->setVertical(Alignment::VERTICAL_TOP);
@@ -780,11 +776,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             $sheet->setCellValue('B' . $newRow, 'b. Average Daily Attendance =');
             $sheet->mergeCells('B' . $newRow . ':C' . ($newRow + 1));
             $sheet->getStyle('B' . $newRow . ':C' . ($newRow + 1))->getAlignment()->setVertical(Alignment::VERTICAL_CENTER);
-
+            $sheet->getStyle('B' . $newRow . ':C' . ($newRow + 1))->getFont()->setName('SansSerif')->setSize(8);
+            
             $sheet->setCellValue('D' . $newRow, 'Total Daily Attendance');
             $sheet->mergeCells('D' . $newRow . ':O' . $newRow);
             $sheet->getStyle('D' . $newRow . ':O' . $newRow)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER)->setVertical(Alignment::VERTICAL_CENTER);
-
+            $sheet->getStyle('D' . $newRow . ':O' . $newRow)->getFont()->setName('SansSerif')->setSize(8);
+            
             $sheet->setCellValue('AC' . $newRow, 'end of month');
             $sheet->mergeCells('AC' . $newRow . ':AH' . $newRow);
             $sheet->getStyle('AC' . $newRow . ':AH' . $newRow)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER)->setVertical(Alignment::VERTICAL_CENTER);
@@ -794,7 +792,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             $sheet->setCellValue('D' . $newRow, 'Number of School Days in reporting month');
             $sheet->mergeCells('D' . $newRow . ':O' . $newRow);
             $sheet->getStyle('D' . $newRow . ':O' . $newRow)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER)->setVertical(Alignment::VERTICAL_CENTER);
-
+            $sheet->getStyle('D' . $newRow . ':O' . $newRow)->getFont()->setName('SansSerif')->setSize(8);
+            $sheet->getStyle('D' . $newRow . ':O' . $newRow)->getBorders()->getTop()->setBorderStyle(Border::BORDER_THIN);
+            
             $sheet->setCellValue('AC' . $newRow, 'Percentage of Enrolment as of');
             $sheet->mergeCells('AC' . $newRow . ':AH' . $newRow);
             $sheet->getStyle('AC' . $newRow . ':AH' . $newRow)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER)->setVertical(Alignment::VERTICAL_CENTER);
@@ -820,15 +820,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             $sheet->setCellValue('B' . $newRow, 'c. Percentage of Attendance for the month =');
             $sheet->mergeCells('B' . $newRow . ':C' . ($newRow + 1));
             $sheet->getStyle('B' . $newRow . ':C' . ($newRow + 1))->getAlignment()->setVertical(Alignment::VERTICAL_CENTER);
-
+            $sheet->getStyle('B' . $newRow . ':C' . ($newRow + 1))->getFont()->setName('SansSerif')->setSize(8);
+            
             $sheet->setCellValue('D' . $newRow, 'Average daily attendance');
             $sheet->mergeCells('D' . $newRow . ':O' . $newRow);
             $sheet->getStyle('D' . $newRow . ':O' . $newRow)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER)->setVertical(Alignment::VERTICAL_CENTER);
-
+            $sheet->getStyle('D' . $newRow . ':O' . $newRow)->getFont()->setName('SansSerif')->setSize(8);
+            
             $sheet->setCellValue('P' . $newRow, 'x 100');
             $sheet->mergeCells('P' . $newRow . ':Q' . ($newRow + 1));
-            $sheet->getStyle('P' . $newRow . ':Q' . ($newRow + 1))->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER)->setVertical(Alignment::VERTICAL_CENTER)->applyFromArray($borderStyle);
-
+            $sheet->getStyle('P' . $newRow . ':Q' . ($newRow + 1))->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER)->setVertical(Alignment::VERTICAL_CENTER);
+            $sheet->getStyle('P' . $newRow . ':Q' . ($newRow + 1))->getFont()->setName('SansSerif')->setSize(9);
+            
             $sheet->setCellValue('AC' . $newRow, 'end of month');
             $sheet->mergeCells('AC' . $newRow . ':AH' . $newRow);
             $sheet->getStyle('AC' . $newRow . ':AH' . $newRow)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER)->setVertical(Alignment::VERTICAL_CENTER);
@@ -838,6 +841,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             $sheet->setCellValue('D' . $newRow, 'Registered Learners as of end of the month');
             $sheet->mergeCells('D' . $newRow . ':O' . $newRow);
             $sheet->getStyle('D' . $newRow . ':O' . $newRow)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER)->setVertical(Alignment::VERTICAL_CENTER);
+            $sheet->getStyle('D' . $newRow . ':O' . $newRow)->getFont()->setName('SansSerif')->setSize(8);
+            $sheet->getStyle('D' . $newRow . ':O' . $newRow)->getBorders()->getTop()->setBorderStyle(Border::BORDER_THIN);
 
             $sheet->setCellValue('S' . $newRow, 'b. Individual-Related Factors');
             $sheet->mergeCells('S' . $newRow . ':AA' . $newRow);
@@ -864,19 +869,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             $sheet->getStyle('AM' . $newRow . ':AN' . ($newRow + 1))->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER)->setVertical(Alignment::VERTICAL_CENTER);
             $sheet->getStyle('AM' . $newRow . ':AN' . ($newRow + 1))->getFont()->setName('SansSerif')->setSize(9);
             
-            
             $newRow = 52 + $offset;
             $sheet->setCellValue('S' . $newRow, "b.1. Illness\nb.2. Overage\nb.3. Death\nb.4. Drug Abuse\nb.5. Poor academic performance\nb.6. Lack of interest/Distractions\nb.7. Hunger/Malnutrition");
             $sheet->mergeCells('S' . $newRow . ':AA' . ($newRow + 5)); 
             $sheet->getStyle('S' . $newRow . ':AA' . ($newRow + 5))->getAlignment()->setWrapText(true)->setHorizontal(Alignment::HORIZONTAL_LEFT)->setVertical(Alignment::VERTICAL_TOP);
             $sheet->getStyle('S' . $newRow . ':AA' . ($newRow + 5))->getFont()->setName('SansSerif')->setSize(8);
 
-            
             $newRow = 53 + $offset;
             $sheet->setCellValue('A' . $newRow, "4. Every end of the month, the class adviser will submit this form to the office of the principal for recording of summary table into School Form 4. Once signed by the principal, this form should be returned to the adviser.\n5. The adviser will provide neccessary interventions including but not limited to home visitation to learner/s who were absent for 5 consecutive days and/or those at risk of dropping out.\n6.  Attendance performance of learners will be reflected in Form 137 and Form 138 every grading period.");
             $sheet->mergeCells('A' . $newRow . ':Q' . ($newRow + 4)); 
-            $sheet->getStyle('A' . $newRow . ':Q' . ($newRow + 4))->getAlignment()->setWrapText(true)->setHorizontal(Alignment::HORIZONTAL_LEFT)->setVertical(Alignment::VERTICAL_TOP);
-            $sheet->getStyle('A' . $newRow . ':Q' . ($newRow + 4))->getFont()->setName('SansSerif')->setSize(9);
+            $sheet->getStyle('A' . $newRow . ':Q' . ($newRow + 4))->getAlignment()->setWrapText(true)->setHorizontal(Alignment::HORIZONTAL_LEFT)->setVertical(Alignment::VERTICAL_CENTER);
+            $sheet->getStyle('A' . $newRow . ':Q' . ($newRow + 4))->getFont()->setName('SansSerif')->setSize(8);
             
             $sheet->setCellValue('AC' . $newRow, 'Percentage of Attendance for the month');
             $sheet->mergeCells('AC' . $newRow . ':AH' . ($newRow + 1));
@@ -920,29 +923,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             $sheet->mergeCells('AM' . $newRow . ':AN' . ($newRow + 1));
             $sheet->getStyle('AM' . $newRow . ':AN' . ($newRow + 1))->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER)->setVertical(Alignment::VERTICAL_CENTER);
             $sheet->getStyle('AM' . $newRow . ':AN' . ($newRow + 1))->getFont()->setName('SansSerif')->setSize(9);
-            
-            // $sheet->setCellValue('X' . $newRow, 'b.1. Illness');
-            // $sheet->mergeCells('X' . $newRow . ':AD' . $newRow);
-            // $sheet->setCellValue('X' . ($newRow + 1), 'b.2. Overage');
-            // $sheet->mergeCells('X' . ($newRow + 1) . ':AD' . ($newRow + 1));
-            // $sheet->setCellValue('X' . ($newRow + 2), 'b.3. Death');
-            // $sheet->mergeCells('X' . ($newRow + 2) . ':AD' . ($newRow + 2));
-            // $sheet->setCellValue('X' . ($newRow + 3), 'b.4. Drug Abuse');
-            // $sheet->mergeCells('X' . ($newRow + 3) . ':AD' . ($newRow + 3));
-            // $sheet->setCellValue('X' . ($newRow + 4), 'b.5. Poor academic performance');
-            // $sheet->mergeCells('X' . ($newRow + 4) . ':AD' . ($newRow + 4));
-            // $sheet->setCellValue('X' . ($newRow + 5), 'b.6. Lack of interest/Distractions');
-            // $sheet->mergeCells('X' . ($newRow + 5) . ':AD' . ($newRow + 5));
-            // $sheet->setCellValue('X' . ($newRow + 6), 'b.7. Hunger/Malnutrition');
-            // $sheet->mergeCells('X' . ($newRow + 6) . ':AD' . ($newRow + 6));
-            // $sheet->setCellValue('AE' . $newRow, 'Average Daily Attendance');
-            // $sheet->mergeCells('AE' . $newRow . ':AF' . $newRow);
-            // $sheet->setCellValue('AG' . $newRow, $averageDaily);
-            // $sheet->mergeCells('AG' . $newRow . ':AS' . $newRow);
-            // for ($i = 0; $i <= 6; $i++) {
-            //     $sheet->getStyle('A' . ($newRow + $i) . ':AS' . ($newRow + $i))->applyFromArray($borderStyle);
-            //     $sheet->getRowDimension($newRow + $i)->setRowHeight(15);
-            // }
 
             $newRow = 56 + $offset;
 
@@ -973,7 +953,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             $sheet->setCellValue('B' . $newRow, '*Beginning of School Year cut-off report is every 1st Friday of the School Year');
             $sheet->mergeCells('B' . $newRow . ':Q' . ($newRow + 1));
             $sheet->getStyle('B' . $newRow . ':Q' . ($newRow + 1))->getAlignment()->setVertical(Alignment::VERTICAL_CENTER);
-            $sheet->getStyle('B' . $newRow . ':Q' . ($newRow + 1))->getFont()->setName('SansSerif')->setSize(9);
+            $sheet->getStyle('B' . $newRow . ':Q' . ($newRow + 1))->getFont()->setName('SansSerif')->setSize(8);
 
             $sheet->setCellValue('S' . $newRow, 'c. School-Related Factors');
             $sheet->mergeCells('S' . $newRow . ':AA' . $newRow); 
@@ -1014,17 +994,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             
             
             $newRow = 60 + $offset;
-            
-            // $sheet->setCellValue('X' . $newRow, 'c.1. Teacher Factor');
-            // $sheet->mergeCells('X' . $newRow . ':AD' . $newRow);
-            // $sheet->setCellValue('X' . ($newRow + 1), 'c.2. Physical condition of classroom');
-            // $sheet->mergeCells('X' . ($newRow + 1) . ':AD' . ($newRow + 1));
-            // $sheet->setCellValue('X' . ($newRow + 2), 'c.3. Peer influence');
-            // $sheet->mergeCells('X' . ($newRow + 2) . ':AD' . ($newRow + 2));
-            // for ($i = 0; $i <= 2; $i++) {
-            //     $sheet->getStyle('A' . ($newRow + $i) . ':AS' . ($newRow + $i))->applyFromArray($borderStyle);
-            //     $sheet->getRowDimension($newRow + $i)->setRowHeight(15);
-            // }
 
             $newRow = 61 + $offset;
             $sheet->setCellValue('AC' . $newRow, 'Transferred in');
@@ -1120,9 +1089,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             
 
             $newRow = 74 + $offset;
-
-            // $sheet->getStyle('A' . $newRow . ':AS' . $newRow)->applyFromArray($borderStyle);
-            // $sheet->getRowDimension($newRow)->setRowHeight(15);
 
             $newRow = 75 + $offset;
             $sheet->setCellValue('S' . $newRow, 'Generated thru ****');

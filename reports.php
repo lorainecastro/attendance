@@ -320,12 +320,12 @@ $sheet->getStyle('A6:AN6')->applyFromArray($borderStyle);
 
 // Set fixed texts and merge cells (rows 1–5)
 $sheet->setCellValue('A1', 'School Form 2 (SF2) Daily Attendance Report of Learners');
-$sheet->mergeCells('A1:AR1');
+$sheet->mergeCells('A1:AN1');
 $sheet->getStyle('A1')->getFont()->setName('SansSerif')->setSize(13)->setBold(true);
 $sheet->getStyle('A1')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER)->setVertical(Alignment::VERTICAL_CENTER);
 
 $sheet->setCellValue('A2', '(This replaces Form 1, Form 2 & STS Form 4 - Absenteeism and Dropout Profile)');
-$sheet->mergeCells('A2:AR2');
+$sheet->mergeCells('A2:AN2');
 $sheet->getStyle('A2')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER)->setVertical(Alignment::VERTICAL_CENTER);
 
 $sheet->setCellValue('A3', 'School ID');
@@ -614,9 +614,9 @@ foreach ($dayAssignments as $assignment) {
             // Set guidelines texts with merges
             $newRow = 42 + $offset;
             $sheet->setCellValue('A' . $newRow, 'GUIDELINES:');
-            $sheet->mergeCells('A' . $newRow . ':W' . $newRow);
-            $sheet->setCellValue('X' . $newRow, '1. CODES FOR CHECKING ATTENDANCE');
-            $sheet->mergeCells('X' . $newRow . ':AD' . $newRow);
+            $sheet->mergeCells('A' . $newRow . ':Q' . $newRow);
+            $sheet->setCellValue('S' . $newRow, '1. CODES FOR CHECKING ATTENDANCE');
+            $sheet->mergeCells('S' . $newRow . ':AA' . $newRow);
             $sheet->setCellValue('AE' . $newRow, 'Month : ' . $month);
             $sheet->mergeCells('AE' . $newRow . ':AG' . $newRow);
             $sheet->setCellValue('AH' . $newRow, 'No. of Days of Classes:');
@@ -629,11 +629,12 @@ foreach ($dayAssignments as $assignment) {
 
             $newRow = 43 + $offset;
             $sheet->setCellValue('A' . $newRow, "1. The attendance shall be accomplished daily. Refer to the codes for checking learners' attendance.\n2. Dates shall be written in the columns after Learner's Name.\n3. To compute the following:");
-            $sheet->mergeCells('A' . $newRow . ':Q' . $newRow);
+            $sheet->mergeCells('A' . $newRow . ':Q' . ($newRow + 2)); 
+            $sheet->getStyle('A' . $newRow . ':Q' . ($newRow + 2))->getAlignment()->setWrapText(true);
+            
             $sheet->setCellValue('X' . $newRow, '(blank) - Present; (x)- Absent; Tardy (half shaded= Upper for Late Commer, Lower for Cutting Classes)');
             $sheet->mergeCells('X' . $newRow . ':AD' . $newRow);
             $sheet->getStyle('A' . $newRow . ':AS' . $newRow)->applyFromArray($borderStyle);
-            $sheet->getRowDimension($newRow)->setRowHeight(45);
             $sheet->getStyle('A' . $newRow)->getAlignment()->setWrapText(true);
             $sheet->getStyle('X' . $newRow)->getAlignment()->setWrapText(true);
 

@@ -629,7 +629,7 @@ foreach ($dayAssignments as $assignment) {
 
             $newRow = 43 + $offset;
             $sheet->setCellValue('A' . $newRow, "1. The attendance shall be accomplished daily. Refer to the codes for checking learners' attendance.\n2. Dates shall be written in the columns after Learner's Name.\n3. To compute the following:");
-            $sheet->mergeCells('A' . $newRow . ':W' . $newRow);
+            $sheet->mergeCells('A' . $newRow . ':Q' . $newRow);
             $sheet->setCellValue('X' . $newRow, '(blank) - Present; (x)- Absent; Tardy (half shaded= Upper for Late Commer, Lower for Cutting Classes)');
             $sheet->mergeCells('X' . $newRow . ':AD' . $newRow);
             $sheet->getStyle('A' . $newRow . ':AS' . $newRow)->applyFromArray($borderStyle);

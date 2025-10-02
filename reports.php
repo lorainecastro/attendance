@@ -653,28 +653,40 @@ foreach ($dayAssignments as $assignment) {
             $sheet->setCellValue('AI' . $newRow, 'M');
             $sheet->mergeCells('AI' . $newRow . ':AJ' . $newRow);
             $sheet->getStyle('AI' . $newRow . ':AJ' . $newRow)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER)->setVertical(Alignment::VERTICAL_CENTER);
-            
+            $sheet->getStyle('AI' . $newRow . ':AJ' . $newRow)->getFont()->setName('SansSerif')->setSize(8)->setBold(true);
+
             $sheet->setCellValue('AK' . $newRow, 'F');
             $sheet->mergeCells('AK' . $newRow . ':AL' . $newRow);
             $sheet->getStyle('AK' . $newRow . ':AL' . $newRow)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER)->setVertical(Alignment::VERTICAL_CENTER);
-            
+            $sheet->getStyle('AK' . $newRow . ':AL' . $newRow)->getFont()->setName('SansSerif')->setSize(8)->setBold(true);
+
             $sheet->setCellValue('AM' . $newRow, 'TOTAL');
             $sheet->mergeCells('AM' . $newRow . ':AN' . $newRow);
             $sheet->getStyle('AM' . $newRow . ':AN' . $newRow)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER)->setVertical(Alignment::VERTICAL_CENTER);
-            
-
-            // $sheet->getStyle('A' . $newRow)->getAlignment()->setWrapText(true);
-            // $sheet->getStyle('X' . $newRow)->getAlignment()->setWrapText(true);
+            $sheet->getStyle('AM' . $newRow . ':AN' . $newRow)->getFont()->setName('SansSerif')->setSize(8)->setBold(true);
 
             $newRow = 44 + $offset;
-            $sheet->setCellValue('AE' . $newRow, '* Enrolment as of (1st Friday of the SY)');
-            $sheet->mergeCells('AE' . $newRow . ':AF' . $newRow);
-            $sheet->setCellValue('AG' . $newRow, $maleCount);
-            $sheet->setCellValue('AH' . $newRow, $femaleCount);
-            $sheet->setCellValue('AI' . $newRow, $totalStudents);
-            $sheet->mergeCells('AI' . $newRow . ':AS' . $newRow);
-            $sheet->getStyle('A' . $newRow . ':AS' . $newRow)->applyFromArray($borderStyle);
-            $sheet->getRowDimension($newRow)->setRowHeight(15);
+            $sheet->setCellValue('AC' . $newRow, '* Enrolment as of (1st Friday of the SY)');
+            $sheet->mergeCells('AC' . $newRow . ':AH' . $newRow);
+            $sheet->getStyle('AC' . $newRow . ':AH' . $newRow)->getAlignment()->setVertical(Alignment::VERTICAL_CENTER);
+            $sheet->getStyle('AC' . $newRow . ':AH' . $newRow)->getFont()->setName('SansSerif')->setSize(8);
+
+            $sheet->setCellValue('AI' . $newRow, $maleCount);
+            $sheet->mergeCells('AI' . $newRow . ':AJ' . $newRow);
+            $sheet->getStyle('AI' . $newRow . ':AJ' . $newRow)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER)->setVertical(Alignment::VERTICAL_CENTER);
+            $sheet->getStyle('AI' . $newRow . ':AJ' . $newRow)->getFont()->setName('SansSerif')->setSize(9);
+
+            $sheet->setCellValue('AK' . $newRow, $femaleCount);
+            $sheet->mergeCells('AK' . $newRow . ':AL' . $newRow);
+            $sheet->getStyle('AK' . $newRow . ':AL' . $newRow)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER)->setVertical(Alignment::VERTICAL_CENTER);
+            $sheet->getStyle('AK' . $newRow . ':AL' . $newRow)->getFont()->setName('SansSerif')->setSize(9);
+
+            $sheet->setCellValue('AM' . $newRow, $totalStudents);
+            $sheet->mergeCells('AM' . $newRow . ':AN' . $newRow);
+            $sheet->getStyle('AM' . $newRow . ':AN' . $newRow)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER)->setVertical(Alignment::VERTICAL_CENTER);
+            $sheet->getStyle('AM' . $newRow . ':AN' . $newRow)->getFont()->setName('SansSerif')->setSize(9);
+            // $sheet->getStyle('A' . $newRow . ':AS' . $newRow)->applyFromArray($borderStyle);
+            // $sheet->getRowDimension($newRow)->setRowHeight(15);
 
             $newRow = 45 + $offset;
             $sheet->setCellValue('S' . $newRow, '2. REASONS/CAUSES FOR NLS');
@@ -689,8 +701,8 @@ foreach ($dayAssignments as $assignment) {
             $sheet->setCellValue('AH' . $newRow, 0);
             $sheet->setCellValue('AI' . $newRow, 0);
             $sheet->mergeCells('AI' . $newRow . ':AS' . $newRow);
-            $sheet->getStyle('A' . $newRow . ':AS' . $newRow)->applyFromArray($borderStyle);
-            $sheet->getRowDimension($newRow)->setRowHeight(15);
+            // $sheet->getStyle('A' . $newRow . ':AS' . $newRow)->applyFromArray($borderStyle);
+            // $sheet->getRowDimension($newRow)->setRowHeight(15);
 
             $newRow = 46 + $offset;
             $sheet->setCellValue('B' . $newRow, 'a. Percentage of Enrolment =');

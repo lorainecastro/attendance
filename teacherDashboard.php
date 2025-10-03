@@ -867,7 +867,7 @@ $at_risk_students = getAtRiskStudents($pdo, $currentUser['teacher_id']);
             <div class="nav-section">
                 <div class="nav-section-title">Main</div>
                 <div class="nav-item">
-                    <a href="#" class="nav-link menu-item">
+                    <a href="#" class="nav-link menu-item active">
                         <i class="fas fa-tachometer-alt nav-icon"></i>
                         <span class="nav-text">Dashboard</span>
                         <span class="nav-tooltip">Dashboard</span>
@@ -915,7 +915,7 @@ $at_risk_students = getAtRiskStudents($pdo, $currentUser['teacher_id']);
                     </a>
                 </div>
                 <div class="nav-item">
-                    <a href="#" class="nav-link menu-item active">
+                    <a href="#" class="nav-link menu-item">
                         <i class="fas fa-file-export nav-icon"></i>
                         <span class="nav-text">Reports & Export</span>
                         <span class="nav-tooltip">Reports & Export</span>
@@ -1183,7 +1183,7 @@ $at_risk_students = getAtRiskStudents($pdo, $currentUser['teacher_id']);
             }
 
             // Load default page
-            loadPage('reports.php');
+            loadPage('dashboard.php');
         });
 
         // Load page into iframe

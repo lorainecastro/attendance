@@ -355,7 +355,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             $sheet->mergeCells('A5:A7'); // Merge A5 through A7
             $sheet->setCellValue('B5', "NAME\n(Last Name, First Name, Middle Name)");
             $sheet->mergeCells('B5:C7'); // Merge B5:C5 through B7:C7
-            $sheet->setCellValue('D5', '(1st row for date)');
+            $sheet->setCellValue('D5', '(1st row for date, 2nd row for Day: M,T,W,TH,F)');
             $sheet->mergeCells('D5:AB5'); // Merge D5 to AB5
             $sheet->setCellValue('AC5', "Total for the Month");
             $sheet->mergeCells('AC5:AF6');

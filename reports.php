@@ -268,7 +268,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             // Create spreadsheet
             $spreadsheet = new Spreadsheet();
             $sheet = $spreadsheet->getActiveSheet();
-            $sheet->setTitle('school_form_2_ver2014.2.1.1');
+            // $sheet->setTitle('school_form_2_ver2014.2.1.1');
+            $sheet->setTitle('School_Form_2');
 
             // Border style
             $borderStyle = [

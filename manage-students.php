@@ -349,6 +349,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action']) && $_POST['a
     ob_clean();
 
     $lrns = json_decode($_POST['lrns'], true);
+    $grade_level = $_POST['grade_level'] ?? '';
+    $subject = $_POST['subject'] ?? '';
+    $section = $_POST['section'] ?? '';
 
     if (empty($lrns) || !is_array($lrns)) {
         echo json_encode(['success' => false, 'message' => 'No students selected for export']);
@@ -359,9 +362,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action']) && $_POST['a
         $pdo = getDBConnection();
         $teacher_id = $user['teacher_id'];
 
-        // Prepare the query to fetch selected students
+        // Prepare the query with filters
         $placeholders = str_repeat('?,', count($lrns) - 1) . '?';
-        $stmt = $pdo->prepare("
+        $query = "
             SELECT DISTINCT s.*, c.grade_level, sub.subject_name as class_name, 
                    c.section_name as section, s.date_added
             FROM class_students cs
@@ -369,15 +372,32 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action']) && $_POST['a
             JOIN subjects sub ON c.subject_id = sub.subject_id
             JOIN students s ON cs.lrn = s.lrn
             WHERE c.teacher_id = ? AND s.lrn IN ($placeholders)
-            ORDER BY s.full_name
-        ");
+            AND c.isArchived = 0
+        ";
+        $params = [$teacher_id, ...$lrns];
 
-        $params = array_merge([$teacher_id], $lrns);
+        // Add filter conditions
+        if ($grade_level) {
+            $query .= " AND c.grade_level = ?";
+            $params[] = $grade_level;
+        }
+        if ($subject) {
+            $query .= " AND sub.subject_name = ?";
+            $params[] = $subject;
+        }
+        if ($section) {
+            $query .= " AND c.section_name = ?";
+            $params[] = $section;
+        }
+
+        $query .= " ORDER BY s.full_name";
+
+        $stmt = $pdo->prepare($query);
         $stmt->execute($params);
         $students = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
         if (empty($students)) {
-            echo json_encode(['success' => false, 'message' => 'No students found for export']);
+            echo json_encode(['success' => false, 'message' => 'No students found for export with the applied filters']);
             exit();
         }
 
@@ -445,6 +465,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action']) && $_POST['a
         $sheet->getColumnDimension('L')->setWidth(15); // QR Code
         $sheet->getColumnDimension('M')->setWidth(15); // Date Added
         $sheet->getRowDimension(1)->setRowHeight(20);
+
         // Fill data
         $row = 2;
         foreach ($students as $student) {
@@ -518,6 +539,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action']) && $_POST['a
         echo json_encode([
             'success' => true,
             'filename' => $filename,
+            'exported_count' => count($students),
             'message' => 'Excel file generated successfully'
         ]);
     } catch (Exception $e) {
@@ -2626,10 +2648,19 @@ $total_unique_students = $unique_students_stmt->fetchColumn();
                 return;
             }
 
-            // Get LRNs from allSelectedStudents instead of visible checkboxes
-            const selectedLRNs = Array.from(allSelectedStudents).map(key => key.split('-')[0]);
+            // Filter selected students to only those in filteredStudents (respecting current filters)
+            const filteredKeys = new Set(filteredStudents.map(s => `${s.lrn}-${s.class_id}`));
+            const selectedLRNs = Array.from(allSelectedStudents)
+                .filter(key => filteredKeys.has(key))
+                .map(key => key.split('-')[0]);
+            const uniqueLRNs = [...new Set(selectedLRNs)]; // Remove duplicates
 
-            console.log('Exporting students:', selectedLRNs); // Debug log
+            if (uniqueLRNs.length === 0) {
+                alert('No selected students match the current filters.');
+                return;
+            }
+
+            console.log('Exporting students:', uniqueLRNs);
 
             // Show loading state
             const exportBtn = document.getElementById('bulkExportBtn');
@@ -2637,12 +2668,20 @@ $total_unique_students = $unique_students_stmt->fetchColumn();
             exportBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating...';
             exportBtn.disabled = true;
 
+            // Get current filter values to send to backend
+            const gradeLevel = document.getElementById('gradeLevelFilter').value;
+            const className = document.getElementById('classFilter').value;
+            const section = document.getElementById('sectionFilter').value;
+
             fetch('', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/x-www-form-urlencoded'
                     },
-                    body: `action=exportExcel&lrns=${encodeURIComponent(JSON.stringify(selectedLRNs))}`
+                    body: `action=exportExcel&lrns=${encodeURIComponent(JSON.stringify(uniqueLRNs))}` +
+                        `&grade_level=${encodeURIComponent(gradeLevel)}` +
+                        `&subject=${encodeURIComponent(className)}` +
+                        `&section=${encodeURIComponent(section)}`
                 })
                 .then(res => {
                     if (!res.ok) {
@@ -2664,8 +2703,8 @@ $total_unique_students = $unique_students_stmt->fetchColumn();
                         downloadLink.click();
                         document.body.removeChild(downloadLink);
 
-                        // Show success message
-                        alert(`Excel file generated successfully! Exported ${selectedLRNs.length} students.`);
+                        // Show success message with count
+                        alert(`Excel file generated successfully! Exported ${data.exported_count} students.`);
                     } else {
                         alert(data.message || 'Failed to generate Excel file');
                     }
@@ -2675,9 +2714,8 @@ $total_unique_students = $unique_students_stmt->fetchColumn();
                     alert('An error occurred while generating the Excel file. Please check the console for details.');
                 })
                 .finally(() => {
-                    // Reset button state
                     exportBtn.innerHTML = originalText;
-                    exportBtn.disabled = false;
+                    exportBtn.disabled = allSelectedStudents.size === 0;
                 });
         }
 
